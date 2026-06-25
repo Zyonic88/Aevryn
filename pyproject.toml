@@ -27,6 +27,9 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+scenesmith = "scenesmith.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8",

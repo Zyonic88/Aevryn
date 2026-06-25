@@ -10,12 +10,16 @@ Its architecture is intentionally simple:
 SceneSmith
 |
 +-- Story Import
++-- Web Import
++-- Translation Engine
 +-- Canon Engine
 +-- Character Engine
 +-- World Engine
 +-- Timeline Engine
 +-- Scene Engine
++-- Scene Analyzer
 +-- Prompt Engine
++-- Presentation Engine
 +-- Export Engine
 +-- Project Manager
 ```
@@ -41,14 +45,20 @@ It defines which systems exist, why they exist, and where their authority begins
 The high-level systems are:
 
 * Story Import
+* Web Import
+* Translation Engine
 * Canon Engine
 * Character Engine
 * World Engine
 * Timeline Engine
 * Scene Engine
+* Scene Analyzer
 * Prompt Engine
+* Presentation Engine
 * Export Engine
 * Project Manager
+
+Each system has a dedicated system document in `docs/`.
 
 ## What Does It NOT Own?
 
@@ -94,13 +104,17 @@ Every subsystem document must answer:
 
 Implementation work should follow those documents, not replace them.
 
+After Story Import is documented and implemented, the architecture should be treated as frozen.
+
+No new systems should be added without deliberate architecture review.
+
 ## System Responsibilities
 
 ### Story Import
 
 Purpose:
 
-Read story.
+Read story and create stable source structure.
 
 Supports:
 
@@ -110,7 +124,73 @@ Supports:
 * DOCX
 * Copied chapters
 
+Owns:
+
+* Chapter parsing
+* Scene splitting
+* Paragraph indexing
+* Source references
+* Chapter IDs
+* Scene IDs
+* Evidence anchors
+
 Nothing else.
+
+### Web Import
+
+Purpose:
+
+Accept URLs as source intake only when import is allowed.
+
+Owns:
+
+* URL intake
+* Metadata extraction
+* Chapter discovery
+* Source attribution
+* Import permission checks
+* Robots.txt checks
+* Rate-limit policy
+
+Does not own:
+
+* Canon truth
+* AI extraction
+* Copyright bypass
+* Paywall bypass
+* Prompt generation
+
+For V1, manual upload and paste remain the primary path.
+
+Web Import should fail closed when permissions are unclear.
+
+### Translation Engine
+
+Purpose:
+
+Translate or normalize imported source text while preserving canon continuity.
+
+Owns:
+
+* Translation workflow
+* Glossary and term-bank checks
+* Name preservation
+* Alias detection
+* Title and honorific handling
+* Sentence restructuring
+* Translation-to-source evidence links
+
+Does not own:
+
+* Canon truth
+* Entity extraction
+* Story Import structure
+* Timeline validity
+* Prompt generation
+
+For V1, Translation is optional.
+
+It may run after Story Import and before Entity Extraction.
 
 ### Canon Engine
 
@@ -204,6 +284,28 @@ Given Scene 148, it automatically knows:
 * Mood
 * Relevant objects
 
+### Scene Analyzer
+
+Purpose:
+
+Understand what a scene accomplishes.
+
+Outputs:
+
+* Scene summary
+* Purpose
+* Conflict
+* Mood
+* Visual highlights
+* Character goals
+* Character emotions
+* Important objects
+* Environment summary
+* Changes introduced
+* Continuity notes
+
+Scene Analyzer does not own canon truth.
+
 ### Prompt Engine
 
 This generates:
@@ -217,6 +319,28 @@ Not from guesses.
 
 From canon.
 
+### Presentation Engine
+
+Purpose:
+
+Convert internal truth into clean human-readable views.
+
+Outputs:
+
+* Character Profiles
+* Scene Sheets
+* World Sheets
+* Timeline Views
+* Relationship Graphs
+* Continuity Reports
+* Prompt Pack Views
+
+Presentation does not own truth.
+
+Presentation creates the view model.
+
+Export writes it.
+
 ### Export Engine
 
 Outputs:
@@ -228,3 +352,9 @@ Outputs:
 * Character Sheets
 * Scene Sheets
 * Prompt Sheets
+
+## Product Constraint
+
+SceneSmith must prove the engine before the interface.
+
+Do not build a website, login system, payment system, subscription system, AI chat, or image generation workflow until the evidence-backed scene reconstruction pipeline works through CLI or another minimal terminal workflow.

@@ -17,7 +17,44 @@ If we cannot explain:
 
 then we do not write code.
 
-## 2. Single Responsibility
+## 2. Authority Is Sacred
+
+Every system owns exactly one responsibility.
+
+If another system needs that responsibility, it asks the owning system.
+
+Never duplicate authority.
+
+Examples:
+
+* Prompt Engine wants character information? It asks Character Engine.
+* Character Engine wants timeline position? It asks Timeline Engine.
+* Timeline Engine wants canon state? It asks Canon Engine.
+* Canon Engine wants source proof? It uses Story Import evidence anchors.
+
+No shortcuts.
+
+## 3. The AI Never Owns Truth
+
+The AI owns extraction.
+
+The Canon owns truth.
+
+AI may propose facts.
+
+AI may extract evidence.
+
+AI may suggest relationships.
+
+AI may identify possible state changes.
+
+But AI never becomes the source of truth.
+
+Only the Canon Engine stores canonical truth, and only when the fact is evidence-backed.
+
+This distinction is what makes SceneSmith a trusted production tool instead of just another AI app.
+
+## 4. Single Responsibility
 
 Every class.
 
@@ -29,7 +66,7 @@ One job.
 
 If something starts doing multiple unrelated things, split it.
 
-## 3. Readability Over Cleverness
+## 5. Readability Over Cleverness
 
 No clever code.
 
@@ -49,7 +86,7 @@ def upd(...):
 
 or giant anonymous lambdas.
 
-## 4. Documentation First
+## 6. Documentation First
 
 Every subsystem gets documentation before implementation.
 
@@ -62,7 +99,7 @@ Every system document must answer:
 * How does it fail?
 * How does it interact with other systems?
 
-## 5. Type Hints Everywhere
+## 7. Type Hints Everywhere
 
 Python should look like modern Python.
 
@@ -78,7 +115,7 @@ Not:
 def extract(ch):
 ```
 
-## 6. Comprehensive Docstrings
+## 8. Comprehensive Docstrings
 
 Every public function.
 
@@ -91,23 +128,23 @@ Explain:
 * Return values
 * Exceptions
 
-## 7. Tests Are Required
+## 9. Tests Are Required
 
 No subsystem is complete until it has tests.
 
 Not optional.
 
-## 8. Logging
+## 10. Logging
 
 No random print statements.
 
 Everything meaningful uses structured logging.
 
-## 9. Never Duplicate Logic
+## 11. Never Duplicate Logic
 
 If we are copying code, we are probably designing something incorrectly.
 
-## 10. Evidence Over Assumption
+## 12. Evidence Over Assumption
 
 This should become SceneSmith's defining philosophy.
 
@@ -127,13 +164,13 @@ Every extracted fact should have:
 * Chapter
 * Evidence
 
-## 11. No Technical Debt "For Later"
+## 13. No Technical Debt "For Later"
 
 If something feels wrong, fix it while it is still small.
 
 Do not build a mountain of TODOs.
 
-## 12. Git Discipline
+## 14. Git Discipline
 
 Every commit should represent one meaningful change.
 
@@ -145,7 +182,7 @@ fix(canon): preserve equipment state after upgrades
 test(world): validate location state transitions
 ```
 
-## 13. Repository Discipline
+## 15. Repository Discipline
 
 Git contains:
 
@@ -163,7 +200,7 @@ Git never contains:
 * Dependencies
 * Temporary files
 
-## 14. Understanding Rule
+## 16. Understanding Rule
 
 Before a subsystem is considered complete, we must be able to explain:
 
@@ -176,7 +213,7 @@ Before a subsystem is considered complete, we must be able to explain:
 
 without reading the code.
 
-## 15. The User Comes First
+## 17. The User Comes First
 
 Every feature must answer:
 
@@ -184,7 +221,7 @@ Does this make creating a story recap easier?
 
 If the answer is "no," it probably does not belong in Version 1.
 
-## 16. The 2-Year Rule
+## 18. The 2-Year Rule
 
 Every time we write code, ask:
 

@@ -85,6 +85,10 @@ The Canon Engine does not own:
 
 Other systems may read from canon or submit evidence to canon, but the Canon Engine alone decides how canonical state is stored, versioned, and retrieved.
 
+AI extraction may propose facts, but it never owns truth.
+
+The Canon Engine owns truth.
+
 ## How Does It Fail?
 
 The Canon Engine can fail if:
@@ -259,3 +263,7 @@ It asks:
 What does the story currently say?
 
 That is a huge distinction.
+
+The AI may help find evidence.
+
+The Canon Engine decides what becomes canon.
