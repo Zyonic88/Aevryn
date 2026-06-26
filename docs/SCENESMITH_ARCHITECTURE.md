@@ -119,10 +119,19 @@ Read story and create stable source structure.
 Supports:
 
 * TXT
-* EPUB
-* PDF
+* Markdown
+* HTML
+* FB2
 * DOCX
+* ODT
+* EPUB
 * Copied chapters
+
+Deferred until dedicated parser support:
+
+* PDF
+* MOBI
+* AZW3
 
 Owns:
 

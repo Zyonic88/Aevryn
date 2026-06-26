@@ -51,15 +51,6 @@ Story Import owns:
 * Explicit chapter order validation
 * File-format adapters that prepare readable text for Story Import
 
-Supported inputs:
-
-* TXT
-* EPUB
-* PDF
-* DOCX
-* Markdown
-* Copied chapters
-
 ## What Does It NOT Own?
 
 Story Import does not own:
@@ -78,12 +69,39 @@ It prepares source structure.
 
 It does not interpret story meaning.
 
-EPUB support is an adapter.
+## Native Source Format Support
 
-It extracts deterministic readable spine text, removes navigation-only material,
-normalizes text, and passes that text to the existing Story Import parser.
+V1.1 supported:
 
-It must not become a separate story parser.
+* TXT
+* Markdown
+* HTML/XHTML
+* FB2
+* DOCX
+* ODT
+* EPUB
+* Copied chapters
+
+Deferred:
+
+* PDF
+* MOBI
+* AZW3
+
+Rule:
+
+Never claim source-format support until the parser is deterministic, tested,
+and preserves evidence-anchor integrity.
+
+The current support table is maintained in `docs/SCENESMITH_IMPORT_FORMAT_MATRIX.md`.
+
+Compiled and structured file support is adapter-based.
+
+Adapters extract deterministic readable text, remove navigation-only material
+where applicable, normalize text, and pass that text to the existing Story
+Import parser.
+
+They must not become separate story parsers.
 
 ## How Does It Fail?
 
@@ -100,6 +118,8 @@ Story Import can fail if:
 * EPUB metadata is malformed.
 * EPUB spine documents cannot be found or decoded.
 * EPUB navigation or table-of-contents material leaks into imported story text.
+* DOCX, ODT, or FB2 XML is malformed.
+* PDF, MOBI, or AZW3 is supplied before parser support is enabled.
 
 When structure is ambiguous, Story Import should preserve the ambiguity instead of pretending certainty.
 
@@ -129,8 +149,9 @@ Imported source structures must be internally consistent:
 
 Story Import provides stable source references to later analysis and extraction work.
 
-EPUB adapters provide clean text to Story Import. Story Import still owns chapter
-parsing, scene splitting, paragraph indexing, sentence indexing, and evidence anchors.
+File adapters provide clean text to Story Import. Story Import still owns
+chapter parsing, scene splitting, paragraph indexing, sentence indexing, and
+evidence anchors.
 
 The Canon Engine uses evidence anchors when recording facts.
 

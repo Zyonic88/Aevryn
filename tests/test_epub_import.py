@@ -26,7 +26,7 @@ def test_epub_extractor_uses_spine_text_and_excludes_navigation() -> None:
                 "<html><body>"
                 "<p>CHAPTER 1. Loomings.</p>"
                 "<p>Call me Ishmael.</p>"
-                "<p>The sea was blue—very blue.</p>"
+                "<p>The sea was blue\u2014very blue.</p>"
                 "</body></html>"
             ),
         },
@@ -38,7 +38,7 @@ def test_epub_extractor_uses_spine_text_and_excludes_navigation() -> None:
 
     assert "Navigation Only" not in extracted.text
     assert "CHAPTER 1. Loomings." in extracted.text
-    assert "blue—very blue" in extracted.text
+    assert "blue\u2014very blue" in extracted.text
     assert extracted.spine_document_count == 1
 
 

@@ -26,9 +26,9 @@ from scenesmith.extraction import (
 )
 from scenesmith.extraction.engine import SceneExtractor
 from scenesmith.importing import (
-    EpubTextExtractor,
     EvidenceAnchor,
     ImportedSource,
+    SourceFileTextExtractor,
     StoryImporter,
 )
 from scenesmith.prompts import CanonPromptBuilder, PromptBundle
@@ -142,7 +142,7 @@ class SceneSmithProjectRunner:
         source_id: str,
         title: str | None = None,
     ) -> ImportedSource:
-        """Import a UTF-8 text file or EPUB file.
+        """Import a supported source file.
 
         Parameters:
             path: Source file path.
@@ -156,18 +156,11 @@ class SceneSmithProjectRunner:
             OSError: If the source file cannot be read.
             ValueError: If Story Import rejects the source content.
         """
-        if path.suffix.casefold() == ".epub":
-            extracted = EpubTextExtractor().extract_path(path)
-            return StoryImporter().import_text(
-                source_id=source_id,
-                title=title or path.stem,
-                text=extracted.text,
-            )
-
+        extracted = SourceFileTextExtractor().extract_path(path)
         return StoryImporter().import_text(
             source_id=source_id,
             title=title or path.stem,
-            text=path.read_text(encoding="utf-8"),
+            text=extracted.text,
         )
 
     def run_demo_text_file(

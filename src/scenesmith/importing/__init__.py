@@ -6,6 +6,7 @@ anchors. It does not extract entities, update canon, or call AI.
 
 from scenesmith.importing.engine import StoryImporter
 from scenesmith.importing.epub import EpubText, EpubTextExtractor
+from scenesmith.importing.files import SourceFileText, SourceFileTextExtractor
 from scenesmith.importing.models import (
     EvidenceAnchor,
     ImportedSentence,
@@ -20,5 +21,7 @@ __all__ = [
     "ImportedSentence",
     "ImportedSource",
     "SourceParagraph",
+    "SourceFileText",
+    "SourceFileTextExtractor",
     "StoryImporter",
 ]

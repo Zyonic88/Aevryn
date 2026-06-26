@@ -55,6 +55,8 @@ from scenesmith.importing import (
     EvidenceAnchor,
     ImportedSentence,
     ImportedSource,
+    SourceFileText,
+    SourceFileTextExtractor,
     SourceParagraph,
     StoryImporter,
 )
@@ -170,6 +172,8 @@ __all__ = [
     "StaticAIExtractionClient",
     "SceneEnvironmentSnapshot",
     "SourceParagraph",
+    "SourceFileText",
+    "SourceFileTextExtractor",
     "StoryPosition",
     "StoryImporter",
     "TimelineChapter",

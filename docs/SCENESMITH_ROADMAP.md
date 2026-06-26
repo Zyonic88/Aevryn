@@ -315,13 +315,22 @@ Projects contain:
 Supported import paths:
 
 * TXT
-* EPUB
-* PDF
 * Markdown
+* HTML
+* FB2
+* DOCX
+* ODT
+* EPUB
 * Paste Text
 * Web Import
 
 Web Import remains experimental until permission checks, rate limits, and source attribution are production-safe.
+
+Parser-backed future import paths:
+
+* PDF
+* MOBI
+* AZW3
 
 ---
 

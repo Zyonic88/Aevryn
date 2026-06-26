@@ -67,7 +67,13 @@ Build source structure before extraction.
 Order:
 
 * Import TXT
+* Import Markdown
+* Import HTML
+* Import FB2
+* Import DOCX
+* Import ODT
 * Import EPUB
+* Fail clearly for deferred PDF, MOBI, and AZW3 support
 * Split Chapters
 * Split Scenes
 * Paragraph IDs

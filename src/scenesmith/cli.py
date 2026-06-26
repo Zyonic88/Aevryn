@@ -12,6 +12,7 @@ from typing import Any, cast
 
 from scenesmith.export import ExportEngine
 from scenesmith.extraction import EvidenceBoundedAIExtractor, StaticAIExtractionClient
+from scenesmith.importing import SourceFileTextExtractor
 from scenesmith.json_utils import loads_json_without_duplicate_keys
 from scenesmith.presentation import PresentationEngine
 from scenesmith.projects import ProjectRunResult, SceneSmithProjectRunner
@@ -405,7 +406,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _add_source_arguments(parser: argparse.ArgumentParser) -> None:
     """Add common source import arguments to a subcommand."""
-    parser.add_argument("path", help="Path to a UTF-8 text or EPUB source file.")
+    parser.add_argument(
+        "path",
+        help="Path to a supported source file: TXT, Markdown, HTML, FB2, DOCX, ODT, or EPUB.",
+    )
     parser.add_argument(
         "--source-id",
         default="source_demo",
@@ -420,8 +424,9 @@ def _add_source_arguments(parser: argparse.ArgumentParser) -> None:
 
 def _handle_import(args: argparse.Namespace) -> None:
     """Handle the import command."""
+    path = Path(cast(str, args.path))
     imported_source = _runner().import_text_file(
-        path=Path(cast(str, args.path)),
+        path=path,
         source_id=cast(str, args.source_id),
         title=cast(str | None, args.title),
     )
@@ -430,6 +435,7 @@ def _handle_import(args: argparse.Namespace) -> None:
         json.dumps(
             {
                 "source_id": imported_source.source_id,
+                "source_format": SourceFileTextExtractor.source_format_for_path(path),
                 "title": imported_source.title,
                 "chapters": len(imported_source.story.chapters),
                 "chapter_ids": [

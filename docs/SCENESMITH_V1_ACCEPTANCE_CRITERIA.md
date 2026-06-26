@@ -33,10 +33,36 @@ Every V1 subsystem must satisfy:
 
 # Story Import
 
+## Native Source Format Support
+
+V1.1 supported:
+
+* TXT
+* Markdown
+* HTML/XHTML
+* FB2
+* DOCX
+* ODT
+* EPUB
+
+Deferred:
+
+* PDF
+* MOBI
+* AZW3
+
+Rule:
+
+Never claim source-format support until the parser is deterministic, tested,
+and preserves evidence-anchor integrity.
+
+The support matrix is maintained in `docs/SCENESMITH_IMPORT_FORMAT_MATRIX.md`.
+
 V1 complete means Story Import:
 
 * Imports plain text
-* Accepts `.epub` input through a Story Import adapter
+* Accepts `.txt`, `.md`, `.markdown`, `.html`, `.htm`, `.xhtml`, `.fb2`, `.docx`, `.odt`, and `.epub` through Story Import adapters
+* Extracts readable Markdown, HTML, FB2, DOCX, and ODT content
 * Extracts readable EPUB spine content
 * Excludes EPUB navigation, table-of-contents, and metadata-only blocks
 * Preserves EPUB chapter headings
@@ -45,6 +71,7 @@ V1 complete means Story Import:
 * Feeds EPUB text into the existing Story Import parser
 * Imports the same EPUB twice with identical counts and evidence anchors
 * Fails clearly on malformed EPUB files
+* Fails clearly for PDF, MOBI, and AZW3 until dedicated parser support is enabled
 * Preserves source order
 * Rejects out-of-order explicit multi-chapter imports
 * Rejects boolean source indexes
