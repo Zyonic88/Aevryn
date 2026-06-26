@@ -55,6 +55,7 @@ SceneSmith needs a dedicated system that can answer:
 * What damage exists?
 * What organizations control this place?
 * What world facts are valid at this chapter?
+* What world facts are valid at this scene?
 * What evidence supports those facts?
 
 Without the World Engine, SceneSmith would understand characters but fail to preserve the world around them.
@@ -153,6 +154,9 @@ The World Engine fails when:
 * Canon has no accepted facts for the requested entity
 * The requested chapter has no active world state
 * Relationships exist but the connected entity was never accepted
+* A world state contains duplicate entity entries
+* World output contains malformed IDs, blank display values, or invalid chapter indexes
+* Scene-position world output leaks facts or relationships from a later scene
 
 Unknown world details remain Unknown.
 
@@ -220,10 +224,27 @@ The World Engine is deterministic.
 
 Given the same Canon and the same chapter, it must always produce the same world state.
 
+Given the same Canon, chapter, and scene, it must always produce the same scene-position world state.
+
+Scene-position world state must not expose facts or relationships introduced later in the same chapter.
+
 World Engine output is only for World Objects.
 
 Character entities are rejected.
 
+Selected world entity IDs must be nonblank machine-safe tokens.
+
 Relationship endpoints must resolve to accepted Canon entities.
 
 Display names come from active Canon display-name facts when they exist.
+
+World state view models must reject malformed output:
+
+* World entity IDs are required and must be machine-safe.
+* World entity types are required and must be machine-safe.
+* Display names are required.
+* Chapter indexes are one-based.
+* World fact attributes are required and must be machine-safe.
+* World fact values are required.
+* Valid-from source IDs must be machine-safe.
+* A World State cannot include the same entity more than once.

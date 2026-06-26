@@ -64,11 +64,27 @@ It does not reach into Canon or Timeline directly.
 
 Prompt sections must be concise and production-ready.
 
+Character details in prompts must come from scene-relevant context facts, not the full living character card.
+
+Prompt character details should omit mechanical metadata such as task rewards, penalties, and feasibility scores unless that metadata is explicitly needed by a future prompt mode.
+
 Repeated bullets and prompt lines are deduplicated.
 
 Long analysis text is shortened before entering prompts.
 
 Prompt Engine never calls external AI tools.
+
+Prompt outputs must not be blank.
+
+Production Pack scene IDs are whitespace-free machine tokens.
+
+Production Packs must reference Scene Analyzer output for the same scene ID.
+
+Production Pack list fields must not contain blank visible rows.
+
+Production Pack list fields must not contain duplicate visible rows.
+
+`Unknown` is allowed when evidence is absent.
 
 ## What Does It NOT Own?
 
@@ -100,7 +116,12 @@ The Prompt Engine can fail if:
 * It produces empty or misleading prompts.
 * It calls external AI services.
 * It re-dumps raw chapter text instead of concise scene context.
+* It dumps full character cards instead of scene-relevant character facts.
+* It lets mechanical metadata crowd out production-relevant scene details.
 * It repeats the same facts or notes until the prompt becomes noisy.
+* It combines prompt output and scene analysis from different scenes.
+* It emits blank visual highlights, goals, objects, notes, or forbidden elements.
+* It emits duplicate visual highlights, goals, objects, notes, or forbidden elements.
 
 Unknown information must remain absent or explicitly Unknown.
 

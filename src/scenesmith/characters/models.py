@@ -27,6 +27,13 @@ class CharacterFact:
     valid_from: StoryPosition
     valid_until: StoryPosition | None = None
 
+    def __post_init__(self) -> None:
+        """Validate character fact view-model fields."""
+        _require_machine_token(self.attribute, "Character fact attribute")
+        _require_text(self.value, "Character fact value")
+        if self.previous_value is not None:
+            _require_text(self.previous_value, "Character fact previous value")
+
 
 @dataclass(frozen=True, slots=True)
 class CharacterCard:
@@ -45,3 +52,25 @@ class CharacterCard:
     position: StoryPosition | None
     facts: dict[str, CharacterFact]
     relationships: tuple[CanonRelationship, ...]
+
+    def __post_init__(self) -> None:
+        """Validate character card view-model identity and fact mapping."""
+        _require_machine_token(self.character_id, "Character card character ID")
+        _require_text(self.display_name, "Character card display name")
+        for attribute, fact in self.facts.items():
+            _require_machine_token(attribute, "Character card fact key")
+            if attribute != fact.attribute:
+                raise ValueError("Character card fact keys must match fact attributes.")
+
+
+def _require_text(value: str, field_name: str) -> None:
+    """Validate a required human-readable text field."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required.")
+
+
+def _require_machine_token(value: str, field_name: str) -> None:
+    """Validate a required whitespace-free machine token."""
+    _require_text(value, field_name)
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{field_name} cannot contain whitespace.")

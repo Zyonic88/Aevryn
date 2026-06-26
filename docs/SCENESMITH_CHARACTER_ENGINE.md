@@ -37,6 +37,10 @@ The Character Engine owns:
 
 It organizes character state for other systems.
 
+V1 character cards can be built for a chapter or an exact scene position.
+
+Scene-position cards must not include facts introduced later in the same chapter.
+
 ## V1 Rules
 
 The Character Engine is a read layer.
@@ -50,6 +54,15 @@ If a story position is requested explicitly, the position must exist in Timeline
 Previous values must come from Canon history order, not string ordering or display assumptions.
 
 Unknown information remains absent or Unknown.
+
+Character card view models must reject malformed output:
+
+* Character IDs are required and must be machine-safe.
+* Display names are required.
+* Fact attributes are required and must be machine-safe.
+* Fact values are required.
+* Fact dictionary keys must match their fact attributes.
+* Valid-from source IDs must be machine-safe.
 
 ## What Does It NOT Own?
 
@@ -77,8 +90,10 @@ The Character Engine can fail if:
 * A card treats unknown information as known.
 * A card ignores timeline validity.
 * A card mutates canon state.
+* A scene-position card leaks facts introduced in a later scene.
 * A card includes non-character authority that belongs to another engine.
 * A card uses the latest character name when an earlier display-name fact is active.
+* A card contains malformed IDs, blank visible values, or mismatched fact keys.
 
 When character information is not supported by canon, the correct value is Unknown.
 

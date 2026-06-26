@@ -1,0 +1,23 @@
+{
+  "case_id": "action_entry_ten_thousandfold",
+  "title": "Entry! I Can Increase It Ten Thousandfold!",
+  "genre": "Action",
+  "source_directory": "Entry! I Can Increase It Ten Thousandfold! (Action)",
+  "chapter_glob": "*.txt",
+  "expected_import": {
+    "chapter_files": 10,
+    "chapters": 10,
+    "evidence_anchors": 1100,
+    "import_digest": "6b4754ea4981ef2009020d885000033a98c8d180bc38e83cba3bc5f7752b5242",
+    "paragraphs": 336,
+    "scenes": 10,
+    "sentences": 1100,
+    "source_manifest_digest": "dd23b0f004dbd4748a476d4bf2aec0e36f2d885800d0803608a290994724be78"
+  },
+  "expected_extraction": {
+    "scene_inputs": 10,
+    "evidence_anchors": 1100,
+    "extraction_input_digest": "20ae0117979e3d609b4eed8a1c4617ba7c6c2d226133b9dd2fa01d5a2d50889a",
+    "extraction_prompt_digest": "c123dd2e59a7bb0f54ef2a058138c24f43a13eb0ffac86290a4b4c2d2e9fcf46"
+  }
+}

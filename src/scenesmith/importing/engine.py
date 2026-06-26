@@ -41,6 +41,13 @@ class StoryImporter:
     _numbered_chapter_title_pattern = re.compile(r"^#\s*(?P<index>\d+)\D.*$")
     _scene_pattern = re.compile(r"^(?:##\s+)?scene\s*:?.*$", re.IGNORECASE)
     _sentence_pattern = re.compile(r".+?(?:\.{3}|[.!?]+)(?:[\"')\]\u3011]*)|.+$")
+    _sentence_abbreviations = frozenset(
+        {"Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "St.", "No.", "vs.", "etc."}
+    )
+    _derived_paragraph_sentence_limit = 6
+    _derived_paragraph_character_limit = 700
+    _paragraph_derivation_sentence_threshold = 8
+    _paragraph_derivation_character_threshold = 1200
     _mojibake_replacements = {
         "\u00e3\u20ac\u0090": "\u3010",
         "\u00e3\u20ac\u0091": "\u3011",
@@ -54,10 +61,13 @@ class StoryImporter:
         text: str,
     ) -> ImportedSource:
         """Import TXT or Markdown-like text."""
-        text = self._normalize_text(text)
         self._validate_input(source_id=source_id, title=title, text=text)
+        source_id = source_id.strip()
+        title = title.strip()
+        text = self._normalize_text(text)
 
         chapter_blocks = self._split_chapters(text)
+        self._validate_chapter_order(chapter_blocks)
         chapters: list[Chapter] = []
         all_paragraphs: list[SourceParagraph] = []
         all_anchors: list[EvidenceAnchor] = []
@@ -178,11 +188,7 @@ class StoryImporter:
         paragraph_text: str,
     ) -> tuple[ImportedSentence, ...]:
         """Split paragraph text into indexed sentences."""
-        sentences = [
-            match.group(0).strip()
-            for match in self._sentence_pattern.finditer(paragraph_text)
-            if match.group(0).strip()
-        ]
+        sentences = self._split_sentences(paragraph_text)
         if not sentences:
             sentences = [paragraph_text]
 
@@ -268,6 +274,26 @@ class StoryImporter:
         return tuple(block for block in blocks if block.text)
 
     @staticmethod
+    def _validate_chapter_order(chapter_blocks: tuple[_ChapterBlock, ...]) -> None:
+        """Reject explicit chapter headings that move backward or duplicate."""
+        explicit_indices = [
+            chapter_block.chapter_index
+            for chapter_block in chapter_blocks
+            if chapter_block.chapter_index is not None
+        ]
+        if len(explicit_indices) <= 1:
+            return
+
+        previous_index = explicit_indices[0]
+        for chapter_index in explicit_indices[1:]:
+            if chapter_index <= previous_index:
+                raise ValueError(
+                    "Chapter headings must appear in increasing order; "
+                    f"found Chapter {chapter_index} after Chapter {previous_index}."
+                )
+            previous_index = chapter_index
+
+    @staticmethod
     def _merge_preface_lines(
         preface_lines: list[str],
         chapter_lines: list[str],
@@ -343,25 +369,155 @@ class StoryImporter:
 
     @staticmethod
     def _split_paragraphs(text: str) -> tuple[str, ...]:
-        """Split text into non-empty paragraphs."""
-        paragraphs = [
+        """Split text into explicit or deterministically derived paragraphs."""
+        if not isinstance(text, str):
+            raise ValueError("Paragraph source text is required.")
+        source_paragraphs = [
             paragraph.strip()
             for paragraph in re.split(r"\n\s*\n", text)
             if paragraph.strip()
         ]
-        if not paragraphs and text.strip():
+        if not source_paragraphs and text.strip():
             return (text.strip(),)
+
+        paragraphs: list[str] = []
+        for paragraph in source_paragraphs:
+            paragraphs.extend(StoryImporter._derive_paragraphs(paragraph))
 
         return tuple(paragraphs)
 
     @staticmethod
+    def _derive_paragraphs(paragraph: str) -> tuple[str, ...]:
+        """Create readable paragraphs from an oversized unspaced source block."""
+        sentences = StoryImporter._split_sentences(paragraph)
+        if not sentences:
+            return (paragraph,)
+        if (
+            len(sentences) <= StoryImporter._paragraph_derivation_sentence_threshold
+            and len(paragraph) <= StoryImporter._paragraph_derivation_character_threshold
+        ):
+            return (paragraph,)
+
+        derived: list[str] = []
+        current: list[str] = []
+        current_length = 0
+
+        for sentence in sentences:
+            starts_new_focus = StoryImporter._starts_paragraph_focus(sentence)
+            if current and (
+                starts_new_focus
+                or len(current) >= StoryImporter._derived_paragraph_sentence_limit
+                or current_length + len(sentence) > StoryImporter._derived_paragraph_character_limit
+            ):
+                derived.append(" ".join(current))
+                current = []
+                current_length = 0
+
+            current.append(sentence)
+            current_length += len(sentence) + 1
+
+        if current:
+            derived.append(" ".join(current))
+
+        return tuple(derived)
+
+    @staticmethod
+    def _starts_paragraph_focus(sentence: str) -> bool:
+        """Return whether a sentence should start a derived paragraph."""
+        stripped = sentence.lstrip()
+        return (
+            stripped.startswith(('"', "'", "\u201c", "\u3010"))
+            or stripped.startswith(("Chapter ", "Scene "))
+            or stripped.endswith(":")
+        )
+
+    @staticmethod
+    def _split_sentences(text: str) -> list[str]:
+        """Split text into complete sentences without decimal or title breaks."""
+        normalized = re.sub(r"\s+", " ", text.strip())
+        if not normalized:
+            return []
+
+        sentences: list[str] = []
+        start = 0
+        index = 0
+        while index < len(normalized):
+            if normalized[start] == "\u3010":
+                panel_end = normalized.find("\u3011", start)
+                if panel_end != -1 and StoryImporter._is_sentence_boundary(
+                    normalized,
+                    panel_end,
+                ):
+                    sentences.append(normalized[start : panel_end + 1].strip())
+                    start = StoryImporter._next_sentence_start(normalized, panel_end + 1)
+                    index = start
+                    continue
+
+            character = normalized[index]
+            if character in ".!?" and StoryImporter._is_real_sentence_end(
+                normalized,
+                index,
+            ):
+                end = StoryImporter._sentence_end_with_closers(normalized, index)
+                sentences.append(normalized[start:end].strip())
+                start = StoryImporter._next_sentence_start(normalized, end)
+                index = start
+                continue
+
+            index += 1
+
+        if start < len(normalized):
+            sentences.append(normalized[start:].strip())
+
+        return [sentence for sentence in sentences if sentence]
+
+    @staticmethod
+    def _is_real_sentence_end(text: str, index: int) -> bool:
+        """Return whether punctuation at an index ends a sentence."""
+        character = text[index]
+        if character == ".":
+            previous_character = text[index - 1] if index > 0 else ""
+            next_character = text[index + 1] if index + 1 < len(text) else ""
+            if previous_character.isdigit() and next_character.isdigit():
+                return False
+            token_start = text.rfind(" ", 0, index) + 1
+            token = text[token_start : index + 1]
+            if token in StoryImporter._sentence_abbreviations:
+                return False
+
+        return True
+
+    @staticmethod
+    def _is_sentence_boundary(text: str, index: int) -> bool:
+        """Return whether an index is followed by a sentence boundary."""
+        next_index = index + 1
+        return next_index >= len(text) or text[next_index].isspace()
+
+    @staticmethod
+    def _sentence_end_with_closers(text: str, index: int) -> int:
+        """Return sentence end index including closing punctuation."""
+        end = index + 1
+        while end < len(text) and text[end] in "\"')]\u201d\u2019\u3011":
+            end += 1
+        return end
+
+    @staticmethod
+    def _next_sentence_start(text: str, index: int) -> int:
+        """Return the next non-space sentence start index."""
+        while index < len(text) and text[index].isspace():
+            index += 1
+        return index
+
+    @staticmethod
     def _validate_input(source_id: str, title: str, text: str) -> None:
         """Validate import inputs."""
-        if not source_id.strip():
+        if not isinstance(source_id, str) or not source_id.strip():
             raise ValueError("Source ID is required.")
-        if not title.strip():
+        if any(character.isspace() for character in source_id.strip()):
+            raise ValueError("Source ID cannot contain whitespace.")
+        if not isinstance(title, str) or not title.strip():
             raise ValueError("Source title is required.")
-        if not text.strip():
+        if not isinstance(text, str) or not text.strip():
             raise ValueError("Source text is required.")
 
     @staticmethod

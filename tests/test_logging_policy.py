@@ -25,12 +25,34 @@ CORE_SUBSYSTEM_MODULES = (
     "src/scenesmith/presentation/engine.py",
     "src/scenesmith/export/engine.py",
     "src/scenesmith/projects/runner.py",
+    "src/scenesmith/validation/runner.py",
 )
 
 
 def test_logging_policy_document_exists() -> None:
     """The V1 logging policy must be documented."""
     assert (ROOT / "docs" / "SCENESMITH_LOGGING_POLICY.md").exists()
+
+
+def test_repository_line_endings_are_normalized() -> None:
+    """The repository must declare stable text line endings."""
+    attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+
+    assert "*.py text eol=lf" in attributes
+    assert "*.md text eol=lf" in attributes
+    assert "*.json text eol=lf" in attributes
+
+
+def test_repository_ignores_generated_reference_outputs() -> None:
+    """Generated outputs and local snapshots should not be committed accidentally."""
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+
+    assert "generated/" in gitignore
+    assert "runtime/" in gitignore
+    assert "output/" in gitignore
+    assert "exports/" in gitignore
+    assert "snapshots/*" in gitignore
+    assert "!snapshots/README.md" in gitignore
 
 
 def test_package_installs_null_handler() -> None:

@@ -1,0 +1,23 @@
+{
+  "case_id": "fantasy_son_in_law_god_emperor",
+  "title": "Son-in-law, God-Emperor",
+  "genre": "Fantasy",
+  "source_directory": "Son-in-law, God-Emperor (Fantasy)",
+  "chapter_glob": "*.txt",
+  "expected_import": {
+    "chapter_files": 10,
+    "chapters": 10,
+    "evidence_anchors": 1223,
+    "import_digest": "e6ecdf6b0b6c4c23228756a2878f57a185d9c202ba2df7f29b529cbfc755cf7d",
+    "paragraphs": 293,
+    "scenes": 10,
+    "sentences": 1223,
+    "source_manifest_digest": "0b9beabb61a607971186339adcd76f51be9bd4305851ca472e7fbe48af9c3b85"
+  },
+  "expected_extraction": {
+    "scene_inputs": 10,
+    "evidence_anchors": 1223,
+    "extraction_input_digest": "a29c1999053038e4c38695bdf8c66c4628afeba26fdd62646bed1adf84cdccb6",
+    "extraction_prompt_digest": "47244cf9d19a49916cb521f1ecb0e0cc6dea3cc5974bcd27706f2a30cbc33c71"
+  }
+}

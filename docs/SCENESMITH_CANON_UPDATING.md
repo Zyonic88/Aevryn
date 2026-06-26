@@ -29,6 +29,7 @@ Canon Updating owns:
 
 * Candidate validation
 * Evidence anchor conversion into Evidence records
+* Scene-to-evidence consistency checks
 * Confidence threshold enforcement
 * New entity creation from accepted candidates
 * Fact creation from accepted candidates
@@ -36,6 +37,22 @@ Canon Updating owns:
 * Version update decisions
 
 It owns the decision to submit accepted changes to Canon Database.
+
+## V1 Rules
+
+Relationship candidates may connect entities accepted in the same scene or already stored in Canon.
+
+The extractor does not have to restate both relationship endpoint entities in every scene.
+
+Evidence anchors supplied to one Canon update must be unique.
+
+Minimum confidence must be numeric, not boolean, and bounded from 0.0 to 1.0.
+
+Duplicate semantic relationships are idempotent and must not be reported as newly accepted.
+
+Accepted state-change summary IDs must refer to stored Canon Database state-change records.
+
+Explicit state-change candidates validate the accepted fact state; they must not create phantom summary IDs.
 
 ## What Does It NOT Own?
 
@@ -58,6 +75,8 @@ Canon Updating can fail if:
 * A candidate has no evidence anchor.
 * A candidate confidence is below threshold.
 * A candidate references an unknown source anchor.
+* The extraction result scene does not match the supplied evidence anchors.
+* The supplied evidence anchors contain duplicate anchor IDs.
 * A relationship references entities that were not accepted or already stored.
 * Existing canon is overwritten instead of versioned.
 * AI candidates are treated as truth before validation.

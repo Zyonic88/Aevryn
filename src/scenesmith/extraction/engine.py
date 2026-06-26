@@ -103,6 +103,11 @@ class EntityExtractionEngine:
             )
         )
         self._validate_result(result=result, allowed_anchor_ids=anchor_ids)
+        if result.scene_id != scene_id:
+            raise ValueError(
+                "Extraction result has wrong scene_id for requested scene: "
+                f"{result.scene_id}"
+            )
         logger.debug(
             "scene_extraction_validated",
             extra={
@@ -122,6 +127,7 @@ class EntityExtractionEngine:
     ) -> None:
         """Validate extractor candidates against Story Import anchors."""
         allowed = set(allowed_anchor_ids)
+        self._validate_unique_result_candidates(result)
         for entity in result.entities:
             self._validate_entity(entity=entity, allowed_anchor_ids=allowed)
         for fact in result.facts:
@@ -183,9 +189,56 @@ class EntityExtractionEngine:
         EntityExtractionEngine._validate_confidence(state_change.confidence)
 
     @staticmethod
+    def _validate_unique_result_candidates(result: ExtractionResult) -> None:
+        """Validate that one scene result does not repeat candidate identities."""
+        entity_ids = tuple(entity.entity_id for entity in result.entities)
+        EntityExtractionEngine._require_unique_values(entity_ids, "entity IDs")
+
+        fact_ids = tuple(fact.fact_id for fact in result.facts)
+        EntityExtractionEngine._require_unique_values(fact_ids, "fact IDs")
+
+        relationship_keys = tuple(
+            (
+                relationship.source_entity_id,
+                relationship.relationship_type,
+                relationship.target_entity_id,
+            )
+            for relationship in result.relationships
+        )
+        EntityExtractionEngine._require_unique_values(
+            relationship_keys,
+            "relationship candidates",
+        )
+
+        state_change_keys = tuple(
+            (
+                state_change.entity_id,
+                state_change.attribute,
+                state_change.value,
+                state_change.valid_from_anchor_id,
+                state_change.valid_until_anchor_id,
+            )
+            for state_change in result.state_changes
+        )
+        EntityExtractionEngine._require_unique_values(
+            state_change_keys,
+            "state-change candidates",
+        )
+
+    @staticmethod
+    def _require_unique_values(values: tuple[object, ...], field_name: str) -> None:
+        """Validate unique candidate identities."""
+        if len(values) != len(set(values)):
+            raise ValueError(f"Extraction result contains duplicate {field_name}.")
+
+    @staticmethod
     def _validate_confidence(confidence: float) -> None:
         """Validate extraction confidence score."""
-        if not 0.0 <= confidence <= 1.0:
+        if (
+            isinstance(confidence, bool)
+            or not isinstance(confidence, int | float)
+            or not 0.0 <= confidence <= 1.0
+        ):
             raise ValueError("Extraction confidence must be between 0.0 and 1.0.")
 
     @staticmethod

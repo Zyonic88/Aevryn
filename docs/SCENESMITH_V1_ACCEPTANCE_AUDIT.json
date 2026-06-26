@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "audit_status": "in_progress",
+  "audit_status": "rc1_ready",
   "universal_criteria": [
     "purpose_defined",
     "authority_defined",
@@ -17,16 +17,13 @@
     "no_unnecessary_complexity"
   ],
   "accepted_criterion_values": [
-    "pass",
-    "blocked_by_canon_test"
+    "pass"
   ],
-  "global_blockers": [
-        "real_chapter_1_to_chapter_4_canon_test_not_run"
-  ],
+  "global_blockers": [],
   "implemented_systems": [
     {
       "name": "Story Import",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -43,17 +40,21 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_STORY_IMPORT.md"],
-        "source": ["src/scenesmith/importing/engine.py"],
-        "tests": ["tests/test_story_importer.py"]
+        "documentation": [
+          "docs/SCENESMITH_STORY_IMPORT.md"
+        ],
+        "source": [
+          "src/scenesmith/importing/engine.py"
+        ],
+        "tests": [
+          "tests/test_story_importer.py"
+        ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Entity Extraction",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -70,7 +71,9 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_ENTITY_EXTRACTION.md"],
+        "documentation": [
+          "docs/SCENESMITH_ENTITY_EXTRACTION.md"
+        ],
         "source": [
           "src/scenesmith/extraction/ai.py",
           "src/scenesmith/extraction/engine.py"
@@ -80,13 +83,11 @@
           "tests/test_evidence_bounded_ai_extraction.py"
         ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Canon Updating",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -103,17 +104,21 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_CANON_UPDATING.md"],
-        "source": ["src/scenesmith/canon/updating.py"],
-        "tests": ["tests/test_canon_updating.py"]
+        "documentation": [
+          "docs/SCENESMITH_CANON_UPDATING.md"
+        ],
+        "source": [
+          "src/scenesmith/canon/updating.py"
+        ],
+        "tests": [
+          "tests/test_canon_updating.py"
+        ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Canon Engine",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -130,7 +135,9 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_CANON_ENGINE.md"],
+        "documentation": [
+          "docs/SCENESMITH_CANON_ENGINE.md"
+        ],
         "source": [
           "src/scenesmith/canon/database.py",
           "src/scenesmith/canon/engine.py"
@@ -140,13 +147,11 @@
           "tests/test_canon_engine.py"
         ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Timeline Engine",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -163,17 +168,21 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_TIMELINE_ENGINE.md"],
-        "source": ["src/scenesmith/timeline/engine.py"],
-        "tests": ["tests/test_timeline_engine.py"]
+        "documentation": [
+          "docs/SCENESMITH_TIMELINE_ENGINE.md"
+        ],
+        "source": [
+          "src/scenesmith/timeline/engine.py"
+        ],
+        "tests": [
+          "tests/test_timeline_engine.py"
+        ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Character Engine",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -190,7 +199,9 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_CHARACTER_ENGINE.md"],
+        "documentation": [
+          "docs/SCENESMITH_CHARACTER_ENGINE.md"
+        ],
         "source": [
           "src/scenesmith/characters/cards.py",
           "src/scenesmith/characters/engine.py"
@@ -200,13 +211,11 @@
           "tests/test_character_engine.py"
         ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "World Engine",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -223,17 +232,21 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_WORLD_ENGINE.md"],
-        "source": ["src/scenesmith/world/engine.py"],
-        "tests": ["tests/test_world_engine.py"]
+        "documentation": [
+          "docs/SCENESMITH_WORLD_ENGINE.md"
+        ],
+        "source": [
+          "src/scenesmith/world/engine.py"
+        ],
+        "tests": [
+          "tests/test_world_engine.py"
+        ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Scene Engine",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -250,7 +263,9 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_SCENE_ENGINE.md"],
+        "documentation": [
+          "docs/SCENESMITH_SCENE_ENGINE.md"
+        ],
         "source": [
           "src/scenesmith/scenes/context.py",
           "src/scenesmith/scenes/engine.py"
@@ -260,13 +275,11 @@
           "tests/test_scene_engine.py"
         ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Scene Analyzer",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -283,17 +296,21 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_SCENE_ANALYZER.md"],
-        "source": ["src/scenesmith/scenes/analyzer.py"],
-        "tests": ["tests/test_scene_analyzer.py"]
+        "documentation": [
+          "docs/SCENESMITH_SCENE_ANALYZER.md"
+        ],
+        "source": [
+          "src/scenesmith/scenes/analyzer.py"
+        ],
+        "tests": [
+          "tests/test_scene_analyzer.py"
+        ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Prompt Engine",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -310,7 +327,9 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_PROMPT_ENGINE.md"],
+        "documentation": [
+          "docs/SCENESMITH_PROMPT_ENGINE.md"
+        ],
         "source": [
           "src/scenesmith/prompts/builder.py",
           "src/scenesmith/prompts/engine.py"
@@ -320,13 +339,11 @@
           "tests/test_prompt_engine.py"
         ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Presentation Engine",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -343,17 +360,21 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_PRESENTATION_ENGINE.md"],
-        "source": ["src/scenesmith/presentation/engine.py"],
-        "tests": ["tests/test_presentation_engine.py"]
+        "documentation": [
+          "docs/SCENESMITH_PRESENTATION_ENGINE.md"
+        ],
+        "source": [
+          "src/scenesmith/presentation/engine.py"
+        ],
+        "tests": [
+          "tests/test_presentation_engine.py"
+        ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Export Engine",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -370,20 +391,22 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_EXPORT_ENGINE.md"],
-        "source": ["src/scenesmith/export/engine.py"],
+        "documentation": [
+          "docs/SCENESMITH_EXPORT_ENGINE.md"
+        ],
+        "source": [
+          "src/scenesmith/export/engine.py"
+        ],
         "tests": [
           "tests/test_export_engine.py",
           "tests/test_phase9_export.py"
         ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "Project Manager",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -400,17 +423,21 @@
         "no_unnecessary_complexity": "pass"
       },
       "evidence": {
-        "documentation": ["docs/SCENESMITH_PROJECT_MANAGER.md"],
-        "source": ["src/scenesmith/projects/runner.py"],
-        "tests": ["tests/test_project_runner.py"]
+        "documentation": [
+          "docs/SCENESMITH_PROJECT_MANAGER.md"
+        ],
+        "source": [
+          "src/scenesmith/projects/runner.py"
+        ],
+        "tests": [
+          "tests/test_project_runner.py"
+        ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     },
     {
       "name": "CLI Proof Workflow",
-      "status": "acceptance_hardened_pending_canon_test",
+      "status": "v1_complete_rc1",
       "criteria": {
         "purpose_defined": "pass",
         "authority_defined": "pass",
@@ -431,26 +458,44 @@
           "docs/BUILD_ORDER.md",
           "docs/SCENESMITH_V1_ACCEPTANCE_CRITERIA.md"
         ],
-        "source": ["src/scenesmith/cli.py"],
-        "tests": ["tests/test_cli.py"]
+        "source": [
+          "src/scenesmith/cli.py",
+          "src/scenesmith/validation/runner.py"
+        ],
+        "tests": [
+          "tests/test_cli.py",
+          "tests/test_validation_corpus.py",
+          "tests/test_validation_runner.py"
+        ]
       },
-      "remaining_blockers": [
-                "real_chapter_1_to_chapter_4_canon_test_not_run"
-      ]
+      "remaining_blockers": []
     }
   ],
   "boundary_systems": [
     {
       "name": "Translation Engine",
       "status": "foundation_only",
-      "documentation": ["docs/SCENESMITH_TRANSLATION_ENGINE.md"],
+      "documentation": [
+        "docs/SCENESMITH_TRANSLATION_ENGINE.md"
+      ],
       "reason": "Translation is documented as an optional V1-adjacent module, but the core continuity loop does not require implementation yet."
     },
     {
       "name": "Web Import",
       "status": "documented_only",
-      "documentation": ["docs/SCENESMITH_WEB_IMPORT_SYSTEM.md"],
+      "documentation": [
+        "docs/SCENESMITH_WEB_IMPORT_SYSTEM.md"
+      ],
       "reason": "Manual upload and paste remain the V1 import path until permission checks, rate limits, and source handling are implemented."
     }
-  ]
+  ],
+  "rc1_snapshot_comparison": {
+    "status": "pass",
+    "snapshot_base": "snapshots/v1_rc1_validation_comparison_20260626_014637",
+    "suite_digest": "816f6226832fe56ccdddc4064630807d31dd3646d4ec4573fde1450d0c2a3aad",
+    "compared_files": [
+      "README.md",
+      "validation_result.json"
+    ]
+  }
 }

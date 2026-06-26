@@ -8,6 +8,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from typing import TypeVar
 
+from scenesmith.canon.policies import is_additive_fact_attribute
 from scenesmith.core import (
     Chapter,
     Character,
@@ -22,6 +23,12 @@ from scenesmith.core import (
 T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
+
+_EXCLUSIVE_RELATIONSHIP_TYPES = frozenset(
+    {
+        "located_at",
+    }
+)
 
 
 class CanonDatabase:
@@ -57,6 +64,17 @@ class CanonDatabase:
             chapter,
             "chapter",
         )
+
+    def retrieve_chapter(self, chapter_id: str) -> Chapter | None:
+        """Retrieve a stored chapter by ID.
+
+        Parameters:
+            chapter_id: Permanent chapter identifier.
+
+        Returns:
+            Stored chapter if known, otherwise None.
+        """
+        return self._chapters.get(chapter_id)
 
     def store_character(self, character: Character) -> None:
         """Store the first version of a character.
@@ -185,8 +203,18 @@ class CanonDatabase:
             evidence: Evidence to store.
 
         Raises:
-            ValueError: If the evidence ID already belongs to different data.
+            ValueError: If the evidence references unknown registered story
+                structure or the evidence ID already belongs to different data.
         """
+        if self._chapters and evidence.chapter_id not in self._chapters:
+            raise ValueError(f"Unknown chapter: {evidence.chapter_id}")
+
+        chapter = self._chapters.get(evidence.chapter_id)
+        if chapter is not None and chapter.scenes:
+            scene_ids = {scene.scene_id for scene in chapter.scenes}
+            if evidence.scene_id not in scene_ids:
+                raise ValueError(f"Unknown scene: {evidence.scene_id}")
+
         self._store_unique(
             self._evidence,
             evidence.evidence_id,
@@ -217,6 +245,8 @@ class CanonDatabase:
         """
         if fact.evidence_id not in self._evidence:
             raise ValueError(f"Unknown evidence: {fact.evidence_id}")
+        if self.retrieve_entity(fact.entity_id) is None:
+            raise ValueError(f"Unknown entity: {fact.entity_id}")
 
         self._store_unique(
             self._facts,
@@ -236,6 +266,26 @@ class CanonDatabase:
         """
         return self._facts.get(fact_id)
 
+    def fact_evidence_chapter_index(self, fact: Fact) -> int | None:
+        """Return the chapter index for fact evidence when known.
+
+        Parameters:
+            fact: Fact whose evidence position should be read.
+
+        Returns:
+            One-based chapter index, or None when supporting evidence/chapter is
+            not stored.
+        """
+        evidence = self._evidence.get(fact.evidence_id)
+        if evidence is None:
+            return None
+
+        chapter = self._chapters.get(evidence.chapter_id)
+        if chapter is None:
+            return None
+
+        return chapter.chapter_index
+
     def store_relationship(self, relationship: Relationship) -> None:
         """Store an evidence-backed relationship.
 
@@ -248,6 +298,10 @@ class CanonDatabase:
         """
         if relationship.evidence_id not in self._evidence:
             raise ValueError(f"Unknown evidence: {relationship.evidence_id}")
+        if self.retrieve_entity(relationship.source_entity_id) is None:
+            raise ValueError(f"Unknown entity: {relationship.source_entity_id}")
+        if self.retrieve_entity(relationship.target_entity_id) is None:
+            raise ValueError(f"Unknown entity: {relationship.target_entity_id}")
 
         existing_by_id = self._relationships.get(relationship.relationship_id)
         if existing_by_id is not None:
@@ -274,6 +328,29 @@ class CanonDatabase:
             Relationship if known, otherwise None.
         """
         return self._relationships.get(relationship_id)
+
+    def relationship_evidence_chapter_index(
+        self,
+        relationship: Relationship,
+    ) -> int | None:
+        """Return the chapter index for relationship evidence when known.
+
+        Parameters:
+            relationship: Relationship whose evidence position should be read.
+
+        Returns:
+            One-based chapter index, or None when supporting evidence/chapter is
+            not stored.
+        """
+        evidence = self._evidence.get(relationship.evidence_id)
+        if evidence is None:
+            return None
+
+        chapter = self._chapters.get(evidence.chapter_id)
+        if chapter is None:
+            return None
+
+        return chapter.chapter_index
 
     def retrieve_state_change(self, state_change_id: str) -> StateChange | None:
         """Retrieve a state change by ID.
@@ -302,6 +379,63 @@ class CanonDatabase:
             or relationship.target_entity_id == entity_id
         )
 
+    def list_relationships_for_entity_at_chapter(
+        self,
+        entity_id: str,
+        chapter_index: int,
+    ) -> Sequence[Relationship]:
+        """Return relationships known by a chapter.
+
+        Parameters:
+            entity_id: Entity ID used as source or target.
+            chapter_index: One-based chapter index to inspect.
+
+        Returns:
+            Immutable sequence of matching relationships whose evidence exists
+            at or before the requested chapter.
+        """
+        self._validate_chapter_index(chapter_index)
+        return tuple(
+            relationship
+            for relationship in self.list_relationships_for_entity(entity_id)
+            if self._relationship_is_known_at_chapter(relationship, chapter_index)
+            and self._relationship_is_active_at_chapter(relationship, chapter_index)
+        )
+
+    def list_relationships_for_entity_at_scene(
+        self,
+        entity_id: str,
+        chapter_index: int,
+        scene_index: int,
+    ) -> Sequence[Relationship]:
+        """Return relationships known by a scene position.
+
+        Parameters:
+            entity_id: Entity ID used as source or target.
+            chapter_index: One-based chapter index to inspect.
+            scene_index: One-based scene index to inspect.
+
+        Returns:
+            Immutable sequence of matching relationships whose evidence exists
+            at or before the requested scene.
+        """
+        self._validate_chapter_index(chapter_index)
+        self._validate_scene_index(scene_index)
+        return tuple(
+            relationship
+            for relationship in self.list_relationships_for_entity(entity_id)
+            if self._relationship_is_known_at_scene(
+                relationship=relationship,
+                chapter_index=chapter_index,
+                scene_index=scene_index,
+            )
+            and self._relationship_is_active_at_scene(
+                relationship=relationship,
+                chapter_index=chapter_index,
+                scene_index=scene_index,
+            )
+        )
+
     def _find_relationship_by_semantic_key(
         self,
         relationship: Relationship,
@@ -316,6 +450,132 @@ class CanonDatabase:
                 return existing_relationship
 
         return None
+
+    def _relationship_is_known_at_chapter(
+        self,
+        relationship: Relationship,
+        chapter_index: int,
+    ) -> bool:
+        """Return whether relationship evidence exists by a chapter."""
+        evidence = self._evidence[relationship.evidence_id]
+        chapter = self._chapters.get(evidence.chapter_id)
+        if chapter is None:
+            return False
+
+        return chapter.chapter_index <= chapter_index
+
+    def _relationship_is_known_at_scene(
+        self,
+        relationship: Relationship,
+        chapter_index: int,
+        scene_index: int,
+    ) -> bool:
+        """Return whether relationship evidence exists by a scene."""
+        evidence = self._evidence[relationship.evidence_id]
+        chapter = self._chapters.get(evidence.chapter_id)
+        if chapter is None:
+            return False
+
+        return self._relationship_sort_key(relationship) <= (
+            chapter_index,
+            scene_index,
+            999_999,
+            999_999,
+            "\uffff",
+        )
+
+    def _relationship_is_active_at_chapter(
+        self,
+        relationship: Relationship,
+        chapter_index: int,
+    ) -> bool:
+        """Return whether a relationship should appear in reconstructed state."""
+        if relationship.relationship_type not in _EXCLUSIVE_RELATIONSHIP_TYPES:
+            return True
+
+        latest_relationship = self._latest_exclusive_relationship_at_chapter(
+            source_entity_id=relationship.source_entity_id,
+            relationship_type=relationship.relationship_type,
+            chapter_index=chapter_index,
+        )
+        return latest_relationship == relationship
+
+    def _relationship_is_active_at_scene(
+        self,
+        relationship: Relationship,
+        chapter_index: int,
+        scene_index: int,
+    ) -> bool:
+        """Return whether a relationship appears in reconstructed scene state."""
+        if relationship.relationship_type not in _EXCLUSIVE_RELATIONSHIP_TYPES:
+            return True
+
+        latest_relationship = self._latest_exclusive_relationship_at_scene(
+            source_entity_id=relationship.source_entity_id,
+            relationship_type=relationship.relationship_type,
+            chapter_index=chapter_index,
+            scene_index=scene_index,
+        )
+        return latest_relationship == relationship
+
+    def _latest_exclusive_relationship_at_chapter(
+        self,
+        source_entity_id: str,
+        relationship_type: str,
+        chapter_index: int,
+    ) -> Relationship | None:
+        """Return the latest exclusive relationship for a source by chapter."""
+        relationships = tuple(
+            relationship
+            for relationship in self._relationships.values()
+            if relationship.source_entity_id == source_entity_id
+            and relationship.relationship_type == relationship_type
+            and self._relationship_is_known_at_chapter(relationship, chapter_index)
+        )
+        if not relationships:
+            return None
+
+        return max(relationships, key=self._relationship_sort_key)
+
+    def _latest_exclusive_relationship_at_scene(
+        self,
+        source_entity_id: str,
+        relationship_type: str,
+        chapter_index: int,
+        scene_index: int,
+    ) -> Relationship | None:
+        """Return the latest exclusive relationship for a source by scene."""
+        relationships = tuple(
+            relationship
+            for relationship in self._relationships.values()
+            if relationship.source_entity_id == source_entity_id
+            and relationship.relationship_type == relationship_type
+            and self._relationship_is_known_at_scene(
+                relationship=relationship,
+                chapter_index=chapter_index,
+                scene_index=scene_index,
+            )
+        )
+        if not relationships:
+            return None
+
+        return max(relationships, key=self._relationship_sort_key)
+
+    def _relationship_sort_key(
+        self,
+        relationship: Relationship,
+    ) -> tuple[int, int, int, int, str]:
+        """Return a deterministic story-order sort key for a relationship."""
+        evidence = self._evidence[relationship.evidence_id]
+        chapter = self._chapters.get(evidence.chapter_id)
+        chapter_index = chapter.chapter_index if chapter is not None else 0
+        return (
+            chapter_index,
+            self._scene_index_from_id(evidence.scene_id),
+            evidence.paragraph_index,
+            evidence.sentence_index,
+            relationship.relationship_id,
+        )
 
     def retrieve_current_fact(self, entity_id: str, attribute: str) -> Fact | None:
         """Retrieve the latest stored fact for an entity attribute.
@@ -369,6 +629,11 @@ class CanonDatabase:
             raise ValueError(f"Unknown chapter: {event.chapter_id}")
         if event.evidence_id not in self._evidence:
             raise ValueError(f"Unknown evidence: {event.evidence_id}")
+        evidence = self._evidence[event.evidence_id]
+        if evidence.chapter_id != event.chapter_id:
+            raise ValueError("Timeline event chapter must match evidence chapter.")
+        if evidence.scene_id != event.scene_id:
+            raise ValueError("Timeline event scene must match evidence scene.")
 
         self._store_unique(
             self._events,
@@ -396,6 +661,10 @@ class CanonDatabase:
             and state_change.valid_until_event_id not in self._events
         ):
             raise ValueError(f"Unknown event: {state_change.valid_until_event_id}")
+        if state_change.valid_until_event_id is not None and self._event_position_key(
+            state_change.valid_until_event_id,
+        ) <= self._event_position_key(state_change.valid_from_event_id):
+            raise ValueError("State change valid_until cannot be earlier than valid_from.")
 
         self._store_unique(
             self._state_changes,
@@ -420,6 +689,9 @@ class CanonDatabase:
         Raises:
             ValueError: If the closing event is unknown.
         """
+        if is_additive_fact_attribute(attribute):
+            return
+
         if valid_until_event_id not in self._events:
             raise ValueError(f"Unknown event: {valid_until_event_id}")
 
@@ -430,6 +702,12 @@ class CanonDatabase:
                 and fact.attribute == attribute
                 and state_change.valid_until_event_id is None
             ):
+                if self._event_position_key(valid_until_event_id) <= self._event_position_key(
+                    state_change.valid_from_event_id,
+                ):
+                    raise ValueError(
+                        "State change valid_until cannot be earlier than valid_from."
+                    )
                 self._state_changes[state_change.state_change_id] = StateChange(
                     state_change_id=state_change.state_change_id,
                     fact_id=state_change.fact_id,
@@ -451,13 +729,54 @@ class CanonDatabase:
         Returns:
             Immutable sequence of facts active at that chapter.
         """
+        self._validate_chapter_index(chapter_index)
         active_facts = [
             self._facts[state_change.fact_id]
             for state_change in self._state_changes.values()
             if self._state_change_is_active(state_change, chapter_index)
             and self._facts[state_change.fact_id].entity_id == entity_id
         ]
-        return tuple(sorted(active_facts, key=lambda fact: fact.attribute))
+        return tuple(
+            sorted(
+                active_facts,
+                key=lambda fact: (fact.attribute, self._fact_timeline_sort_key(fact)),
+            )
+        )
+
+    def retrieve_state_at_scene(
+        self,
+        entity_id: str,
+        chapter_index: int,
+        scene_index: int,
+    ) -> Sequence[Fact]:
+        """Retrieve facts valid for an entity at a scene position.
+
+        Parameters:
+            entity_id: Entity whose active facts should be returned.
+            chapter_index: One-based chapter index to inspect.
+            scene_index: One-based scene index to inspect.
+
+        Returns:
+            Immutable sequence of facts active at that scene.
+        """
+        self._validate_chapter_index(chapter_index)
+        self._validate_scene_index(scene_index)
+        active_facts = [
+            self._facts[state_change.fact_id]
+            for state_change in self._state_changes.values()
+            if self._state_change_is_active_at_scene(
+                state_change=state_change,
+                chapter_index=chapter_index,
+                scene_index=scene_index,
+            )
+            and self._facts[state_change.fact_id].entity_id == entity_id
+        ]
+        return tuple(
+            sorted(
+                active_facts,
+                key=lambda fact: (fact.attribute, self._fact_timeline_sort_key(fact)),
+            )
+        )
 
     def _state_change_is_active(
         self,
@@ -475,13 +794,31 @@ class CanonDatabase:
         valid_until = self._event_chapter_index(state_change.valid_until_event_id)
         return chapter_index < valid_until
 
+    def _state_change_is_active_at_scene(
+        self,
+        state_change: StateChange,
+        chapter_index: int,
+        scene_index: int,
+    ) -> bool:
+        """Return whether a state change is active at a scene."""
+        lookup_key = (chapter_index, scene_index, 10**9, 10**9, "\uffff")
+        valid_from = self._event_sort_key(state_change.valid_from_event_id)
+        if lookup_key < valid_from:
+            return False
+
+        if state_change.valid_until_event_id is None:
+            return True
+
+        valid_until = self._event_sort_key(state_change.valid_until_event_id)
+        return lookup_key < valid_until
+
     def _event_chapter_index(self, event_id: str) -> int:
         """Return the chapter index for an event."""
         event = self._events[event_id]
         chapter = self._chapters[event.chapter_id]
         return chapter.chapter_index
 
-    def _fact_timeline_sort_key(self, fact: Fact) -> tuple[int, int, int, str, str]:
+    def _fact_timeline_sort_key(self, fact: Fact) -> tuple[int, int, int, int, int, str, str]:
         """Return a stable timeline-first sort key for a fact."""
         state_changes = tuple(
             state_change
@@ -489,7 +826,7 @@ class CanonDatabase:
             if state_change.fact_id == fact.fact_id
         )
         if not state_changes:
-            return (0, 0, 0, "", fact.fact_id)
+            return (0, 0, 0, 0, 0, "", fact.fact_id)
 
         latest_state_change = max(
             state_changes,
@@ -497,28 +834,69 @@ class CanonDatabase:
                 state_change.valid_from_event_id,
             ),
         )
-        chapter_index, scene_index, event_id = self._event_sort_key(
-            latest_state_change.valid_from_event_id,
+        chapter_index, scene_index, paragraph_index, sentence_index, event_id = (
+            self._event_sort_key(
+                latest_state_change.valid_from_event_id,
+            )
         )
-        return (1, chapter_index, scene_index, event_id, fact.fact_id)
+        return (
+            1,
+            chapter_index,
+            scene_index,
+            paragraph_index,
+            sentence_index,
+            event_id,
+            fact.fact_id,
+        )
 
-    def _event_sort_key(self, event_id: str) -> tuple[int, int, str]:
+    def _event_sort_key(self, event_id: str) -> tuple[int, int, int, int, str]:
         """Return a deterministic story-order key for an event."""
+        position_key = self._event_position_key(event_id)
+        return (*position_key, self._events[event_id].event_id)
+
+    def _event_position_key(self, event_id: str) -> tuple[int, int, int, int]:
+        """Return a source-position key for an event."""
         event = self._events[event_id]
+        evidence = self._evidence[event.evidence_id]
         return (
             self._event_chapter_index(event_id),
-            self._first_integer(event.scene_id),
-            event.event_id,
+            self._scene_index_from_id(event.scene_id),
+            evidence.paragraph_index,
+            evidence.sentence_index,
         )
 
     @staticmethod
-    def _first_integer(value: str) -> int:
-        """Return the first integer in a string, or zero when absent."""
-        match = re.search(r"\d+", value)
-        if match is None:
+    def _scene_index_from_id(scene_id: str) -> int:
+        """Return the scene index encoded in a SceneSmith scene ID."""
+        match = re.search(r"(?:^|_)scene_(\d+)(?:_|$)", scene_id)
+        if match is not None:
+            return int(match.group(1))
+
+        matches = re.findall(r"\d+", scene_id)
+        if not matches:
             return 0
 
-        return int(match.group())
+        return int(matches[-1])
+
+    @staticmethod
+    def _validate_chapter_index(chapter_index: int) -> None:
+        """Validate one-based chapter lookup positions."""
+        if (
+            isinstance(chapter_index, bool)
+            or not isinstance(chapter_index, int)
+            or chapter_index < 1
+        ):
+            raise ValueError("Chapter index must be at least 1.")
+
+    @staticmethod
+    def _validate_scene_index(scene_index: int) -> None:
+        """Validate one-based scene lookup positions."""
+        if (
+            isinstance(scene_index, bool)
+            or not isinstance(scene_index, int)
+            or scene_index < 1
+        ):
+            raise ValueError("Scene index must be at least 1.")
 
     def _store_unique(
         self,

@@ -119,6 +119,13 @@ class TimelineEngine:
             raise InvalidTimelinePositionError(
                 f"Unknown event: {state_change.event_id}"
             )
+        if (
+            state_change.event_id is not None
+            and self._events[state_change.event_id].position != state_change.valid_from
+        ):
+            raise InvalidTimelinePositionError(
+                "State-change event must match valid_from position."
+            )
         self._require_non_overlapping_state_change(state_change)
 
         self._state_changes[state_change.change_id] = state_change
@@ -162,6 +169,12 @@ class TimelineEngine:
         scenes = sorted(self._scenes.values(), key=lambda scene: scene.position)
         if chapter_index is None:
             return tuple(scenes)
+        if (
+            isinstance(chapter_index, bool)
+            or not isinstance(chapter_index, int)
+            or chapter_index < 1
+        ):
+            raise InvalidTimelinePositionError("Chapter index must be at least 1.")
 
         return tuple(
             scene
@@ -200,6 +213,7 @@ class TimelineEngine:
         if position is None:
             return tuple(events)
 
+        self._require_registered_scene(position)
         return tuple(event for event in events if event.position == position)
 
     def list_state_changes(
@@ -221,6 +235,7 @@ class TimelineEngine:
         if subject_id is None:
             return tuple(state_changes)
 
+        self._require_machine_token(subject_id, "State-change subject filter")
         return tuple(
             state_change
             for state_change in state_changes
@@ -241,6 +256,8 @@ class TimelineEngine:
         Returns:
             Immutable sequence of matching state changes in story order.
         """
+        self._require_machine_token(subject_id, "State history subject ID")
+        self._require_machine_token(attribute, "State history attribute")
         return tuple(
             state_change
             for state_change in self.list_state_changes(subject_id=subject_id)
@@ -283,6 +300,14 @@ class TimelineEngine:
         """Ensure a story position maps to a registered scene."""
         if position not in self._scenes:
             raise InvalidTimelinePositionError(f"Unknown scene: {position}")
+
+    @staticmethod
+    def _require_machine_token(value: str, field_name: str) -> None:
+        """Validate a whitespace-free timeline lookup token."""
+        if not isinstance(value, str) or not value.strip():
+            raise InvalidTimelinePositionError(f"{field_name} is required.")
+        if any(character.isspace() for character in value):
+            raise InvalidTimelinePositionError(f"{field_name} cannot contain whitespace.")
 
     def _require_non_overlapping_state_change(
         self,

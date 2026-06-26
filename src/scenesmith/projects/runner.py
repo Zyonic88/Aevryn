@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -9,16 +10,19 @@ from pathlib import Path
 from typing import Any
 
 from scenesmith.canon import CanonDatabase, CanonUpdater, CanonUpdateSummary
+from scenesmith.canon.policies import is_additive_fact_attribute
 from scenesmith.characters import CanonCharacterCard, CharacterCardBuilder
+from scenesmith.core import Fact
 from scenesmith.extraction import (
     EntityExtractionEngine,
+    EvidenceBoundedAIExtractor,
     ExtractedEntity,
     ExtractedFact,
     ExtractedRelationship,
-    ExtractedStateChange,
     ExtractionResult,
     SceneEvidenceAnchor,
     SceneExtractionInput,
+    StaticAIExtractionClient,
 )
 from scenesmith.extraction.engine import SceneExtractor
 from scenesmith.importing import EvidenceAnchor, ImportedSource, StoryImporter
@@ -45,6 +49,13 @@ class ProjectRunResult:
     extraction_results: tuple[ExtractionResult, ...]
     update_summaries: tuple[CanonUpdateSummary, ...]
 
+    def __post_init__(self) -> None:
+        """Validate project workflow result alignment."""
+        if len(self.extraction_results) != len(self.update_summaries):
+            raise ValueError(
+                "Project run extraction results and update summaries must align."
+            )
+
 
 @dataclass(frozen=True, slots=True)
 class ContinuityRecord:
@@ -58,6 +69,22 @@ class ContinuityRecord:
     scene_id: str = ""
     evidence_quote: str = ""
 
+    def __post_init__(self) -> None:
+        """Validate continuity record identity and evidence references."""
+        _require_machine_token(self.record_id, "Continuity record ID")
+        _require_machine_token(self.record_type, "Continuity record type")
+        _require_text(self.description, "Continuity record description")
+        if self.evidence_id:
+            _require_machine_token(self.evidence_id, "Continuity evidence ID")
+        if self.chapter_id:
+            _require_machine_token(self.chapter_id, "Continuity chapter ID")
+        if self.scene_id:
+            _require_machine_token(self.scene_id, "Continuity scene ID")
+        if not isinstance(self.evidence_quote, str) or (
+            self.evidence_quote and not self.evidence_quote.strip()
+        ):
+            raise ValueError("Continuity evidence quote cannot be blank.")
+
 
 @dataclass(frozen=True, slots=True)
 class ContinuitySceneReport:
@@ -69,6 +96,17 @@ class ContinuitySceneReport:
     still_known: tuple[ContinuityRecord, ...] = ()
     invalidated: tuple[ContinuityRecord, ...] = ()
 
+    def __post_init__(self) -> None:
+        """Validate scene report identity and bucket uniqueness."""
+        _require_machine_token(self.scene_id, "Continuity scene report ID")
+        for bucket_name, records in (
+            ("new", self.new),
+            ("updated", self.updated),
+            ("still-known", self.still_known),
+            ("invalidated", self.invalidated),
+        ):
+            _require_unique_record_ids(records, bucket_name)
+
 
 @dataclass(frozen=True, slots=True)
 class ContinuityReport:
@@ -76,6 +114,13 @@ class ContinuityReport:
 
     source_id: str
     scenes: tuple[ContinuitySceneReport, ...]
+
+    def __post_init__(self) -> None:
+        """Validate continuity report source identity and scene uniqueness."""
+        _require_machine_token(self.source_id, "Continuity report source ID")
+        scene_ids = [scene.scene_id for scene in self.scenes]
+        if len(scene_ids) != len(set(scene_ids)):
+            raise ValueError("Continuity report cannot contain duplicate scenes.")
 
 
 class SceneSmithProjectRunner:
@@ -321,6 +366,35 @@ class SceneSmithProjectRunner:
             chapter_index=chapter_index or self.latest_chapter_index(result),
         )
 
+    def build_character_card_at_scene(
+        self,
+        result: ProjectRunResult,
+        character_id: str,
+        scene_id: str | None = None,
+    ) -> CanonCharacterCard:
+        """Build a character card at an exact imported scene position.
+
+        Parameters:
+            result: Completed project run result.
+            character_id: Character entity ID.
+            scene_id: Optional scene ID. Defaults to latest imported scene.
+
+        Returns:
+            Canon-backed character card reconstructed for the requested scene.
+
+        Raises:
+            ValueError: If the scene or character is unknown.
+        """
+        chapter_index, scene_index = self._scene_position(
+            result=result,
+            scene_id=scene_id or self.latest_scene_id(result),
+        )
+        return CharacterCardBuilder(result.database).build_card_at_scene(
+            character_id=character_id,
+            chapter_index=chapter_index,
+            scene_index=scene_index,
+        )
+
     def build_scene_context(
         self,
         result: ProjectRunResult,
@@ -393,6 +467,35 @@ class SceneSmithProjectRunner:
             chapter_index=chapter_index or self.latest_chapter_index(result),
         )
 
+    def build_world_state_at_scene(
+        self,
+        result: ProjectRunResult,
+        entity_ids: Sequence[str],
+        scene_id: str | None = None,
+    ) -> WorldState:
+        """Build world state at an exact imported scene position.
+
+        Parameters:
+            result: Completed project run result.
+            entity_ids: World entity IDs to reconstruct.
+            scene_id: Optional scene ID. Defaults to latest imported scene.
+
+        Returns:
+            Canon-backed world state reconstructed for the requested scene.
+
+        Raises:
+            ValueError: If the scene or a requested world entity is unknown.
+        """
+        chapter_index, scene_index = self._scene_position(
+            result=result,
+            scene_id=scene_id or self.latest_scene_id(result),
+        )
+        return WorldStateBuilder(database=result.database).build_state_at_scene(
+            entity_ids=self._dedupe_ids(entity_ids),
+            chapter_index=chapter_index,
+            scene_index=scene_index,
+        )
+
     def build_continuity_report(self, result: ProjectRunResult) -> ContinuityReport:
         """Build a continuity report from accepted Canon updates.
 
@@ -404,7 +507,7 @@ class SceneSmithProjectRunner:
             invalidated records by scene.
         """
         known_records: dict[str, ContinuityRecord] = {}
-        latest_fact_by_key: dict[tuple[str, str], ContinuityRecord] = {}
+        latest_fact_by_key: dict[tuple[str, ...], ContinuityRecord] = {}
         scene_reports: list[ContinuitySceneReport] = []
 
         for extraction_result, summary in zip(
@@ -442,7 +545,7 @@ class SceneSmithProjectRunner:
                     evidence_id=fact.evidence_id,
                 )
                 record = self._with_evidence_context(result, record)
-                fact_key = (fact.entity_id, fact.attribute)
+                fact_key = self._continuity_fact_key(fact)
                 previous_fact = latest_fact_by_key.get(fact_key)
                 if previous_fact is None:
                     new_records.append(record)
@@ -536,6 +639,11 @@ class SceneSmithProjectRunner:
             ValueError: If a payload references a scene not in the imported source
                 or a scene has no payload.
         """
+        for scene_id in payloads_by_scene_id:
+            if not isinstance(scene_id, str):
+                raise ValueError("AI multi-scene response scene IDs must be strings.")
+            _require_machine_token(scene_id, "AI multi-scene response scene ID")
+
         imported_scene_ids = {
             scene.scene_id
             for chapter in imported_source.story.chapters
@@ -574,6 +682,19 @@ class SceneSmithProjectRunner:
         """Return the latest scene ID from an imported source."""
         SceneSmithProjectRunner._require_imported_scenes(imported_source)
         return imported_source.story.chapters[-1].scenes[-1].scene_id
+
+    @staticmethod
+    def _scene_position(
+        result: ProjectRunResult,
+        scene_id: str,
+    ) -> tuple[int, int]:
+        """Return chapter and scene indexes for an imported scene ID."""
+        for chapter in result.imported_source.story.chapters:
+            for scene in chapter.scenes:
+                if scene.scene_id == scene_id:
+                    return chapter.chapter_index, scene.scene_index
+
+        raise ValueError(f"Unknown scene: {scene_id}")
 
     @staticmethod
     def _anchors_for_scene(
@@ -641,6 +762,14 @@ class SceneSmithProjectRunner:
             evidence_quote=evidence.quote,
         )
 
+    @staticmethod
+    def _continuity_fact_key(fact: Fact) -> tuple[str, str] | tuple[str, str, str]:
+        """Return replacement key for continuity fact classification."""
+        if is_additive_fact_attribute(fact.attribute):
+            return (fact.entity_id, fact.attribute, fact.value)
+
+        return (fact.entity_id, fact.attribute)
+
 
 class _KeywordDemoExtractor:
     """Deterministic extractor used only to prove the local pipeline."""
@@ -653,6 +782,7 @@ class _KeywordDemoExtractor:
         anchor_id = scene.evidence_anchor_ids[0]
         lowered_text = scene.text.lower()
         entities: list[ExtractedEntity] = []
+        facts: list[ExtractedFact] = []
         relationships: list[ExtractedRelationship] = []
 
         mark_is_present = "mark" in lowered_text
@@ -680,6 +810,23 @@ class _KeywordDemoExtractor:
                 )
             )
             if mark_is_present:
+                facts.append(
+                    ExtractedFact(
+                        fact_id=(
+                            f"fact_character_mark_current_weapon_"
+                            f"{item_id.removeprefix('item_')}_{scene.scene_id}"
+                        ),
+                        entity_id="character_mark",
+                        attribute="current_weapon",
+                        value=(
+                            "None"
+                            if self._item_relationship(lowered_text) == "lost"
+                            else item_name
+                        ),
+                        evidence_anchor_id=anchor_id,
+                        confidence=0.9,
+                    )
+                )
                 relationships.append(
                     ExtractedRelationship(
                         source_entity_id="character_mark",
@@ -693,6 +840,7 @@ class _KeywordDemoExtractor:
         return ExtractionResult(
             scene_id=scene.scene_id,
             entities=tuple(entities),
+            facts=tuple(facts),
             relationships=tuple(relationships),
         )
 
@@ -731,70 +879,10 @@ class _StaticScenePayloadExtractor:
         if payload is None:
             raise ValueError(f"AI response is missing scene: {scene.scene_id}")
 
-        return ExtractionResult(
-            scene_id=scene.scene_id,
-            entities=tuple(self._entities(payload)),
-            facts=tuple(self._facts(payload)),
-            relationships=tuple(self._relationships(payload)),
-            state_changes=tuple(self._state_changes(payload)),
-        )
-
-    @staticmethod
-    def _entities(payload: dict[str, Any]) -> tuple[ExtractedEntity, ...]:
-        """Parse static entity payloads."""
-        return tuple(
-            ExtractedEntity(
-                entity_id=str(item["entity_id"]),
-                entity_type=str(item["entity_type"]),
-                display_name=str(item["display_name"]),
-                evidence_anchor_id=str(item["evidence_anchor_id"]),
-                confidence=float(item["confidence"]),
-            )
-            for item in payload.get("entities", [])
-        )
-
-    @staticmethod
-    def _facts(payload: dict[str, Any]) -> tuple[ExtractedFact, ...]:
-        """Parse static fact payloads."""
-        return tuple(
-            ExtractedFact(
-                fact_id=str(item["fact_id"]),
-                entity_id=str(item["entity_id"]),
-                attribute=str(item["attribute"]),
-                value=str(item["value"]),
-                evidence_anchor_id=str(item["evidence_anchor_id"]),
-                confidence=float(item["confidence"]),
-            )
-            for item in payload.get("facts", [])
-        )
-
-    @staticmethod
-    def _relationships(payload: dict[str, Any]) -> tuple[ExtractedRelationship, ...]:
-        """Parse static relationship payloads."""
-        return tuple(
-            ExtractedRelationship(
-                source_entity_id=str(item["source_entity_id"]),
-                relationship_type=str(item["relationship_type"]),
-                target_entity_id=str(item["target_entity_id"]),
-                evidence_anchor_id=str(item["evidence_anchor_id"]),
-                confidence=float(item["confidence"]),
-            )
-            for item in payload.get("relationships", [])
-        )
-
-    @staticmethod
-    def _state_changes(payload: dict[str, Any]) -> tuple[ExtractedStateChange, ...]:
-        """Parse static state-change payloads."""
-        return tuple(
-            ExtractedStateChange(
-                entity_id=str(item["entity_id"]),
-                attribute=str(item["attribute"]),
-                value=str(item["value"]),
-                valid_from_anchor_id=str(item["valid_from_anchor_id"]),
-                valid_until_anchor_id=item.get("valid_until_anchor_id"),
-                confidence=float(item["confidence"]),
-            )
-            for item in payload.get("state_changes", [])
+        return EvidenceBoundedAIExtractor(
+            StaticAIExtractionClient(json.dumps(payload))
+        ).extract_scene(
+            scene
         )
 
 
@@ -810,3 +898,28 @@ def _anchors_by_scene(
         scene_id: tuple(scene_anchors)
         for scene_id, scene_anchors in grouped.items()
     }
+
+
+def _require_text(value: str, field_name: str) -> None:
+    """Validate a required human-readable text field."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required.")
+
+
+def _require_machine_token(value: str, field_name: str) -> None:
+    """Validate a required whitespace-free machine token."""
+    _require_text(value, field_name)
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{field_name} cannot contain whitespace.")
+
+
+def _require_unique_record_ids(
+    records: tuple[ContinuityRecord, ...],
+    bucket_name: str,
+) -> None:
+    """Validate that one continuity bucket has no duplicate records."""
+    record_ids = [record.record_id for record in records]
+    if len(record_ids) != len(set(record_ids)):
+        raise ValueError(
+            f"Continuity {bucket_name} records cannot contain duplicate IDs."
+        )

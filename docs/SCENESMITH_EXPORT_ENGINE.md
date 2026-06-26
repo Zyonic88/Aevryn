@@ -44,13 +44,21 @@ It never changes Canon, Timeline, Scene, Prompt, or Presentation objects.
 
 JSON output is stable and sorted.
 
+JSON output preserves Unicode text instead of ASCII-escaping repaired names, titles, or dialogue.
+
 CSV output uses stable headers.
+
+CSV output must reject duplicate headers, missing row fields, and unexpected row fields.
 
 Markdown output remains human-readable and does not mix unrelated formats.
 
 Repeated Markdown list items are deduplicated.
 
-Continuity Report exports include evidence context when available.
+Markdown list output must reject blank visible rows.
+
+Continuity Report JSON exports preserve the full audit trail.
+
+Continuity Report Markdown exports summarize retained canon and raw state-change records so humans can scan what changed without losing access to machine-readable evidence.
 
 ## What Does It NOT Own?
 
@@ -80,8 +88,12 @@ The Export Engine can fail if:
 * It writes files without explicit file-handling authority.
 * It mixes export formats in one output.
 * It exports unstable ordering for facts, relationships, events, or state changes.
+* It silently emits CSV rows that do not match the configured header schema.
+* It corrupts or ASCII-escapes Unicode text that creators need to read.
 * It drops snapshot identifiers needed to trace exported scene context.
 * It drops evidence context needed to audit continuity changes.
+* It exposes raw validity-event internals in human Markdown reports instead of summarizing them.
+* It emits blank Markdown list rows.
 
 Unknown information should remain absent or represented as Unknown.
 

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from scenesmith.canon import CanonDatabase
+from scenesmith.canon.policies import is_additive_fact_attribute
 from scenesmith.core import Evidence, Fact
 
 logger = logging.getLogger(__name__)
@@ -22,6 +24,21 @@ class CanonCharacterFact:
     valid_from_chapter_id: str
     valid_from_scene_id: str
 
+    def __post_init__(self) -> None:
+        """Validate character fact display fields."""
+        _require_machine_token(self.attribute, "Character fact attribute")
+        _require_text(self.value, "Character fact value")
+        if self.previous_value is not None:
+            _require_text(self.previous_value, "Character fact previous value")
+        _require_machine_token(
+            self.valid_from_chapter_id,
+            "Character fact valid-from chapter ID",
+        )
+        _require_machine_token(
+            self.valid_from_scene_id,
+            "Character fact valid-from scene ID",
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class CanonCharacterCard:
@@ -31,6 +48,17 @@ class CanonCharacterCard:
     display_name: str
     chapter_index: int
     facts: tuple[CanonCharacterFact, ...]
+
+    def __post_init__(self) -> None:
+        """Validate character card identity and story position."""
+        _require_machine_token(self.character_id, "Character card character ID")
+        _require_text(self.display_name, "Character card display name")
+        if (
+            isinstance(self.chapter_index, bool)
+            or not isinstance(self.chapter_index, int)
+            or self.chapter_index < 1
+        ):
+            raise ValueError("Character card chapter index must be at least 1.")
 
 
 class CharacterCardBuilder:
@@ -57,6 +85,13 @@ class CharacterCardBuilder:
         Raises:
             ValueError: If the character is unknown or fact evidence is missing.
         """
+        if (
+            isinstance(chapter_index, bool)
+            or not isinstance(chapter_index, int)
+            or chapter_index < 1
+        ):
+            raise ValueError("Chapter index must be at least 1.")
+
         character = self._database.retrieve_character(character_id)
         if character is None:
             raise ValueError(f"Unknown character: {character_id}")
@@ -65,9 +100,72 @@ class CharacterCardBuilder:
             entity_id=character_id,
             chapter_index=chapter_index,
         )
+        return self._build_card_from_facts(
+            character_id=character_id,
+            fallback_display_name=character.entity.display_name,
+            chapter_index=chapter_index,
+            active_facts=active_facts,
+        )
+
+    def build_card_at_scene(
+        self,
+        character_id: str,
+        chapter_index: int,
+        scene_index: int,
+    ) -> CanonCharacterCard:
+        """Build a character card for a scene position.
+
+        Parameters:
+            character_id: Character entity ID.
+            chapter_index: Chapter index used for state lookup.
+            scene_index: Scene index used for state lookup.
+
+        Returns:
+            Character card for the requested scene.
+
+        Raises:
+            ValueError: If the character is unknown or the position is invalid.
+        """
+        if (
+            isinstance(chapter_index, bool)
+            or not isinstance(chapter_index, int)
+            or chapter_index < 1
+        ):
+            raise ValueError("Chapter index must be at least 1.")
+        if (
+            isinstance(scene_index, bool)
+            or not isinstance(scene_index, int)
+            or scene_index < 1
+        ):
+            raise ValueError("Scene index must be at least 1.")
+
+        character = self._database.retrieve_character(character_id)
+        if character is None:
+            raise ValueError(f"Unknown character: {character_id}")
+
+        active_facts = self._database.retrieve_state_at_scene(
+            entity_id=character_id,
+            chapter_index=chapter_index,
+            scene_index=scene_index,
+        )
+        return self._build_card_from_facts(
+            character_id=character_id,
+            fallback_display_name=character.entity.display_name,
+            chapter_index=chapter_index,
+            active_facts=active_facts,
+        )
+
+    def _build_card_from_facts(
+        self,
+        character_id: str,
+        fallback_display_name: str,
+        chapter_index: int,
+        active_facts: Sequence[Fact],
+    ) -> CanonCharacterCard:
+        """Build a character card from already-selected active facts."""
         card_facts = tuple(self._build_fact(fact) for fact in active_facts)
         display_name = self._display_name_from_facts(
-            fallback=character.entity.display_name,
+            fallback=fallback_display_name,
             facts=card_facts,
         )
         logger.debug(
@@ -104,6 +202,9 @@ class CharacterCardBuilder:
 
     def _previous_value(self, fact: Fact) -> str | None:
         """Return the previous value for a fact attribute."""
+        if is_additive_fact_attribute(fact.attribute):
+            return None
+
         history = self._database.retrieve_fact_history(
             entity_id=fact.entity_id,
             attribute=fact.attribute,
@@ -128,3 +229,16 @@ class CharacterCardBuilder:
                 return fact.value
 
         return fallback
+
+
+def _require_text(value: str, field_name: str) -> None:
+    """Validate a required human-readable text field."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required.")
+
+
+def _require_machine_token(value: str, field_name: str) -> None:
+    """Validate a required whitespace-free machine token."""
+    _require_text(value, field_name)
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{field_name} cannot contain whitespace.")

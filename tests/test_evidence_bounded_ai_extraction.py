@@ -210,6 +210,91 @@ def test_ai_extractor_repairs_candidate_mojibake() -> None:
     assert result.facts[0].value == "Zhao Chen's fiancée"
 
 
+def test_ai_extractor_trims_candidate_strings() -> None:
+    """AI candidate strings are stripped before Canon sees them."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    anchor_id = imported.anchors[0].anchor_id
+    engine = EntityExtractionEngine(
+        extractor=EvidenceBoundedAIExtractor(
+            JsonClient(
+                json.dumps(
+                    {
+                        "entities": [
+                            {
+                                "entity_id": " character_mark ",
+                                "entity_type": " character ",
+                                "display_name": " Mark ",
+                                "evidence_anchor_id": f" {anchor_id} ",
+                                "confidence": 1.0,
+                            }
+                        ],
+                        "facts": [
+                            {
+                                "fact_id": " fact_character_mark_current_weapon ",
+                                "entity_id": " character_mark ",
+                                "attribute": " current_weapon ",
+                                "value": " Iron Sword ",
+                                "evidence_anchor_id": f" {anchor_id} ",
+                                "confidence": 1.0,
+                            }
+                        ],
+                        "relationships": [],
+                        "state_changes": [],
+                    }
+                )
+            )
+        )
+    )
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_id == "character_mark"
+    assert result.entities[0].entity_type == "character"
+    assert result.entities[0].display_name == "Mark"
+    assert result.facts[0].fact_id == "fact_character_mark_current_weapon"
+    assert result.facts[0].value == "Iron Sword"
+
+
+def test_ai_extractor_rejects_machine_fields_with_spaces() -> None:
+    """AI machine fields must remain stable whitespace-free tokens."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    anchor_id = imported.anchors[0].anchor_id
+    engine = EntityExtractionEngine(
+        extractor=EvidenceBoundedAIExtractor(
+            JsonClient(
+                json.dumps(
+                    {
+                        "entities": [],
+                        "facts": [
+                            {
+                                "fact_id": "fact_character_mark_current_weapon",
+                                "entity_id": "character_mark",
+                                "attribute": "current weapon",
+                                "value": "Iron Sword",
+                                "evidence_anchor_id": anchor_id,
+                                "confidence": 1.0,
+                            }
+                        ],
+                        "relationships": [],
+                        "state_changes": [],
+                    }
+                )
+            )
+        )
+    )
+
+    with pytest.raises(ValueError, match="machine field cannot contain spaces"):
+        engine.extract_imported_source(imported)
+
+
 def test_ai_extractor_rejects_missing_required_payload_keys() -> None:
     """AI responses must include the full candidate payload shape."""
     imported = StoryImporter().import_text(
@@ -252,6 +337,97 @@ def test_ai_extractor_rejects_unsupported_payload_keys() -> None:
         engine.extract_imported_source(imported)
 
 
+def test_ai_extractor_rejects_duplicate_json_keys() -> None:
+    """AI JSON objects cannot rely on last-key-wins parsing."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(
+        extractor=EvidenceBoundedAIExtractor(
+            JsonClient(
+                '{"entities": [], "entities": [], '
+                '"facts": [], "relationships": [], "state_changes": []}'
+            )
+        )
+    )
+
+    with pytest.raises(ValueError, match="duplicate key"):
+        engine.extract_imported_source(imported)
+
+
+def test_ai_extractor_rejects_unsupported_candidate_fields() -> None:
+    """AI candidate items cannot include unsupported explanatory fields."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    anchor_id = imported.anchors[0].anchor_id
+    engine = EntityExtractionEngine(
+        extractor=EvidenceBoundedAIExtractor(
+            JsonClient(
+                json.dumps(
+                    {
+                        "entities": [
+                            {
+                                "entity_id": "character_mark",
+                                "entity_type": "character",
+                                "display_name": "Mark",
+                                "evidence_anchor_id": anchor_id,
+                                "confidence": 0.95,
+                                "reasoning": "unsupported",
+                            }
+                        ],
+                        "facts": [],
+                        "relationships": [],
+                        "state_changes": [],
+                    }
+                )
+            )
+        )
+    )
+
+    with pytest.raises(ValueError, match="unsupported fields in entities"):
+        engine.extract_imported_source(imported)
+
+
+def test_ai_extractor_rejects_missing_candidate_fields() -> None:
+    """AI candidate items must include the complete required schema."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    anchor_id = imported.anchors[0].anchor_id
+    engine = EntityExtractionEngine(
+        extractor=EvidenceBoundedAIExtractor(
+            JsonClient(
+                json.dumps(
+                    {
+                        "entities": [],
+                        "facts": [
+                            {
+                                "fact_id": "fact_character_mark_current_weapon",
+                                "entity_id": "character_mark",
+                                "attribute": "current_weapon",
+                                "value": "Iron Sword",
+                                "evidence_anchor_id": anchor_id,
+                            }
+                        ],
+                        "relationships": [],
+                        "state_changes": [],
+                    }
+                )
+            )
+        )
+    )
+
+    with pytest.raises(ValueError, match="missing required fields in facts"):
+        engine.extract_imported_source(imported)
+
+
 def test_ai_extractor_rejects_out_of_range_confidence() -> None:
     """AI confidence must be bounded before Canon Updating sees candidates."""
     imported = StoryImporter().import_text(
@@ -284,6 +460,41 @@ def test_ai_extractor_rejects_out_of_range_confidence() -> None:
     )
 
     with pytest.raises(ValueError, match="between 0.0 and 1.0"):
+        engine.extract_imported_source(imported)
+
+
+def test_ai_extractor_rejects_boolean_confidence() -> None:
+    """AI confidence must be a real numeric score, not a boolean."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    anchor_id = imported.anchors[0].anchor_id
+    engine = EntityExtractionEngine(
+        extractor=EvidenceBoundedAIExtractor(
+            JsonClient(
+                json.dumps(
+                    {
+                        "entities": [
+                            {
+                                "entity_id": "character_mark",
+                                "entity_type": "character",
+                                "display_name": "Mark",
+                                "evidence_anchor_id": anchor_id,
+                                "confidence": True,
+                            }
+                        ],
+                        "facts": [],
+                        "relationships": [],
+                        "state_changes": [],
+                    }
+                )
+            )
+        )
+    )
+
+    with pytest.raises(ValueError, match="confidence must be numeric"):
         engine.extract_imported_source(imported)
 
 

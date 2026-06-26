@@ -1,0 +1,23 @@
+{
+  "case_id": "mystery_super_dimensional_wizard",
+  "title": "Super Dimensional Wizard",
+  "genre": "Mystery",
+  "source_directory": "Super Dimensional Wizard (Mystery)",
+  "chapter_glob": "*.txt",
+  "expected_import": {
+    "chapter_files": 10,
+    "chapters": 10,
+    "evidence_anchors": 1106,
+    "import_digest": "664ce5e5d92997602c4b195bc0c87a9f831a288e366aaeac91d47bb110877b0f",
+    "paragraphs": 256,
+    "scenes": 10,
+    "sentences": 1106,
+    "source_manifest_digest": "7afd05f1ff9fae1d3bf994b0cbcb75d1b6f9b5b8b9fcc9ada327e4cbd6f656da"
+  },
+  "expected_extraction": {
+    "scene_inputs": 10,
+    "evidence_anchors": 1106,
+    "extraction_input_digest": "d7df6abcb8e35852c8c57a0237a7dfd3316548183b18ac1c30de2237744efc56",
+    "extraction_prompt_digest": "db51686a47c1c27d7403d7a2a7e53f523e36a4d7acadbb50fa02450ad399f8a6"
+  }
+}

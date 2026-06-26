@@ -228,3 +228,23 @@ Every time we write code, ask:
 If we come back to this in two years, will we immediately understand it?
 
 If the answer is "probably not," rewrite it.
+
+## 19. V1 Feature Freeze
+
+From this point until Version 1 is released:
+
+* No new core systems
+* No new architecture
+* No major redesigns
+
+Allowed work:
+
+* Bug fixes
+* Performance improvements
+* UX improvements
+* Testing
+* Documentation
+
+The goal is confidence, not more scope.
+
+SceneSmith V1 is now moving toward Release Candidate 1.

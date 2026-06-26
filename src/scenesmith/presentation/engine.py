@@ -39,30 +39,36 @@ class PresentationEngine:
             display_name=card.display_name,
             subtitle=self._subtitle(facts_by_attribute),
             status=self._section("Status", facts_by_attribute, ("status", "role")),
-            current_goal=self._section(
+            current_goal=self._section_by_category(
                 "Current Goal",
                 facts_by_attribute,
-                ("current_task", "starship_plan", "next_semester_requirement"),
+                exact_attributes=("current_goal", "current_task", "next_semester_requirement"),
+                partial_attributes=("goal", "objective", "plan", "requirement", "task"),
             ),
-            current_equipment=self._section(
+            current_equipment=self._section_by_category(
                 "Current Equipment",
                 facts_by_attribute,
-                ("current_weapon", "equipment", "inventory"),
+                exact_attributes=("current_equipment", "current_weapon", "equipment", "inventory"),
+                partial_attributes=("armor", "equipment", "inventory", "item", "tool", "weapon"),
             ),
-            current_abilities=self._section(
+            current_abilities=self._section_by_category(
                 "Current Abilities",
                 facts_by_attribute,
-                (
-                    "profession",
-                    "system_reward_fleet_luck_bonus",
-                    "system_reward_eye_of_insight",
-                    "eye_of_insight_effect",
-                ),
+                exact_attributes=("ability", "profession", "skill"),
+                partial_attributes=("ability", "effect", "profession", "reward", "skill"),
             ),
-            current_assets=self._section(
+            current_assets=self._section_by_category(
                 "Current Assets",
                 facts_by_attribute,
-                ("warehouse", "starships_owned", "territory"),
+                exact_attributes=("current_assets", "territory", "warehouse"),
+                partial_attributes=(
+                    "asset",
+                    "owned",
+                    "resource",
+                    "territory",
+                    "vehicle",
+                    "warehouse",
+                ),
             ),
             territory=self._section(
                 "Territory",
@@ -154,7 +160,13 @@ class PresentationEngine:
 
         Returns:
             Production pack view with concise prompt sections.
+
+        Raises:
+            ValueError: If the production pack belongs to a different scene.
         """
+        if pack.scene_id != scene.scene_id:
+            raise ValueError("Production pack must match the presented scene.")
+
         return ProductionPackView(
             scene=scene,
             image_prompt=PresentationSection(
@@ -236,6 +248,42 @@ class PresentationEngine:
         return PresentationSection(
             title=title,
             items=PresentationEngine._items_or_unknown(items),
+        )
+
+    @staticmethod
+    def _section_by_category(
+        title: str,
+        facts_by_attribute: dict[str, tuple[CanonCharacterFact, ...]],
+        exact_attributes: tuple[str, ...],
+        partial_attributes: tuple[str, ...],
+    ) -> PresentationSection:
+        """Build a section from generic fact attribute categories."""
+        exact_attribute_set = set(exact_attributes)
+        items = tuple(
+            fact.value
+            for attribute, facts in facts_by_attribute.items()
+            if PresentationEngine._attribute_matches(
+                attribute=attribute,
+                exact_attributes=exact_attribute_set,
+                partial_attributes=partial_attributes,
+            )
+            for fact in facts
+        )
+        return PresentationSection(
+            title=title,
+            items=PresentationEngine._items_or_unknown(items),
+        )
+
+    @staticmethod
+    def _attribute_matches(
+        attribute: str,
+        exact_attributes: set[str],
+        partial_attributes: tuple[str, ...],
+    ) -> bool:
+        """Return whether an attribute belongs in a generic presentation section."""
+        normalized_attribute = attribute.lower()
+        return normalized_attribute in exact_attributes or any(
+            partial in normalized_attribute for partial in partial_attributes
         )
 
     @staticmethod

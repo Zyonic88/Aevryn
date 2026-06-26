@@ -6,12 +6,21 @@ import logging
 import textwrap
 from collections.abc import Iterable
 
-from scenesmith.characters import CanonCharacterCard, CanonCharacterFact
+from scenesmith.characters import CanonCharacterCard
 from scenesmith.core import Fact, Relationship
 from scenesmith.prompts.models import ProductionPack, PromptBundle
 from scenesmith.scenes import CanonSceneContext, SceneAnalysis, SceneAnalyzer
 
 logger = logging.getLogger(__name__)
+
+PROMPT_METADATA_ATTRIBUTE_PARTS = frozenset(
+    {
+        "failure_penalty",
+        "penalty",
+        "reward",
+        "feasibility",
+    }
+)
 
 
 class CanonPromptBuilder:
@@ -83,7 +92,7 @@ class CanonPromptBuilder:
             (
                 "Generate this image using only accepted SceneSmith canon.",
                 self._analysis_section(analysis),
-                self._character_section(context.character_cards),
+                self._character_section(context),
                 self._visual_section(analysis),
                 self._continuity_guard_section(analysis),
             )
@@ -101,7 +110,7 @@ class CanonPromptBuilder:
                 "Create narration using only accepted SceneSmith canon.",
                 self._analysis_section(analysis),
                 "Narrate using only accepted canon facts.",
-                self._character_section(context.character_cards),
+                self._character_section(context),
                 self._continuity_guard_section(analysis),
             )
         )
@@ -118,7 +127,7 @@ class CanonPromptBuilder:
                 "Create camera direction using only accepted SceneSmith canon.",
                 self._analysis_section(analysis),
                 "Describe camera framing without inventing new canon.",
-                self._character_section(context.character_cards),
+                self._character_section(context),
                 self._visual_section(analysis),
             )
         )
@@ -215,12 +224,18 @@ class CanonPromptBuilder:
 
         return lines
 
-    def _character_section(self, cards: Iterable[CanonCharacterCard]) -> str:
+    def _character_section(self, context: CanonSceneContext) -> str:
         """Return character section."""
         lines: list[str] = []
-        for card in cards:
+        scene_fact_keys = self._scene_fact_keys(context.active_facts)
+        for card in context.character_cards:
             lines.append(f"Character: {card.display_name} ({card.character_id})")
-            lines.extend(self._character_fact_lines(card.facts))
+            lines.extend(
+                self._character_fact_lines(
+                    card=card,
+                    scene_fact_keys=scene_fact_keys,
+                )
+            )
 
         if not lines:
             return "Characters: Unknown"
@@ -228,13 +243,37 @@ class CanonPromptBuilder:
         return "\n".join(lines)
 
     @staticmethod
-    def _character_fact_lines(facts: Iterable[CanonCharacterFact]) -> list[str]:
+    def _scene_fact_keys(facts: Iterable[Fact]) -> dict[str, set[tuple[str, str]]]:
+        """Return scene-relevant fact keys by entity ID."""
+        keys: dict[str, set[tuple[str, str]]] = {}
+        for fact in facts:
+            keys.setdefault(fact.entity_id, set()).add((fact.attribute, fact.value))
+
+        return keys
+
+    @staticmethod
+    def _character_fact_lines(
+        card: CanonCharacterCard,
+        scene_fact_keys: dict[str, set[tuple[str, str]]],
+    ) -> list[str]:
         """Return character fact lines."""
+        relevant_fact_keys = scene_fact_keys.get(card.character_id, set())
         lines = (
             f"- {fact.attribute}: {CanonPromptBuilder._shorten(fact.value)}"
-            for fact in sorted(facts, key=lambda fact: fact.attribute)
+            for fact in sorted(card.facts, key=lambda fact: fact.attribute)
+            if (fact.attribute, fact.value) in relevant_fact_keys
+            and not CanonPromptBuilder._is_prompt_metadata_attribute(fact.attribute)
         )
         return CanonPromptBuilder._unique_values(lines)
+
+    @staticmethod
+    def _is_prompt_metadata_attribute(attribute: str) -> bool:
+        """Return whether an attribute is mechanical metadata for prompt details."""
+        normalized_attribute = attribute.lower()
+        return any(
+            part in normalized_attribute
+            for part in PROMPT_METADATA_ATTRIBUTE_PARTS
+        )
 
     @staticmethod
     def _fact_section(facts: Iterable[Fact]) -> str:

@@ -12,6 +12,11 @@ class SceneEvidenceAnchor:
     anchor_id: str
     quote: str
 
+    def __post_init__(self) -> None:
+        """Validate scene evidence anchor fields."""
+        _require_machine_token(self.anchor_id, "Scene evidence anchor ID")
+        _require_text(self.quote, "Scene evidence anchor quote")
+
 
 @dataclass(frozen=True, slots=True)
 class SceneExtractionInput:
@@ -21,6 +26,26 @@ class SceneExtractionInput:
     text: str
     evidence_anchor_ids: tuple[str, ...]
     evidence_anchors: tuple[SceneEvidenceAnchor, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Validate scene extraction input fields."""
+        _require_machine_token(self.scene_id, "Scene extraction scene ID")
+        _require_text(self.text, "Scene extraction text")
+        for anchor_id in self.evidence_anchor_ids:
+            _require_machine_token(anchor_id, "Scene extraction evidence anchor ID")
+        _require_unique_values(
+            self.evidence_anchor_ids,
+            "Scene extraction evidence anchor IDs",
+        )
+        evidence_anchor_ids = tuple(anchor.anchor_id for anchor in self.evidence_anchors)
+        _require_unique_values(
+            evidence_anchor_ids,
+            "Scene extraction evidence anchors",
+        )
+        if evidence_anchor_ids and set(evidence_anchor_ids) != set(self.evidence_anchor_ids):
+            raise ValueError(
+                "Scene extraction evidence anchors must match evidence anchor IDs."
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +58,14 @@ class ExtractedEntity:
     evidence_anchor_id: str
     confidence: float
 
+    def __post_init__(self) -> None:
+        """Validate extracted entity candidate fields."""
+        _require_machine_token(self.entity_id, "Extracted entity ID")
+        _require_machine_token(self.entity_type, "Extracted entity type")
+        _require_text(self.display_name, "Extracted entity display name")
+        _require_machine_token(self.evidence_anchor_id, "Extracted entity evidence anchor ID")
+        _require_confidence(self.confidence)
+
 
 @dataclass(frozen=True, slots=True)
 class ExtractedRelationship:
@@ -43,6 +76,26 @@ class ExtractedRelationship:
     target_entity_id: str
     evidence_anchor_id: str
     confidence: float
+
+    def __post_init__(self) -> None:
+        """Validate extracted relationship candidate fields."""
+        _require_machine_token(
+            self.source_entity_id,
+            "Extracted relationship source entity ID",
+        )
+        _require_machine_token(
+            self.relationship_type,
+            "Extracted relationship type",
+        )
+        _require_machine_token(
+            self.target_entity_id,
+            "Extracted relationship target entity ID",
+        )
+        _require_machine_token(
+            self.evidence_anchor_id,
+            "Extracted relationship evidence anchor ID",
+        )
+        _require_confidence(self.confidence)
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +109,15 @@ class ExtractedFact:
     evidence_anchor_id: str
     confidence: float
 
+    def __post_init__(self) -> None:
+        """Validate extracted fact candidate fields."""
+        _require_machine_token(self.fact_id, "Extracted fact ID")
+        _require_machine_token(self.entity_id, "Extracted fact entity ID")
+        _require_machine_token(self.attribute, "Extracted fact attribute")
+        _require_text(self.value, "Extracted fact value")
+        _require_machine_token(self.evidence_anchor_id, "Extracted fact evidence anchor ID")
+        _require_confidence(self.confidence)
+
 
 @dataclass(frozen=True, slots=True)
 class ExtractedStateChange:
@@ -68,6 +130,22 @@ class ExtractedStateChange:
     confidence: float
     valid_until_anchor_id: str | None = None
 
+    def __post_init__(self) -> None:
+        """Validate extracted state-change candidate fields."""
+        _require_machine_token(self.entity_id, "Extracted state-change entity ID")
+        _require_machine_token(self.attribute, "Extracted state-change attribute")
+        _require_text(self.value, "Extracted state-change value")
+        _require_machine_token(
+            self.valid_from_anchor_id,
+            "Extracted state-change valid-from anchor ID",
+        )
+        if self.valid_until_anchor_id is not None:
+            _require_machine_token(
+                self.valid_until_anchor_id,
+                "Extracted state-change valid-until anchor ID",
+            )
+        _require_confidence(self.confidence)
+
 
 @dataclass(frozen=True, slots=True)
 class ExtractionResult:
@@ -78,3 +156,36 @@ class ExtractionResult:
     facts: tuple[ExtractedFact, ...] = ()
     relationships: tuple[ExtractedRelationship, ...] = ()
     state_changes: tuple[ExtractedStateChange, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Validate extraction result identity."""
+        _require_machine_token(self.scene_id, "Extraction result scene ID")
+
+
+def _require_text(value: str, field_name: str) -> None:
+    """Validate a required human-readable text field."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required.")
+
+
+def _require_machine_token(value: str, field_name: str) -> None:
+    """Validate a required whitespace-free machine token."""
+    _require_text(value, field_name)
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{field_name} cannot contain whitespace.")
+
+
+def _require_confidence(confidence: float) -> None:
+    """Validate extraction confidence."""
+    if (
+        isinstance(confidence, bool)
+        or not isinstance(confidence, int | float)
+        or not 0.0 <= confidence <= 1.0
+    ):
+        raise ValueError("Extraction confidence must be between 0.0 and 1.0.")
+
+
+def _require_unique_values(values: tuple[object, ...], field_name: str) -> None:
+    """Validate that model-level identity values are unique."""
+    if len(values) != len(set(values)):
+        raise ValueError(f"{field_name} must be unique.")

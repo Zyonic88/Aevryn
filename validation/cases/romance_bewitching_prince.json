@@ -1,0 +1,23 @@
+{
+  "case_id": "romance_bewitching_prince",
+  "title": "Bewitching Prince Spoils His Wife Genius Doctor Unscrupulous Consort",
+  "genre": "Romance",
+  "source_directory": "Bewitching Prince Spoils His Wife Genius Doctor Unscrupulous Consort (Romance)",
+  "chapter_glob": "*.txt",
+  "expected_import": {
+    "chapter_files": 10,
+    "chapters": 10,
+    "evidence_anchors": 495,
+    "import_digest": "b362dbc9d3daa9c303a6546fcd2c1e35d02a7c7ed960f896afc1596b14d03586",
+    "paragraphs": 139,
+    "scenes": 10,
+    "sentences": 495,
+    "source_manifest_digest": "4bc44d875229ee4310d403c149ad5cddbf44a811d37beaf3b88351ecef946fe3"
+  },
+  "expected_extraction": {
+    "scene_inputs": 10,
+    "evidence_anchors": 495,
+    "extraction_input_digest": "91b21f8a490bd9013bfd6de9bd519802c4c6f7f3f13d8e3f237132785d628819",
+    "extraction_prompt_digest": "c3f4c4491853757f0bd915df551279aaaaa6f21ca7fe0b73984d10fd11acd1c7"
+  }
+}

@@ -78,7 +78,7 @@ class CanonEngine:
         """
         self._require_registered_entity(entity_id)
         self._require_evidence(evidence)
-        if not display_name.strip():
+        if not isinstance(display_name, str) or not display_name.strip():
             raise ValueError("Entity display name is required.")
 
         self._entities[entity_id] = replace(

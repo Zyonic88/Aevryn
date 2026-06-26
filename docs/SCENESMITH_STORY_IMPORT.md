@@ -46,7 +46,9 @@ Story Import owns:
 * Chapter IDs
 * Scene IDs
 * Evidence anchors
+* Source-map integrity
 * Source order preservation
+* Explicit chapter order validation
 
 Supported inputs:
 
@@ -80,6 +82,7 @@ It does not interpret story meaning.
 Story Import can fail if:
 
 * Chapter order is lost.
+* Explicit multi-chapter headings move backward or duplicate a chapter index.
 * Scene boundaries are unstable.
 * Paragraph indexes change unexpectedly.
 * Sentence indexes cannot be traced back to source text.
@@ -88,6 +91,23 @@ Story Import can fail if:
 * It mutates imported text without preserving the original.
 
 When structure is ambiguous, Story Import should preserve the ambiguity instead of pretending certainty.
+
+A standalone chapter file may preserve its explicit heading index, such as Chapter 2.
+
+A multi-chapter source must keep explicit chapter headings in increasing order.
+
+Imported source structures must be internally consistent:
+
+* Imported source IDs must match the story ID.
+* Paragraphs must reference known scene IDs.
+* Sentences must reference their owning paragraph.
+* Paragraph IDs, sentence IDs, and anchor IDs must be unique.
+* Evidence anchors must reference known paragraphs and sentences.
+* Evidence anchors must reference known chapters and scenes.
+* Evidence anchor scenes must match their paragraph scenes.
+* Evidence anchor sentences must belong to their referenced paragraphs.
+* Evidence anchor quotes must exactly match their referenced sentence text.
+* Evidence anchors must belong to the imported source.
 
 ## How Does It Interact With Other Systems?
 

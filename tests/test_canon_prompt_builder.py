@@ -1,5 +1,7 @@
 """Tests for Phase 8 Prompt Generation."""
 
+import pytest
+
 from scenesmith import (
     CanonPromptBuilder,
     CanonSceneContext,
@@ -8,6 +10,7 @@ from scenesmith import (
     SceneAnalyzer,
     SceneContextBuilder,
 )
+from scenesmith.core import Fact, StateChange
 from tests.test_scene_context_builder import build_database, build_imported_source
 
 
@@ -79,15 +82,99 @@ def test_canon_prompt_builder_does_not_dump_full_scene_text() -> None:
     assert len(prompt) < 1000
 
 
-def test_canon_prompt_builder_dedupes_repeated_analysis_bullets() -> None:
-    """Prompt sections do not repeat duplicate analyzer values."""
-    prompt = CanonPromptBuilder(analyzer=DuplicateAnalysisAnalyzer()).build_image_prompt(
-        build_context()
+def test_canon_prompt_builder_uses_scene_relevant_character_facts() -> None:
+    """Prompt character details come from focused scene context, not full cards."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_fact(
+        Fact(
+            fact_id="fact_001_school_year",
+            entity_id="character_mark",
+            attribute="school_year",
+            value="First Year",
+            evidence_id="evidence_001",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_001_school_year",
+            fact_id="fact_001_school_year",
+            valid_from_event_id="event_001_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
     )
 
-    assert prompt.count("- Same visual") == 1
-    assert prompt.count("- Same object") == 1
-    assert prompt.count("- Same note") == 1
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "- current_weapon: Iron Sword" in prompt
+    assert "school_year" not in prompt
+
+
+def test_canon_prompt_builder_omits_mechanical_metadata_from_character_details() -> None:
+    """Prompt character details omit task math that belongs in audit views."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_fact(
+        Fact(
+            fact_id="fact_008_task_reward",
+            entity_id="character_mark",
+            attribute="active_task_reward",
+            value="One contest point",
+            evidence_id="evidence_008",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_008_task_reward",
+            fact_id="fact_008_task_reward",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    database.store_fact(
+        Fact(
+            fact_id="fact_008_task",
+            entity_id="character_mark",
+            attribute="active_task",
+            value="Win the contest",
+            evidence_id="evidence_008",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_008_task",
+            fact_id="fact_008_task",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "active_task: Win the contest" in prompt
+    assert "active_task_reward" not in prompt
+    assert "One contest point" not in prompt
+
+
+def test_canon_prompt_builder_rejects_duplicate_analysis_bullets() -> None:
+    """Prompt sections require duplicate analysis rows to fail upstream."""
+    with pytest.raises(ValueError, match="must be unique"):
+        CanonPromptBuilder(analyzer=DuplicateAnalysisAnalyzer()).build_image_prompt(
+            build_context()
+        )
 
 
 def test_canon_prompt_builder_shortens_long_analysis_text() -> None:

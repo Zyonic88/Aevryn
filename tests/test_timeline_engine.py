@@ -1,5 +1,7 @@
 """Tests for the SceneSmith Timeline Engine."""
 
+from typing import Any, cast
+
 import pytest
 
 from scenesmith import StoryPosition
@@ -89,6 +91,29 @@ def test_list_scenes_can_filter_by_chapter() -> None:
     assert engine.list_scenes(chapter_index=1) == (first_scene, second_scene)
 
 
+def test_list_scenes_rejects_invalid_chapter_filter() -> None:
+    """Timeline scene filters use one-based chapter indexes."""
+    engine = TimelineEngine()
+
+    with pytest.raises(InvalidTimelinePositionError, match="Chapter index"):
+        engine.list_scenes(chapter_index=0)
+
+    with pytest.raises(InvalidTimelinePositionError, match="Chapter index"):
+        engine.list_scenes(chapter_index=True)
+
+    with pytest.raises(InvalidTimelinePositionError, match="Chapter index"):
+        engine.list_scenes(chapter_index=cast(Any, "1"))
+
+
+def test_timeline_chapter_rejects_boolean_index() -> None:
+    """Timeline chapter indexes must be real one-based integers."""
+    with pytest.raises(ValueError, match="Chapter index"):
+        TimelineChapter(chapter_index=True, title="Opening")
+
+    with pytest.raises(ValueError, match="Chapter index"):
+        TimelineChapter(chapter_index=cast(Any, "1"), title="Opening")
+
+
 def test_record_event_requires_registered_scene() -> None:
     """Events must happen at registered story positions."""
     engine = TimelineEngine()
@@ -140,6 +165,15 @@ def test_list_events_returns_story_order_and_position_filter() -> None:
     assert engine.list_events(position=position(8, 2)) == (second_event,)
 
 
+def test_list_events_rejects_unknown_position_filter() -> None:
+    """Event position filters must point to registered scenes."""
+    engine = TimelineEngine()
+    register_basic_timeline(engine)
+
+    with pytest.raises(InvalidTimelinePositionError, match="Unknown scene"):
+        engine.list_events(position=position(99, 1))
+
+
 def test_list_events_uses_event_id_for_same_position_order() -> None:
     """Events at the same position have deterministic event-ID ordering."""
     engine = TimelineEngine()
@@ -176,6 +210,31 @@ def test_record_state_change_requires_registered_positions() -> None:
         )
 
 
+def test_record_state_change_event_must_match_valid_from_position() -> None:
+    """A state change event must occur where the state becomes valid."""
+    engine = TimelineEngine()
+    register_basic_timeline(engine)
+    engine.record_event(
+        TimelineEvent(
+            event_id="event_mark_finds_dagger",
+            position=position(1, 1),
+            description="Mark finds a rusty dagger.",
+        )
+    )
+
+    with pytest.raises(InvalidTimelinePositionError, match="valid_from position"):
+        engine.record_state_change(
+            TimelineStateChange(
+                change_id="change_mark_weapon_dagger",
+                subject_id="character_mark",
+                attribute="current_weapon",
+                value="Rusty Dagger",
+                valid_from=position(8, 2),
+                event_id="event_mark_finds_dagger",
+            )
+        )
+
+
 def test_state_change_rejects_invalid_validity_window() -> None:
     """valid_until cannot come before valid_from."""
     with pytest.raises(ValueError):
@@ -186,6 +245,25 @@ def test_state_change_rejects_invalid_validity_window() -> None:
             value="Iron Sword",
             valid_from=position(8, 2),
             valid_until=position(1, 1),
+        )
+
+
+def test_timeline_models_reject_machine_token_whitespace() -> None:
+    """Timeline IDs and state attributes are whitespace-free tokens."""
+    with pytest.raises(ValueError, match="Event ID cannot contain whitespace"):
+        TimelineEvent(
+            event_id="event mark finds dagger",
+            position=position(1, 1),
+            description="Mark finds a rusty dagger.",
+        )
+
+    with pytest.raises(ValueError, match="State change attribute"):
+        TimelineStateChange(
+            change_id="change_mark_weapon",
+            subject_id="character_mark",
+            attribute="current weapon",
+            value="Rusty Dagger",
+            valid_from=position(1, 1),
         )
 
 
@@ -343,6 +421,18 @@ def test_active_state_changes_can_filter_by_subject() -> None:
         position=position(14, 1),
         subject_id="character_mark",
     ) == (mark_change,)
+
+
+def test_state_change_filters_reject_invalid_machine_tokens() -> None:
+    """Timeline state lookup filters use machine-safe IDs and attributes."""
+    engine = TimelineEngine()
+    register_basic_timeline(engine)
+
+    with pytest.raises(InvalidTimelinePositionError, match="cannot contain whitespace"):
+        engine.list_state_changes(subject_id="character mark")
+
+    with pytest.raises(InvalidTimelinePositionError, match="attribute"):
+        engine.get_state_history("character_mark", "current weapon")
 
 
 def test_set_current_position_requires_registered_scene() -> None:

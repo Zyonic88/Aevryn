@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -15,7 +16,13 @@ from scenesmith import (
 )
 from scenesmith.core import Story
 from scenesmith.importing import ImportedSource
-from scenesmith.projects import SceneSmithProjectRunner
+from scenesmith.projects import (
+    ContinuityRecord,
+    ContinuityReport,
+    ContinuitySceneReport,
+    ProjectRunResult,
+    SceneSmithProjectRunner,
+)
 
 
 def source_file() -> Path:
@@ -53,6 +60,26 @@ def single_chapter_source_file() -> Path:
     return path
 
 
+def two_scene_source_file() -> Path:
+    """Create a one-chapter source file with two explicit scenes."""
+    path = Path("build") / "test_project_runner" / "two_scene_chapter.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(
+            [
+                "Chapter 1",
+                "Mark was calm in the quiet hangar.",
+                "",
+                "---",
+                "",
+                "Mark became alarmed as the hangar alarm started.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_runner_imports_text_file() -> None:
     """Project runner imports source files through Story Import."""
     runner = SceneSmithProjectRunner()
@@ -78,6 +105,48 @@ def test_runner_builds_character_card_from_demo_pipeline() -> None:
     assert card.facts[0].evidence.quote == "Mark bought an iron sword."
 
 
+def test_runner_builds_scene_position_character_card() -> None:
+    """Project runner can build character cards at exact scene positions."""
+    runner = SceneSmithProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": mood_payload(
+                anchor_id=first_anchor_id,
+                mood="Calm",
+            ),
+            "demo_chapter_001_scene_002": mood_payload(
+                anchor_id=second_anchor_id,
+                mood="Alarmed",
+            ),
+        },
+    )
+
+    first_card = runner.build_character_card_at_scene(
+        result=result,
+        character_id="character_mark",
+        scene_id="demo_chapter_001_scene_001",
+    )
+    second_card = runner.build_character_card_at_scene(
+        result=result,
+        character_id="character_mark",
+        scene_id="demo_chapter_001_scene_002",
+    )
+
+    assert tuple(
+        fact.value for fact in first_card.facts if fact.attribute == "current_mood"
+    ) == ("Calm",)
+    assert tuple(
+        fact.value for fact in second_card.facts if fact.attribute == "current_mood"
+    ) == ("Alarmed",)
+
+
 def test_runner_builds_prompt_bundle_from_demo_pipeline() -> None:
     """Project runner builds prompt bundles from scene context."""
     runner = SceneSmithProjectRunner()
@@ -86,7 +155,7 @@ def test_runner_builds_prompt_bundle_from_demo_pipeline() -> None:
     bundle = runner.build_prompt_bundle(result=result)
 
     assert "Scene ID: demo_chapter_002_scene_001" in bundle.image_prompt
-    assert "character_mark owns item_iron_sword" in bundle.animation_prompt
+    assert "item_iron_sword" in bundle.animation_prompt
 
 
 class EmptyExtractor:
@@ -303,6 +372,52 @@ def test_runner_updates_character_card_and_prompt_from_ai_candidates() -> None:
     assert world_state.entities[0].display_name == "Iron Sword"
 
 
+def test_runner_builds_scene_position_world_state() -> None:
+    """Project runner can build world state at exact scene positions."""
+    runner = SceneSmithProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": hangar_payload(
+                anchor_id=first_anchor_id,
+                condition="Quiet",
+            ),
+            "demo_chapter_001_scene_002": hangar_payload(
+                anchor_id=second_anchor_id,
+                condition="Alarm active",
+            ),
+        },
+    )
+
+    first_world = runner.build_world_state_at_scene(
+        result=result,
+        entity_ids=("location_hangar",),
+        scene_id="demo_chapter_001_scene_001",
+    )
+    second_world = runner.build_world_state_at_scene(
+        result=result,
+        entity_ids=("location_hangar",),
+        scene_id="demo_chapter_001_scene_002",
+    )
+
+    assert tuple(
+        fact.value for fact in first_world.entities[0].facts if fact.attribute == "condition"
+    ) == ("Quiet",)
+    assert tuple(
+        fact.value
+        for fact in second_world.entities[0].facts
+        if fact.attribute == "condition"
+    ) == (
+        "Alarm active",
+    )
+
+
 def test_runner_dedupes_selected_ids_for_views() -> None:
     """Project runner dedupes selected IDs before building downstream views."""
     runner = SceneSmithProjectRunner()
@@ -319,6 +434,26 @@ def test_runner_dedupes_selected_ids_for_views() -> None:
 
     assert len(context.character_cards) == 1
     assert len(world_state.entities) == 1
+
+
+def test_runner_scene_position_views_reject_unknown_scene() -> None:
+    """Scene-position project views require imported scene IDs."""
+    runner = SceneSmithProjectRunner()
+    result = runner.run_demo_text_file(path=source_file(), source_id="demo")
+
+    with pytest.raises(ValueError, match="Unknown scene"):
+        runner.build_character_card_at_scene(
+            result=result,
+            character_id="character_mark",
+            scene_id="demo_chapter_999_scene_001",
+        )
+
+    with pytest.raises(ValueError, match="Unknown scene"):
+        runner.build_world_state_at_scene(
+            result=result,
+            entity_ids=("item_iron_sword",),
+            scene_id="demo_chapter_999_scene_001",
+        )
 
 
 def test_runner_builds_continuity_report_across_chapters() -> None:
@@ -390,6 +525,47 @@ def test_runner_can_apply_multi_scene_ai_payloads() -> None:
     )
 
 
+def test_continuity_report_keeps_additive_facts_as_new() -> None:
+    """Additive fact attributes accumulate instead of invalidating prior values."""
+    runner = SceneSmithProjectRunner()
+    imported_source = runner.import_text_file(path=source_file(), source_id="demo")
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": ability_payload(
+                anchor_id=first_anchor_id,
+                ability="Fleet Luck Bonus",
+            ),
+            "demo_chapter_002_scene_001": ability_payload(
+                anchor_id=second_anchor_id,
+                ability="Eye of Insight",
+            ),
+        },
+    )
+
+    report = runner.build_continuity_report(result)
+
+    assert any(
+        record.description == "character_mark ability = Fleet Luck Bonus"
+        for record in report.scenes[0].new
+    )
+    assert any(
+        record.description == "character_mark ability = Eye of Insight"
+        for record in report.scenes[1].new
+    )
+    assert not any(
+        record.description == "character_mark ability = Eye of Insight"
+        for record in report.scenes[1].updated
+    )
+    assert not any(
+        record.description == "character_mark ability = Fleet Luck Bonus"
+        for record in report.scenes[1].invalidated
+    )
+
+
 def test_runner_rejects_multi_scene_ai_payloads_missing_scene() -> None:
     """Project runner requires one payload for every imported scene."""
     runner = SceneSmithProjectRunner()
@@ -403,6 +579,114 @@ def test_runner_rejects_multi_scene_ai_payloads_missing_scene() -> None:
                 "demo_chapter_001_scene_001": weapon_payload(
                     anchor_id=first_anchor_id,
                     weapon="Rusty Dagger",
+                ),
+            },
+        )
+
+
+def test_runner_rejects_multi_scene_ai_payloads_unknown_scene() -> None:
+    """Project runner rejects payloads that do not belong to imported scenes."""
+    runner = SceneSmithProjectRunner()
+    imported_source = runner.import_text_file(path=source_file(), source_id="demo")
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[1].anchor_id
+
+    with pytest.raises(ValueError, match="unknown scenes"):
+        runner.run_imported_source_with_scene_payloads(
+            imported_source=imported_source,
+            payloads_by_scene_id={
+                "demo_chapter_001_scene_001": weapon_payload(
+                    anchor_id=first_anchor_id,
+                    weapon="Rusty Dagger",
+                ),
+                "demo_chapter_002_scene_001": weapon_payload(
+                    anchor_id=second_anchor_id,
+                    weapon="Iron Sword",
+                ),
+                "demo_chapter_999_scene_001": weapon_payload(
+                    anchor_id=second_anchor_id,
+                    weapon="Future Sword",
+                ),
+            },
+        )
+
+
+def test_runner_rejects_blank_multi_scene_ai_payload_scene_id() -> None:
+    """Project runner rejects blank multi-scene payload IDs at the API boundary."""
+    runner = SceneSmithProjectRunner()
+    imported_source = runner.import_text_file(path=source_file(), source_id="demo")
+    first_anchor_id = imported_source.anchors[0].anchor_id
+
+    with pytest.raises(ValueError, match="scene ID is required"):
+        runner.run_imported_source_with_scene_payloads(
+            imported_source=imported_source,
+            payloads_by_scene_id={
+                "": weapon_payload(
+                    anchor_id=first_anchor_id,
+                    weapon="Rusty Dagger",
+                )
+            },
+        )
+
+
+def test_runner_rejects_non_string_multi_scene_ai_payload_scene_id() -> None:
+    """Project runner rejects non-string multi-scene payload IDs cleanly."""
+    runner = SceneSmithProjectRunner()
+    imported_source = runner.import_text_file(path=source_file(), source_id="demo")
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    payloads = cast(
+        dict[str, dict[str, Any]],
+        {
+            1: weapon_payload(
+                anchor_id=first_anchor_id,
+                weapon="Rusty Dagger",
+            )
+        },
+    )
+
+    with pytest.raises(ValueError, match="scene IDs must be strings"):
+        runner.run_imported_source_with_scene_payloads(
+            imported_source=imported_source,
+            payloads_by_scene_id=payloads,
+        )
+
+
+def test_runner_rejects_whitespace_multi_scene_ai_payload_scene_id() -> None:
+    """Project runner rejects non-machine-safe multi-scene payload IDs."""
+    runner = SceneSmithProjectRunner()
+    imported_source = runner.import_text_file(path=source_file(), source_id="demo")
+    first_anchor_id = imported_source.anchors[0].anchor_id
+
+    with pytest.raises(ValueError, match="scene ID cannot contain whitespace"):
+        runner.run_imported_source_with_scene_payloads(
+            imported_source=imported_source,
+            payloads_by_scene_id={
+                "demo chapter 001 scene 001": weapon_payload(
+                    anchor_id=first_anchor_id,
+                    weapon="Rusty Dagger",
+                )
+            },
+        )
+
+
+def test_runner_rejects_malformed_multi_scene_ai_payload() -> None:
+    """Project runner uses the strict evidence-bounded AI payload schema."""
+    runner = SceneSmithProjectRunner()
+    imported_source = runner.import_text_file(path=source_file(), source_id="demo")
+    second_anchor_id = imported_source.anchors[1].anchor_id
+
+    with pytest.raises(ValueError, match="missing required keys"):
+        runner.run_imported_source_with_scene_payloads(
+            imported_source=imported_source,
+            payloads_by_scene_id={
+                "demo_chapter_001_scene_001": {
+                    "entities": [],
+                    "facts": [],
+                    "relationships": [],
+                },
+                "demo_chapter_002_scene_001": weapon_payload(
+                    anchor_id=second_anchor_id,
+                    weapon="Iron Sword",
                 ),
             },
         )
@@ -426,10 +710,132 @@ def test_continuity_report_exports_as_json_and_markdown() -> None:
     assert exported_json["scenes"][1]["updated"][0]["evidence_id"]
     assert exported_json["scenes"][1]["updated"][0]["chapter_id"]
     assert exported_json["scenes"][1]["updated"][0]["evidence_quote"]
+    assert any(
+        record["record_type"] == "state_change"
+        for record in exported_json["scenes"][0]["new"]
+    )
     assert "# Continuity Report: demo" in exported_markdown
     assert "### Updated" in exported_markdown
     assert "character_mark current_weapon = Iron Sword" in exported_markdown
     assert "Mark bought an iron sword." in exported_markdown
+    assert "### Summary" in exported_markdown
+    assert "- Still known:" in exported_markdown
+    assert "state changes recorded; use JSON export" in exported_markdown
+    assert "State valid from event" not in exported_markdown
+
+
+def test_continuity_report_markdown_limits_retained_canon_noise() -> None:
+    """Continuity Markdown summarizes retained records while JSON keeps them."""
+    runner = SceneSmithProjectRunner()
+    imported_source = runner.import_text_file(path=source_file(), source_id="demo")
+    result = runner.run_imported_source(
+        imported_source=imported_source,
+        extractor=ChapterWeaponExtractor(),
+    )
+    report = runner.build_continuity_report(result)
+    exporter = ExportEngine()
+
+    exported_json = json.loads(exporter.continuity_report_json(report))
+    exported_markdown = exporter.continuity_report_markdown(report)
+
+    assert exported_json["scenes"][1]["still_known"]
+    assert "retained canon records remain active" in exported_markdown
+    assert "use JSON export for the full audit trail" not in exported_markdown
+
+
+def test_continuity_report_markdown_omits_excess_retained_records() -> None:
+    """Continuity Markdown keeps retained canon examples bounded."""
+    retained_records = tuple(
+        ContinuityRecord(
+            record_id=f"record_{index:03}",
+            record_type="fact",
+            description=f"character_mark retained_attribute_{index} = Value",
+            evidence_id=f"evidence_{index:03}",
+            chapter_id="chapter_001",
+            scene_id="chapter_001_scene_001",
+            evidence_quote=f"Retained evidence {index}.",
+        )
+        for index in range(13)
+    )
+    report = ContinuityReport(
+        source_id="demo",
+        scenes=(
+            ContinuitySceneReport(
+                scene_id="demo_chapter_002_scene_001",
+                still_known=retained_records,
+            ),
+        ),
+    )
+
+    exported_markdown = ExportEngine().continuity_report_markdown(report)
+
+    assert "- 13 retained canon records remain active." in exported_markdown
+    assert "retained_attribute_11" in exported_markdown
+    assert "retained_attribute_12" not in exported_markdown
+    assert "1 additional retained records omitted from Markdown" in exported_markdown
+    assert "Retained evidence" not in exported_markdown
+
+
+def test_project_run_result_rejects_misaligned_summaries() -> None:
+    """Project run results keep extraction results aligned with update summaries."""
+    runner = SceneSmithProjectRunner()
+    result = runner.run_demo_text_file(path=source_file(), source_id="demo")
+
+    with pytest.raises(ValueError, match="must align"):
+        ProjectRunResult(
+            imported_source=result.imported_source,
+            database=result.database,
+            extraction_results=result.extraction_results,
+            update_summaries=(),
+        )
+
+
+def test_continuity_record_rejects_invalid_identity() -> None:
+    """Continuity records require machine-safe IDs and visible descriptions."""
+    with pytest.raises(ValueError, match="record ID cannot contain whitespace"):
+        ContinuityRecord(
+            record_id="record one",
+            record_type="fact",
+            description="Fact accepted.",
+        )
+
+    with pytest.raises(ValueError, match="description is required"):
+        ContinuityRecord(
+            record_id="record_one",
+            record_type="fact",
+            description=" ",
+        )
+
+    with pytest.raises(ValueError, match="evidence quote cannot be blank"):
+        ContinuityRecord(
+            record_id="record_one",
+            record_type="fact",
+            description="Fact accepted.",
+            evidence_quote=cast(Any, 42),
+        )
+
+
+def test_continuity_scene_report_rejects_duplicate_bucket_records() -> None:
+    """One continuity bucket cannot list the same record twice."""
+    record = ContinuityRecord(
+        record_id="record_one",
+        record_type="fact",
+        description="Fact accepted.",
+    )
+
+    with pytest.raises(ValueError, match="duplicate IDs"):
+        ContinuitySceneReport(
+            scene_id="scene_001",
+            new=(record, record),
+        )
+
+
+def test_continuity_report_rejects_duplicate_scenes() -> None:
+    """Continuity reports keep scene entries unique."""
+    scene = ContinuitySceneReport(scene_id="scene_001")
+
+    with pytest.raises(ValueError, match="duplicate scenes"):
+        ContinuityReport(source_id="demo", scenes=(scene, scene))
 
 
 def weapon_payload(anchor_id: str, weapon: str) -> dict[str, object]:
@@ -451,6 +857,90 @@ def weapon_payload(anchor_id: str, weapon: str) -> dict[str, object]:
                 "entity_id": "character_mark",
                 "attribute": "current_weapon",
                 "value": weapon,
+                "evidence_anchor_id": anchor_id,
+                "confidence": 0.95,
+            }
+        ],
+        "relationships": [],
+        "state_changes": [],
+    }
+
+
+def ability_payload(anchor_id: str, ability: str) -> dict[str, object]:
+    """Build a multi-scene AI payload for an additive ability fact."""
+    normalized_ability = ability.lower().replace(" ", "_")
+    return {
+        "entities": [
+            {
+                "entity_id": "character_mark",
+                "entity_type": "character",
+                "display_name": "Mark",
+                "evidence_anchor_id": anchor_id,
+                "confidence": 0.95,
+            }
+        ],
+        "facts": [
+            {
+                "fact_id": f"fact_character_mark_ability_{normalized_ability}",
+                "entity_id": "character_mark",
+                "attribute": "ability",
+                "value": ability,
+                "evidence_anchor_id": anchor_id,
+                "confidence": 0.95,
+            }
+        ],
+        "relationships": [],
+        "state_changes": [],
+    }
+
+
+def mood_payload(anchor_id: str, mood: str) -> dict[str, object]:
+    """Build a multi-scene AI payload for a character mood fact."""
+    normalized_mood = mood.lower().replace(" ", "_")
+    return {
+        "entities": [
+            {
+                "entity_id": "character_mark",
+                "entity_type": "character",
+                "display_name": "Mark",
+                "evidence_anchor_id": anchor_id,
+                "confidence": 0.95,
+            }
+        ],
+        "facts": [
+            {
+                "fact_id": f"fact_character_mark_current_mood_{normalized_mood}",
+                "entity_id": "character_mark",
+                "attribute": "current_mood",
+                "value": mood,
+                "evidence_anchor_id": anchor_id,
+                "confidence": 0.95,
+            }
+        ],
+        "relationships": [],
+        "state_changes": [],
+    }
+
+
+def hangar_payload(anchor_id: str, condition: str) -> dict[str, object]:
+    """Build a multi-scene AI payload for a world condition fact."""
+    normalized_condition = condition.lower().replace(" ", "_")
+    return {
+        "entities": [
+            {
+                "entity_id": "location_hangar",
+                "entity_type": "location",
+                "display_name": "Hangar",
+                "evidence_anchor_id": anchor_id,
+                "confidence": 0.95,
+            }
+        ],
+        "facts": [
+            {
+                "fact_id": f"fact_location_hangar_condition_{normalized_condition}",
+                "entity_id": "location_hangar",
+                "attribute": "condition",
+                "value": condition,
                 "evidence_anchor_id": anchor_id,
                 "confidence": 0.95,
             }

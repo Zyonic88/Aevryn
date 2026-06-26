@@ -5,7 +5,9 @@ import pytest
 from scenesmith import (
     CanonEngine,
     CanonEntity,
+    CharacterCard,
     CharacterEngine,
+    CharacterFact,
     EntityType,
     Evidence,
     InvalidTimelinePositionError,
@@ -200,3 +202,44 @@ def test_build_card_rejects_non_character_entity() -> None:
 
     with pytest.raises(NotACharacterError):
         character_engine.build_card("weapon_rusty_dagger")
+
+
+def test_character_fact_rejects_invalid_display_fields() -> None:
+    """Character facts must keep machine keys and visible values valid."""
+    with pytest.raises(ValueError, match="attribute cannot contain whitespace"):
+        CharacterFact(
+            attribute="current weapon",
+            value="Rusty Dagger",
+            previous_value=None,
+            evidence=evidence(),
+            valid_from=position(1, 1),
+        )
+
+    with pytest.raises(ValueError, match="value is required"):
+        CharacterFact(
+            attribute="current_weapon",
+            value=" ",
+            previous_value=None,
+            evidence=evidence(),
+            valid_from=position(1, 1),
+        )
+
+
+def test_character_card_rejects_mismatched_fact_keys() -> None:
+    """Character cards keep fact dictionary keys aligned with attributes."""
+    fact = CharacterFact(
+        attribute="current_weapon",
+        value="Rusty Dagger",
+        previous_value=None,
+        evidence=evidence(),
+        valid_from=position(1, 1),
+    )
+
+    with pytest.raises(ValueError, match="fact keys must match"):
+        CharacterCard(
+            character_id="character_mark",
+            display_name="Mark",
+            position=position(1, 1),
+            facts={"weapon": fact},
+            relationships=(),
+        )

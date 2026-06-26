@@ -49,6 +49,8 @@ It may decide:
 * Which source file is being processed
 * Which scene is being requested
 * Which character card is being requested
+* Which scene-position character card is being requested
+* Which scene-position world state is being requested
 * Which output bundle should be assembled
 * Which completed project run should be summarized as a Continuity Report
 
@@ -66,11 +68,30 @@ Single-scene extraction must return candidates for the requested scene.
 
 Multi-scene AI candidate envelopes must include exactly one payload for every imported scene.
 
+Multi-scene AI candidate envelope scene IDs must be string, nonblank, machine-safe tokens.
+
 Repeated selected IDs are deduplicated before downstream view construction.
+
+CLI-selected character and world entity IDs must be nonblank machine-safe tokens.
+
+Scene-position character cards and world states must use the requested imported scene, not just the chapter.
 
 Continuity Reports separate new, updated, still-known, and invalidated Canon records.
 
+Continuity Reports must treat additive facts, such as abilities and skills, as accumulated new facts instead of invalidating earlier values.
+
 Continuity Report records include evidence ID, chapter ID, scene ID, and evidence quote when Canon has them.
+
+Project Run Results must keep extraction results aligned with Canon update summaries.
+
+Continuity Report view models must reject malformed output:
+
+* Source IDs and scene IDs must be machine-safe.
+* Record IDs and record types must be machine-safe.
+* Record descriptions are required.
+* Evidence IDs, chapter IDs, and scene IDs are machine-safe when present.
+* A scene report bucket cannot contain duplicate record IDs.
+* A project-level report cannot contain duplicate scene entries.
 
 Downstream errors should remain visible instead of being hidden.
 
@@ -103,10 +124,16 @@ The Project Manager can fail when:
 * Canon Updating rejects low-confidence candidates
 * A requested character is unknown
 * A requested scene is unknown
+* A scene-position view requests a scene that Story Import did not create
+* A selected character or world entity ID is blank or contains whitespace
 * A downstream engine raises a validation error
 * An extractor returns candidates for the wrong scene
 * An imported source contains no chapters or scenes
 * A multi-scene AI candidate envelope is missing scenes or references unknown scenes
+* A multi-scene AI candidate envelope uses non-string or malformed scene IDs
+* A project run result has a different number of extraction results and update summaries
+* A continuity report contains malformed IDs, blank descriptions, or duplicate scene entries
+* A continuity report treats additive character growth as replacement
 
 It should fail loudly and preserve the original error context.
 

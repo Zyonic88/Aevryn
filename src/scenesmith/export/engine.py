@@ -24,12 +24,14 @@ from scenesmith.presentation import (
     SceneSheetView,
     WorldSheetView,
 )
-from scenesmith.projects import ContinuityRecord, ContinuityReport
+from scenesmith.projects import ContinuityRecord, ContinuityReport, ContinuitySceneReport
 from scenesmith.prompts import ProductionPack, PromptBundle
 from scenesmith.scenes import CanonSceneContext, SceneContext, SceneEnvironmentSnapshot
 from scenesmith.timeline import TimelineEvent, TimelineStateChange
 
 logger = logging.getLogger(__name__)
+
+MAX_STILL_KNOWN_MARKDOWN_RECORDS = 12
 
 
 class ExportEngine:
@@ -271,6 +273,9 @@ class ExportEngine:
                 [
                     f"## {scene_report.scene_id}",
                     "",
+                    "### Summary",
+                    *self._continuity_summary_lines(scene_report),
+                    "",
                     "### New",
                     *self._continuity_record_lines(scene_report.new),
                     "",
@@ -278,7 +283,7 @@ class ExportEngine:
                     *self._continuity_record_lines(scene_report.updated),
                     "",
                     "### Still Known",
-                    *self._continuity_record_lines(scene_report.still_known),
+                    *self._continuity_still_known_lines(scene_report.still_known),
                     "",
                     "### Invalidated",
                     *self._continuity_record_lines(scene_report.invalidated),
@@ -759,13 +764,25 @@ class ExportEngine:
     @staticmethod
     def _to_json(value: dict[str, Any]) -> str:
         """Serialize a dictionary as stable JSON text."""
-        serialized = json.dumps(value, indent=2, sort_keys=True)
+        serialized = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
         logger.debug("export_json_serialized")
         return serialized
 
     @staticmethod
     def _csv_text(fieldnames: list[str], rows: list[dict[str, str]]) -> str:
         """Serialize rows as CSV text."""
+        if len(fieldnames) != len(set(fieldnames)):
+            raise ValueError("CSV fieldnames cannot contain duplicates.")
+        fieldname_set = set(fieldnames)
+        for row in rows:
+            row_keys = set(row)
+            missing_keys = fieldname_set - row_keys
+            extra_keys = row_keys - fieldname_set
+            if missing_keys:
+                raise ValueError("CSV rows must include every configured field.")
+            if extra_keys:
+                raise ValueError("CSV rows cannot include unexpected fields.")
+
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
@@ -777,6 +794,8 @@ class ExportEngine:
         """Return Markdown bullet list lines."""
         if not values:
             return ["Unknown"]
+        if any(not isinstance(value, str) or not value.strip() for value in values):
+            raise ValueError("Markdown list values cannot be blank.")
 
         return [f"- {value}" for value in ExportEngine._unique_values(values)]
 
@@ -810,10 +829,70 @@ class ExportEngine:
         if not records:
             return ["Unknown"]
 
-        return [
+        sorted_records = tuple(sorted(records, key=lambda record: record.record_id))
+        visible_records = tuple(
+            record for record in sorted_records if record.record_type != "state_change"
+        )
+        state_change_count = len(sorted_records) - len(visible_records)
+
+        lines = [
             cls._continuity_record_line(record)
-            for record in sorted(records, key=lambda record: record.record_id)
+            for record in visible_records
         ]
+        if state_change_count > 0:
+            lines.append(
+                "- "
+                f"{state_change_count} state changes recorded; "
+                "use JSON export for exact validity events."
+            )
+        return lines or ["Unknown"]
+
+    @staticmethod
+    def _continuity_summary_lines(scene_report: ContinuitySceneReport) -> list[str]:
+        """Return concise continuity counts for one scene."""
+        return [
+            f"- New: {len(scene_report.new)}",
+            f"- Updated: {len(scene_report.updated)}",
+            f"- Still known: {len(scene_report.still_known)}",
+            f"- Invalidated: {len(scene_report.invalidated)}",
+        ]
+
+    @classmethod
+    def _continuity_still_known_lines(
+        cls,
+        records: tuple[ContinuityRecord, ...],
+    ) -> list[str]:
+        """Return retained canon records without flooding the human report."""
+        if not records:
+            return ["Unknown"]
+
+        sorted_records = tuple(sorted(records, key=lambda record: record.record_id))
+        state_change_count = sum(
+            1 for record in sorted_records if record.record_type == "state_change"
+        )
+        display_records = tuple(
+            record for record in sorted_records if record.record_type != "state_change"
+        )
+        visible_records = display_records[:MAX_STILL_KNOWN_MARKDOWN_RECORDS]
+        hidden_count = len(display_records) - len(visible_records)
+
+        lines = [f"- {len(sorted_records)} retained canon records remain active."]
+        if state_change_count > 0:
+            lines.append(
+                "- "
+                f"{state_change_count} retained state changes omitted from Markdown; "
+                "use JSON export for exact validity events."
+            )
+        lines.extend(
+            cls._continuity_record_summary_line(record) for record in visible_records
+        )
+        if hidden_count > 0:
+            lines.append(
+                "- "
+                f"{hidden_count} additional retained records omitted from Markdown; "
+                "use JSON export for the full audit trail."
+            )
+        return lines
 
     @staticmethod
     def _continuity_record_line(record: ContinuityRecord) -> str:
@@ -829,6 +908,11 @@ class ExportEngine:
         ]
         evidence = f" Evidence: {' | '.join(evidence_parts)}" if evidence_parts else ""
         return f"- [{record.record_type}] {record.description}.{evidence}"
+
+    @staticmethod
+    def _continuity_record_summary_line(record: ContinuityRecord) -> str:
+        """Return one concise Markdown line for a retained continuity record."""
+        return f"- [{record.record_type}] {record.description}."
 
     @staticmethod
     def _sorted_canon_character_facts(

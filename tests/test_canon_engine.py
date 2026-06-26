@@ -1,10 +1,16 @@
 """Tests for the SceneSmith Canon Engine."""
 
+from typing import Any, cast
+
 import pytest
 
 from scenesmith.canon import (
+    CanonConflict,
     CanonEngine,
     CanonEntity,
+    CanonFactVersion,
+    CanonRelationship,
+    CanonSnapshot,
     DuplicateEntityError,
     EntityType,
     Evidence,
@@ -50,6 +56,40 @@ def register_rusty_dagger(engine: CanonEngine) -> CanonEntity:
     )
     engine.register_entity(entity)
     return entity
+
+
+def test_canon_evidence_rejects_boolean_confidence() -> None:
+    """Canon evidence confidence must be numeric and not boolean."""
+    with pytest.raises(ValueError, match="Evidence confidence"):
+        Evidence(
+            chapter="Chapter 1",
+            scene="Scene 1",
+            quote="Mark lifted the rusty dagger.",
+            confidence=True,
+        )
+
+
+def test_story_position_rejects_boolean_indexes() -> None:
+    """Story positions require real one-based integer indexes."""
+    with pytest.raises(ValueError, match="Chapter index must be at least 1"):
+        StoryPosition(chapter_index=True, scene_index=1)
+
+    with pytest.raises(ValueError, match="Scene index must be at least 1"):
+        StoryPosition(chapter_index=1, scene_index=True)
+
+
+def test_story_position_and_evidence_reject_non_numeric_values() -> None:
+    """Canon positions and confidence reject non-numeric runtime values."""
+    with pytest.raises(ValueError, match="Chapter index must be at least 1"):
+        StoryPosition(chapter_index=cast(Any, "1"), scene_index=1)
+
+    with pytest.raises(ValueError, match="Evidence confidence"):
+        Evidence(
+            chapter="Chapter 1",
+            scene="Scene 1",
+            quote="Mark lifted the rusty dagger.",
+            confidence=cast(Any, "high"),
+        )
 
 
 def test_register_entity_keeps_permanent_id() -> None:
@@ -386,6 +426,104 @@ def test_rename_entity_preserves_permanent_id_and_records_fact() -> None:
     assert renamed_entity.display_name == "Sir Mark"
     assert name_fact.attribute == "display_name"
     assert name_fact.value == "Sir Mark"
+
+
+def test_canon_entity_rejects_machine_id_whitespace() -> None:
+    """Canon entity IDs are permanent machine-safe IDs."""
+    with pytest.raises(ValueError, match="Entity ID cannot contain whitespace"):
+        CanonEntity(
+            entity_id="character mark",
+            entity_type=EntityType.CHARACTER,
+            display_name="Mark",
+        )
+
+
+def test_canon_fact_version_rejects_invalid_fields() -> None:
+    """Canon fact versions require machine-safe identity and visible values."""
+    with pytest.raises(ValueError, match="Fact attribute cannot contain whitespace"):
+        CanonFactVersion(
+            entity_id="character_mark",
+            attribute="current weapon",
+            value="Rusty Dagger",
+            evidence=make_evidence(),
+        )
+
+    with pytest.raises(ValueError, match="Fact previous value is required"):
+        CanonFactVersion(
+            entity_id="character_mark",
+            attribute="current_weapon",
+            value="Rusty Dagger",
+            previous_value=" ",
+            evidence=make_evidence(),
+        )
+
+
+def test_canon_relationship_rejects_invalid_machine_fields() -> None:
+    """Canon relationships require machine-safe endpoints and type."""
+    with pytest.raises(
+        ValueError,
+        match="Relationship type cannot contain whitespace",
+    ):
+        CanonRelationship(
+            source_entity_id="character_mark",
+            relationship_type="travels with",
+            target_entity_id="character_luna",
+            evidence=make_evidence(),
+        )
+
+
+def test_canon_conflict_rejects_mismatched_versions() -> None:
+    """Canon conflicts must describe different values for one entity attribute."""
+    existing = CanonFactVersion(
+        entity_id="character_mark",
+        attribute="hair_color",
+        value="Black",
+        evidence=make_evidence(),
+    )
+    conflicting = CanonFactVersion(
+        entity_id="character_luna",
+        attribute="hair_color",
+        value="Brown",
+        evidence=make_evidence(),
+    )
+
+    with pytest.raises(ValueError, match="must match conflict entity ID"):
+        CanonConflict(
+            entity_id="character_mark",
+            attribute="hair_color",
+            existing_version=existing,
+            conflicting_version=conflicting,
+        )
+
+
+def test_canon_snapshot_rejects_mismatched_facts_and_relationships() -> None:
+    """Canon snapshots must describe one entity's active state."""
+    fact = CanonFactVersion(
+        entity_id="character_mark",
+        attribute="current_weapon",
+        value="Rusty Dagger",
+        evidence=make_evidence(),
+    )
+
+    with pytest.raises(ValueError, match="fact keys must match"):
+        CanonSnapshot(
+            entity_id="character_mark",
+            facts={"weapon": fact},
+            relationships=(),
+        )
+
+    unrelated_relationship = CanonRelationship(
+        source_entity_id="character_luna",
+        relationship_type="owns",
+        target_entity_id="weapon_rusty_dagger",
+        evidence=make_evidence(),
+    )
+    with pytest.raises(ValueError, match="relationships must connect"):
+        CanonSnapshot(
+            entity_id="character_mark",
+            facts={"current_weapon": fact},
+            relationships=(unrelated_relationship,),
+        )
 
 
 def test_snapshot_entity_returns_current_facts_and_relationships() -> None:

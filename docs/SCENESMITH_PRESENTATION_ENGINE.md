@@ -57,9 +57,21 @@ It never changes Canon meaning.
 
 Scene sheets must use analysis for the same scene.
 
+Production pack views must use packs and scene sheets for the same scene.
+
+Visible presentation sections must not contain blank titles or blank items.
+
+Visible presentation sections must not contain duplicate items.
+
+Multi-section presentation views must not repeat visible section titles.
+
 Repeated display items are deduplicated.
 
 Long prompt lines are shortened for scan-friendly views.
+
+Character profile grouping must use genre-neutral attribute categories such as goals, tasks, plans, equipment, abilities, assets, relationships, and limitations.
+
+It must not depend on one test story's names, factions, power systems, vehicles, or item labels.
 
 Unknown information remains Unknown.
 
@@ -96,6 +108,9 @@ Presentation Engine can fail if:
 * It makes evidence impossible to inspect.
 * It optimizes for AI instead of users.
 * It presents analysis for the wrong scene.
+* It presents a production pack under the wrong scene sheet.
+* It emits blank visible rows.
+* It emits duplicate section headings inside one view.
 * It repeats the same fact until the view becomes noisy.
 
 The core question:

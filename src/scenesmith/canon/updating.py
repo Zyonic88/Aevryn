@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass
 
 from scenesmith.canon import CanonDatabase
+from scenesmith.canon.policies import is_additive_fact_attribute
 from scenesmith.core import (
     Chapter,
     Character,
@@ -37,6 +38,17 @@ class CanonUpdateSummary:
     accepted_state_changes: tuple[str, ...] = ()
     rejected_candidates: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        """Validate accepted and rejected candidate summary IDs."""
+        for bucket_name, candidate_ids in (
+            ("accepted entity", self.accepted_entities),
+            ("accepted fact", self.accepted_facts),
+            ("accepted relationship", self.accepted_relationships),
+            ("accepted state change", self.accepted_state_changes),
+            ("rejected candidate", self.rejected_candidates),
+        ):
+            _require_unique_machine_tokens(candidate_ids, bucket_name)
+
 
 class CanonUpdater:
     """Validate extraction candidates before changing Canon."""
@@ -51,7 +63,11 @@ class CanonUpdater:
         Raises:
             ValueError: If minimum_confidence is outside 0.0 to 1.0.
         """
-        if not 0.0 <= minimum_confidence <= 1.0:
+        if (
+            isinstance(minimum_confidence, bool)
+            or not isinstance(minimum_confidence, int | float)
+            or not 0.0 <= minimum_confidence <= 1.0
+        ):
             raise ValueError("Minimum confidence must be between 0.0 and 1.0.")
 
         self._database = database
@@ -70,7 +86,12 @@ class CanonUpdater:
 
         Returns:
             Summary of accepted and rejected candidates.
+
+        Raises:
+            ValueError: If the extraction result scene does not match the
+                supplied evidence anchors.
         """
+        self._validate_result_scene(result=result, anchors=anchors)
         anchor_by_id = {anchor.anchor_id: anchor for anchor in anchors}
         accepted_entities: list[str] = []
         accepted_facts: list[str] = []
@@ -87,6 +108,10 @@ class CanonUpdater:
             evidence = self._store_evidence(anchor=anchor, confidence=candidate.confidence)
             self._store_entity(candidate)
             fact = self._store_entity_name_fact(candidate=candidate, evidence=evidence)
+            if fact is None:
+                accepted_entities.append(candidate.entity_id)
+                continue
+
             event = self._store_event(
                 candidate_id=candidate.entity_id,
                 anchor=anchor,
@@ -117,6 +142,9 @@ class CanonUpdater:
                 candidate=fact_candidate,
                 evidence=evidence,
             )
+            if fact is None:
+                continue
+
             event = self._store_event(
                 candidate_id=fact_candidate.fact_id,
                 anchor=anchor,
@@ -168,8 +196,6 @@ class CanonUpdater:
                 rejected_candidates.append(state_change_id)
                 continue
 
-            accepted_state_changes.append(state_change_id)
-
         summary = CanonUpdateSummary(
             accepted_entities=tuple(accepted_entities),
             accepted_facts=tuple(accepted_facts),
@@ -199,15 +225,60 @@ class CanonUpdater:
 
         return summary
 
+    @staticmethod
+    def _validate_result_scene(
+        result: ExtractionResult,
+        anchors: tuple[EvidenceAnchor, ...],
+    ) -> None:
+        """Ensure extraction results are applied with same-scene evidence anchors."""
+        anchor_ids = tuple(anchor.anchor_id for anchor in anchors)
+        if len(anchor_ids) != len(set(anchor_ids)):
+            raise ValueError("Canon update evidence anchors cannot contain duplicates.")
+        mismatched_scene_ids = sorted(
+            {anchor.scene_id for anchor in anchors if anchor.scene_id != result.scene_id}
+        )
+        if mismatched_scene_ids:
+            mismatched = ", ".join(mismatched_scene_ids)
+            raise ValueError(
+                "Extraction result scene_id does not match evidence anchor scenes: "
+                f"{mismatched}"
+            )
+
     def _candidate_is_acceptable(
         self,
         candidate: ExtractedEntity,
         anchor_by_id: dict[str, EvidenceAnchor],
     ) -> bool:
         """Return whether an extracted entity can be accepted."""
+        anchor = anchor_by_id.get(candidate.evidence_anchor_id)
         return (
             candidate.confidence >= self._minimum_confidence
-            and candidate.evidence_anchor_id in anchor_by_id
+            and anchor is not None
+            and self._display_name_position_is_acceptable(
+                candidate=candidate,
+                anchor=anchor,
+            )
+        )
+
+    def _display_name_position_is_acceptable(
+        self,
+        candidate: ExtractedEntity,
+        anchor: EvidenceAnchor,
+    ) -> bool:
+        """Return whether a display-name update has an unambiguous source order."""
+        current_fact = self._database.retrieve_current_fact(
+            entity_id=candidate.entity_id,
+            attribute="display_name",
+        )
+        if current_fact is None or current_fact.value == candidate.display_name:
+            return True
+
+        current_evidence = self._database.retrieve_evidence(current_fact.evidence_id)
+        if current_evidence is None:
+            return True
+
+        return self._anchor_position_key(anchor) > self._evidence_position_key(
+            current_evidence
         )
 
     def _relationship_is_acceptable(
@@ -220,8 +291,8 @@ class CanonUpdater:
         return (
             relationship.confidence >= self._minimum_confidence
             and relationship.evidence_anchor_id in anchor_by_id
-            and relationship.source_entity_id in known_entity_ids
-            and relationship.target_entity_id in known_entity_ids
+            and self._entity_is_known(relationship.source_entity_id, known_entity_ids)
+            and self._entity_is_known(relationship.target_entity_id, known_entity_ids)
         )
 
     def _fact_is_acceptable(
@@ -231,10 +302,36 @@ class CanonUpdater:
         known_entity_ids: set[str],
     ) -> bool:
         """Return whether an extracted fact can be accepted."""
+        anchor = anchor_by_id.get(fact.evidence_anchor_id)
         return (
             fact.confidence >= self._minimum_confidence
-            and fact.evidence_anchor_id in anchor_by_id
+            and anchor is not None
             and self._entity_is_known(fact.entity_id, known_entity_ids)
+            and self._replacement_fact_position_is_acceptable(fact=fact, anchor=anchor)
+        )
+
+    def _replacement_fact_position_is_acceptable(
+        self,
+        fact: ExtractedFact,
+        anchor: EvidenceAnchor,
+    ) -> bool:
+        """Return whether a replacement fact has an unambiguous source order."""
+        if is_additive_fact_attribute(fact.attribute):
+            return True
+
+        current_fact = self._database.retrieve_current_fact(
+            entity_id=fact.entity_id,
+            attribute=fact.attribute,
+        )
+        if current_fact is None or current_fact.value == fact.value:
+            return True
+
+        current_evidence = self._database.retrieve_evidence(current_fact.evidence_id)
+        if current_evidence is None:
+            return True
+
+        return self._anchor_position_key(anchor) > self._evidence_position_key(
+            current_evidence
         )
 
     def _entity_is_known(self, entity_id: str, known_entity_ids: set[str]) -> bool:
@@ -259,12 +356,53 @@ class CanonUpdater:
             entity_id=entity_id,
             attribute=attribute,
         )
+        value_is_current = (
+            self._additive_fact_value_is_active(
+                entity_id=entity_id,
+                attribute=attribute,
+                value=value,
+            )
+            if is_additive_fact_attribute(attribute)
+            else current_fact is not None and current_fact.value == value
+        )
         return (
             confidence >= self._minimum_confidence
             and anchor_id in anchor_by_id
             and self._entity_is_known(entity_id, known_entity_ids)
-            and current_fact is not None
-            and current_fact.value == value
+            and value_is_current
+        )
+
+    def _additive_fact_value_is_active(
+        self,
+        entity_id: str,
+        attribute: str,
+        value: str,
+    ) -> bool:
+        """Return whether an additive fact value is currently active."""
+        history = self._database.retrieve_fact_history(
+            entity_id=entity_id,
+            attribute=attribute,
+        )
+        if not history:
+            return False
+
+        chapter_indexes = tuple(
+            self._chapter_index_from_id(evidence.chapter_id)
+            for fact in history
+            if (evidence := self._database.retrieve_evidence(fact.evidence_id))
+            is not None
+        )
+        if not chapter_indexes:
+            return False
+
+        chapter_index = max(chapter_indexes)
+        return any(
+            fact.value == value
+            for fact in self._database.retrieve_state_at_chapter(
+                entity_id=entity_id,
+                chapter_index=chapter_index,
+            )
+            if fact.attribute == attribute
         )
 
     def _store_evidence(self, anchor: EvidenceAnchor, confidence: float) -> Evidence:
@@ -273,6 +411,9 @@ class CanonUpdater:
         existing_evidence = self._database.retrieve_evidence(evidence_id)
         if existing_evidence is not None:
             return existing_evidence
+
+        if self._database.retrieve_chapter(anchor.chapter_id) is None:
+            self._database.store_chapter(chapter=self._chapter_from_anchor(anchor))
 
         evidence = Evidence(
             evidence_id=evidence_id,
@@ -318,8 +459,15 @@ class CanonUpdater:
         self,
         candidate: ExtractedEntity,
         evidence: Evidence,
-    ) -> Fact:
+    ) -> Fact | None:
         """Store a display-name fact for an accepted entity."""
+        current_fact = self._database.retrieve_current_fact(
+            entity_id=candidate.entity_id,
+            attribute="display_name",
+        )
+        if current_fact is not None and current_fact.value == candidate.display_name:
+            return None
+
         fact = Fact(
             fact_id=self._fact_id(
                 candidate.entity_id,
@@ -339,8 +487,19 @@ class CanonUpdater:
         self,
         candidate: ExtractedFact,
         evidence: Evidence,
-    ) -> Fact:
+    ) -> Fact | None:
         """Store an extracted fact candidate."""
+        current_fact = self._database.retrieve_current_fact(
+            entity_id=candidate.entity_id,
+            attribute=candidate.attribute,
+        )
+        if (
+            current_fact is not None
+            and current_fact.value == candidate.value
+            and not is_additive_fact_attribute(candidate.attribute)
+        ):
+            return None
+
         fact = Fact(
             fact_id=candidate.fact_id,
             entity_id=candidate.entity_id,
@@ -358,9 +517,6 @@ class CanonUpdater:
         evidence: Evidence,
     ) -> TimelineEvent:
         """Store a timeline event for an accepted candidate."""
-        self._database.store_chapter(
-            chapter=self._chapter_from_anchor(anchor)
-        )
         event = TimelineEvent(
             event_id=self._event_id(candidate_id, evidence.evidence_id),
             chapter_id=anchor.chapter_id,
@@ -439,6 +595,31 @@ class CanonUpdater:
         """Extract a chapter index from a generated chapter ID."""
         return int(chapter_id.rsplit("_", maxsplit=1)[-1])
 
+    @classmethod
+    def _anchor_position_key(cls, anchor: EvidenceAnchor) -> tuple[int, int, int, int]:
+        """Return a story-order source key for an evidence anchor."""
+        return (
+            cls._chapter_index_from_id(anchor.chapter_id),
+            cls._scene_index_from_id(anchor.scene_id),
+            anchor.paragraph_index,
+            anchor.sentence_index,
+        )
+
+    @classmethod
+    def _evidence_position_key(cls, evidence: Evidence) -> tuple[int, int, int, int]:
+        """Return a story-order source key for stored evidence."""
+        return (
+            cls._chapter_index_from_id(evidence.chapter_id),
+            cls._scene_index_from_id(evidence.scene_id),
+            evidence.paragraph_index,
+            evidence.sentence_index,
+        )
+
+    @staticmethod
+    def _scene_index_from_id(scene_id: str) -> int:
+        """Extract a scene index from a generated scene ID."""
+        return int(scene_id.rsplit("_", maxsplit=1)[-1])
+
     @staticmethod
     def _evidence_id(anchor_id: str) -> str:
         """Build evidence ID from an anchor ID."""
@@ -473,3 +654,16 @@ class CanonUpdater:
             f"relationship_{relationship.source_entity_id}_"
             f"{relationship.relationship_type}_{relationship.target_entity_id}"
         )
+
+
+def _require_unique_machine_tokens(values: tuple[str, ...], field_name: str) -> None:
+    """Validate summary IDs in one bucket."""
+    if len(values) != len(set(values)):
+        raise ValueError(f"Canon summary {field_name} IDs cannot contain duplicates.")
+    for value in values:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Canon summary {field_name} ID is required.")
+        if any(character.isspace() for character in value):
+            raise ValueError(
+                f"Canon summary {field_name} ID cannot contain whitespace."
+            )

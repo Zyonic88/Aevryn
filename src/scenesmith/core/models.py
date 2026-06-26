@@ -19,6 +19,24 @@ class Story:
     title: str
     chapters: tuple[Chapter, ...] = ()
 
+    def __post_init__(self) -> None:
+        """Validate required story identity."""
+        _require_machine_token(self.story_id, "Story ID")
+        _require_text(self.title, "Story title")
+        chapter_ids: list[str] = []
+        chapter_indexes: list[int] = []
+        for chapter in self.chapters:
+            if chapter.story_id != self.story_id:
+                raise ValueError("Story chapters must reference the story ID.")
+            chapter_ids.append(chapter.chapter_id)
+            chapter_indexes.append(chapter.chapter_index)
+        if len(chapter_ids) != len(set(chapter_ids)):
+            raise ValueError("Story cannot contain duplicate chapters.")
+        if len(chapter_indexes) != len(set(chapter_indexes)):
+            raise ValueError("Story cannot contain duplicate chapter indexes.")
+        if chapter_indexes != sorted(chapter_indexes):
+            raise ValueError("Story chapters must appear in increasing order.")
+
 
 @dataclass(frozen=True, slots=True)
 class Chapter:
@@ -37,6 +55,26 @@ class Chapter:
     chapter_index: int
     title: str
     scenes: tuple[Scene, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Validate required chapter identity and ordering."""
+        _require_machine_token(self.chapter_id, "Chapter ID")
+        _require_machine_token(self.story_id, "Chapter story ID")
+        _require_positive_index(self.chapter_index, "Chapter index")
+        _require_text(self.title, "Chapter title")
+        scene_ids: list[str] = []
+        scene_indexes: list[int] = []
+        for scene in self.scenes:
+            if scene.chapter_id != self.chapter_id:
+                raise ValueError("Chapter scenes must reference the chapter ID.")
+            scene_ids.append(scene.scene_id)
+            scene_indexes.append(scene.scene_index)
+        if len(scene_ids) != len(set(scene_ids)):
+            raise ValueError("Chapter cannot contain duplicate scenes.")
+        if len(scene_indexes) != len(set(scene_indexes)):
+            raise ValueError("Chapter cannot contain duplicate scene indexes.")
+        if scene_indexes != sorted(scene_indexes):
+            raise ValueError("Chapter scenes must appear in increasing order.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +95,15 @@ class Scene:
     title: str
     paragraphs: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        """Validate required scene identity and ordering."""
+        _require_machine_token(self.scene_id, "Scene ID")
+        _require_machine_token(self.chapter_id, "Scene chapter ID")
+        _require_positive_index(self.scene_index, "Scene index")
+        _require_text(self.title, "Scene title")
+        for paragraph in self.paragraphs:
+            _require_text(paragraph, "Scene paragraph")
+
 
 @dataclass(frozen=True, slots=True)
 class Entity:
@@ -72,6 +119,12 @@ class Entity:
     entity_type: str
     display_name: str
 
+    def __post_init__(self) -> None:
+        """Validate required entity identity."""
+        _require_machine_token(self.entity_id, "Entity ID")
+        _require_machine_token(self.entity_type, "Entity type")
+        _require_text(self.display_name, "Entity display name")
+
 
 @dataclass(frozen=True, slots=True)
 class Character:
@@ -82,6 +135,11 @@ class Character:
     """
 
     entity: Entity
+
+    def __post_init__(self) -> None:
+        """Validate that the wrapped entity is a character."""
+        if self.entity.entity_type != "character":
+            raise ValueError("Character models must wrap character entities.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +152,11 @@ class Location:
 
     entity: Entity
 
+    def __post_init__(self) -> None:
+        """Validate that the wrapped entity is a location."""
+        if self.entity.entity_type != "location":
+            raise ValueError("Location models must wrap location entities.")
+
 
 @dataclass(frozen=True, slots=True)
 class Item:
@@ -104,6 +167,11 @@ class Item:
     """
 
     entity: Entity
+
+    def __post_init__(self) -> None:
+        """Validate that the wrapped entity is an item-like entity."""
+        if self.entity.entity_type not in {"armor", "item", "weapon"}:
+            raise ValueError("Item models must wrap item, weapon, or armor entities.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +198,22 @@ class Evidence:
     quote: str
     confidence: float
 
+    def __post_init__(self) -> None:
+        """Validate required source evidence fields."""
+        _require_machine_token(self.evidence_id, "Evidence ID")
+        _require_machine_token(self.source_id, "Evidence source ID")
+        _require_machine_token(self.chapter_id, "Evidence chapter ID")
+        _require_machine_token(self.scene_id, "Evidence scene ID")
+        _require_positive_index(self.paragraph_index, "Evidence paragraph index")
+        _require_positive_index(self.sentence_index, "Evidence sentence index")
+        _require_text(self.quote, "Evidence quote")
+        if (
+            isinstance(self.confidence, bool)
+            or not isinstance(self.confidence, int | float)
+            or not 0.0 <= self.confidence <= 1.0
+        ):
+            raise ValueError("Evidence confidence must be between 0.0 and 1.0.")
+
 
 @dataclass(frozen=True, slots=True)
 class Fact:
@@ -148,6 +232,14 @@ class Fact:
     attribute: str
     value: str
     evidence_id: str
+
+    def __post_init__(self) -> None:
+        """Validate required fact identity and evidence reference."""
+        _require_machine_token(self.fact_id, "Fact ID")
+        _require_machine_token(self.entity_id, "Fact entity ID")
+        _require_machine_token(self.attribute, "Fact attribute")
+        _require_text(self.value, "Fact value")
+        _require_machine_token(self.evidence_id, "Fact evidence ID")
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,6 +260,14 @@ class Relationship:
     target_entity_id: str
     evidence_id: str
 
+    def __post_init__(self) -> None:
+        """Validate required relationship identity and evidence reference."""
+        _require_machine_token(self.relationship_id, "Relationship ID")
+        _require_machine_token(self.source_entity_id, "Relationship source entity ID")
+        _require_machine_token(self.relationship_type, "Relationship type")
+        _require_machine_token(self.target_entity_id, "Relationship target entity ID")
+        _require_machine_token(self.evidence_id, "Relationship evidence ID")
+
 
 @dataclass(frozen=True, slots=True)
 class TimelineEvent:
@@ -187,6 +287,14 @@ class TimelineEvent:
     description: str
     evidence_id: str
 
+    def __post_init__(self) -> None:
+        """Validate required event identity and evidence reference."""
+        _require_machine_token(self.event_id, "Timeline event ID")
+        _require_machine_token(self.chapter_id, "Timeline event chapter ID")
+        _require_machine_token(self.scene_id, "Timeline event scene ID")
+        _require_text(self.description, "Timeline event description")
+        _require_machine_token(self.evidence_id, "Timeline event evidence ID")
+
 
 @dataclass(frozen=True, slots=True)
 class StateChange:
@@ -203,6 +311,17 @@ class StateChange:
     fact_id: str
     valid_from_event_id: str
     valid_until_event_id: str | None = None
+
+    def __post_init__(self) -> None:
+        """Validate required state-change identity and event references."""
+        _require_machine_token(self.state_change_id, "State change ID")
+        _require_machine_token(self.fact_id, "State change fact ID")
+        _require_machine_token(self.valid_from_event_id, "State change start event ID")
+        if self.valid_until_event_id is not None:
+            _require_machine_token(
+                self.valid_until_event_id,
+                "State change end event ID",
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -226,3 +345,37 @@ class SceneSnapshot:
     fact_ids: tuple[str, ...] = ()
     relationship_ids: tuple[str, ...] = ()
     event_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Validate required scene snapshot identity."""
+        _require_machine_token(self.snapshot_id, "Scene snapshot ID")
+        _require_machine_token(self.scene_id, "Scene snapshot scene ID")
+        for character_id in self.character_ids:
+            _require_machine_token(character_id, "Scene snapshot character ID")
+        for location_id in self.location_ids:
+            _require_machine_token(location_id, "Scene snapshot location ID")
+        for fact_id in self.fact_ids:
+            _require_machine_token(fact_id, "Scene snapshot fact ID")
+        for relationship_id in self.relationship_ids:
+            _require_machine_token(relationship_id, "Scene snapshot relationship ID")
+        for event_id in self.event_ids:
+            _require_machine_token(event_id, "Scene snapshot event ID")
+
+
+def _require_text(value: str, field_name: str) -> None:
+    """Validate a required human-readable text field."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required.")
+
+
+def _require_machine_token(value: str, field_name: str) -> None:
+    """Validate a required whitespace-free machine token."""
+    _require_text(value, field_name)
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{field_name} cannot contain whitespace.")
+
+
+def _require_positive_index(value: int, field_name: str) -> None:
+    """Validate a one-based source index."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{field_name} must be at least 1.")

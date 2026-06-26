@@ -26,6 +26,7 @@ Every V1 subsystem must satisfy:
 * Failure modes handled
 * Logging for meaningful operational events or failures
 * Type safety
+* Non-string required text fails with clear validation errors
 * No unnecessary complexity
 
 ---
@@ -36,6 +37,8 @@ V1 complete means Story Import:
 
 * Imports plain text
 * Preserves source order
+* Rejects out-of-order explicit multi-chapter imports
+* Rejects boolean source indexes
 * Parses chapters
 * Parses scenes
 * Creates stable chapter IDs
@@ -43,6 +46,10 @@ V1 complete means Story Import:
 * Creates paragraph IDs
 * Creates sentence IDs
 * Creates evidence anchors
+* Derives readable paragraphs from oversized unspaced source blocks
+* Does not split sentences inside decimals, titles, or numbered names
+* Validates evidence anchors against known chapters, scenes, paragraphs, and sentences
+* Requires evidence anchor quotes to match source sentence text
 * Preserves source quotes
 * Handles common text encoding artifacts
 * Rejects empty or invalid input
@@ -100,7 +107,10 @@ V1 complete means Entity Extraction:
 * Proposes candidate relationships
 * Proposes candidate state changes
 * Requires evidence anchors for every candidate
+* Requires scene input anchor IDs and evidence anchor objects to match
 * Requires confidence for every candidate
+* Rejects boolean or out-of-range confidence
+* Rejects duplicate scene evidence anchors
 * Rejects unsupported claims
 * Preserves Unknown when evidence is missing
 * Does not update Canon directly
@@ -114,12 +124,15 @@ V1 complete means Canon Updating:
 
 * Accepts extraction candidates only through validation
 * Requires known evidence anchors
+* Rejects duplicate evidence anchors
 * Requires minimum confidence
 * Requires known or newly accepted entities
+* Rejects replacement facts that do not have later paragraph/sentence evidence
 * Stores accepted entities
 * Stores accepted facts
 * Stores accepted relationships
 * Stores state changes
+* Reports only stored state changes as accepted
 * Rejects unsupported candidates
 * Records rejected candidates
 * Never lets AI own truth
@@ -136,15 +149,24 @@ V1 complete means Canon Engine:
 * Stores facts
 * Stores relationships
 * Stores evidence
+* Validates evidence against registered chapter and scene structure when available
 * Stores timeline events
+* Requires timeline events to match evidence chapter and scene
+* Requires facts to reference known entities
+* Requires relationships to reference known source and target entities
 * Stores state changes
 * Supports permanent IDs
 * Supports generic non-character entities
 * Supports version history
+* Orders same-scene state changes by paragraph and sentence evidence
 * Supports current state lookup
 * Supports state lookup at chapter X
+* Supports state lookup at scene X
+* Rejects boolean lookup indexes
 * Supports relationship lookup
+* Supports relationship lookup at scene X
 * Detects duplicate relationships
+* Rejects zero-length same-position state windows
 * Preserves history instead of overwriting it
 * Keeps Unknown as Unknown when evidence is missing
 
@@ -164,6 +186,8 @@ V1 complete means Timeline Engine:
 * Supports history reconstruction
 * Supports current state lookup
 * Validates ordering
+* Requires state-change events to match valid_from position
+* Rejects boolean story positions
 * Rejects duplicate chapters
 * Rejects duplicate scenes
 * Rejects duplicate events
@@ -178,6 +202,8 @@ V1 complete means Character Engine:
 * Builds living character cards
 * Reads from Canon
 * Is timeline-aware
+* Supports scene-position cards
+* Rejects boolean card lookup positions
 * Shows current state
 * Shows previous values
 * Shows valid-from references
@@ -203,6 +229,9 @@ V1 complete means World Engine:
 * Shows connected relationships
 * Shows evidence
 * Is timeline-aware through chapter lookup
+* Supports scene-position world state
+* Rejects boolean world lookup positions
+* Filters later same-chapter world facts and relationships
 * Handles unknown world entities
 * Does not mutate Canon
 * Does not generate world facts
@@ -217,6 +246,8 @@ V1 complete means Scene Engine:
 * Includes characters present
 * Includes active facts
 * Includes relationships
+* Filters later same-chapter facts and relationships
+* Builds embedded character cards at the requested scene position
 * Includes current equipment
 * Includes relevant world state when available
 * Produces scene snapshots
@@ -244,6 +275,7 @@ V1 complete means Scene Analyzer:
 * Produces environment summary
 * Produces changes introduced
 * Produces continuity notes
+* Rejects blank or duplicate analysis rows
 * Does not mutate Canon
 * Does not generate final prompts
 
@@ -264,6 +296,7 @@ V1 complete means Prompt Engine:
 * Includes continuity notes
 * Includes forbidden elements
 * Avoids raw chapter dumps
+* Rejects blank or duplicate production-pack rows
 * Does not invent missing canon
 
 ---
@@ -280,6 +313,7 @@ V1 complete means Presentation Engine:
 * Builds continuity report views when available
 * Keeps evidence visible or reachable
 * Optimizes for fast human scanning
+* Rejects blank or duplicate visible rows
 * Does not mutate Canon
 * Does not write files
 * Does not simplify machine truth
@@ -299,6 +333,7 @@ V1 complete means Export Engine:
 * Exports prompt sheets
 * Exports production packs
 * Preserves evidence references
+* Rejects blank Markdown list rows
 * Does not mutate Canon
 * Does not create presentation view models
 
@@ -316,6 +351,9 @@ V1 complete means Project Manager:
 * Coordinates Scene Engine
 * Coordinates Prompt Engine
 * Coordinates Export-ready outputs
+* Builds scene-position character cards
+* Builds scene-position world state
+* Rejects unknown scene-position view requests
 * Does not own subsystem logic
 * Does not own Canon truth
 * Provides stable proof workflow methods
@@ -330,9 +368,11 @@ V1 complete means the CLI can:
 * Build an extraction prompt
 * Apply evidence-bounded AI JSON
 * Apply multi-scene evidence-bounded AI JSON envelopes
+* Reject non-string or malformed multi-scene AI envelope scene IDs
 * Show a character sheet
 * Show a scene sheet
 * Show a world sheet
+* Use scene IDs for scene-position character and world sheets
 * Show a prompt sheet
 * Show a continuity report
 * Run deterministically
@@ -449,3 +489,43 @@ SceneSmith must compare:
 * Errors
 
 If the outputs or counts differ between rebuilds, V1 is not complete.
+
+The automated Canon Rebuild ladder must also verify:
+
+* Incremental imports converge with full empty-project rebuilds
+* Out-of-order explicit chapters are rejected or require an explicit rebuild path
+* Saved outputs remain byte-stable across repeated rebuilds
+
+---
+
+# SceneSmith V1 RC1
+
+SceneSmith reaches Release Candidate 1 only when:
+
+* Architecture is frozen
+* No new V1 core systems are being added
+* All implemented V1 systems satisfy the universal checklist
+* All required subsystem acceptance criteria pass
+* Canon Rebuild Test passes
+* 10-chapter continuity test passes
+* No known critical bugs remain
+* Documentation is complete enough for another engineer to inherit the project
+
+Allowed work after RC1:
+
+* Bug fixes
+* Performance improvements
+* UX improvements
+* Test coverage
+* Documentation corrections
+
+Not allowed after RC1:
+
+* New core systems
+* New architecture
+* Major redesigns
+* Scope expansion disguised as polish
+
+RC1 is a confidence milestone.
+
+It means SceneSmith is stable enough to prepare for Version 1 release validation.

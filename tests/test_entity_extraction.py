@@ -1,12 +1,17 @@
 """Tests for Phase 4 Entity Extraction."""
 
+from typing import Any, cast
+
 import pytest
 
 from scenesmith import (
     EntityExtractionEngine,
     ExtractedEntity,
+    ExtractedFact,
     ExtractedRelationship,
+    ExtractedStateChange,
     ExtractionResult,
+    SceneEvidenceAnchor,
     SceneExtractionInput,
     StoryImporter,
 )
@@ -86,6 +91,69 @@ class BadConfidenceExtractor:
         )
 
 
+class WrongSceneIdExtractor:
+    """Extractor that returns candidates under the wrong scene ID."""
+
+    def extract_scene(self, _scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a result that does not match the requested scene."""
+        return ExtractionResult(scene_id="source_demo_chapter_999_scene_001")
+
+
+class DuplicateCandidateExtractor:
+    """Extractor that returns duplicate candidate identities."""
+
+    def __init__(self, duplicate_kind: str) -> None:
+        """Create a duplicate-candidate extractor."""
+        self._duplicate_kind = duplicate_kind
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return duplicate candidates of the configured kind."""
+        first_anchor = scene.evidence_anchor_ids[0]
+        if self._duplicate_kind == "entity":
+            entity = ExtractedEntity(
+                entity_id="character_mark",
+                entity_type="character",
+                display_name="Mark",
+                evidence_anchor_id=first_anchor,
+                confidence=0.95,
+            )
+            return ExtractionResult(scene_id=scene.scene_id, entities=(entity, entity))
+        if self._duplicate_kind == "fact":
+            fact = ExtractedFact(
+                fact_id="fact_mark_weapon",
+                entity_id="character_mark",
+                attribute="current_weapon",
+                value="Iron Sword",
+                evidence_anchor_id=first_anchor,
+                confidence=0.95,
+            )
+            return ExtractionResult(scene_id=scene.scene_id, facts=(fact, fact))
+        if self._duplicate_kind == "relationship":
+            relationship = ExtractedRelationship(
+                source_entity_id="character_mark",
+                relationship_type="owns",
+                target_entity_id="item_iron_sword",
+                evidence_anchor_id=first_anchor,
+                confidence=0.95,
+            )
+            return ExtractionResult(
+                scene_id=scene.scene_id,
+                relationships=(relationship, relationship),
+            )
+
+        state_change = ExtractedStateChange(
+            entity_id="character_mark",
+            attribute="current_weapon",
+            value="Iron Sword",
+            valid_from_anchor_id=first_anchor,
+            confidence=0.95,
+        )
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            state_changes=(state_change, state_change),
+        )
+
+
 def imported_source_text() -> str:
     """Return source text for extraction tests."""
     return """Chapter 1
@@ -151,3 +219,137 @@ def test_extraction_rejects_invalid_confidence() -> None:
 
     with pytest.raises(ValueError, match="confidence"):
         engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_wrong_result_scene_id() -> None:
+    """Extractor results must belong to the scene being processed."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=WrongSceneIdExtractor())
+
+    with pytest.raises(ValueError, match="wrong scene_id"):
+        engine.extract_imported_source(imported)
+
+
+@pytest.mark.parametrize(
+    ("duplicate_kind", "message"),
+    (
+        ("entity", "duplicate entity IDs"),
+        ("fact", "duplicate fact IDs"),
+        ("relationship", "duplicate relationship candidates"),
+        ("state_change", "duplicate state-change candidates"),
+    ),
+)
+def test_extraction_rejects_duplicate_candidates(
+    duplicate_kind: str,
+    message: str,
+) -> None:
+    """Extractor results must not repeat candidate identities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(
+        extractor=DuplicateCandidateExtractor(duplicate_kind)
+    )
+
+    with pytest.raises(ValueError, match=message):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_models_reject_invalid_machine_fields() -> None:
+    """Extraction candidate IDs and attributes are whitespace-free tokens."""
+    with pytest.raises(ValueError, match="Extracted fact attribute"):
+        ExtractedFact(
+            fact_id="fact_mark_weapon",
+            entity_id="character_mark",
+            attribute="current weapon",
+            value="Iron Sword",
+            evidence_anchor_id="anchor_001",
+            confidence=0.95,
+        )
+
+
+def test_extraction_models_reject_invalid_confidence() -> None:
+    """Extraction candidate confidence is bounded at model construction."""
+    with pytest.raises(ValueError, match="Extraction confidence"):
+        ExtractedStateChange(
+            entity_id="character_mark",
+            attribute="current_weapon",
+            value="Iron Sword",
+            valid_from_anchor_id="anchor_001",
+            confidence=1.5,
+        )
+
+
+def test_extraction_models_reject_boolean_confidence() -> None:
+    """Extraction candidate confidence must be numeric and not boolean."""
+    with pytest.raises(ValueError, match="Extraction confidence"):
+        ExtractedEntity(
+            entity_id="character_mark",
+            entity_type="character",
+            display_name="Mark",
+            evidence_anchor_id="anchor_001",
+            confidence=True,
+        )
+
+
+def test_extraction_models_reject_non_numeric_confidence() -> None:
+    """Extraction candidate confidence rejects non-numeric runtime values."""
+    with pytest.raises(ValueError, match="Extraction confidence"):
+        ExtractedEntity(
+            entity_id="character_mark",
+            entity_type="character",
+            display_name="Mark",
+            evidence_anchor_id="anchor_001",
+            confidence=cast(Any, "high"),
+        )
+
+
+def test_scene_evidence_anchor_rejects_blank_quote() -> None:
+    """Scene evidence anchors sent to extractors must preserve source text."""
+    with pytest.raises(ValueError, match="Scene evidence anchor quote"):
+        SceneEvidenceAnchor(anchor_id="anchor_001", quote=" ")
+
+
+def test_scene_extraction_input_rejects_duplicate_anchor_ids() -> None:
+    """Scene extraction inputs must not repeat allowed source anchors."""
+    with pytest.raises(ValueError, match="evidence anchor IDs must be unique"):
+        SceneExtractionInput(
+            scene_id="source_chapter_001_scene_001",
+            text="Mark draws the sword.",
+            evidence_anchor_ids=("anchor_001", "anchor_001"),
+        )
+
+
+def test_scene_extraction_input_rejects_duplicate_evidence_anchors() -> None:
+    """Full evidence anchors sent to an extractor must be unique."""
+    anchor = SceneEvidenceAnchor(anchor_id="anchor_001", quote="Mark draws the sword.")
+
+    with pytest.raises(ValueError, match="evidence anchors must be unique"):
+        SceneExtractionInput(
+            scene_id="source_chapter_001_scene_001",
+            text="Mark draws the sword.",
+            evidence_anchor_ids=("anchor_001",),
+            evidence_anchors=(anchor, anchor),
+        )
+
+
+def test_scene_extraction_input_rejects_anchor_object_mismatch() -> None:
+    """Prompt anchors and allowed anchor IDs must describe the same source anchors."""
+    with pytest.raises(ValueError, match="must match evidence anchor IDs"):
+        SceneExtractionInput(
+            scene_id="source_chapter_001_scene_001",
+            text="Mark draws the sword.",
+            evidence_anchor_ids=("anchor_001",),
+            evidence_anchors=(
+                SceneEvidenceAnchor(
+                    anchor_id="anchor_002",
+                    quote="Mark draws the sword.",
+                ),
+            ),
+        )

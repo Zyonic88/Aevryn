@@ -12,6 +12,14 @@ class PresentationSection:
     title: str
     items: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        """Validate section title and display items."""
+        _require_text(self.title, "Presentation section title")
+        for item in self.items:
+            _require_text(item, "Presentation section item")
+        if len(self.items) != len(set(self.items)):
+            raise ValueError("Presentation section items must be unique.")
+
 
 @dataclass(frozen=True, slots=True)
 class CharacterProfileView:
@@ -31,6 +39,13 @@ class CharacterProfileView:
     recent_changes: PresentationSection
     evidence_summary: str
 
+    def __post_init__(self) -> None:
+        """Validate required character profile view fields."""
+        _require_machine_token(self.character_id, "Character profile ID")
+        _require_text(self.display_name, "Character profile display name")
+        _require_text(self.subtitle, "Character profile subtitle")
+        _require_text(self.evidence_summary, "Character profile evidence summary")
+
 
 @dataclass(frozen=True, slots=True)
 class SceneSheetView:
@@ -48,6 +63,13 @@ class SceneSheetView:
     environment: PresentationSection
     evidence_summary: str
 
+    def __post_init__(self) -> None:
+        """Validate required scene sheet view fields."""
+        _require_machine_token(self.scene_id, "Scene sheet ID")
+        _require_text(self.title, "Scene sheet title")
+        _require_machine_token(self.chapter_label, "Scene sheet chapter label")
+        _require_text(self.evidence_summary, "Scene sheet evidence summary")
+
 
 @dataclass(frozen=True, slots=True)
 class ProductionPackView:
@@ -59,6 +81,18 @@ class ProductionPackView:
     camera_prompt: PresentationSection
     animation_prompt: PresentationSection
 
+    def __post_init__(self) -> None:
+        """Validate prompt-pack section titles are unique."""
+        _require_unique_section_titles(
+            (
+                self.image_prompt,
+                self.narration_prompt,
+                self.camera_prompt,
+                self.animation_prompt,
+            ),
+            "Production pack",
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class WorldSheetView:
@@ -67,3 +101,32 @@ class WorldSheetView:
     chapter_label: str
     entity_sections: tuple[PresentationSection, ...]
     evidence_summary: str
+
+    def __post_init__(self) -> None:
+        """Validate required world sheet view fields."""
+        _require_text(self.chapter_label, "World sheet chapter label")
+        _require_text(self.evidence_summary, "World sheet evidence summary")
+        _require_unique_section_titles(self.entity_sections, "World sheet")
+
+
+def _require_text(value: str, field_name: str) -> None:
+    """Validate a required human-readable text field."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required.")
+
+
+def _require_machine_token(value: str, field_name: str) -> None:
+    """Validate a required whitespace-free machine token."""
+    _require_text(value, field_name)
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{field_name} cannot contain whitespace.")
+
+
+def _require_unique_section_titles(
+    sections: tuple[PresentationSection, ...],
+    view_name: str,
+) -> None:
+    """Validate that one view does not repeat visible section titles."""
+    titles = [section.title for section in sections]
+    if len(titles) != len(set(titles)):
+        raise ValueError(f"{view_name} section titles must be unique.")

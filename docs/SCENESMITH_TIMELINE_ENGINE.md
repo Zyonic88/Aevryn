@@ -74,6 +74,26 @@ Overlapping validity windows are rejected.
 
 Permanent timeline IDs are never silently reused for different data.
 
+Chapter and scene positions are one-based.
+
+Boolean values are not valid chapter or scene positions.
+
+Timeline machine fields are whitespace-free tokens:
+
+* Event IDs
+* State-change IDs
+* Subject IDs
+* State attributes
+* Linked event IDs
+
+Filtered Timeline lookups must validate their filters.
+
+Event position filters must point to registered scenes.
+
+State-change event links must point to an event at the same valid_from position.
+
+State-history subject and attribute filters must be machine-safe tokens.
+
 ## What Does It NOT Own?
 
 The Timeline Engine does not own:
@@ -99,9 +119,12 @@ The Timeline Engine can fail if:
 * Events are recorded without a valid story position.
 * State changes do not have valid_from.
 * State changes overlap incorrectly.
+* A state change references an event from a different story position.
 * valid_until is earlier than valid_from.
 * Current story position points to a chapter or scene that does not exist.
 * A state-change ID is reused for different data.
+* Timeline IDs or attributes contain whitespace.
+* A filtered lookup uses an unknown story position or malformed subject/attribute token.
 
 When a position is unknown, the Timeline Engine should reject the operation instead of guessing.
 

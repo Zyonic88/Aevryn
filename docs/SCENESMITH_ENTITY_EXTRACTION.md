@@ -31,10 +31,18 @@ Entity Extraction owns:
 
 * Sending scene text to an extractor
 * Receiving extracted candidates
+* Enforcing the candidate payload schema
+* Rejecting duplicate JSON keys in AI responses
 * Preserving evidence anchor references
 * Preserving confidence
 * Rejecting candidates that cite unknown anchors
+* Rejecting candidates returned for the wrong scene
 * Rejecting candidates with invalid confidence
+* Rejecting unsupported candidate fields
+* Rejecting whitespace in machine-token fields
+* Rejecting invalid candidate model construction
+* Rejecting duplicate or mismatched scene evidence anchors
+* Rejecting duplicate candidate identities within one scene result
 * Returning extraction results for review or canon update
 
 It owns candidates.
@@ -63,8 +71,14 @@ Entity Extraction can fail if:
 * A candidate has no evidence anchor.
 * A candidate has no confidence score.
 * A candidate cites evidence outside the current scene.
+* A candidate payload has missing or unsupported fields.
+* A candidate uses whitespace in IDs, attributes, entity types, or relationship labels.
+* Scene input anchor IDs and full evidence anchors do not match.
+* Scene input repeats an evidence anchor.
 * A candidate is treated as canonical truth.
 * A candidate references a scene that was not imported.
+* An extractor returns results for a different scene than the one requested.
+* An extractor repeats the same entity, fact, relationship, or state-change candidate.
 * The extractor invents unsupported details.
 * Canon is updated without validation.
 
@@ -100,6 +114,26 @@ Every candidate must include:
 
 * Evidence anchor
 * Confidence
+
+Confidence must be numeric, not boolean, and must stay between 0.0 and 1.0.
+
+Candidate payloads must use only the supported schema fields.
+
+Machine-token fields must be whitespace-free:
+
+* Entity IDs
+* Fact IDs
+* Entity types
+* Fact attributes
+* Relationship types
+* Source and target entity IDs
+* Evidence anchor IDs
+
+Human-readable values may contain spaces.
+
+Scene input anchor IDs and full evidence anchor objects must match exactly.
+
+Within one scene result, candidate identities must be unique.
 
 Unsupported claims are omitted.
 

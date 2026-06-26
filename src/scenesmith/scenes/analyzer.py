@@ -12,6 +12,15 @@ from scenesmith.scenes.context import CanonSceneContext
 
 logger = logging.getLogger(__name__)
 
+ANALYSIS_METADATA_ATTRIBUTE_PARTS = frozenset(
+    {
+        "failure_penalty",
+        "penalty",
+        "task_reward",
+        "feasibility",
+    }
+)
+
 
 @dataclass(frozen=True, slots=True)
 class SceneAnalysis:
@@ -30,6 +39,35 @@ class SceneAnalysis:
     changes_introduced: tuple[str, ...]
     continuity_notes: tuple[str, ...]
     forbidden_elements: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        """Validate required scene analysis fields."""
+        _require_machine_token(self.scene_id, "Scene analysis scene ID")
+        _require_text(self.summary, "Scene analysis summary")
+        _require_text(self.purpose, "Scene analysis purpose")
+        _require_text(self.conflict, "Scene analysis conflict")
+        _require_text(self.mood, "Scene analysis mood")
+        _require_text(self.environment_summary, "Scene analysis environment summary")
+        for value in (
+            *self.visual_highlights,
+            *self.character_goals,
+            *self.character_emotions,
+            *self.important_objects,
+            *self.changes_introduced,
+            *self.continuity_notes,
+            *self.forbidden_elements,
+        ):
+            _require_text(value, "Scene analysis list item")
+        for field_name, values in (
+            ("Scene analysis visual highlights", self.visual_highlights),
+            ("Scene analysis character goals", self.character_goals),
+            ("Scene analysis character emotions", self.character_emotions),
+            ("Scene analysis important objects", self.important_objects),
+            ("Scene analysis changes introduced", self.changes_introduced),
+            ("Scene analysis continuity notes", self.continuity_notes),
+            ("Scene analysis forbidden elements", self.forbidden_elements),
+        ):
+            _require_unique_values(values, field_name)
 
 
 class SceneAnalyzer:
@@ -63,9 +101,12 @@ class SceneAnalyzer:
         )
         priority_facts = scene_facts or facts
         priority_relationships = scene_relationships or relationships
+        production_facts = self._production_facts(priority_facts)
+        production_scene_facts = self._production_facts(scene_facts)
+        production_all_facts = self._production_facts(facts)
         summary = self._summary(
             context=context,
-            facts=priority_facts,
+            facts=production_facts,
             relationships=priority_relationships,
         )
         logger.debug(
@@ -81,21 +122,30 @@ class SceneAnalyzer:
         return SceneAnalysis(
             scene_id=context.scene.scene_id,
             summary=summary,
-            purpose=self._purpose(facts=priority_facts, relationships=priority_relationships),
-            conflict=self._conflict(facts=priority_facts, relationships=priority_relationships),
-            mood=self._mood(facts=priority_facts, relationships=priority_relationships),
-            visual_highlights=self._visual_highlights(priority_facts, fallback_facts=facts),
-            character_goals=self._character_goals(priority_facts, fallback_facts=facts),
-            character_emotions=self._character_emotions(priority_facts, fallback_facts=facts),
+            purpose=self._purpose(facts=production_facts, relationships=priority_relationships),
+            conflict=self._conflict(facts=production_facts, relationships=priority_relationships),
+            mood=self._mood(facts=production_facts, relationships=priority_relationships),
+            visual_highlights=self._visual_highlights(
+                production_facts,
+                fallback_facts=production_all_facts,
+            ),
+            character_goals=self._character_goals(
+                production_facts,
+                fallback_facts=production_all_facts,
+            ),
+            character_emotions=self._character_emotions(
+                production_facts,
+                fallback_facts=production_all_facts,
+            ),
             important_objects=self._important_objects(
-                facts=priority_facts,
+                facts=production_facts,
                 relationships=priority_relationships,
-                fallback_facts=facts,
+                fallback_facts=production_all_facts,
                 fallback_relationships=relationships,
             ),
             environment_summary=self._environment_summary(context),
-            changes_introduced=self._changes_introduced(scene_facts),
-            continuity_notes=self._continuity_notes(facts),
+            changes_introduced=self._changes_introduced(production_scene_facts),
+            continuity_notes=self._continuity_notes(production_all_facts),
             forbidden_elements=(
                 "Do not add facts, characters, items, locations, "
                 "or relationships without evidence.",
@@ -126,11 +176,39 @@ class SceneAnalyzer:
         return " ".join(parts)
 
     @staticmethod
+    def _production_facts(facts: Iterable[Fact]) -> tuple[Fact, ...]:
+        """Return facts suitable for production-facing scene analysis."""
+        return tuple(
+            fact
+            for fact in facts
+            if not SceneAnalyzer._is_analysis_metadata_attribute(fact.attribute)
+        )
+
+    @staticmethod
+    def _is_analysis_metadata_attribute(attribute: str) -> bool:
+        """Return whether an attribute is mechanical metadata for analysis."""
+        normalized_attribute = attribute.lower()
+        return any(
+            part in normalized_attribute
+            for part in ANALYSIS_METADATA_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
     def _purpose(
         facts: tuple[Fact, ...],
         relationships: tuple[Relationship, ...],
     ) -> str:
         """Infer scene purpose from canon changes."""
+        labels = SceneAnalyzer._combined_labels(facts=facts, relationships=relationships)
+        if any(label in labels for label in ("challenge", "duel", "contest")):
+            return "Advance a direct challenge and the character's current objective."
+        if any(label in labels for label in ("trial training", "training", "operation")):
+            return "Show active operations, preparation, or readiness."
+        if any(label in labels for label in ("crew", "team", "unit", "group")) and any(
+            relationship.relationship_type in {"recruits", "commands", "serves_under"}
+            for relationship in relationships
+        ):
+            return "Establish group structure, command, or service obligations."
         if any("reward" in fact.attribute or "ability" in fact.attribute for fact in facts):
             return "Introduce or update character abilities and system rules."
         if any(
@@ -155,14 +233,15 @@ class SceneAnalyzer:
         relationships: tuple[Relationship, ...],
     ) -> str:
         """Infer conflict from accepted canon labels."""
-        labels = " ".join(
-            [fact.attribute + " " + fact.value for fact in facts]
-            + [relationship.relationship_type for relationship in relationships]
-        ).lower()
+        labels = SceneAnalyzer._combined_labels(facts=facts, relationships=relationships)
+        if any(label in labels for label in ("challenge", "duel", "contest")):
+            return "A direct challenge creates immediate pressure."
+        if "make money" in labels or "resource" in labels or "support" in labels:
+            return "Resource pressure affects the character's ability to support others."
         if any(label in labels for label in ("mock", "humiliat", "contempt")):
             return "Social humiliation or contempt is present."
         if any(label in labels for label in ("disgust", "reject", "girlfriend", "fiance")):
-            return "Relationship tension surrounds Zhao Chen and Jiang Shasha."
+            return "Relationship tension affects the characters involved."
         if "limitation" in labels or "cannot" in labels or "punishment" in labels:
             return "Character constraints create pressure."
         if "rule" in labels:
@@ -176,10 +255,11 @@ class SceneAnalyzer:
         relationships: tuple[Relationship, ...],
     ) -> str:
         """Infer broad mood from accepted canon labels."""
-        text = " ".join(
-            [fact.attribute + " " + fact.value for fact in facts]
-            + [relationship.relationship_type for relationship in relationships]
-        ).lower()
+        text = SceneAnalyzer._combined_labels(facts=facts, relationships=relationships)
+        if any(label in text for label in ("trial training", "training", "operation")):
+            return "Focused and operational"
+        if "light and breezy" in text:
+            return "Confident and casual"
         if any(label in text for label in ("mock", "humiliat", "contempt", "disgust")):
             return "Awkward and tense"
         if "reward" in text or "bonus" in text:
@@ -195,31 +275,53 @@ class SceneAnalyzer:
         fallback_facts: Iterable[Fact] = (),
     ) -> tuple[str, ...]:
         """Return visual highlights from accepted facts."""
-        highlights = SceneAnalyzer._values_for_attributes(
+        highlights = SceneAnalyzer._values_for_attribute_categories(
             facts=facts,
-            attributes={
+            exact_attributes={
                 "current_location",
                 "warehouse",
-                "starfleet_recruitment_rule",
-                "starship_plan",
                 "territory",
-                "docked_starships",
                 "hull_length",
                 "identification_emblems",
                 "current_activity",
                 "current_focus",
                 "current_action",
             },
+            partial_attributes={
+                "activity",
+                "action",
+                "appearance",
+                "asset",
+                "condition",
+                "environment",
+                "focus",
+                "location",
+                "plan",
+                "rule",
+                "territory",
+                "vehicle",
+                "visual",
+                "warehouse",
+            },
         )
         if not highlights:
-            highlights = SceneAnalyzer._values_for_attributes(
+            highlights = SceneAnalyzer._values_for_attribute_categories(
                 facts=fallback_facts,
-                attributes={
+                exact_attributes={
                     "current_location",
                     "warehouse",
-                    "starfleet_recruitment_rule",
-                    "starship_plan",
                     "territory",
+                },
+                partial_attributes={
+                    "activity",
+                    "environment",
+                    "location",
+                    "plan",
+                    "rule",
+                    "territory",
+                    "vehicle",
+                    "visual",
+                    "warehouse",
                 },
             )
         return tuple(SceneAnalyzer._unique_values(highlights)[:6])
@@ -237,24 +339,59 @@ class SceneAnalyzer:
         ]
 
     @staticmethod
+    def _values_for_attribute_categories(
+        facts: Iterable[Fact],
+        exact_attributes: set[str],
+        partial_attributes: set[str],
+    ) -> list[str]:
+        """Return fact values matching generic attribute categories."""
+        values: list[str] = []
+        for fact in facts:
+            attribute = fact.attribute.lower()
+            if attribute in exact_attributes or any(
+                partial in attribute for partial in partial_attributes
+            ):
+                values.append(fact.value)
+
+        return values
+
+    @staticmethod
     def _character_goals(
         facts: Iterable[Fact],
         fallback_facts: Iterable[Fact] = (),
     ) -> tuple[str, ...]:
         """Return character goals from accepted facts."""
-        goals = SceneAnalyzer._values_for_attributes(
+        goals = SceneAnalyzer._values_for_attribute_categories(
             facts=facts,
-            attributes={
+            exact_attributes={
+                "active_task",
                 "current_task",
-                "starship_plan",
                 "next_semester_requirement",
                 "current_goal",
             },
+            partial_attributes={
+                "goal",
+                "objective",
+                "plan",
+                "requirement",
+                "task",
+            },
         )
         if not goals:
-            goals = SceneAnalyzer._values_for_attributes(
+            goals = SceneAnalyzer._values_for_attribute_categories(
                 facts=fallback_facts,
-                attributes={"current_task", "starship_plan", "next_semester_requirement"},
+                exact_attributes={
+                    "active_task",
+                    "current_task",
+                    "next_semester_requirement",
+                },
+                partial_attributes={
+                    "goal",
+                    "objective",
+                    "plan",
+                    "requirement",
+                    "task",
+                },
             )
         return tuple(SceneAnalyzer._unique_values(goals)[:6])
 
@@ -270,14 +407,27 @@ class SceneAnalyzer:
                 "emotion",
                 "mood",
                 "relationship_context",
-                "attitude_toward_zhao_chen",
                 "food_opinion",
             },
+        )
+        emotions.extend(
+            SceneAnalyzer._values_for_attribute_categories(
+                facts=facts,
+                exact_attributes=set(),
+                partial_attributes={"attitude_toward"},
+            )
         )
         if not emotions:
             emotions = SceneAnalyzer._values_for_attributes(
                 facts=fallback_facts,
                 attributes={"emotion", "mood", "relationship_context"},
+            )
+            emotions.extend(
+                SceneAnalyzer._values_for_attribute_categories(
+                    facts=fallback_facts,
+                    exact_attributes=set(),
+                    partial_attributes={"attitude_toward"},
+                )
             )
         return tuple(SceneAnalyzer._unique_values(emotions)[:6])
 
@@ -292,24 +442,39 @@ class SceneAnalyzer:
         objects = [
             fact.value
             for fact in facts
-            if fact.attribute
-            in {
-                "warehouse",
-                "starship",
-                "blueprint",
-                "territory",
-                "starship_plan",
-                "docked_starships",
-                "market_status",
-                "hull_length",
-                "social_context",
-            }
+            if SceneAnalyzer._attribute_matches(
+                attribute=fact.attribute,
+                exact_attributes={
+                    "asset",
+                    "blueprint",
+                    "equipment",
+                    "item",
+                    "market_status",
+                    "social_context",
+                    "territory",
+                    "vehicle",
+                    "warehouse",
+                    "weapon",
+                },
+                partial_attributes={
+                    "asset",
+                    "blueprint",
+                    "equipment",
+                    "item",
+                    "object",
+                    "plan",
+                    "prop",
+                    "territory",
+                    "vehicle",
+                    "warehouse",
+                    "weapon",
+                },
+            )
         ]
         objects.extend(
             relationship.target_entity_id
             for relationship in relationships
-            if relationship.relationship_type
-            in {"has_blueprint", "possesses", "has_starship", "owns"}
+            if SceneAnalyzer._relationship_marks_object(relationship.relationship_type)
         )
         if not objects:
             fallback_fact_tuple = tuple(fallback_facts)
@@ -322,6 +487,45 @@ class SceneAnalyzer:
                 relationships=fallback_relationship_tuple,
             )
         return tuple(SceneAnalyzer._unique_values(objects))
+
+    @staticmethod
+    def _attribute_matches(
+        attribute: str,
+        exact_attributes: set[str],
+        partial_attributes: set[str],
+    ) -> bool:
+        """Return whether an attribute matches a generic category."""
+        normalized_attribute = attribute.lower()
+        return normalized_attribute in exact_attributes or any(
+            partial in normalized_attribute for partial in partial_attributes
+        )
+
+    @staticmethod
+    def _relationship_marks_object(relationship_type: str) -> bool:
+        """Return whether a relationship points to an important object."""
+        normalized_type = relationship_type.lower()
+        return normalized_type in {
+            "has",
+            "has_blueprint",
+            "has_equipment",
+            "has_item",
+            "owns",
+            "possesses",
+            "uses",
+            "wields",
+        } or any(
+            marker in normalized_type
+            for marker in (
+                "warehouse",
+                "blueprint",
+                "equipment",
+                "item",
+                "object",
+                "tool",
+                "vehicle",
+                "weapon",
+            )
+        )
 
     @staticmethod
     def _environment_summary(context: CanonSceneContext) -> str:
@@ -389,6 +593,17 @@ class SceneAnalyzer:
         )
 
     @staticmethod
+    def _combined_labels(
+        facts: tuple[Fact, ...],
+        relationships: tuple[Relationship, ...],
+    ) -> str:
+        """Return searchable fact and relationship labels."""
+        return " ".join(
+            [fact.attribute + " " + fact.value for fact in facts]
+            + [relationship.relationship_type for relationship in relationships]
+        ).lower()
+
+    @staticmethod
     def _unique_values(values: Iterable[str]) -> list[str]:
         """Return non-empty values in first-seen order without duplicates."""
         unique: dict[str, None] = {}
@@ -397,3 +612,22 @@ class SceneAnalyzer:
                 unique.setdefault(value, None)
 
         return list(unique)
+
+
+def _require_text(value: str, field_name: str) -> None:
+    """Validate a required human-readable text field."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required.")
+
+
+def _require_machine_token(value: str, field_name: str) -> None:
+    """Validate a required whitespace-free machine token."""
+    _require_text(value, field_name)
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{field_name} cannot contain whitespace.")
+
+
+def _require_unique_values(values: tuple[str, ...], field_name: str) -> None:
+    """Validate that visible analysis rows are not duplicated."""
+    if len(values) != len(set(values)):
+        raise ValueError(f"{field_name} must be unique.")

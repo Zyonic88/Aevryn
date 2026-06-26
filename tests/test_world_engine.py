@@ -1,8 +1,16 @@
 """Tests for World Engine."""
 
+from typing import Any, cast
+
 import pytest
 
-from scenesmith import CanonDatabase, WorldStateBuilder
+from scenesmith import (
+    CanonDatabase,
+    WorldEntityFact,
+    WorldEntityState,
+    WorldState,
+    WorldStateBuilder,
+)
 from scenesmith.core import (
     Chapter,
     Character,
@@ -194,12 +202,246 @@ def test_world_state_builder_returns_selected_entities() -> None:
     )
 
 
+def test_world_state_builder_returns_scene_specific_world_state() -> None:
+    """Scene-position world state does not leak later same-chapter facts."""
+    database = CanonDatabase()
+    database.store_entity(
+        Entity(
+            entity_id="location_hangar",
+            entity_type="location",
+            display_name="Hangar",
+        )
+    )
+    database.store_chapter(
+        Chapter(
+            chapter_id="chapter_001",
+            story_id="story_demo",
+            chapter_index=1,
+            title="Chapter 1",
+        )
+    )
+    database.store_evidence(
+        evidence(
+            evidence_id="evidence_quiet",
+            chapter_id="chapter_001",
+            scene_id="chapter_001_scene_001",
+            quote="The hangar was quiet.",
+        )
+    )
+    database.store_evidence(
+        evidence(
+            evidence_id="evidence_alarm",
+            chapter_id="chapter_001",
+            scene_id="chapter_001_scene_002",
+            quote="The hangar alarm started.",
+        )
+    )
+    quiet_fact = Fact(
+        fact_id="fact_hangar_condition_quiet",
+        entity_id="location_hangar",
+        attribute="condition",
+        value="Quiet",
+        evidence_id="evidence_quiet",
+    )
+    alarm_fact = Fact(
+        fact_id="fact_hangar_condition_alarm",
+        entity_id="location_hangar",
+        attribute="condition",
+        value="Alarm active",
+        evidence_id="evidence_alarm",
+    )
+    database.store_fact(quiet_fact)
+    database.store_fact(alarm_fact)
+    database.store_timeline_event(
+        event(
+            event_id="event_quiet",
+            chapter_id="chapter_001",
+            scene_id="chapter_001_scene_001",
+            evidence_id="evidence_quiet",
+        )
+    )
+    database.store_timeline_event(
+        event(
+            event_id="event_alarm",
+            chapter_id="chapter_001",
+            scene_id="chapter_001_scene_002",
+            evidence_id="evidence_alarm",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_quiet",
+            fact_id="fact_hangar_condition_quiet",
+            valid_from_event_id="event_quiet",
+            valid_until_event_id="event_alarm",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_alarm",
+            fact_id="fact_hangar_condition_alarm",
+            valid_from_event_id="event_alarm",
+        )
+    )
+    builder = WorldStateBuilder(database=database)
+
+    first_scene = builder.build_entity_state_at_scene(
+        entity_id="location_hangar",
+        chapter_index=1,
+        scene_index=1,
+    )
+    second_scene = builder.build_entity_state_at_scene(
+        entity_id="location_hangar",
+        chapter_index=1,
+        scene_index=2,
+    )
+
+    assert tuple(fact.value for fact in first_scene.facts) == ("Quiet",)
+    assert tuple(fact.value for fact in second_scene.facts) == ("Alarm active",)
+
+
+def test_world_state_builder_filters_later_same_chapter_relationships() -> None:
+    """Scene-position world state only includes relationships known by the scene."""
+    database = build_database()
+    database.store_chapter(
+        Chapter(
+            chapter_id="chapter_007",
+            story_id="story_demo",
+            chapter_index=7,
+            title="Chapter 7",
+        )
+    )
+    database.store_entity(
+        Entity(
+            entity_id="organization_silver_guard",
+            entity_type="organization",
+            display_name="Silver Guard",
+        )
+    )
+    database.store_evidence(
+        evidence(
+            evidence_id="evidence_silver_guard",
+            chapter_id="chapter_006",
+            scene_id="chapter_006_scene_002",
+            quote="The Silver Guard entered the fortress.",
+        )
+    )
+    database.store_relationship(
+        Relationship(
+            relationship_id="relationship_silver_guard_enters_fortress",
+            source_entity_id="organization_silver_guard",
+            relationship_type="enters",
+            target_entity_id="location_northern_fortress",
+            evidence_id="evidence_silver_guard",
+        )
+    )
+    builder = WorldStateBuilder(database=database)
+
+    first_scene = builder.build_entity_state_at_scene(
+        entity_id="location_northern_fortress",
+        chapter_index=6,
+        scene_index=1,
+    )
+    second_scene = builder.build_entity_state_at_scene(
+        entity_id="location_northern_fortress",
+        chapter_index=6,
+        scene_index=2,
+    )
+
+    assert tuple(relationship.relationship_id for relationship in first_scene.relationships) == (
+        "relationship_iron_guard_controls_fortress",
+    )
+    assert tuple(relationship.relationship_id for relationship in second_scene.relationships) == (
+        "relationship_iron_guard_controls_fortress",
+        "relationship_silver_guard_enters_fortress",
+    )
+
+
 def test_world_state_builder_rejects_unknown_entity() -> None:
     """Unknown world entities cannot get world state views."""
     builder = WorldStateBuilder(database=CanonDatabase())
 
     with pytest.raises(ValueError, match="Unknown world entity"):
         builder.build_entity_state(entity_id="location_missing", chapter_index=1)
+
+
+def test_world_state_builder_rejects_invalid_entity_ids() -> None:
+    """World state builders reject malformed selected entity IDs before lookup."""
+    builder = WorldStateBuilder(database=build_database())
+
+    with pytest.raises(ValueError, match="World entity ID is required"):
+        builder.build_entity_state(entity_id=" ", chapter_index=1)
+
+    with pytest.raises(ValueError, match="World entity ID is required"):
+        builder.build_entity_state(entity_id=cast(Any, 42), chapter_index=1)
+
+    with pytest.raises(ValueError, match="World entity ID cannot contain whitespace"):
+        builder.build_state(
+            entity_ids=("location northern fortress",),
+            chapter_index=1,
+        )
+
+
+def test_world_state_builder_rejects_invalid_chapter_index() -> None:
+    """World state lookups use one-based story positions."""
+    builder = WorldStateBuilder(database=build_database())
+
+    with pytest.raises(ValueError, match="Chapter index must be at least 1"):
+        builder.build_entity_state(
+            entity_id="location_northern_fortress",
+            chapter_index=0,
+        )
+
+    with pytest.raises(ValueError, match="Chapter index must be at least 1"):
+        builder.build_state(
+            entity_ids=("location_northern_fortress",),
+            chapter_index=0,
+        )
+
+    with pytest.raises(ValueError, match="Chapter index must be at least 1"):
+        builder.build_entity_state(
+            entity_id="location_northern_fortress",
+            chapter_index=True,
+        )
+
+    with pytest.raises(ValueError, match="Chapter index must be at least 1"):
+        builder.build_entity_state(
+            entity_id="location_northern_fortress",
+            chapter_index=cast(Any, "1"),
+        )
+
+
+def test_world_state_builder_rejects_invalid_scene_index() -> None:
+    """Scene-position world state lookups use one-based scene positions."""
+    builder = WorldStateBuilder(database=build_database())
+
+    with pytest.raises(ValueError, match="Scene index must be at least 1"):
+        builder.build_entity_state_at_scene(
+            entity_id="location_northern_fortress",
+            chapter_index=1,
+            scene_index=0,
+        )
+
+    with pytest.raises(ValueError, match="Scene index must be at least 1"):
+        builder.build_state_at_scene(
+            entity_ids=("location_northern_fortress",),
+            chapter_index=1,
+            scene_index=0,
+        )
+
+    with pytest.raises(ValueError, match="Scene index must be at least 1"):
+        builder.build_entity_state_at_scene(
+            entity_id="location_northern_fortress",
+            chapter_index=1,
+            scene_index=True,
+        )
+
+    with pytest.raises(ValueError, match="Scene index must be at least 1"):
+        builder.build_entity_state_at_scene(
+            entity_id="location_northern_fortress",
+            chapter_index=1,
+            scene_index=cast(Any, "1"),
+        )
 
 
 def test_world_state_builder_rejects_character_entity() -> None:
@@ -253,23 +495,18 @@ def test_world_state_builder_sorts_relationships_by_id() -> None:
 
 
 def test_world_state_builder_rejects_relationship_with_unknown_endpoint() -> None:
-    """World relationships must point to accepted Canon entities."""
+    """Canon rejects world relationships with unknown endpoints before read layers."""
     database = build_database()
-    database.store_relationship(
-        Relationship(
-            relationship_id="relationship_missing_group_claims_fortress",
-            source_entity_id="organization_missing",
-            relationship_type="claims",
-            target_entity_id="location_northern_fortress",
-            evidence_id="evidence_owner",
-        )
-    )
-    builder = WorldStateBuilder(database=database)
 
-    with pytest.raises(ValueError, match="Unknown related world entity"):
-        builder.build_entity_state(
-            entity_id="location_northern_fortress",
-            chapter_index=6,
+    with pytest.raises(ValueError, match="Unknown entity: organization_missing"):
+        database.store_relationship(
+            Relationship(
+                relationship_id="relationship_missing_group_claims_fortress",
+                source_entity_id="organization_missing",
+                relationship_type="claims",
+                target_entity_id="location_northern_fortress",
+                evidence_id="evidence_owner",
+            )
         )
 
 
@@ -322,3 +559,56 @@ def test_world_state_builder_uses_active_display_name_fact() -> None:
     )
 
     assert state.display_name == "North Gate"
+
+
+def test_world_entity_fact_rejects_invalid_display_fields() -> None:
+    """World facts reject malformed display values and source IDs."""
+    with pytest.raises(ValueError, match="attribute cannot contain whitespace"):
+        WorldEntityFact(
+            attribute="damage level",
+            value="Walls damaged",
+            evidence=evidence("evidence_damage", "chapter_006", "scene_006", "Quote."),
+            valid_from_chapter_id="chapter_006",
+            valid_from_scene_id="scene_006",
+        )
+
+    with pytest.raises(ValueError, match="valid-from chapter ID cannot contain whitespace"):
+        WorldEntityFact(
+            attribute="damage",
+            value="Walls damaged",
+            evidence=evidence("evidence_damage", "chapter_006", "scene_006", "Quote."),
+            valid_from_chapter_id="chapter 006",
+            valid_from_scene_id="scene_006",
+        )
+
+
+def test_world_entity_state_rejects_invalid_identity() -> None:
+    """World entity state requires valid identity and chapter values."""
+    with pytest.raises(ValueError, match="World entity ID cannot contain whitespace"):
+        WorldEntityState(
+            entity_id="location fortress",
+            entity_type="location",
+            display_name="Northern Fortress",
+            chapter_index=1,
+        )
+
+    with pytest.raises(ValueError, match="chapter index must be at least 1"):
+        WorldEntityState(
+            entity_id="location_northern_fortress",
+            entity_type="location",
+            display_name="Northern Fortress",
+            chapter_index=0,
+        )
+
+
+def test_world_state_rejects_duplicate_entities() -> None:
+    """World state views cannot contain duplicate entity entries."""
+    entity = WorldEntityState(
+        entity_id="location_northern_fortress",
+        entity_type="location",
+        display_name="Northern Fortress",
+        chapter_index=1,
+    )
+
+    with pytest.raises(ValueError, match="duplicate entities"):
+        WorldState(chapter_index=1, entities=(entity, entity))

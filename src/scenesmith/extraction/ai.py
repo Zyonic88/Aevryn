@@ -14,6 +14,7 @@ from scenesmith.extraction.models import (
     ExtractionResult,
     SceneExtractionInput,
 )
+from scenesmith.json_utils import loads_json_without_duplicate_keys
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,25 @@ class EvidenceBoundedAIExtractor:
     _required_payload_keys = frozenset(
         {"entities", "facts", "relationships", "state_changes"}
     )
+    _entity_item_keys = frozenset(
+        {"entity_id", "entity_type", "display_name", "evidence_anchor_id", "confidence"}
+    )
+    _fact_item_keys = frozenset(
+        {"fact_id", "entity_id", "attribute", "value", "evidence_anchor_id", "confidence"}
+    )
+    _relationship_item_keys = frozenset(
+        {
+            "source_entity_id",
+            "relationship_type",
+            "target_entity_id",
+            "evidence_anchor_id",
+            "confidence",
+        }
+    )
+    _state_change_item_keys = frozenset(
+        {"entity_id", "attribute", "value", "valid_from_anchor_id", "confidence"}
+    )
+    _state_change_optional_item_keys = frozenset({"valid_until_anchor_id"})
     _mojibake_replacements = {
         "\u00e3\u20ac\u0090": "\u3010",
         "\u00e3\u20ac\u0091": "\u3011",
@@ -129,7 +149,7 @@ class EvidenceBoundedAIExtractor:
     def _load_payload(raw_response: str) -> dict[str, Any]:
         """Parse an AI JSON response."""
         try:
-            payload = json.loads(raw_response.lstrip("\ufeff"))
+            payload = loads_json_without_duplicate_keys(raw_response)
         except json.JSONDecodeError as error:
             raise ValueError("AI extraction response must be valid JSON.") from error
 
@@ -154,13 +174,20 @@ class EvidenceBoundedAIExtractor:
         """Parse entity candidates from a payload."""
         return tuple(
             ExtractedEntity(
-                entity_id=cls._required_str(item, "entity_id"),
-                entity_type=cls._required_str(item, "entity_type"),
+                entity_id=cls._required_machine_str(item, "entity_id"),
+                entity_type=cls._required_machine_str(item, "entity_type"),
                 display_name=cls._required_str(item, "display_name"),
-                evidence_anchor_id=cls._required_str(item, "evidence_anchor_id"),
+                evidence_anchor_id=cls._required_machine_str(
+                    item,
+                    "evidence_anchor_id",
+                ),
                 confidence=cls._required_confidence(item),
             )
-            for item in cls._items(payload, "entities")
+            for item in cls._items(
+                payload,
+                "entities",
+                required_keys=cls._entity_item_keys,
+            )
         )
 
     @classmethod
@@ -168,14 +195,21 @@ class EvidenceBoundedAIExtractor:
         """Parse fact candidates from a payload."""
         return tuple(
             ExtractedFact(
-                fact_id=cls._required_str(item, "fact_id"),
-                entity_id=cls._required_str(item, "entity_id"),
-                attribute=cls._required_str(item, "attribute"),
+                fact_id=cls._required_machine_str(item, "fact_id"),
+                entity_id=cls._required_machine_str(item, "entity_id"),
+                attribute=cls._required_machine_str(item, "attribute"),
                 value=cls._required_str(item, "value"),
-                evidence_anchor_id=cls._required_str(item, "evidence_anchor_id"),
+                evidence_anchor_id=cls._required_machine_str(
+                    item,
+                    "evidence_anchor_id",
+                ),
                 confidence=cls._required_confidence(item),
             )
-            for item in cls._items(payload, "facts")
+            for item in cls._items(
+                payload,
+                "facts",
+                required_keys=cls._fact_item_keys,
+            )
         )
 
     @classmethod
@@ -183,13 +217,20 @@ class EvidenceBoundedAIExtractor:
         """Parse relationship candidates from a payload."""
         return tuple(
             ExtractedRelationship(
-                source_entity_id=cls._required_str(item, "source_entity_id"),
-                relationship_type=cls._required_str(item, "relationship_type"),
-                target_entity_id=cls._required_str(item, "target_entity_id"),
-                evidence_anchor_id=cls._required_str(item, "evidence_anchor_id"),
+                source_entity_id=cls._required_machine_str(item, "source_entity_id"),
+                relationship_type=cls._required_machine_str(item, "relationship_type"),
+                target_entity_id=cls._required_machine_str(item, "target_entity_id"),
+                evidence_anchor_id=cls._required_machine_str(
+                    item,
+                    "evidence_anchor_id",
+                ),
                 confidence=cls._required_confidence(item),
             )
-            for item in cls._items(payload, "relationships")
+            for item in cls._items(
+                payload,
+                "relationships",
+                required_keys=cls._relationship_item_keys,
+            )
         )
 
     @classmethod
@@ -197,18 +238,35 @@ class EvidenceBoundedAIExtractor:
         """Parse state-change candidates from a payload."""
         return tuple(
             ExtractedStateChange(
-                entity_id=cls._required_str(item, "entity_id"),
-                attribute=cls._required_str(item, "attribute"),
+                entity_id=cls._required_machine_str(item, "entity_id"),
+                attribute=cls._required_machine_str(item, "attribute"),
                 value=cls._required_str(item, "value"),
-                valid_from_anchor_id=cls._required_str(item, "valid_from_anchor_id"),
-                valid_until_anchor_id=cls._optional_str(item, "valid_until_anchor_id"),
+                valid_from_anchor_id=cls._required_machine_str(
+                    item,
+                    "valid_from_anchor_id",
+                ),
+                valid_until_anchor_id=cls._optional_machine_str(
+                    item,
+                    "valid_until_anchor_id",
+                ),
                 confidence=cls._required_confidence(item),
             )
-            for item in cls._items(payload, "state_changes")
+            for item in cls._items(
+                payload,
+                "state_changes",
+                required_keys=cls._state_change_item_keys,
+                optional_keys=cls._state_change_optional_item_keys,
+            )
         )
 
     @staticmethod
-    def _items(payload: dict[str, Any], key: str) -> tuple[dict[str, Any], ...]:
+    def _items(
+        payload: dict[str, Any],
+        key: str,
+        *,
+        required_keys: frozenset[str],
+        optional_keys: frozenset[str] = frozenset(),
+    ) -> tuple[dict[str, Any], ...]:
         """Return object items from a payload list."""
         value = payload.get(key, [])
         if not isinstance(value, list):
@@ -218,9 +276,38 @@ class EvidenceBoundedAIExtractor:
         for item in value:
             if not isinstance(item, dict):
                 raise ValueError(f"AI extraction list item must be an object: {key}")
+            EvidenceBoundedAIExtractor._validate_item_keys(
+                item=item,
+                key=key,
+                required_keys=required_keys,
+                optional_keys=optional_keys,
+            )
             items.append(item)
 
         return tuple(items)
+
+    @staticmethod
+    def _validate_item_keys(
+        item: dict[str, Any],
+        key: str,
+        required_keys: frozenset[str],
+        optional_keys: frozenset[str],
+    ) -> None:
+        """Validate the schema keys for one extraction candidate item."""
+        keys = set(item)
+        missing_keys = required_keys - keys
+        if missing_keys:
+            missing = ", ".join(sorted(missing_keys))
+            raise ValueError(
+                f"AI extraction item is missing required fields in {key}: {missing}"
+            )
+
+        unsupported_keys = keys - required_keys - optional_keys
+        if unsupported_keys:
+            unsupported = ", ".join(sorted(unsupported_keys))
+            raise ValueError(
+                f"AI extraction item has unsupported fields in {key}: {unsupported}"
+            )
 
     @staticmethod
     def _required_str(item: dict[str, Any], key: str) -> str:
@@ -228,7 +315,14 @@ class EvidenceBoundedAIExtractor:
         value = item.get(key)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"AI extraction field must be a non-empty string: {key}")
-        return EvidenceBoundedAIExtractor._normalize_text(value)
+        return EvidenceBoundedAIExtractor._normalize_text(value.strip())
+
+    @staticmethod
+    def _required_machine_str(item: dict[str, Any], key: str) -> str:
+        """Read a required machine-token string from a payload item."""
+        value = EvidenceBoundedAIExtractor._required_str(item, key)
+        EvidenceBoundedAIExtractor._validate_machine_token(value=value, key=key)
+        return value
 
     @staticmethod
     def _optional_str(item: dict[str, Any], key: str) -> str | None:
@@ -238,13 +332,28 @@ class EvidenceBoundedAIExtractor:
             return None
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"AI extraction field must be a string or null: {key}")
-        return EvidenceBoundedAIExtractor._normalize_text(value)
+        return EvidenceBoundedAIExtractor._normalize_text(value.strip())
+
+    @staticmethod
+    def _optional_machine_str(item: dict[str, Any], key: str) -> str | None:
+        """Read an optional machine-token string from a payload item."""
+        value = EvidenceBoundedAIExtractor._optional_str(item, key)
+        if value is None:
+            return None
+        EvidenceBoundedAIExtractor._validate_machine_token(value=value, key=key)
+        return value
+
+    @staticmethod
+    def _validate_machine_token(value: str, key: str) -> None:
+        """Validate that a machine field has no whitespace."""
+        if any(character.isspace() for character in value):
+            raise ValueError(f"AI extraction machine field cannot contain spaces: {key}")
 
     @staticmethod
     def _required_confidence(item: dict[str, Any]) -> float:
         """Read a required confidence value from a payload item."""
         value = item.get("confidence")
-        if not isinstance(value, int | float):
+        if isinstance(value, bool) or not isinstance(value, int | float):
             raise ValueError("AI extraction confidence must be numeric.")
         confidence = float(value)
         if not 0.0 <= confidence <= 1.0:

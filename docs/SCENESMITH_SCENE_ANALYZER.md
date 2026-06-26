@@ -57,7 +57,19 @@ The Scene Analyzer is deterministic.
 
 It only analyzes a scene context whose snapshot points to the same scene.
 
+Scene Analysis outputs must have a valid scene ID and non-empty summary, purpose, conflict, mood, and environment summary.
+
+Scene Analysis list items must not be blank.
+
+Scene Analysis list items must not repeat within the same output field.
+
 It may compress accepted facts and relationships into human-readable meaning.
+
+Its heuristic language must remain genre-neutral.
+
+It may recognize broad beats such as challenges, contests, operations, preparation, resource pressure, command structure, and relationship tension when accepted facts support them.
+
+It must not hard-code names, titles, power systems, factions, or genre-specific wording from a test story.
 
 It must not name specific unsupported actors when Canon only supports a general conflict label.
 
@@ -66,6 +78,8 @@ Repeated facts, notes, and objects are deduplicated.
 Retained canon becomes continuity notes.
 
 Only facts evidenced by the current scene become changes introduced.
+
+Mechanical metadata such as task rewards, penalties, and feasibility scores should not dominate production-facing summaries.
 
 ## What Does It NOT Own?
 
@@ -97,6 +111,8 @@ Scene Analyzer can fail if:
 * It allows prompt generation to re-dump the entire chapter.
 * It treats retained canon as a newly introduced scene change.
 * It analyzes a context whose snapshot does not match the scene.
+* It emits blank production-facing analysis fields.
+* It emits duplicate production-facing analysis rows.
 
 When uncertain, it should return Unknown instead of guessing.
 

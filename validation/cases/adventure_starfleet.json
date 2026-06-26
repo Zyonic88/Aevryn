@@ -1,0 +1,23 @@
+{
+  "case_id": "adventure_starfleet",
+  "title": "Sorry, my starfleet only recruits female soldiers",
+  "genre": "Adventure",
+  "source_directory": "Sorry, my starfleet only recruits female soldiers (Adventure)",
+  "chapter_glob": "*.txt",
+  "expected_import": {
+    "chapter_files": 10,
+    "chapters": 10,
+    "evidence_anchors": 1269,
+    "import_digest": "295dab6a37a323d5e02c808965a58da50b42b63d3db074caada0635342f9d489",
+    "paragraphs": 318,
+    "scenes": 10,
+    "sentences": 1269,
+    "source_manifest_digest": "d36fb1093e9af0a17d09e9b5c628664f2ab010d53a1ac24d03f57212ff57f21f"
+  },
+  "expected_extraction": {
+    "scene_inputs": 10,
+    "evidence_anchors": 1269,
+    "extraction_input_digest": "da6390d0a6ea964af63a05ad2a19540cb5a56be4d0c050f36a29836c4c66efad",
+    "extraction_prompt_digest": "7c5741cd4c9ea116c20ec8a1a275b99ff7b3e19e1213c8058d3c7d57eca780f8"
+  }
+}

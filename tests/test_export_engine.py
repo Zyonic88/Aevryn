@@ -3,6 +3,9 @@
 import csv
 import io
 import json
+from typing import Any, cast
+
+import pytest
 
 from scenesmith import (
     CanonEngine,
@@ -151,6 +154,21 @@ def test_prompt_bundle_json_includes_all_prompt_types() -> None:
     assert exported["animation_prompt"]
 
 
+def test_json_exports_preserve_unicode_text() -> None:
+    """JSON exports preserve repaired Unicode instead of ASCII escaping it."""
+    bundle = PromptBundle(
+        image_prompt="Show Zhao Chen's fiancée.",
+        narration_prompt="Narrate the scene.",
+        camera_prompt="Use a medium close-up.",
+        animation_prompt="Subtle holographic motion.",
+    )
+
+    exported = ExportEngine().prompt_bundle_json(bundle)
+
+    assert "fiancée" in exported
+    assert "\\u00e9" not in exported
+
+
 def test_character_sheet_markdown_exports_character_facts() -> None:
     """Character sheet Markdown includes display name and known facts."""
     character_card, _scene_context, _prompt_bundle = build_outputs()
@@ -216,3 +234,39 @@ def test_prompt_bundle_csv_exports_prompt_rows() -> None:
         "camera",
         "animation",
     ]
+
+
+def test_csv_text_rejects_duplicate_headers() -> None:
+    """CSV exports require stable, unique headers."""
+    with pytest.raises(ValueError, match="fieldnames cannot contain duplicates"):
+        ExportEngine._csv_text(
+            fieldnames=["attribute", "attribute"],
+            rows=[],
+        )
+
+
+def test_csv_text_rejects_missing_row_fields() -> None:
+    """CSV rows must match the configured export schema."""
+    with pytest.raises(ValueError, match="include every configured field"):
+        ExportEngine._csv_text(
+            fieldnames=["attribute", "value"],
+            rows=[{"attribute": "current_weapon"}],
+        )
+
+
+def test_csv_text_rejects_unexpected_row_fields() -> None:
+    """CSV rows cannot silently include fields outside the schema."""
+    with pytest.raises(ValueError, match="unexpected fields"):
+        ExportEngine._csv_text(
+            fieldnames=["attribute"],
+            rows=[{"attribute": "current_weapon", "value": "Iron Sword"}],
+        )
+
+
+def test_markdown_list_rejects_blank_values() -> None:
+    """Markdown list exports should not emit blank visible rows."""
+    with pytest.raises(ValueError, match="cannot be blank"):
+        ExportEngine._markdown_list(("Visible", " "))
+
+    with pytest.raises(ValueError, match="cannot be blank"):
+        ExportEngine._markdown_list(("Visible", cast(Any, 42)))

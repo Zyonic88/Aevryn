@@ -5,11 +5,16 @@ import pytest
 from scenesmith import (
     CanonEngine,
     CanonEntity,
+    CanonFactVersion,
+    CharacterCard,
     CharacterEngine,
+    CharacterFact,
     EntityType,
     Evidence,
     InvalidTimelinePositionError,
+    SceneContext,
     SceneEngine,
+    SceneEnvironmentSnapshot,
     StoryPosition,
     TimelineChapter,
     TimelineEngine,
@@ -37,6 +42,21 @@ def evidence(
         scene=scene,
         quote=quote,
         confidence=1.0,
+    )
+
+
+def fact_version(
+    *,
+    entity_id: str = "location_rain_bridge",
+    attribute: str = "weather",
+    value: str = "Rain",
+) -> CanonFactVersion:
+    """Create a canon fact version for scene model tests."""
+    return CanonFactVersion(
+        entity_id=entity_id,
+        attribute=attribute,
+        value=value,
+        evidence=evidence(),
     )
 
 
@@ -174,4 +194,75 @@ def test_build_context_rejects_unknown_environment_entity() -> None:
         scene_engine.build_context(
             position=position(14, 1),
             environment_entity_ids=("location_unknown",),
+        )
+
+
+def test_scene_environment_snapshot_rejects_mismatched_fact_keys() -> None:
+    """Environment snapshot fact keys must match fact attributes."""
+    with pytest.raises(ValueError, match="fact keys must match"):
+        SceneEnvironmentSnapshot(
+            entity_id="location_rain_bridge",
+            facts={"climate": fact_version(attribute="weather")},
+        )
+
+
+def test_scene_context_rejects_mismatched_scene_position() -> None:
+    """Scene context position must match Timeline scene metadata."""
+    with pytest.raises(ValueError, match="position must match"):
+        SceneContext(
+            position=position(14, 1),
+            scene=TimelineScene(position=position(8, 2), title="Blacksmith"),
+            characters=(),
+            environment=(),
+            events=(),
+            active_state_changes=(),
+        )
+
+
+def test_scene_context_rejects_duplicate_characters() -> None:
+    """Scene context cannot contain duplicate character cards."""
+    character_fact = CharacterFact(
+        attribute="current_weapon",
+        value="Iron Sword",
+        previous_value=None,
+        evidence=evidence(chapter="Chapter 8", scene="Scene 2"),
+        valid_from=position(8, 2),
+    )
+    character = CharacterCard(
+        character_id="character_mark",
+        display_name="Mark",
+        position=position(14, 1),
+        facts={"current_weapon": character_fact},
+        relationships=(),
+    )
+
+    with pytest.raises(ValueError, match="duplicate characters"):
+        SceneContext(
+            position=position(14, 1),
+            scene=TimelineScene(position=position(14, 1), title="Rain Bridge"),
+            characters=(character, character),
+            environment=(),
+            events=(),
+            active_state_changes=(),
+        )
+
+
+def test_scene_context_rejects_future_active_state_changes() -> None:
+    """Active state changes cannot begin after the scene position."""
+    with pytest.raises(ValueError, match="future"):
+        SceneContext(
+            position=position(14, 1),
+            scene=TimelineScene(position=position(14, 1), title="Rain Bridge"),
+            characters=(),
+            environment=(),
+            events=(),
+            active_state_changes=(
+                TimelineStateChange(
+                    change_id="change_future_weapon",
+                    subject_id="character_mark",
+                    attribute="current_weapon",
+                    value="Steel Sword",
+                    valid_from=position(20, 1),
+                ),
+            ),
         )

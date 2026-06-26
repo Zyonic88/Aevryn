@@ -24,6 +24,26 @@ Version 1 focuses on understanding stories.
 
 It does **not** generate media.
 
+## Feature Freeze
+
+Version 1 is under feature freeze.
+
+Until Version 1 is released, SceneSmith must not add:
+
+* New core systems
+* New architecture
+* Major redesigns
+
+Allowed work:
+
+* Bug fixes
+* Performance improvements
+* UX improvements
+* Testing
+* Documentation
+
+The goal from this point forward is release confidence.
+
 ---
 
 ## Core Systems
@@ -78,6 +98,24 @@ It does **not** generate media.
 ## Success Criteria
 
 A creator can upload a story and generate canonically accurate scene information without manually tracking continuity.
+
+---
+
+## SceneSmith V1 RC1
+
+Release Candidate 1 is reached when:
+
+* Architecture is frozen
+* All V1 systems are complete
+* Acceptance criteria pass
+* Canon Rebuild Test passes
+* 10-chapter continuity test passes
+* No known critical bugs remain
+* Documentation is complete
+
+RC1 is not a feature milestone.
+
+RC1 is a confidence milestone.
 
 ---
 

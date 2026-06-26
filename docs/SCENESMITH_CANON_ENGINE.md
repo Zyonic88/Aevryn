@@ -89,16 +89,57 @@ AI extraction may propose facts, but it never owns truth.
 
 The Canon Engine owns truth.
 
+Chapter-based canon lookups use one-based chapter indexes.
+
+Scene-based canon lookups use one-based chapter and scene indexes.
+
+Boolean values are not valid lookup indexes.
+
+Scene-based canon lookups must not expose facts or relationships introduced later in the same chapter.
+
+Canon read models must reject malformed state:
+
+* Entity IDs are permanent and machine-safe.
+* Evidence must reference known registered chapters when chapter structure exists.
+* Evidence must reference known registered scenes when scene structure exists.
+* Evidence confidence must be numeric, not boolean, and bounded from 0.0 to 1.0.
+* Fact entity IDs and attributes are machine-safe.
+* Facts must reference known entities.
+* Relationship endpoints and relationship types are machine-safe.
+* Relationships must reference known source and target entities.
+* Fact values and previous values cannot be blank.
+* Conflicts must describe two different values for the same entity and attribute.
+* Snapshot fact keys must match fact attributes.
+* Snapshot facts must belong to the snapshot entity.
+* Snapshot relationships must connect to the snapshot entity.
+* Canon update summary buckets cannot contain malformed or duplicate IDs.
+* Timeline events must cite evidence from the same chapter.
+* Timeline events must cite evidence from the same scene.
+* State change validity windows cannot end before they begin.
+* Closing an open state change cannot create a backward validity window.
+
 ## How Does It Fail?
 
 The Canon Engine can fail if:
 
 * A fact has no evidence.
+* Evidence points outside registered chapter or scene structure.
+* A fact points to an unknown entity.
 * A fact points to the wrong chapter or scene.
+* A relationship points to an unknown source or target entity.
 * A new value overwrites old state instead of creating version history.
 * Two facts conflict and the conflict is not preserved.
 * An entity receives a new ID when it should keep the same permanent ID.
 * Unknown information is treated as known.
+* State is reconstructed from an invalid chapter position.
+* State is reconstructed from a whole chapter when a scene-specific position was requested.
+* A snapshot mixes facts or relationships from another entity.
+* A conflict does not refer to one entity and one attribute.
+* An update summary contains malformed or duplicate accepted IDs.
+* A timeline event points at evidence from a different chapter.
+* A timeline event points at evidence from a different scene.
+* A state change validity window moves backward in story order.
+* A previously open state change is closed before it started.
 
 When the Canon Engine cannot prove a fact, the correct state is Unknown.
 

@@ -7,6 +7,10 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from scenesmith.canon import CanonDatabase
+from scenesmith.canon.policies import (
+    is_current_state_relationship_type,
+    is_scene_context_fact_attribute,
+)
 from scenesmith.characters import CanonCharacterCard, CharacterCardBuilder
 from scenesmith.core import Fact, Relationship, Scene, SceneSnapshot
 from scenesmith.importing import ImportedSource
@@ -23,6 +27,23 @@ class CanonSceneContext:
     character_cards: tuple[CanonCharacterCard, ...]
     active_facts: tuple[Fact, ...]
     relationships: tuple[Relationship, ...]
+
+    def __post_init__(self) -> None:
+        """Validate scene context snapshot consistency."""
+        if self.snapshot.scene_id != self.scene.scene_id:
+            raise ValueError("Scene context snapshot must reference the scene.")
+        snapshot_character_ids = set(self.snapshot.character_ids)
+        card_character_ids = {card.character_id for card in self.character_cards}
+        if snapshot_character_ids != card_character_ids:
+            raise ValueError("Scene context snapshot character IDs must match cards.")
+        if set(self.snapshot.fact_ids) != {fact.fact_id for fact in self.active_facts}:
+            raise ValueError("Scene context snapshot fact IDs must match active facts.")
+        if set(self.snapshot.relationship_ids) != {
+            relationship.relationship_id for relationship in self.relationships
+        }:
+            raise ValueError(
+                "Scene context snapshot relationship IDs must match relationships."
+            )
 
 
 class SceneContextBuilder:
@@ -60,24 +81,39 @@ class SceneContextBuilder:
         chapter_index, scene = self._find_scene(imported_source, scene_id)
         unique_character_ids = self._dedupe_ids(character_ids)
         cards = tuple(
-            self._character_cards.build_card(
+            self._character_cards.build_card_at_scene(
                 character_id=character_id,
                 chapter_index=chapter_index,
+                scene_index=scene.scene_index,
             )
             for character_id in unique_character_ids
         )
         active_facts = tuple(
             fact
             for character_id in unique_character_ids
-            for fact in self._database.retrieve_state_at_chapter(
+            for fact in self._database.retrieve_state_at_scene(
                 entity_id=character_id,
+                chapter_index=chapter_index,
+                scene_index=scene.scene_index,
+            )
+            if self._fact_is_scene_relevant(
+                fact=fact,
                 chapter_index=chapter_index,
             )
         )
         relationships = self._dedupe_relationships(
             relationship
             for character_id in unique_character_ids
-            for relationship in self._database.list_relationships_for_entity(character_id)
+            for relationship in self._database.list_relationships_for_entity_at_scene(
+                entity_id=character_id,
+                chapter_index=chapter_index,
+                scene_index=scene.scene_index,
+            )
+            if self._relationship_is_scene_relevant(
+                relationship=relationship,
+                chapter_index=chapter_index,
+                character_ids=unique_character_ids,
+            )
         )
         location_ids = self._location_ids_from_relationships(relationships)
         snapshot = SceneSnapshot(
@@ -158,3 +194,31 @@ class SceneContextBuilder:
                     location_ids.setdefault(entity_id, None)
 
         return tuple(location_ids)
+
+    def _relationship_is_scene_relevant(
+        self,
+        relationship: Relationship,
+        chapter_index: int,
+        character_ids: tuple[str, ...],
+    ) -> bool:
+        """Return whether a relationship belongs in a scene context view."""
+        evidence_chapter_index = self._database.relationship_evidence_chapter_index(
+            relationship
+        )
+        if evidence_chapter_index == chapter_index:
+            return True
+
+        if is_current_state_relationship_type(relationship.relationship_type):
+            return True
+
+        return (
+            relationship.source_entity_id in character_ids
+            and relationship.target_entity_id in character_ids
+        )
+
+    def _fact_is_scene_relevant(self, fact: Fact, chapter_index: int) -> bool:
+        """Return whether a fact belongs in a scene context view."""
+        if self._database.fact_evidence_chapter_index(fact) == chapter_index:
+            return True
+
+        return is_scene_context_fact_attribute(fact.attribute)

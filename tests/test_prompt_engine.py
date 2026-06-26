@@ -1,12 +1,17 @@
 """Tests for the SceneSmith Prompt Engine."""
 
+import pytest
+
 from scenesmith import (
     CanonEngine,
     CanonEntity,
     CharacterEngine,
     EntityType,
     Evidence,
+    ProductionPack,
+    PromptBundle,
     PromptEngine,
+    SceneAnalysis,
     SceneContext,
     SceneEngine,
     StoryPosition,
@@ -163,3 +168,178 @@ def test_build_bundle_returns_all_prompt_types() -> None:
     assert bundle.narration_prompt
     assert bundle.camera_prompt
     assert bundle.animation_prompt
+
+
+def test_prompt_bundle_rejects_blank_prompt_text() -> None:
+    """Prompt bundles must contain usable prompt text."""
+    with pytest.raises(ValueError, match="Image prompt is required"):
+        PromptBundle(
+            image_prompt=" ",
+            narration_prompt="Narrate known canon.",
+            camera_prompt="Use a medium shot.",
+            animation_prompt="Show known motion.",
+        )
+
+
+def test_production_pack_rejects_invalid_scene_id() -> None:
+    """Production packs use stable machine-token scene IDs."""
+    bundle = PromptBundle(
+        image_prompt="Image prompt.",
+        narration_prompt="Narration prompt.",
+        camera_prompt="Camera prompt.",
+        animation_prompt="Animation prompt.",
+    )
+
+    with pytest.raises(ValueError, match="Production pack scene ID"):
+        ProductionPack(
+            scene_id="scene 001",
+            scene_summary="Scene summary.",
+            purpose="Purpose.",
+            conflict="Unknown",
+            mood="Unknown",
+            visual_highlights=(),
+            character_goals=(),
+            important_objects=(),
+            environment_summary="Unknown",
+            continuity_notes=(),
+            forbidden_elements=(),
+            prompt_bundle=bundle,
+            analysis=SceneAnalysis(
+                scene_id="scene_001",
+                summary="Scene summary.",
+                purpose="Purpose.",
+                conflict="Unknown",
+                mood="Unknown",
+                visual_highlights=(),
+                character_goals=(),
+                character_emotions=(),
+                important_objects=(),
+                environment_summary="Unknown",
+                changes_introduced=(),
+                continuity_notes=(),
+                forbidden_elements=(),
+            ),
+        )
+
+
+def test_production_pack_rejects_mismatched_analysis_scene() -> None:
+    """Production packs require analysis for the same scene."""
+    bundle = PromptBundle(
+        image_prompt="Image prompt.",
+        narration_prompt="Narration prompt.",
+        camera_prompt="Camera prompt.",
+        animation_prompt="Animation prompt.",
+    )
+
+    with pytest.raises(ValueError, match="analysis must match"):
+        ProductionPack(
+            scene_id="scene_001",
+            scene_summary="Scene summary.",
+            purpose="Purpose.",
+            conflict="Unknown",
+            mood="Unknown",
+            visual_highlights=(),
+            character_goals=(),
+            important_objects=(),
+            environment_summary="Unknown",
+            continuity_notes=(),
+            forbidden_elements=(),
+            prompt_bundle=bundle,
+            analysis=SceneAnalysis(
+                scene_id="scene_002",
+                summary="Scene summary.",
+                purpose="Purpose.",
+                conflict="Unknown",
+                mood="Unknown",
+                visual_highlights=(),
+                character_goals=(),
+                character_emotions=(),
+                important_objects=(),
+                environment_summary="Unknown",
+                changes_introduced=(),
+                continuity_notes=(),
+                forbidden_elements=(),
+            ),
+        )
+
+
+def test_production_pack_rejects_blank_list_items() -> None:
+    """Production pack list fields cannot contain empty visible rows."""
+    bundle = PromptBundle(
+        image_prompt="Image prompt.",
+        narration_prompt="Narration prompt.",
+        camera_prompt="Camera prompt.",
+        animation_prompt="Animation prompt.",
+    )
+
+    with pytest.raises(ValueError, match="visual highlight"):
+        ProductionPack(
+            scene_id="scene_001",
+            scene_summary="Scene summary.",
+            purpose="Purpose.",
+            conflict="Unknown",
+            mood="Unknown",
+            visual_highlights=(" ",),
+            character_goals=(),
+            important_objects=(),
+            environment_summary="Unknown",
+            continuity_notes=(),
+            forbidden_elements=(),
+            prompt_bundle=bundle,
+            analysis=SceneAnalysis(
+                scene_id="scene_001",
+                summary="Scene summary.",
+                purpose="Purpose.",
+                conflict="Unknown",
+                mood="Unknown",
+                visual_highlights=(),
+                character_goals=(),
+                character_emotions=(),
+                important_objects=(),
+                environment_summary="Unknown",
+                changes_introduced=(),
+                continuity_notes=(),
+                forbidden_elements=(),
+            ),
+        )
+
+
+def test_production_pack_rejects_duplicate_list_items() -> None:
+    """Production packs should not carry duplicate human-facing rows."""
+    bundle = PromptBundle(
+        image_prompt="Image prompt.",
+        narration_prompt="Narration prompt.",
+        camera_prompt="Camera prompt.",
+        animation_prompt="Animation prompt.",
+    )
+
+    with pytest.raises(ValueError, match="visual highlights must be unique"):
+        ProductionPack(
+            scene_id="scene_001",
+            scene_summary="Scene summary.",
+            purpose="Purpose.",
+            conflict="Unknown",
+            mood="Unknown",
+            visual_highlights=("Cold room", "Cold room"),
+            character_goals=(),
+            important_objects=(),
+            environment_summary="Unknown",
+            continuity_notes=(),
+            forbidden_elements=(),
+            prompt_bundle=bundle,
+            analysis=SceneAnalysis(
+                scene_id="scene_001",
+                summary="Scene summary.",
+                purpose="Purpose.",
+                conflict="Unknown",
+                mood="Unknown",
+                visual_highlights=(),
+                character_goals=(),
+                character_emotions=(),
+                important_objects=(),
+                environment_summary="Unknown",
+                changes_introduced=(),
+                continuity_notes=(),
+                forbidden_elements=(),
+            ),
+        )

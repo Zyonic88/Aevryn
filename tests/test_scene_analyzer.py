@@ -9,11 +9,20 @@ from scenesmith import (
     CanonPromptBuilder,
     CanonSceneContext,
     CharacterCardBuilder,
+    SceneAnalysis,
     SceneAnalyzer,
     SceneContextBuilder,
     StoryImporter,
 )
-from scenesmith.core import Character, Entity, Evidence, Fact, StateChange, TimelineEvent
+from scenesmith.core import (
+    Character,
+    Entity,
+    Evidence,
+    Fact,
+    Relationship,
+    StateChange,
+    TimelineEvent,
+)
 from tests.test_scene_context_builder import build_database, build_imported_source
 
 
@@ -38,6 +47,26 @@ def test_scene_analyzer_summarizes_scene_meaning() -> None:
     assert "character_mark current_weapon = Iron Sword" in analysis.summary
     assert analysis.purpose == "Establish current character and world state."
     assert analysis.forbidden_elements
+
+
+def test_scene_analysis_rejects_duplicate_visible_rows() -> None:
+    """Scene analysis should not carry duplicate human-facing rows."""
+    with pytest.raises(ValueError, match="visual highlights must be unique"):
+        SceneAnalysis(
+            scene_id="source_demo_chapter_001_scene_001",
+            summary="Mark wakes.",
+            purpose="Introduce Mark.",
+            conflict="Unknown",
+            mood="Quiet",
+            visual_highlights=("Cold room", "Cold room"),
+            character_goals=(),
+            character_emotions=(),
+            important_objects=(),
+            environment_summary="Cold room.",
+            changes_introduced=(),
+            continuity_notes=(),
+            forbidden_elements=(),
+        )
 
 
 def test_prompt_builder_builds_production_pack() -> None:
@@ -173,16 +202,156 @@ Zhang Haoran mocked Zhao Chen with contempt.""",
     assert any("Fleet Luck Bonus" in note for note in analysis.continuity_notes)
 
 
-def test_scene_analyzer_rejects_mismatched_snapshot_scene() -> None:
-    """Scene analysis requires snapshot and scene IDs to match."""
+def test_scene_analyzer_identifies_duel_and_crew_pressure() -> None:
+    """Accepted duel and crew facts produce a specific scene beat."""
     context = build_context()
-    mismatched_context = replace(
+    active_facts = (
+        Fact(
+            fact_id="fact_active_task",
+            entity_id="character_zhao_chen",
+            attribute="active_task",
+            value="Issue a Starship duel challenge to Zhang Haoran and defeat him",
+            evidence_id="evidence_source_demo_chapter_002_scene_001_anchor",
+        ),
+        Fact(
+            fact_id="fact_current_goal",
+            entity_id="character_zhao_chen",
+            attribute="current_goal",
+            value="Find a way to make money to support the Half-Beastman crew",
+            evidence_id="evidence_source_demo_chapter_002_scene_001_anchor",
+        ),
+    )
+    relationships = (
+        Relationship(
+            relationship_id="relationship_crew_serves",
+            source_entity_id="organization_half_beastman_crew",
+            relationship_type="serves_under",
+            target_entity_id="character_zhao_chen",
+            evidence_id="evidence_source_demo_chapter_002_scene_001_anchor",
+        ),
+    )
+    scene_context = replace(
         context,
-        snapshot=replace(context.snapshot, scene_id="other_scene"),
+        snapshot=replace(
+            context.snapshot,
+            fact_ids=tuple(fact.fact_id for fact in active_facts),
+            relationship_ids=tuple(
+                relationship.relationship_id for relationship in relationships
+            ),
+        ),
+        active_facts=active_facts,
+        relationships=relationships,
     )
 
+    analysis = SceneAnalyzer().analyze(scene_context)
+
+    assert (
+        analysis.purpose
+        == "Advance a direct challenge and the character's current objective."
+    )
+    assert analysis.conflict == "A direct challenge creates immediate pressure."
+    assert analysis.character_goals == (
+        "Issue a Starship duel challenge to Zhang Haoran and defeat him",
+        "Find a way to make money to support the Half-Beastman crew",
+    )
+    assert "Zhao Chen" not in analysis.purpose
+    assert "Starship" not in analysis.purpose
+    assert "Zhao Chen" not in analysis.conflict
+    assert "Starship" not in analysis.conflict
+
+
+def test_scene_analyzer_challenge_beat_is_genre_agnostic() -> None:
+    """Challenge heuristics should not depend on the Starfleet fixture genre."""
+    context = build_context()
+    active_facts = (
+        Fact(
+            fact_id="fact_active_task",
+            entity_id="character_mira",
+            attribute="active_task",
+            value="Accept the bakery contest challenge before dawn",
+            evidence_id="evidence_source_demo_chapter_002_scene_001_anchor",
+        ),
+        Fact(
+            fact_id="fact_current_goal",
+            entity_id="character_mira",
+            attribute="current_goal",
+            value="Earn enough money to support the family shop",
+            evidence_id="evidence_source_demo_chapter_002_scene_001_anchor",
+        ),
+    )
+    scene_context = replace(
+        context,
+        snapshot=replace(
+            context.snapshot,
+            fact_ids=tuple(fact.fact_id for fact in active_facts),
+            relationship_ids=(),
+        ),
+        active_facts=active_facts,
+        relationships=(),
+    )
+
+    analysis = SceneAnalyzer().analyze(scene_context)
+
+    assert (
+        analysis.purpose
+        == "Advance a direct challenge and the character's current objective."
+    )
+    assert analysis.conflict == "A direct challenge creates immediate pressure."
+    assert analysis.character_goals == (
+        "Accept the bakery contest challenge before dawn",
+        "Earn enough money to support the family shop",
+    )
+
+
+def test_scene_analyzer_rejects_mismatched_snapshot_scene() -> None:
+    """Scene context requires snapshot and scene IDs to match."""
+    context = build_context()
+
     with pytest.raises(ValueError, match="snapshot"):
-        SceneAnalyzer().analyze(mismatched_context)
+        replace(
+            context,
+            snapshot=replace(context.snapshot, scene_id="other_scene"),
+        )
+
+
+def test_scene_analysis_rejects_invalid_scene_id() -> None:
+    """Scene analysis view models use machine-token scene IDs."""
+    with pytest.raises(ValueError, match="Scene analysis scene ID"):
+        SceneAnalysis(
+            scene_id="scene 001",
+            summary="Scene summary.",
+            purpose="Purpose.",
+            conflict="Unknown",
+            mood="Informational",
+            visual_highlights=(),
+            character_goals=(),
+            character_emotions=(),
+            important_objects=(),
+            environment_summary="Unknown",
+            changes_introduced=(),
+            continuity_notes=(),
+            forbidden_elements=("Do not invent canon.",),
+        )
+
+
+def test_scene_analysis_rejects_blank_list_items() -> None:
+    """Scene analysis outputs should not contain blank display items."""
+    with pytest.raises(ValueError, match="Scene analysis list item"):
+        SceneAnalysis(
+            scene_id="scene_001",
+            summary="Scene summary.",
+            purpose="Purpose.",
+            conflict="Unknown",
+            mood="Informational",
+            visual_highlights=(" ",),
+            character_goals=(),
+            character_emotions=(),
+            important_objects=(),
+            environment_summary="Unknown",
+            changes_introduced=(),
+            continuity_notes=(),
+            forbidden_elements=("Do not invent canon.",),
+        )
 
 
 def test_scene_analyzer_dedupes_repeated_output_values() -> None:

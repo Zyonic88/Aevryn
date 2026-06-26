@@ -24,10 +24,13 @@ class TimelineChapter:
 
     def __post_init__(self) -> None:
         """Validate chapter fields."""
-        if self.chapter_index < 1:
+        if (
+            isinstance(self.chapter_index, bool)
+            or not isinstance(self.chapter_index, int)
+            or self.chapter_index < 1
+        ):
             raise ValueError("Chapter index must be at least 1.")
-        if not self.title.strip():
-            raise ValueError("Chapter title is required.")
+        _require_text(self.title, "Chapter title")
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,8 +50,7 @@ class TimelineScene:
 
     def __post_init__(self) -> None:
         """Validate scene fields."""
-        if not self.title.strip():
-            raise ValueError("Scene title is required.")
+        _require_text(self.title, "Scene title")
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,10 +72,8 @@ class TimelineEvent:
 
     def __post_init__(self) -> None:
         """Validate event fields."""
-        if not self.event_id.strip():
-            raise ValueError("Event ID is required.")
-        if not self.description.strip():
-            raise ValueError("Event description is required.")
+        _require_machine_token(self.event_id, "Event ID")
+        _require_text(self.description, "Event description")
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,13 +103,24 @@ class TimelineStateChange:
 
     def __post_init__(self) -> None:
         """Validate state-change fields and validity window."""
-        if not self.change_id.strip():
-            raise ValueError("State change ID is required.")
-        if not self.subject_id.strip():
-            raise ValueError("State change subject ID is required.")
-        if not self.attribute.strip():
-            raise ValueError("State change attribute is required.")
-        if not self.value.strip():
-            raise ValueError("State change value is required.")
+        _require_machine_token(self.change_id, "State change ID")
+        _require_machine_token(self.subject_id, "State change subject ID")
+        _require_machine_token(self.attribute, "State change attribute")
+        _require_text(self.value, "State change value")
+        if self.event_id is not None:
+            _require_machine_token(self.event_id, "State change event ID")
         if self.valid_until is not None and self.valid_until < self.valid_from:
             raise ValueError("valid_until cannot be earlier than valid_from.")
+
+
+def _require_text(value: str, field_name: str) -> None:
+    """Validate a required human-readable text field."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required.")
+
+
+def _require_machine_token(value: str, field_name: str) -> None:
+    """Validate a required whitespace-free machine token."""
+    _require_text(value, field_name)
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{field_name} cannot contain whitespace.")

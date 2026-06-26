@@ -32,6 +32,8 @@ runtime/
 output/
 exports/
 generated/
+snapshots/*
+!snapshots/README.md
 
 # Editor and OS files
 .idea/

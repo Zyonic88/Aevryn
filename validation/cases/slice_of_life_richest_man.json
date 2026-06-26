@@ -1,0 +1,23 @@
+{
+  "case_id": "slice_of_life_richest_man",
+  "title": "Richest Man I really don't want to make money",
+  "genre": "Slice-of-Life",
+  "source_directory": "Richest Man I really don’t want to make money (Slice-of-Life)",
+  "chapter_glob": "*.txt",
+  "expected_import": {
+    "chapter_files": 10,
+    "chapters": 10,
+    "evidence_anchors": 1260,
+    "import_digest": "6114fbca20c0f6a982909159c31df114cdfc364bc80bbbe87f1bb5b281693dc2",
+    "paragraphs": 355,
+    "scenes": 10,
+    "sentences": 1260,
+    "source_manifest_digest": "efd18fca44ce9ef091f6f067ba66f4bd0f4d3e61ef845101f372465c55e80519"
+  },
+  "expected_extraction": {
+    "scene_inputs": 10,
+    "evidence_anchors": 1260,
+    "extraction_input_digest": "696ae1e4f302e50ff78fb73122f03a8060c565c02082fdfc8e2bfba2bf06eb44",
+    "extraction_prompt_digest": "ff26f88ea3b5d63ceb9fba3a7bc2295476fcf3ac5694bb7904804a5fa84c30a2"
+  }
+}
