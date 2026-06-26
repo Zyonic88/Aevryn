@@ -33,13 +33,13 @@ The CLI output intentionally omits elapsed time.
 
 The V1 validation corpus currently covers:
 
-* 7 genres
-* 70 chapter files
-* 70 imported chapters
-* 70 scenes
-* 1,971 paragraphs
-* 7,578 sentences
-* 7,578 evidence anchors
+* 8 genres
+* 80 chapter files
+* 80 imported chapters
+* 80 scenes
+* 2,294 paragraphs
+* 8,828 sentences
+* 8,828 evidence anchors
 
 ## Regression Rule
 

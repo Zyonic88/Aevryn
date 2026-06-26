@@ -115,6 +115,26 @@ Mark bought an iron sword."""
     assert imported.anchors[1].sentence_index == 2
 
 
+def test_import_text_does_not_treat_narrative_scene_phrase_as_marker() -> None:
+    """Narrative prose that begins with scene is not a structural marker."""
+    importer = StoryImporter()
+
+    imported = importer.import_text(
+        source_id="source_scene_phrase",
+        title="Scene Phrase Story",
+        text=(
+            "Chapter 1\n"
+            "The memory returned in fragments.\n\n"
+            "Scene after scene flashed before Li Fan's eyes like a revolving lantern."
+        ),
+    )
+
+    assert len(imported.story.chapters[0].scenes) == 1
+    assert imported.story.chapters[0].scenes[0].paragraphs[-1] == (
+        "Scene after scene flashed before Li Fan's eyes like a revolving lantern."
+    )
+
+
 def test_import_text_derives_paragraphs_from_long_unspaced_chapter() -> None:
     """Story Import creates readable paragraphs from oversized source blocks."""
     importer = StoryImporter()

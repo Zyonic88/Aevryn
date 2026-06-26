@@ -62,12 +62,12 @@ generation, video generation, or AI chat.
 
 Current RC1 validation:
 
-* 505 automated tests passing
+* 506 automated tests passing
 * Deterministic rebuild validation
 * Cross-genre validation
-* 7-genre validation corpus
-* 70 local chapter files
-* 7,578 evidence anchors
+* 8-genre validation corpus
+* 80 local chapter files
+* 8,828 evidence anchors
 * Evidence-backed canon
 * Timeline-aware continuity
 * RC1 architecture complete
@@ -76,7 +76,7 @@ Current RC1 validation:
 Current validation digest:
 
 ```text
-816f6226832fe56ccdddc4064630807d31dd3646d4ec4573fde1450d0c2a3aad
+b911bda5279c30ead1830f58efa640d83bc66e41f3a50e96846804b428dec9d1
 ```
 
 ---

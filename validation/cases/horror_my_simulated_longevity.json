@@ -1,0 +1,23 @@
+{
+  "case_id": "horror_my_simulated_longevity",
+  "title": "My Simulated Longevity",
+  "genre": "Horror",
+  "source_directory": "My Simulated Longevity (Horror)",
+  "chapter_glob": "*.txt",
+  "expected_import": {
+    "chapter_files": 10,
+    "source_manifest_digest": "6b0a84759994d1cd78a9b774ac4dea204fc61160cd7fc2f64d895c20d48c11a7",
+    "chapters": 10,
+    "scenes": 10,
+    "paragraphs": 323,
+    "sentences": 1250,
+    "evidence_anchors": 1250,
+    "import_digest": "98e9a64eb36308e220f49be6d7ce0cb97a5238e26b973ee1a667aade30cc05b4"
+  },
+  "expected_extraction": {
+    "scene_inputs": 10,
+    "evidence_anchors": 1250,
+    "extraction_input_digest": "1f29e24fede557a55e16e64305756ac5cda8e525f3b3efe1ce151102710e6c31",
+    "extraction_prompt_digest": "9fe00f9d488a7e60677ec28a403fbf79f453956991ce70319114831ab6eed7e7"
+  }
+}

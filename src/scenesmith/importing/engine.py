@@ -39,7 +39,10 @@ class StoryImporter:
 
     _chapter_pattern = re.compile(r"^(?:#\s+)?chapter\s+(?P<index>\d+).*$", re.IGNORECASE)
     _numbered_chapter_title_pattern = re.compile(r"^#\s*(?P<index>\d+)\D.*$")
-    _scene_pattern = re.compile(r"^(?:##\s+)?scene\s*:?.*$", re.IGNORECASE)
+    _scene_pattern = re.compile(
+        r"^(?:##\s+)?scene(?:\s+\d+(?:\s*[:.-]\s*.+)?|\s*:\s*.+)?$",
+        re.IGNORECASE,
+    )
     _sentence_pattern = re.compile(r".+?(?:\.{3}|[.!?]+)(?:[\"')\]\u3011]*)|.+$")
     _sentence_abbreviations = frozenset(
         {"Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "St.", "No.", "vs.", "etc."}
@@ -421,13 +424,14 @@ class StoryImporter:
 
         return tuple(derived)
 
-    @staticmethod
-    def _starts_paragraph_focus(sentence: str) -> bool:
+    @classmethod
+    def _starts_paragraph_focus(cls, sentence: str) -> bool:
         """Return whether a sentence should start a derived paragraph."""
         stripped = sentence.lstrip()
         return (
             stripped.startswith(('"', "'", "\u201c", "\u3010"))
-            or stripped.startswith(("Chapter ", "Scene "))
+            or cls._is_chapter_heading(stripped)
+            or cls._scene_pattern.match(stripped) is not None
             or stripped.endswith(":")
         )
 

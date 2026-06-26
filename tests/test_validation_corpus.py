@@ -10,7 +10,7 @@ VALIDATION_ROOT = ROOT / "validation"
 CASE_DIR = VALIDATION_ROOT / "cases"
 VALIDATION_README = VALIDATION_ROOT / "README.md"
 V1_READINESS = ROOT / "docs" / "SCENESMITH_V1_READINESS.md"
-EXPECTED_CASE_COUNT = 7
+EXPECTED_CASE_COUNT = 8
 
 
 def test_validation_cases_store_only_metadata_and_hashes() -> None:

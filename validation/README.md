@@ -80,10 +80,10 @@ The command prints one result per case plus suite-level totals and a suite diges
 
 ```text
 Validation Totals
-cases=7 passed=7 failed=0 files=70 chapters=70 scenes=70 paragraphs=1971 sentences=7578 anchors=7578 extraction_inputs=70 extraction_anchors=7578
+cases=8 passed=8 failed=0 files=80 chapters=80 scenes=80 paragraphs=2294 sentences=8828 anchors=8828 extraction_inputs=80 extraction_anchors=8828
 
 Validation Digest
-816f6226832fe56ccdddc4064630807d31dd3646d4ec4573fde1450d0c2a3aad
+b911bda5279c30ead1830f58efa640d83bc66e41f3a50e96846804b428dec9d1
 ```
 
 For quick repeat checks, suppress per-case output:

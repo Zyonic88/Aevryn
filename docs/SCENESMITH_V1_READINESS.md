@@ -54,7 +54,7 @@ Implemented V1 systems are complete for RC1.
 * CLI output formats are split by intent: Markdown is presentation-first, while JSON and CSV preserve machine-readable detail.
 * Chapter 1 -> Chapter 10 continuity validation has been run with saved generated outputs.
 * A second-genre Chapter 1 -> Chapter 10 validation has been run with saved generated outputs to guard against building around one novel.
-* Seven-genre validation corpus now covers 70 local chapter files, 70 extraction-ready scene inputs, evidence-bounded extraction prompt digests, and 7,578 evidence anchors without storing chapter text in git.
+* Eight-genre validation corpus now covers 80 local chapter files, 80 extraction-ready scene inputs, evidence-bounded extraction prompt digests, and 8,828 evidence anchors without storing chapter text in git.
 * Validation output is guarded against raw chapter text and extraction prompt leakage.
 * Validation snapshots can be written with `scenesmith validate --snapshot-dir <path>` and refuse to overwrite non-empty directories.
 * Validation source roots are configurable through `--source-root` or `SCENESMITH_VALIDATION_ROOT`, with explicit CLI arguments taking priority.
@@ -128,7 +128,7 @@ All commands must remain green after every hardening pass.
 The current validation corpus fingerprint is:
 
 ```text
-cases=7 passed=7 failed=0 files=70 chapters=70 scenes=70 paragraphs=1971 sentences=7578 anchors=7578
-extraction_inputs=70 extraction_anchors=7578
-digest=816f6226832fe56ccdddc4064630807d31dd3646d4ec4573fde1450d0c2a3aad
+cases=8 passed=8 failed=0 files=80 chapters=80 scenes=80 paragraphs=2294 sentences=8828 anchors=8828
+extraction_inputs=80 extraction_anchors=8828
+digest=b911bda5279c30ead1830f58efa640d83bc66e41f3a50e96846804b428dec9d1
 ```
