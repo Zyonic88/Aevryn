@@ -48,8 +48,8 @@ Story evidence
 
 ## Current Status
 
-SceneSmith is currently a **V1 Release Candidate** focused on proving the
-continuity engine in the terminal.
+SceneSmith is currently **V1 Engine Complete** for the terminal-based story
+continuity workflow.
 
 V1 understands story structure, evidence anchors, candidate extraction payloads,
 canon updates, timeline-aware scene state, character sheets, world sheets,
@@ -60,7 +60,7 @@ generation, video generation, or AI chat.
 
 ## Trust Signals
 
-Current RC1 validation:
+Final V1 acceptance validation:
 
 * 506 automated tests passing
 * Deterministic rebuild validation
@@ -70,8 +70,14 @@ Current RC1 validation:
 * 8,828 evidence anchors
 * Evidence-backed canon
 * Timeline-aware continuity
-* RC1 architecture complete
+* V1 architecture complete
 * Validation score: 100%
+
+Final V1 acceptance snapshot:
+
+```text
+snapshots/v1_final_acceptance_20260626_122543
+```
 
 Current validation digest:
 
