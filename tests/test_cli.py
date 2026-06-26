@@ -138,6 +138,52 @@ def test_cli_help_describes_current_command_purpose(
     assert "deterministic snapshot." in output
 
 
+def test_import_help_describes_source_arguments(capsys: CaptureFixture[str]) -> None:
+    """Import help should explain the source identifiers a user must choose."""
+    with pytest.raises(SystemExit) as error:
+        main(["import", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Path to a UTF-8 text source file." in output
+    assert "Stable machine ID for this imported source." in output
+    assert "Human-readable source title" in output
+
+
+def test_scene_help_describes_timeline_safe_arguments(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Scene help should surface timeline-safe scene and extractor options."""
+    with pytest.raises(SystemExit) as error:
+        main(["scene", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Scene ID to inspect" in output
+    assert "Repeat for multiple" in output
+    assert "characters." in output
+    assert "Evidence-bounded AI JSON response" in output
+    assert "Output format." in output
+
+
+def test_validate_help_describes_snapshot_and_source_root(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Validate help should make corpus source and snapshot behavior discoverable."""
+    with pytest.raises(SystemExit) as error:
+        main(["validate", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Directory containing validation case metadata JSON" in output
+    assert "files." in output
+    assert "Root directory containing local validation chapter" in output
+    assert "folders. Overrides SCENESMITH_VALIDATION_ROOT." in output
+    assert "List validation cases without importing source files." in output
+    assert "deterministic snapshot" in output
+    assert "metadata is written." in output
+
+
 def ai_response_file(anchor_id: str) -> Path:
     """Create an evidence-bounded AI JSON response file."""
     path = Path("build") / "test_cli" / "ai_response.json"
@@ -363,7 +409,8 @@ def test_cli_reports_missing_file_without_traceback(
 
     assert exit_code == 1
     assert captured.out == ""
-    assert "Error:" in captured.err
+    assert "Error: File not found:" in captured.err
+    assert "build/test_cli/missing.txt" in captured.err.replace("\\", "/")
 
 
 def test_import_command_rejects_out_of_order_chapters(
@@ -539,10 +586,19 @@ def test_extract_ai_json_command_prints_acceptance_summary(
         ["extract-ai-json", str(path), str(response_path), "--source-id", "demo"]
     )
     output = capsys.readouterr().out
+    summary = json.loads(output)
 
     assert exit_code == 0
-    assert '"accepted_facts": 3' in output
-    assert '"accepted_relationships": 1' in output
+    assert summary["accepted_facts"] == 3
+    assert summary["accepted_relationships"] == 1
+    assert summary["accepted_entity_ids"] == [
+        "character_mark",
+        "item_iron_sword",
+    ]
+    assert summary["accepted_relationship_ids"] == [
+        "relationship_character_mark_owns_item_iron_sword"
+    ]
+    assert summary["rejected_candidate_ids"] == []
 
 
 def test_extract_ai_json_command_can_apply_multi_scene_payloads(
@@ -556,11 +612,17 @@ def test_extract_ai_json_command_can_apply_multi_scene_payloads(
         ["extract-ai-json", str(path), str(response_path), "--source-id", "demo"]
     )
     output = capsys.readouterr().out
+    summary = json.loads(output)
 
     assert exit_code == 0
-    assert '"scene_id": "demo_chapter_001_scene_001"' in output
-    assert '"scene_id": "demo_chapter_002_scene_001"' in output
-    assert '"accepted_facts": 3' in output
+    assert [
+        result["scene_id"] for result in summary["results"]
+    ] == [
+        "demo_chapter_001_scene_001",
+        "demo_chapter_002_scene_001",
+    ]
+    assert summary["accepted_facts"] == 3
+    assert summary["accepted_entity_ids"] == ["character_mark"]
 
 
 def test_extract_ai_json_command_can_apply_multi_scene_payload_list(

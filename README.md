@@ -4,17 +4,47 @@
 >
 > Built by **Aetherra Labs**
 
+Upload a story. SceneSmith builds a living canon that stays consistent across
+every chapter.
+
+**Evidence in. Canon out.**
+
 ## Overview
 
-SceneSmith is an AI-powered Story Continuity Engine designed for creators who work with novels, manga, manhwa, web novels, comics, scripts, and other long-form stories.
+SceneSmith is an AI-powered Story Continuity Engine designed for creators who
+work with novels, manga, manhwa, web novels, comics, scripts, and other
+long-form stories.
 
 Its purpose is not to generate stories.
 
 Its purpose is to understand existing stories.
 
-SceneSmith continuously analyzes chapters, tracks characters, locations, items, relationships, timeline progression, and world state, building a living canon database that evolves alongside the story.
+SceneSmith continuously analyzes chapters, tracks characters, locations, items,
+relationships, timeline progression, and world state, building a living canon
+database that evolves alongside the story.
 
-This enables creators to generate consistent AI images, videos, narration, and scene descriptions without continuity errors.
+This enables creators to generate consistent scene descriptions, prompt packs,
+narration prompts, and future AI-assisted media without continuity errors.
+
+## Why Not Just ChatGPT?
+
+ChatGPT can answer from a prompt.
+
+SceneSmith maintains evidence-backed story state.
+
+Instead of asking an AI to remember everything every time, SceneSmith imports
+story evidence, accepts or rejects extracted candidates, versions canon changes,
+and reconstructs what was true at a specific chapter or scene.
+
+That is the difference:
+
+```text
+Story evidence
+-> Candidate facts
+-> Canon validation
+-> Timeline-aware continuity
+-> Human-readable production outputs
+```
 
 ## Current Status
 
@@ -27,6 +57,27 @@ continuity reports, prompt packs, deterministic exports, and validation runs.
 
 V1 does **not** include a website, accounts, payments, cloud sync, image
 generation, video generation, or AI chat.
+
+## Trust Signals
+
+Current RC1 validation:
+
+* 458 automated tests passing
+* Deterministic rebuild validation
+* Cross-genre validation
+* 7-genre validation corpus
+* 70 local chapter files
+* 7,578 evidence anchors
+* Evidence-backed canon
+* Timeline-aware continuity
+* RC1 architecture complete
+* Validation score: 100%
+
+Current validation digest:
+
+```text
+816f6226832fe56ccdddc4064630807d31dd3646d4ec4573fde1450d0c2a3aad
+```
 
 ---
 
@@ -52,7 +103,8 @@ Every prompt starts almost from scratch.
 
 SceneSmith creates a continuously evolving Story State.
 
-Instead of asking AI to remember everything every time, SceneSmith maintains the current canonical truth.
+Instead of asking AI to remember everything every time, SceneSmith maintains the
+current canonical truth.
 
 Every generated prompt references the latest known state of the story.
 
@@ -71,7 +123,7 @@ Every generated prompt references the latest known state of the story.
 * Canon database
 * Character card generation
 * Scene breakdown
-* AI image prompt generation
+* Canon-backed prompt pack generation
 * Narration prompt generation
 * Export to external tools
 
@@ -102,6 +154,10 @@ Apply an AI extraction response from JSON:
 ```powershell
 scenesmith extract-ai-json path\to\chapter_001.txt path\to\ai_response.json --source-id my_story
 ```
+
+The command prints accepted and rejected candidate counts plus stable accepted
+IDs, such as `accepted_entity_ids`. Use those IDs in follow-up commands like
+`character`, `scene`, `world`, and `prompt`.
 
 Generate canon-backed outputs from that response:
 

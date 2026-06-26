@@ -6,7 +6,7 @@ import argparse
 import json
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -70,6 +70,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "validate":
             _handle_validate(args)
             return 0
+    except FileNotFoundError as error:
+        missing_path = error.filename or error.args[0]
+        print(f"Error: File not found: {missing_path}", file=sys.stderr)
+        return 1
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
@@ -133,25 +137,53 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Print the evidence-bounded AI extraction prompt for one scene.",
     )
     _add_source_arguments(extraction_prompt_parser)
-    extraction_prompt_parser.add_argument("--scene-id", default=None)
+    extraction_prompt_parser.add_argument(
+        "--scene-id",
+        default=None,
+        help="Scene ID to prepare; defaults to the first imported scene.",
+    )
 
     extract_ai_parser = subcommands.add_parser(
         "extract-ai-json",
         help="Apply evidence-bounded AI JSON candidates through Canon Updating.",
     )
     _add_source_arguments(extract_ai_parser)
-    extract_ai_parser.add_argument("response_path", help="Path to AI JSON response text.")
-    extract_ai_parser.add_argument("--scene-id", default=None)
+    extract_ai_parser.add_argument(
+        "response_path",
+        help="Path to an evidence-bounded AI JSON response file.",
+    )
+    extract_ai_parser.add_argument(
+        "--scene-id",
+        default=None,
+        help="Scene ID for a single-scene response; ignored for multi-scene envelopes.",
+    )
 
     character_parser = subcommands.add_parser(
         "character",
         help="Print a canon-backed character sheet.",
     )
     _add_source_arguments(character_parser)
-    character_parser.add_argument("--character-id", default="character_mark")
-    character_parser.add_argument("--chapter-index", type=int, default=None)
-    character_parser.add_argument("--scene-id", default=None)
-    character_parser.add_argument("--ai-response-file", default=None)
+    character_parser.add_argument(
+        "--character-id",
+        default="character_mark",
+        help="Character entity ID to display.",
+    )
+    character_parser.add_argument(
+        "--chapter-index",
+        type=int,
+        default=None,
+        help="Chapter index to inspect; defaults to current canon.",
+    )
+    character_parser.add_argument(
+        "--scene-id",
+        default=None,
+        help="Scene ID to inspect; prevents future canon from leaking into the view.",
+    )
+    character_parser.add_argument(
+        "--ai-response-file",
+        default=None,
+        help="Evidence-bounded AI JSON response to apply before building the view.",
+    )
     character_parser.add_argument(
         "--format",
         choices=("markdown", "json", "csv"),
@@ -163,50 +195,146 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Print a timeline-aware scene sheet.",
     )
     _add_source_arguments(scene_parser)
-    scene_parser.add_argument("--scene-id", default=None)
-    scene_parser.add_argument("--character-id", action="append", default=None)
-    scene_parser.add_argument("--ai-response-file", default=None)
-    scene_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    scene_parser.add_argument(
+        "--scene-id",
+        default=None,
+        help="Scene ID to inspect; defaults to the latest imported scene.",
+    )
+    scene_parser.add_argument(
+        "--character-id",
+        action="append",
+        default=None,
+        help="Character entity ID to include. Repeat for multiple characters.",
+    )
+    scene_parser.add_argument(
+        "--ai-response-file",
+        default=None,
+        help="Evidence-bounded AI JSON response to apply before building the view.",
+    )
+    scene_parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+        help="Output format.",
+    )
 
     prompt_parser = subcommands.add_parser(
         "prompt",
         help="Print a canon-backed production prompt pack.",
     )
     _add_source_arguments(prompt_parser)
-    prompt_parser.add_argument("--scene-id", default=None)
-    prompt_parser.add_argument("--character-id", action="append", default=None)
-    prompt_parser.add_argument("--ai-response-file", default=None)
-    prompt_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    prompt_parser.add_argument(
+        "--scene-id",
+        default=None,
+        help="Scene ID to inspect; defaults to the latest imported scene.",
+    )
+    prompt_parser.add_argument(
+        "--character-id",
+        action="append",
+        default=None,
+        help="Character entity ID to include. Repeat for multiple characters.",
+    )
+    prompt_parser.add_argument(
+        "--ai-response-file",
+        default=None,
+        help="Evidence-bounded AI JSON response to apply before building prompts.",
+    )
+    prompt_parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+        help="Output format.",
+    )
 
     world_parser = subcommands.add_parser(
         "world",
         help="Print a canon-backed world sheet for selected non-character entities.",
     )
     _add_source_arguments(world_parser)
-    world_parser.add_argument("--entity-id", action="append", required=True)
-    world_parser.add_argument("--chapter-index", type=int, default=None)
-    world_parser.add_argument("--scene-id", default=None)
-    world_parser.add_argument("--ai-response-file", default=None)
+    world_parser.add_argument(
+        "--entity-id",
+        action="append",
+        required=True,
+        help="Non-character entity ID to display. Repeat for multiple world objects.",
+    )
+    world_parser.add_argument(
+        "--chapter-index",
+        type=int,
+        default=None,
+        help="Chapter index to inspect; defaults to current canon.",
+    )
+    world_parser.add_argument(
+        "--scene-id",
+        default=None,
+        help="Scene ID to inspect; prevents future canon from leaking into the view.",
+    )
+    world_parser.add_argument(
+        "--ai-response-file",
+        default=None,
+        help="Evidence-bounded AI JSON response to apply before building the view.",
+    )
 
     continuity_parser = subcommands.add_parser(
         "continuity",
         help="Print what changed, stayed known, and was invalidated.",
     )
     _add_source_arguments(continuity_parser)
-    continuity_parser.add_argument("--ai-response-file", default=None)
-    continuity_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    continuity_parser.add_argument(
+        "--ai-response-file",
+        default=None,
+        help="Evidence-bounded AI JSON response to apply before building the report.",
+    )
+    continuity_parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+        help="Output format.",
+    )
 
     validate_parser = subcommands.add_parser(
         "validate",
         help="Run the local validation corpus and optional deterministic snapshot.",
     )
-    validate_parser.add_argument("--case-dir", default="validation/cases")
-    validate_parser.add_argument("--source-root", default=None)
-    validate_parser.add_argument("--case-id", action="append", default=None)
-    validate_parser.add_argument("--list-cases", action="store_true")
-    validate_parser.add_argument("--summary-only", action="store_true")
-    validate_parser.add_argument("--snapshot-dir", default=None)
-    validate_parser.add_argument("--format", choices=("text", "json"), default="text")
+    validate_parser.add_argument(
+        "--case-dir",
+        default="validation/cases",
+        help="Directory containing validation case metadata JSON files.",
+    )
+    validate_parser.add_argument(
+        "--source-root",
+        default=None,
+        help=(
+            "Root directory containing local validation chapter folders. "
+            "Overrides SCENESMITH_VALIDATION_ROOT."
+        ),
+    )
+    validate_parser.add_argument(
+        "--case-id",
+        action="append",
+        default=None,
+        help="Validation case ID to run. Repeat for multiple focused cases.",
+    )
+    validate_parser.add_argument(
+        "--list-cases",
+        action="store_true",
+        help="List validation cases without importing source files.",
+    )
+    validate_parser.add_argument(
+        "--summary-only",
+        action="store_true",
+        help="Print only suite totals, digest, and score.",
+    )
+    validate_parser.add_argument(
+        "--snapshot-dir",
+        default=None,
+        help="Empty or absent directory where deterministic snapshot metadata is written.",
+    )
+    validate_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
 
     return parser
 
@@ -214,8 +342,16 @@ def _build_parser() -> argparse.ArgumentParser:
 def _add_source_arguments(parser: argparse.ArgumentParser) -> None:
     """Add common source import arguments to a subcommand."""
     parser.add_argument("path", help="Path to a UTF-8 text source file.")
-    parser.add_argument("--source-id", default="source_demo")
-    parser.add_argument("--title", default=None)
+    parser.add_argument(
+        "--source-id",
+        default="source_demo",
+        help="Stable machine ID for this imported source.",
+    )
+    parser.add_argument(
+        "--title",
+        default=None,
+        help="Human-readable source title; defaults to the file stem.",
+    )
 
 
 def _handle_import(args: argparse.Namespace) -> None:
@@ -328,16 +464,33 @@ def _handle_extract_ai_json(args: argparse.Namespace) -> None:
                 "accepted_entities": sum(
                     len(summary.accepted_entities) for summary in result.update_summaries
                 ),
+                "accepted_entity_ids": _summary_ids(
+                    summary.accepted_entities for summary in result.update_summaries
+                ),
                 "accepted_facts": sum(
                     len(summary.accepted_facts) for summary in result.update_summaries
+                ),
+                "accepted_fact_ids": _summary_ids(
+                    summary.accepted_facts for summary in result.update_summaries
                 ),
                 "accepted_relationships": sum(
                     len(summary.accepted_relationships)
                     for summary in result.update_summaries
                 ),
+                "accepted_relationship_ids": _summary_ids(
+                    summary.accepted_relationships
+                    for summary in result.update_summaries
+                ),
                 "accepted_state_changes": sum(
                     len(summary.accepted_state_changes)
                     for summary in result.update_summaries
+                ),
+                "accepted_state_change_ids": _summary_ids(
+                    summary.accepted_state_changes
+                    for summary in result.update_summaries
+                ),
+                "rejected_candidate_ids": _summary_ids(
+                    summary.rejected_candidates for summary in result.update_summaries
                 ),
             },
             indent=2,
@@ -769,6 +922,16 @@ def _dedupe_ids(entity_ids: Sequence[str]) -> tuple[str, ...]:
         deduped.setdefault(entity_id, None)
 
     return tuple(deduped)
+
+
+def _summary_ids(summary_buckets: Iterable[Sequence[str]]) -> list[str]:
+    """Return accepted or rejected summary IDs in stable first-seen order."""
+    deduped: dict[str, None] = {}
+    for bucket in summary_buckets:
+        for summary_id in bucket:
+            deduped.setdefault(summary_id, None)
+
+    return list(deduped)
 
 
 def _require_text(value: str, field_name: str) -> None:
