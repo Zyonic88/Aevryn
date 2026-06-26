@@ -5,6 +5,7 @@ import re
 import shutil
 from pathlib import Path
 
+import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
 from scenesmith.cli import main
@@ -105,6 +106,36 @@ def out_of_order_source_file() -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def test_cli_help_shows_v1_workflow(capsys: CaptureFixture[str]) -> None:
+    """Top-level CLI help should guide a first user through the V1 flow."""
+    with pytest.raises(SystemExit) as error:
+        main(["--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "SceneSmith V1 proof CLI" in output
+    assert "Typical V1 flow:" in output
+    assert "scenesmith import chapter_001.txt --source-id my_story" in output
+    assert "scenesmith validate --summary-only --snapshot-dir snapshots/run_name" in output
+
+
+def test_cli_help_describes_current_command_purpose(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Top-level CLI help should describe commands in current V1 terms."""
+    with pytest.raises(SystemExit) as error:
+        main(["--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Inspect how source text is parsed" in output
+    assert "Apply evidence-bounded AI JSON candidates through" in output
+    assert "Canon Updating." in output
+    assert "Print a canon-backed production prompt pack" in output
+    assert "Run the local validation corpus and optional" in output
+    assert "deterministic snapshot." in output
 
 
 def ai_response_file(anchor_id: str) -> Path:

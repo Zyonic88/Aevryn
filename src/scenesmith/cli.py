@@ -90,16 +90,41 @@ def _build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="scenesmith",
-        description="SceneSmith proof CLI for importing and inspecting canon state.",
+        description=(
+            "SceneSmith V1 proof CLI for importing story text, applying "
+            "evidence-bounded extraction, and inspecting canon-backed outputs."
+        ),
+        epilog=(
+            "Typical V1 flow:\n"
+            "  scenesmith import chapter_001.txt --source-id my_story\n"
+            "  scenesmith extraction-prompt chapter_001.txt --source-id my_story\n"
+            "  scenesmith extract-ai-json chapter_001.txt ai_response.json --source-id my_story\n"
+            "  scenesmith character chapter_001.txt --source-id my_story "
+            "--ai-response-file ai_response.json --character-id character_mark\n"
+            "  scenesmith scene chapter_001.txt --source-id my_story "
+            "--ai-response-file ai_response.json\n"
+            "  scenesmith prompt chapter_001.txt --source-id my_story "
+            "--ai-response-file ai_response.json\n"
+            "  scenesmith continuity chapter_001.txt --source-id my_story "
+            "--ai-response-file ai_response.json\n\n"
+            "Validation:\n"
+            "  scenesmith validate --summary-only\n"
+            "  scenesmith validate --list-cases\n"
+            "  scenesmith validate --summary-only --snapshot-dir snapshots/run_name"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subcommands = parser.add_subparsers(dest="command", required=True)
 
-    import_parser = subcommands.add_parser("import", help="Import source text.")
+    import_parser = subcommands.add_parser(
+        "import",
+        help="Inspect how source text is parsed into chapters, scenes, and evidence.",
+    )
     _add_source_arguments(import_parser)
 
     extract_parser = subcommands.add_parser(
         "extract-demo",
-        help="Run deterministic demo extraction over imported text.",
+        help="Run the deterministic demo extractor for tests and examples.",
     )
     _add_source_arguments(extract_parser)
 
@@ -112,13 +137,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
     extract_ai_parser = subcommands.add_parser(
         "extract-ai-json",
-        help="Apply an evidence-bounded AI JSON response to imported text.",
+        help="Apply evidence-bounded AI JSON candidates through Canon Updating.",
     )
     _add_source_arguments(extract_ai_parser)
     extract_ai_parser.add_argument("response_path", help="Path to AI JSON response text.")
     extract_ai_parser.add_argument("--scene-id", default=None)
 
-    character_parser = subcommands.add_parser("character", help="Print a character sheet.")
+    character_parser = subcommands.add_parser(
+        "character",
+        help="Print a canon-backed character sheet.",
+    )
     _add_source_arguments(character_parser)
     character_parser.add_argument("--character-id", default="character_mark")
     character_parser.add_argument("--chapter-index", type=int, default=None)
@@ -130,21 +158,30 @@ def _build_parser() -> argparse.ArgumentParser:
         default="markdown",
     )
 
-    scene_parser = subcommands.add_parser("scene", help="Print a scene sheet.")
+    scene_parser = subcommands.add_parser(
+        "scene",
+        help="Print a timeline-aware scene sheet.",
+    )
     _add_source_arguments(scene_parser)
     scene_parser.add_argument("--scene-id", default=None)
     scene_parser.add_argument("--character-id", action="append", default=None)
     scene_parser.add_argument("--ai-response-file", default=None)
     scene_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
-    prompt_parser = subcommands.add_parser("prompt", help="Print a prompt sheet.")
+    prompt_parser = subcommands.add_parser(
+        "prompt",
+        help="Print a canon-backed production prompt pack.",
+    )
     _add_source_arguments(prompt_parser)
     prompt_parser.add_argument("--scene-id", default=None)
     prompt_parser.add_argument("--character-id", action="append", default=None)
     prompt_parser.add_argument("--ai-response-file", default=None)
     prompt_parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
-    world_parser = subcommands.add_parser("world", help="Print a world sheet.")
+    world_parser = subcommands.add_parser(
+        "world",
+        help="Print a canon-backed world sheet for selected non-character entities.",
+    )
     _add_source_arguments(world_parser)
     world_parser.add_argument("--entity-id", action="append", required=True)
     world_parser.add_argument("--chapter-index", type=int, default=None)
@@ -153,7 +190,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     continuity_parser = subcommands.add_parser(
         "continuity",
-        help="Print a continuity report for the imported source.",
+        help="Print what changed, stayed known, and was invalidated.",
     )
     _add_source_arguments(continuity_parser)
     continuity_parser.add_argument("--ai-response-file", default=None)
@@ -161,7 +198,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     validate_parser = subcommands.add_parser(
         "validate",
-        help="Run the local validation corpus.",
+        help="Run the local validation corpus and optional deterministic snapshot.",
     )
     validate_parser.add_argument("--case-dir", default="validation/cases")
     validate_parser.add_argument("--source-root", default=None)

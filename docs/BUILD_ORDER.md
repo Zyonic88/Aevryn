@@ -171,7 +171,25 @@ SceneSmith asks:
 
 Only then does Canon change.
 
-## Phase 6: Character Cards
+## Phase 6: Timeline Engine
+
+Timeline Engine asks:
+
+* What chapter is this?
+* What scene is this?
+* What changed here?
+* When is this fact valid?
+* What is the current story position?
+
+It owns chapter order, scene order, events, state-change validity, and history reconstruction.
+
+It does not extract entities, own canon truth, or generate prompts.
+
+Canon stores truth.
+
+Timeline tells SceneSmith when that truth is valid.
+
+## Phase 7: Character Cards
 
 Character Engine asks Canon.
 
@@ -182,17 +200,48 @@ Character cards should show:
 * Valid From
 * Evidence
 
-## Phase 7: Scene Context
+## Phase 8: World Engine
+
+World Engine asks Canon and Timeline.
+
+It reconstructs the current state of the story world.
+
+It should show:
+
+* Locations
+* Buildings
+* Vehicles
+* Organizations
+* Items
+* Creatures
+* Regions
+* Weather
+* Environmental conditions
+* Ownership
+* Damage
+* Resources
+* Infrastructure
+
+World Engine is a read layer.
+
+World changes.
+
+Characters move through it.
+
+Relationships connect them.
+
+## Phase 9: Scene Context
 
 Scene Engine asks:
 
 * Canon
 * Timeline
 * Character Engine
+* World Engine
 
 It reconstructs what is true at a scene.
 
-## Phase 7A: Scene Analyzer
+## Phase 10: Scene Analyzer
 
 Scene Analyzer asks:
 
@@ -217,7 +266,7 @@ It outputs:
 
 Prompt Engine should use Scene Analyzer output instead of raw chapter text.
 
-## Phase 8: Prompt Generation
+## Phase 11: Prompt Generation
 
 Prompt Engine asks Scene Engine.
 
@@ -225,7 +274,7 @@ No guessing.
 
 No AI ownership of truth.
 
-## Phase 8A: Presentation Engine
+## Phase 12: Presentation Engine
 
 Presentation Engine turns backend truth into human-readable views.
 
@@ -243,7 +292,7 @@ Backend preserves truth.
 
 Frontend presents clarity.
 
-## Phase 9: Export
+## Phase 13: Export
 
 Export Engine writes portable outputs:
 
@@ -301,9 +350,47 @@ It coordinates existing systems only.
 
 It does not own canon truth.
 
+## V1 RC1 Status
+
+SceneSmith has reached V1 RC1 for the implemented continuity engine.
+
+Implemented RC1 systems:
+
+* Story Import
+* Entity Extraction
+* Canon Updating
+* Canon Engine
+* Timeline Engine
+* Character Engine
+* World Engine
+* Scene Engine
+* Scene Analyzer
+* Prompt Engine
+* Presentation Engine
+* Export Engine
+* Project Manager
+* CLI Proof Workflow
+
+Boundary systems:
+
+* Translation Engine is foundation-only.
+* Web Import is documented-only.
+
+Current validation:
+
+```text
+cases=7 passed=7 failed=0
+files=70
+chapters=70
+scenes=70
+anchors=7578
+Validation Score: 100%
+digest=816f6226832fe56ccdddc4064630807d31dd3646d4ec4573fde1450d0c2a3aad
+```
+
 ## Architecture Freeze
 
-After Story Import, Core Data Model, Canon, Timeline, Character, Scene, Prompt, Export, and CLI proof are working, the architecture is considered complete.
+After Story Import, Core Data Model, Canon, Timeline, Character, World, Scene, Scene Analyzer, Prompt, Presentation, Export, and CLI proof are working, the architecture is considered complete.
 
 No new systems should be added without a deliberate architecture review.
 

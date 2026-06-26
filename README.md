@@ -16,6 +16,18 @@ SceneSmith continuously analyzes chapters, tracks characters, locations, items, 
 
 This enables creators to generate consistent AI images, videos, narration, and scene descriptions without continuity errors.
 
+## Current Status
+
+SceneSmith is currently a **V1 Release Candidate** focused on proving the
+continuity engine in the terminal.
+
+V1 understands story structure, evidence anchors, candidate extraction payloads,
+canon updates, timeline-aware scene state, character sheets, world sheets,
+continuity reports, prompt packs, deterministic exports, and validation runs.
+
+V1 does **not** include a website, accounts, payments, cloud sync, image
+generation, video generation, or AI chat.
+
 ---
 
 ## The Problem
@@ -62,6 +74,80 @@ Every generated prompt references the latest known state of the story.
 * AI image prompt generation
 * Narration prompt generation
 * Export to external tools
+
+---
+
+## V1 CLI Quickstart
+
+Install the project in editable mode:
+
+```powershell
+pip install -e .[dev]
+```
+
+Inspect a text chapter import:
+
+```powershell
+scenesmith import path\to\chapter_001.txt --source-id my_story
+```
+
+Generate the evidence-bounded extraction prompt for one scene:
+
+```powershell
+scenesmith extraction-prompt path\to\chapter_001.txt --source-id my_story
+```
+
+Apply an AI extraction response from JSON:
+
+```powershell
+scenesmith extract-ai-json path\to\chapter_001.txt path\to\ai_response.json --source-id my_story
+```
+
+Generate canon-backed outputs from that response:
+
+```powershell
+scenesmith character path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json --character-id character_mark
+scenesmith scene path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
+scenesmith prompt path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
+scenesmith continuity path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
+```
+
+Run the validation corpus:
+
+```powershell
+scenesmith validate --summary-only
+```
+
+The default validation source root is:
+
+```text
+~/Desktop/SceneSmith test chapters
+```
+
+Use `--source-root` or `SCENESMITH_VALIDATION_ROOT` to point validation at a
+different local corpus.
+
+Create a deterministic validation snapshot:
+
+```powershell
+scenesmith validate --summary-only --snapshot-dir snapshots/my_run
+```
+
+Snapshot artifact directories are ignored by git. They store deterministic
+validation metadata only, not chapter text.
+
+---
+
+## Development Checks
+
+Run these before committing:
+
+```powershell
+ruff check pyproject.toml docs src tests validation
+mypy src tests
+pytest -q
+scenesmith validate --summary-only
+```
 
 ---
 
