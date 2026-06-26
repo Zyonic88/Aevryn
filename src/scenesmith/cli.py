@@ -27,6 +27,13 @@ from scenesmith.validation import (
 )
 
 
+class _RawDefaultsHelpFormatter(
+    argparse.ArgumentDefaultsHelpFormatter,
+    argparse.RawDescriptionHelpFormatter,
+):
+    """Argparse formatter that preserves examples and shows argument defaults."""
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the SceneSmith command line interface.
 
@@ -77,7 +84,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Error: File not found: {missing_path}", file=sys.stderr)
         return 1
     except (OSError, ValueError, json.JSONDecodeError) as error:
-        print(f"Error: {error}", file=sys.stderr)
+        print(_format_cli_error(error), file=sys.stderr)
         return 1
 
     parser.error(f"Unknown command: {command}")
@@ -90,6 +97,35 @@ def _configure_utf8_stdio() -> None:
         reconfigure = getattr(stream, "reconfigure", None)
         if callable(reconfigure):
             reconfigure(encoding="utf-8")
+
+
+def _format_cli_error(error: Exception) -> str:
+    """Return a user-facing CLI error with an actionable hint when possible."""
+    message = str(error)
+    hints = _cli_error_hints(message)
+    if not hints:
+        return f"Error: {message}"
+
+    return "\n".join((f"Error: {message}", *(f"Hint: {hint}" for hint in hints)))
+
+
+def _cli_error_hints(message: str) -> tuple[str, ...]:
+    """Return actionable hints for common user-facing CLI errors."""
+    if "Unknown scene" in message:
+        return (
+            "Run `scenesmith import <path> --source-id <id>` to inspect available scene IDs.",
+        )
+    if "Unknown character" in message or "Unknown entity" in message:
+        return (
+            "Run `scenesmith extract-ai-json <path> <response.json> --source-id <id>` "
+            "and use the accepted_entity_ids from the summary.",
+        )
+    if "Unknown world entity" in message:
+        return (
+            "Use a non-character accepted entity ID from the extraction summary.",
+        )
+
+    return ()
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -118,25 +154,28 @@ def _build_parser() -> argparse.ArgumentParser:
             "  scenesmith validate --list-cases\n"
             "  scenesmith validate --summary-only --snapshot-dir snapshots/run_name"
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     subcommands = parser.add_subparsers(dest="command", required=True)
 
     import_parser = subcommands.add_parser(
         "import",
         help="Inspect how source text is parsed into chapters, scenes, and evidence.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     _add_source_arguments(import_parser)
 
     extract_parser = subcommands.add_parser(
         "extract-demo",
         help="Run the deterministic demo extractor for tests and examples.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     _add_source_arguments(extract_parser)
 
     extraction_prompt_parser = subcommands.add_parser(
         "extraction-prompt",
         help="Print the evidence-bounded AI extraction prompt for one scene.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     _add_source_arguments(extraction_prompt_parser)
     extraction_prompt_parser.add_argument(
@@ -148,6 +187,7 @@ def _build_parser() -> argparse.ArgumentParser:
     extract_ai_parser = subcommands.add_parser(
         "extract-ai-json",
         help="Apply evidence-bounded AI JSON candidates through Canon Updating.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     _add_source_arguments(extract_ai_parser)
     extract_ai_parser.add_argument(
@@ -163,12 +203,16 @@ def _build_parser() -> argparse.ArgumentParser:
     character_parser = subcommands.add_parser(
         "character",
         help="Print a canon-backed character sheet.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     _add_source_arguments(character_parser)
     character_parser.add_argument(
         "--character-id",
         default="character_mark",
-        help="Character entity ID to display.",
+        help=(
+            "Character entity ID to display. Use accepted_entity_ids from "
+            "extract-ai-json for real projects."
+        ),
     )
     character_parser.add_argument(
         "--chapter-index",
@@ -196,6 +240,7 @@ def _build_parser() -> argparse.ArgumentParser:
     scene_parser = subcommands.add_parser(
         "scene",
         help="Print a timeline-aware scene sheet.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     _add_source_arguments(scene_parser)
     scene_parser.add_argument(
@@ -207,7 +252,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "--character-id",
         action="append",
         default=None,
-        help="Character entity ID to include. Repeat for multiple characters.",
+        help=(
+            "Character entity ID to include. Repeat for multiple characters. "
+            "Defaults to accepted characters in the selected scene."
+        ),
     )
     scene_parser.add_argument(
         "--ai-response-file",
@@ -224,6 +272,7 @@ def _build_parser() -> argparse.ArgumentParser:
     prompt_parser = subcommands.add_parser(
         "prompt",
         help="Print a canon-backed production prompt pack.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     _add_source_arguments(prompt_parser)
     prompt_parser.add_argument(
@@ -235,7 +284,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "--character-id",
         action="append",
         default=None,
-        help="Character entity ID to include. Repeat for multiple characters.",
+        help=(
+            "Character entity ID to include. Repeat for multiple characters. "
+            "Defaults to accepted characters in the selected scene."
+        ),
     )
     prompt_parser.add_argument(
         "--ai-response-file",
@@ -252,6 +304,7 @@ def _build_parser() -> argparse.ArgumentParser:
     world_parser = subcommands.add_parser(
         "world",
         help="Print a canon-backed world sheet for selected non-character entities.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     _add_source_arguments(world_parser)
     world_parser.add_argument(
@@ -286,6 +339,7 @@ def _build_parser() -> argparse.ArgumentParser:
     continuity_parser = subcommands.add_parser(
         "continuity",
         help="Print what changed, stayed known, and was invalidated.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     _add_source_arguments(continuity_parser)
     continuity_parser.add_argument(
@@ -303,6 +357,7 @@ def _build_parser() -> argparse.ArgumentParser:
     validate_parser = subcommands.add_parser(
         "validate",
         help="Run the local validation corpus and optional deterministic snapshot.",
+        formatter_class=_RawDefaultsHelpFormatter,
     )
     validate_parser.add_argument(
         "--case-dir",
@@ -377,9 +432,38 @@ def _handle_import(args: argparse.Namespace) -> None:
                 "source_id": imported_source.source_id,
                 "title": imported_source.title,
                 "chapters": len(imported_source.story.chapters),
+                "chapter_ids": [
+                    chapter.chapter_id for chapter in imported_source.story.chapters
+                ],
                 "scenes": scene_count,
+                "scene_ids": [
+                    scene.scene_id
+                    for chapter in imported_source.story.chapters
+                    for scene in chapter.scenes
+                ],
+                "scene_map": [
+                    {
+                        "chapter_id": chapter.chapter_id,
+                        "chapter_index": chapter.chapter_index,
+                        "scene_id": scene.scene_id,
+                        "scene_index": scene.scene_index,
+                        "title": scene.title,
+                    }
+                    for chapter in imported_source.story.chapters
+                    for scene in chapter.scenes
+                ],
                 "paragraphs": len(imported_source.paragraphs),
                 "evidence_anchors": len(imported_source.anchors),
+                "first_evidence_anchors": [
+                    {
+                        "anchor_id": anchor.anchor_id,
+                        "chapter_id": anchor.chapter_id,
+                        "scene_id": anchor.scene_id,
+                        "paragraph_index": anchor.paragraph_index,
+                        "sentence_index": anchor.sentence_index,
+                    }
+                    for anchor in imported_source.anchors[:5]
+                ],
             },
             indent=2,
             sort_keys=True,
@@ -544,7 +628,11 @@ def _handle_scene(args: argparse.Namespace) -> None:
     context = runner.build_scene_context(
         result=result,
         scene_id=cast(str | None, args.scene_id),
-        character_ids=_character_ids(args),
+        character_ids=_character_ids_for_scene(
+            args=args,
+            result=result,
+            scene_id=cast(str | None, args.scene_id),
+        ),
     )
     exporter = ExportEngine()
     output_format = cast(str, args.format)
@@ -563,7 +651,11 @@ def _handle_prompt(args: argparse.Namespace) -> None:
     context = runner.build_scene_context(
         result=result,
         scene_id=cast(str | None, args.scene_id),
-        character_ids=_character_ids(args),
+        character_ids=_character_ids_for_scene(
+            args=args,
+            result=result,
+            scene_id=cast(str | None, args.scene_id),
+        ),
     )
     pack = CanonPromptBuilder().build_production_pack(context)
     exporter = ExportEngine()
@@ -881,13 +973,34 @@ def _validation_source_root(source_root: str | None) -> Path:
     return Path.home() / "Desktop" / "SceneSmith test chapters"
 
 
-def _character_ids(args: argparse.Namespace) -> tuple[str, ...]:
-    """Return requested character IDs or the default demo character."""
+def _character_ids_for_scene(
+    args: argparse.Namespace,
+    result: ProjectRunResult,
+    scene_id: str | None,
+) -> tuple[str, ...]:
+    """Return requested character IDs or accepted characters for a scene."""
     character_ids = cast(list[str] | None, args.character_id)
-    if character_ids is None:
-        return ("character_mark",)
+    if character_ids is not None:
+        return _dedupe_ids(character_ids)
 
-    return _dedupe_ids(character_ids)
+    target_scene_id = scene_id or SceneSmithProjectRunner.latest_scene_id(result)
+    accepted_character_ids: dict[str, None] = {}
+    for extraction, summary in zip(
+        result.extraction_results,
+        result.update_summaries,
+        strict=True,
+    ):
+        if extraction.scene_id != target_scene_id:
+            continue
+        accepted_entities = set(summary.accepted_entities)
+        for entity in extraction.entities:
+            if (
+                entity.entity_id in accepted_entities
+                and entity.entity_type == "character"
+            ):
+                accepted_character_ids.setdefault(entity.entity_id, None)
+
+    return tuple(accepted_character_ids)
 
 
 def _run_with_selected_extractor(args: argparse.Namespace) -> ProjectRunResult:

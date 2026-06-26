@@ -62,7 +62,7 @@ generation, video generation, or AI chat.
 
 Current RC1 validation:
 
-* 500 automated tests passing
+* 505 automated tests passing
 * Deterministic rebuild validation
 * Cross-genre validation
 * 7-genre validation corpus
@@ -142,6 +142,10 @@ Inspect a text chapter import:
 ```powershell
 scenesmith import path\to\chapter_001.txt --source-id my_story
 ```
+
+The import command prints chapter IDs, scene IDs, a scene map, and a bounded
+evidence-anchor preview. Use scene IDs with `--scene-id` to inspect
+timeline-safe character, scene, world, and prompt views.
 
 Generate the evidence-bounded extraction prompt for one scene:
 

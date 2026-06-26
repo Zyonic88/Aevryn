@@ -384,6 +384,8 @@ V1 complete means Project Manager:
 V1 complete means the CLI can:
 
 * Import a chapter
+* Show imported chapter and scene IDs
+* Show bounded evidence-anchor previews without dumping source text
 * Build an extraction prompt
 * Apply evidence-bounded AI JSON
 * Apply multi-scene evidence-bounded AI JSON envelopes
@@ -392,12 +394,15 @@ V1 complete means the CLI can:
 * Show a scene sheet
 * Show a world sheet
 * Show machine-readable world state JSON
+* Default scene and prompt character context to accepted characters in the selected scene
 * Use scene IDs for scene-position character and world sheets
 * Show a prompt sheet
 * Show a continuity report
 * Explain Markdown versus JSON/CSV output intent in command help
+* Show command defaults in subcommand help
 * Run deterministically
 * Fail clearly on invalid input
+* Provide actionable hints for common unknown scene, character, and world entity selections
 * Return a nonzero exit code for expected workflow errors
 * Print expected workflow errors to stderr
 * Avoid duplicating repeated selected IDs

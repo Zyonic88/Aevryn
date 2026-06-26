@@ -161,6 +161,9 @@ def test_character_help_describes_presentation_and_machine_outputs(
     assert error.value.code == 0
     assert "Markdown is presentation-first" in output
     assert "JSON/CSV preserve machine detail." in output
+    assert "character_mark" in output
+    assert "accepted_entity_ids" in output
+    assert "(default: markdown)" in output
 
 
 def test_scene_help_describes_timeline_safe_arguments(
@@ -262,6 +265,50 @@ def ai_response_file(anchor_id: str) -> Path:
                         "attribute": "current_weapon",
                         "value": "Iron Sword",
                         "valid_from_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def luna_ai_response_file(anchor_id: str) -> Path:
+    """Create an evidence-bounded AI JSON response for a non-demo character."""
+    path = Path("build") / "test_cli" / "luna_ai_response.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "entities": [
+                    {
+                        "entity_id": "character_luna",
+                        "entity_type": "character",
+                        "display_name": "Luna",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_luna_current_goal_investigate",
+                        "entity_id": "character_luna",
+                        "attribute": "current_goal",
+                        "value": "Investigate the scene",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [
+                    {
+                        "entity_id": "character_luna",
+                        "attribute": "current_goal",
+                        "value": "Investigate the scene",
+                        "valid_from_anchor_id": anchor_id,
+                        "valid_until_anchor_id": None,
                         "confidence": 0.9,
                     }
                 ],
@@ -430,6 +477,59 @@ def test_import_command_prints_source_counts(capsys: CaptureFixture[str]) -> Non
     assert '"evidence_anchors": 2' in output
 
 
+def test_import_command_prints_chapter_and_scene_ids(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Import output should expose IDs users need for later commands."""
+    path = source_file()
+
+    exit_code = main(["import", str(path), "--source-id", "demo", "--title", "Demo"])
+    output = capsys.readouterr().out
+    imported = json.loads(output)
+
+    assert exit_code == 0
+    assert imported["chapter_ids"] == [
+        "demo_chapter_001",
+        "demo_chapter_002",
+    ]
+    assert imported["scene_ids"] == [
+        "demo_chapter_001_scene_001",
+        "demo_chapter_002_scene_001",
+    ]
+    assert imported["scene_map"] == [
+        {
+            "chapter_id": "demo_chapter_001",
+            "chapter_index": 1,
+            "scene_id": "demo_chapter_001_scene_001",
+            "scene_index": 1,
+            "title": "Scene 1",
+        },
+        {
+            "chapter_id": "demo_chapter_002",
+            "chapter_index": 2,
+            "scene_id": "demo_chapter_002_scene_001",
+            "scene_index": 1,
+            "title": "Scene 1",
+        },
+    ]
+    assert imported["first_evidence_anchors"] == [
+        {
+            "anchor_id": "demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor",
+            "chapter_id": "demo_chapter_001",
+            "scene_id": "demo_chapter_001_scene_001",
+            "paragraph_index": 1,
+            "sentence_index": 1,
+        },
+        {
+            "anchor_id": "demo_chapter_002_scene_001_paragraph_001_sentence_001_anchor",
+            "chapter_id": "demo_chapter_002",
+            "scene_id": "demo_chapter_002_scene_001",
+            "paragraph_index": 1,
+            "sentence_index": 1,
+        },
+    ]
+
+
 def test_cli_reports_missing_file_without_traceback(
     capsys: CaptureFixture[str],
 ) -> None:
@@ -504,6 +604,31 @@ def test_scene_command_reports_unknown_scene(
     assert exit_code == 1
     assert captured.out == ""
     assert "Unknown scene" in captured.err
+    assert "scenesmith import <path> --source-id <id>" in captured.err
+
+
+def test_character_command_reports_unknown_character_with_hint(
+    capsys: CaptureFixture[str],
+) -> None:
+    """CLI helps users recover from unknown character selections."""
+    path = source_file()
+
+    exit_code = main(
+        [
+            "character",
+            str(path),
+            "--source-id",
+            "demo",
+            "--character-id",
+            "character_missing",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert captured.out == ""
+    assert "Unknown character: character_missing" in captured.err
+    assert "accepted_entity_ids" in captured.err
 
 
 def test_scene_command_prints_scene_sheet(capsys: CaptureFixture[str]) -> None:
@@ -518,6 +643,32 @@ def test_scene_command_prints_scene_sheet(capsys: CaptureFixture[str]) -> None:
     assert "## Characters Present" in output
     assert "- Mark" in output
     assert "## Continuity Changes" in output
+
+
+def test_scene_command_defaults_to_accepted_scene_characters(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Scene command should not default to demo character IDs for real stories."""
+    path = single_scene_source_file()
+    response_path = luna_ai_response_file(
+        "demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+    )
+
+    exit_code = main(
+        [
+            "scene",
+            str(path),
+            "--source-id",
+            "demo",
+            "--ai-response-file",
+            str(response_path),
+        ]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "- Luna" in output
+    assert "character_mark" not in output
 
 
 def test_scene_command_dedupes_repeated_character_ids(
@@ -951,6 +1102,32 @@ def test_prompt_command_can_use_ai_json_candidates(
     assert "character_mark retains current_weapon: Iron Sword" in output
 
 
+def test_prompt_command_defaults_to_accepted_scene_characters(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Prompt command should use accepted scene characters when none are selected."""
+    path = single_scene_source_file()
+    response_path = luna_ai_response_file(
+        "demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+    )
+
+    exit_code = main(
+        [
+            "prompt",
+            str(path),
+            "--source-id",
+            "demo",
+            "--ai-response-file",
+            str(response_path),
+        ]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Luna" in output
+    assert "character_mark" not in output
+
+
 def test_character_command_can_use_ai_json_scene_id(
     capsys: CaptureFixture[str],
 ) -> None:
@@ -1155,6 +1332,35 @@ def test_world_command_dedupes_repeated_entity_ids(
 
     assert exit_code == 0
     assert output.count("Iron Sword (item)") == 1
+
+
+def test_world_command_reports_unknown_entity_with_hint(
+    capsys: CaptureFixture[str],
+) -> None:
+    """CLI helps users recover from unknown world entity selections."""
+    path = single_scene_source_file()
+    response_path = ai_response_file(
+        "demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+    )
+
+    exit_code = main(
+        [
+            "world",
+            str(path),
+            "--source-id",
+            "demo",
+            "--entity-id",
+            "item_missing",
+            "--ai-response-file",
+            str(response_path),
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert captured.out == ""
+    assert "Unknown world entity: item_missing" in captured.err
+    assert "accepted entity ID" in captured.err
 
 
 def test_continuity_command_prints_report(capsys: CaptureFixture[str]) -> None:
