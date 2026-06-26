@@ -145,7 +145,7 @@ def test_import_help_describes_source_arguments(capsys: CaptureFixture[str]) -> 
     output = capsys.readouterr().out
 
     assert error.value.code == 0
-    assert "Path to a UTF-8 text source file." in output
+    assert "Path to a UTF-8 text or EPUB source file." in output
     assert "Stable machine ID for this imported source." in output
     assert "Human-readable source title" in output
 

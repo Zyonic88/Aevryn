@@ -248,3 +248,38 @@ Allowed work:
 The goal is confidence, not more scope.
 
 SceneSmith V1 is now moving toward Release Candidate 1.
+
+## 20. V2 Platform Boundaries
+
+Version 2 must build a trustworthy platform without weakening the trustworthy engine.
+
+The website never owns business logic.
+
+The API owns the contract.
+
+The engine owns continuity.
+
+The frontend owns interaction.
+
+Presentation Engine owns view models.
+
+Export Engine owns serialization.
+
+No UI may bypass the API.
+
+No API may bypass the engine.
+
+The platform flow is:
+
+```text
+Browser
+-> Frontend
+-> API
+-> Authentication
+-> Project Manager
+-> SceneSmith Engine
+-> Database
+-> Storage
+```
+
+Before any Version 2 subsystem is implemented, its authority boundary must be documented in `docs/SCENESMITH_PLATFORM_ARCHITECTURE.md` or a dedicated system document.

@@ -36,6 +36,15 @@ Every V1 subsystem must satisfy:
 V1 complete means Story Import:
 
 * Imports plain text
+* Accepts `.epub` input through a Story Import adapter
+* Extracts readable EPUB spine content
+* Excludes EPUB navigation, table-of-contents, and metadata-only blocks
+* Preserves EPUB chapter headings
+* Preserves EPUB Unicode text
+* Produces deterministic EPUB text output
+* Feeds EPUB text into the existing Story Import parser
+* Imports the same EPUB twice with identical counts and evidence anchors
+* Fails clearly on malformed EPUB files
 * Preserves source order
 * Rejects out-of-order explicit multi-chapter imports
 * Rejects boolean source indexes

@@ -49,6 +49,7 @@ Story Import owns:
 * Source-map integrity
 * Source order preservation
 * Explicit chapter order validation
+* File-format adapters that prepare readable text for Story Import
 
 Supported inputs:
 
@@ -77,6 +78,13 @@ It prepares source structure.
 
 It does not interpret story meaning.
 
+EPUB support is an adapter.
+
+It extracts deterministic readable spine text, removes navigation-only material,
+normalizes text, and passes that text to the existing Story Import parser.
+
+It must not become a separate story parser.
+
 ## How Does It Fail?
 
 Story Import can fail if:
@@ -89,6 +97,9 @@ Story Import can fail if:
 * Evidence anchors point to the wrong source location.
 * It silently guesses structure when the source is ambiguous.
 * It mutates imported text without preserving the original.
+* EPUB metadata is malformed.
+* EPUB spine documents cannot be found or decoded.
+* EPUB navigation or table-of-contents material leaks into imported story text.
 
 When structure is ambiguous, Story Import should preserve the ambiguity instead of pretending certainty.
 
@@ -117,6 +128,9 @@ Imported source structures must be internally consistent:
 ## How Does It Interact With Other Systems?
 
 Story Import provides stable source references to later analysis and extraction work.
+
+EPUB adapters provide clean text to Story Import. Story Import still owns chapter
+parsing, scene splitting, paragraph indexing, sentence indexing, and evidence anchors.
 
 The Canon Engine uses evidence anchors when recording facts.
 

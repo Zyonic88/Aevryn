@@ -119,19 +119,303 @@ RC1 is a confidence milestone.
 
 ---
 
-# Version 2 - AI Production Suite
+# Version 2 - The Platform
 
 ## Goal
 
-Turn SceneSmith into an AI production assistant.
+Transform the SceneSmith Engine into a usable product while keeping the engine completely independent.
 
-Version 2 focuses on creating assets.
+The website becomes a client of the engine, not the place where the engine lives.
 
-The Canon Engine remains the source of truth.
+Platform authority boundaries are defined in `docs/SCENESMITH_PLATFORM_ARCHITECTURE.md`.
+
+The core architecture becomes:
+
+```text
+Website
+-> API
+-> SceneSmith Engine
+```
+
+Everything the CLI can do, the API must be able to do.
 
 ---
 
-## New Systems
+## Phase 1 - Backend API
+
+Everything goes through the API.
+
+Systems:
+
+* REST API
+* Authentication middleware
+* Project management API
+* Import API
+* Canon API
+* Character API
+* Scene API
+* Timeline API
+* Prompt API
+* Export API
+
+Deliverable:
+
+```text
+Everything the CLI can do
+-> The API can do
+```
+
+---
+
+## Phase 2 - Project Database
+
+The engine currently works on local projects.
+
+Version 2 adds persistent storage for product use.
+
+Store:
+
+* Users
+* Projects
+* Stories
+* Canon
+* Timeline
+* Character Cards
+* World State
+* Exports
+* Settings
+
+Recommended database:
+
+* PostgreSQL
+
+---
+
+## Phase 3 - Background Workers
+
+Never process imports in the browser.
+
+Workflow:
+
+```text
+Upload
+-> Queue
+-> Worker
+-> Processing
+-> Finished
+```
+
+Possible worker systems:
+
+* Redis
+* RQ
+* Celery
+* Dramatiq
+
+---
+
+## Phase 4 - Authentication
+
+Keep authentication simple for Version 2.
+
+Required:
+
+* Register
+* Login
+* Forgot Password
+* Projects
+
+Not required:
+
+* Social logins
+
+---
+
+## Phase 5 - Website
+
+The frontend is built after the backend API, storage, workers, and authentication boundaries exist.
+
+Required views:
+
+* Dashboard
+* Projects
+* Recent Activity
+* Import Story
+* Project
+* Story
+* Characters
+* World
+* Timeline
+* Scenes
+* Continuity
+* Prompt Packs
+* Exports
+
+Character view:
+
+* Portrait Placeholder
+* Summary
+* Abilities
+* Equipment
+* Relationships
+* History
+* Evidence
+
+Scene view:
+
+* Summary
+* Mood
+* Purpose
+* Visual Highlights
+* Prompt Pack
+* Evidence
+
+World view:
+
+* Locations
+* Organizations
+* Items
+* Vehicles
+* Ownership
+
+Timeline view:
+
+```text
+Chapter
+-> Scene
+-> Changes
+```
+
+Continuity view:
+
+* New
+* Updated
+* Invalidated
+* Warnings
+* Evidence
+
+---
+
+## Phase 6 - Project Storage
+
+Users should never lose work.
+
+Projects contain:
+
+* Imports
+* Canon
+* Exports
+* History
+* Snapshots
+
+---
+
+## Phase 7 - Import UI
+
+Supported import paths:
+
+* TXT
+* EPUB
+* PDF
+* Markdown
+* Paste Text
+* Web Import
+
+Web Import remains experimental until permission checks, rate limits, and source attribution are production-safe.
+
+---
+
+## Phase 8 - Monitoring
+
+Every meaningful workflow must be observable.
+
+Log:
+
+* Every import
+* Every extraction
+* Every failure
+* Every export
+
+---
+
+## Phase 9 - Performance
+
+Optimize after the product path is measurable.
+
+Measure:
+
+* Import Time
+* Canon Time
+* Scene Time
+* Prompt Time
+* Export Time
+* Memory
+
+---
+
+## Phase 10 - Internal Alpha
+
+Version 2 ends with a private alpha, not a public launch.
+
+Use it.
+
+Break it.
+
+Fix it.
+
+---
+
+## Version 2 Success Criteria
+
+A creator can:
+
+```text
+Register
+-> Create Project
+-> Upload Novel
+-> Wait
+-> View Character Cards
+-> View World
+-> View Timeline
+-> View Scene Sheets
+-> View Prompt Packs
+-> Export
+```
+
+without touching the CLI.
+
+---
+
+## What Is Not Version 2
+
+Version 2 does not include:
+
+* Image Generation
+* Video Generation
+* Storyboards
+* Voice
+* Music
+* Cloud Collaboration
+* Payments
+* Subscriptions
+* Teams
+* Publishing
+
+Those belong to Version 3 or later.
+
+---
+
+# Version 3 - Production Expansion
+
+## Goal
+
+Extend the platform beyond continuity workflows into media generation, collaboration, monetization, and publishing.
+
+Version 3 begins only after the Version 2 platform lets creators use SceneSmith without touching the CLI.
+
+---
+
+## Candidate Systems
 
 * Image Generation Engine
 * Image Consistency Engine
@@ -139,193 +423,37 @@ The Canon Engine remains the source of truth.
 * Environment Reference Engine
 * Style Library
 * Asset Manager
-
----
-
-## New Capabilities
-
-* AI image generation
-* Character reference images
-* Environment reference images
-* Prop generation
-* Style presets
-* Character consistency
-* Environment consistency
-
----
-
-## Deliverables
-
-* Character artwork
-* Environment artwork
-* Prop sheets
-* Scene illustrations
-* Thumbnail generation
-
----
-
-## Success Criteria
-
-Creators can generate images that remain faithful to the current canon.
-
----
-
-# Version 3 - AI Video Production
-
-## Goal
-
-Transform stories into complete AI-generated videos.
-
-Version 3 focuses on animation and production.
-
----
-
-## New Systems
-
 * Video Generation Engine
 * Storyboard Engine
 * Shot Planner
 * Camera Director
 * Timeline Composer
 * Audio Synchronization
-
----
-
-## New Capabilities
-
-* Scene-to-video generation
-* Storyboards
-* Camera planning
-* Animation prompts
-* Timeline sequencing
-* Multi-shot scenes
-
----
-
-## Deliverables
-
-* Storyboards
-* Video clips
-* Camera scripts
-* Production timelines
-
----
-
-## Success Criteria
-
-Creators can generate complete video sequences directly from SceneSmith scene data.
-
----
-
-# Version 4 - Creator Studio
-
-## Goal
-
-Provide a complete production workspace.
-
----
-
-## New Systems
-
-* Project Dashboard
-* Visual Timeline Editor
-* Character Browser
-* World Browser
-* Asset Library
-* Prompt Editor
-* Production Queue
-
----
-
-## New Capabilities
-
-* Drag-and-drop editing
-* Visual continuity checking
-* Manual scene editing
-* Asset management
-* Production workflow management
-
----
-
-## Deliverables
-
-* Full creator workspace
-* Interactive editing
-* Production dashboard
-
----
-
-# Version 5 - SceneSmith Cloud
-
-## Goal
-
-Make SceneSmith collaborative.
-
----
-
-## New Systems
-
-* User Accounts
-* Teams
-* Cloud Storage
-* Version History
-* Sharing
-* Permissions
-
----
-
-## New Capabilities
-
-* Cloud projects
-* Collaboration
-* Shared canon
-* Team workflows
-* Project history
-
----
-
-## Deliverables
-
-* SaaS platform
-* Team collaboration
-* Shared projects
-
----
-
-# Version 6 - Production Pipeline
-
-## Goal
-
-Generate complete productions.
-
----
-
-## New Systems
-
-* Narration Engine
 * Voice Pipeline
 * Music Pipeline
-* Final Editor
-* Render Pipeline
 * Publishing Engine
+* Payments
+* Subscriptions
+* Teams
+* Cloud Collaboration
 
 ---
 
-## New Capabilities
+## Version 3 Rule
 
-* Voice generation
-* Music generation
-* Final rendering
-* YouTube exports
-* Revid exports
-* Publishing packages
+The Canon Engine remains the source of truth.
+
+No production, collaboration, or monetization system may replace Canon.
 
 ---
 
-## Deliverables
+# Future Versions
 
-* Complete production package
-* Ready-to-publish videos
+## Goal
+
+Future versions should be split only after Version 2 reaches internal alpha and Version 3 scope is deliberately reviewed.
+
+Do not schedule additional major versions while the platform foundation is still unproven.
 
 ---
 

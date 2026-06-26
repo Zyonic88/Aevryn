@@ -405,7 +405,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _add_source_arguments(parser: argparse.ArgumentParser) -> None:
     """Add common source import arguments to a subcommand."""
-    parser.add_argument("path", help="Path to a UTF-8 text source file.")
+    parser.add_argument("path", help="Path to a UTF-8 text or EPUB source file.")
     parser.add_argument(
         "--source-id",
         default="source_demo",

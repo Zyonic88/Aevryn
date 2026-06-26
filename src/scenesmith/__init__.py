@@ -50,6 +50,8 @@ from scenesmith.extraction import (
     StaticAIExtractionClient,
 )
 from scenesmith.importing import (
+    EpubText,
+    EpubTextExtractor,
     EvidenceAnchor,
     ImportedSentence,
     ImportedSource,
@@ -130,6 +132,8 @@ __all__ = [
     "EntityExtractionEngine",
     "Evidence",
     "EvidenceAnchor",
+    "EpubText",
+    "EpubTextExtractor",
     "ExportEngine",
     "ExtractedEntity",
     "ExtractedRelationship",
