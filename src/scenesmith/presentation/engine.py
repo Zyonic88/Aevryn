@@ -328,11 +328,29 @@ class PresentationEngine:
     def _prompt_lines(prompt: str) -> tuple[str, ...]:
         """Return compact prompt lines for presentation."""
         lines = (
-            PresentationEngine._shorten(line.strip())
+            display_line
             for line in prompt.splitlines()
-            if line.strip()
+            if (display_line := PresentationEngine._prompt_display_line(line)) is not None
         )
         return tuple(PresentationEngine._unique_values(lines)[:15])
+
+    @staticmethod
+    def _prompt_display_line(line: str) -> str | None:
+        """Return one displayable prompt line or None for structural placeholders."""
+        stripped_line = PresentationEngine._strip_markdown_bullet(line.strip())
+        if not stripped_line or stripped_line == "Unknown" or stripped_line.endswith(":"):
+            return None
+
+        return PresentationEngine._shorten(stripped_line)
+
+    @staticmethod
+    def _strip_markdown_bullet(value: str) -> str:
+        """Return prompt text without a leading Markdown bullet marker."""
+        stripped_value = value.strip()
+        if stripped_value.startswith("- "):
+            return stripped_value[2:].strip()
+
+        return stripped_value
 
     @staticmethod
     def _world_entity_items(entity: WorldEntityState) -> tuple[str, ...]:

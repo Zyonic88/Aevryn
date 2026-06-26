@@ -15,6 +15,8 @@ from scenesmith.extraction import EvidenceBoundedAIExtractor, StaticAIExtraction
 from scenesmith.json_utils import loads_json_without_duplicate_keys
 from scenesmith.presentation import PresentationEngine
 from scenesmith.projects import ProjectRunResult, SceneSmithProjectRunner
+from scenesmith.prompts import CanonPromptBuilder
+from scenesmith.scenes import SceneAnalyzer
 from scenesmith.validation import (
     ExpectedExtractionMetrics,
     ExpectedImportMetrics,
@@ -188,6 +190,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--format",
         choices=("markdown", "json", "csv"),
         default="markdown",
+        help="Output format. Markdown is presentation-first; JSON/CSV preserve machine detail.",
     )
 
     scene_parser = subcommands.add_parser(
@@ -215,7 +218,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--format",
         choices=("markdown", "json"),
         default="markdown",
-        help="Output format.",
+        help="Output format. Markdown is presentation-first; JSON preserves machine detail.",
     )
 
     prompt_parser = subcommands.add_parser(
@@ -243,7 +246,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--format",
         choices=("markdown", "json"),
         default="markdown",
-        help="Output format.",
+        help="Output format. Markdown is presentation-first; JSON preserves machine detail.",
     )
 
     world_parser = subcommands.add_parser(
@@ -273,6 +276,12 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Evidence-bounded AI JSON response to apply before building the view.",
     )
+    world_parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+        help="Output format. Markdown is presentation-first; JSON preserves machine detail.",
+    )
 
     continuity_parser = subcommands.add_parser(
         "continuity",
@@ -288,7 +297,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--format",
         choices=("markdown", "json"),
         default="markdown",
-        help="Output format.",
+        help="Output format. Markdown is scan-friendly; JSON preserves audit detail.",
     )
 
     validate_parser = subcommands.add_parser(
@@ -333,7 +342,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--format",
         choices=("text", "json"),
         default="text",
-        help="Output format.",
+        help="Output format. Text is scan-friendly; JSON preserves machine detail.",
     )
 
     return parser
@@ -524,7 +533,8 @@ def _handle_character(args: argparse.Namespace) -> None:
     elif output_format == "csv":
         print(exporter.canon_character_facts_csv(card), end="")
     else:
-        print(exporter.canon_character_sheet_markdown(card))
+        view = PresentationEngine().character_profile(card)
+        print(exporter.character_profile_markdown(view))
 
 
 def _handle_scene(args: argparse.Namespace) -> None:
@@ -541,24 +551,30 @@ def _handle_scene(args: argparse.Namespace) -> None:
     if output_format == "json":
         print(exporter.canon_scene_context_json(context))
     else:
-        print(exporter.canon_scene_sheet_markdown(context))
+        analysis = SceneAnalyzer().analyze(context)
+        view = PresentationEngine().scene_sheet(context=context, analysis=analysis)
+        print(exporter.scene_sheet_view_markdown(view))
 
 
 def _handle_prompt(args: argparse.Namespace) -> None:
     """Handle the prompt command."""
     runner = _runner()
     result = _run_with_selected_extractor(args)
-    bundle = runner.build_prompt_bundle(
+    context = runner.build_scene_context(
         result=result,
         scene_id=cast(str | None, args.scene_id),
         character_ids=_character_ids(args),
     )
+    pack = CanonPromptBuilder().build_production_pack(context)
     exporter = ExportEngine()
     output_format = cast(str, args.format)
     if output_format == "json":
-        print(exporter.prompt_bundle_json(bundle))
+        print(exporter.prompt_bundle_json(pack.prompt_bundle))
     else:
-        print(exporter.prompt_sheet_markdown(bundle))
+        analysis = SceneAnalyzer().analyze(context)
+        scene = PresentationEngine().scene_sheet(context=context, analysis=analysis)
+        view = PresentationEngine().production_pack(pack=pack, scene=scene)
+        print(exporter.production_pack_view_markdown(view))
 
 
 def _handle_world(args: argparse.Namespace) -> None:
@@ -578,8 +594,13 @@ def _handle_world(args: argparse.Namespace) -> None:
             entity_ids=_dedupe_ids(cast(list[str], args.entity_id)),
             chapter_index=cast(int | None, args.chapter_index),
         )
-    view = PresentationEngine().world_sheet(state)
-    print(ExportEngine().world_sheet_view_markdown(view))
+    exporter = ExportEngine()
+    output_format = cast(str, args.format)
+    if output_format == "json":
+        print(exporter.world_state_json(state))
+    else:
+        view = PresentationEngine().world_sheet(state)
+        print(exporter.world_sheet_view_markdown(view))
 
 
 def _handle_continuity(args: argparse.Namespace) -> None:

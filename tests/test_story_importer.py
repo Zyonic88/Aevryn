@@ -462,6 +462,25 @@ def test_source_paragraph_rejects_sentence_parent_mismatch() -> None:
         )
 
 
+def test_source_paragraph_rejects_untraceable_sentence_text() -> None:
+    """Paragraph sentences must be traceable to the paragraph source text."""
+    sentence = ImportedSentence(
+        sentence_id="source_chapter_001_scene_001_paragraph_001_sentence_001",
+        paragraph_id="source_chapter_001_scene_001_paragraph_001",
+        sentence_index=1,
+        text="Mark drew a sword.",
+    )
+
+    with pytest.raises(ValueError, match="traceable to paragraph text"):
+        SourceParagraph(
+            paragraph_id="source_chapter_001_scene_001_paragraph_001",
+            scene_id="source_chapter_001_scene_001",
+            paragraph_index=1,
+            text="Mark woke up.",
+            sentences=(sentence,),
+        )
+
+
 def test_evidence_anchor_rejects_empty_quote() -> None:
     """Evidence anchors must preserve source text for canon proof."""
     with pytest.raises(ValueError, match="Evidence quote is required"):
@@ -549,6 +568,84 @@ def test_imported_source_rejects_unknown_scene_anchor() -> None:
     with pytest.raises(ValueError, match="unknown scene"):
         imported_source_with_anchor(
             demo_anchor(scene_id="source_demo_chapter_001_scene_999"),
+        )
+
+
+def test_imported_source_rejects_anchor_scene_chapter_mismatch() -> None:
+    """Evidence anchors must keep chapter metadata aligned with scenes."""
+    story = Story(
+        story_id="source_demo",
+        title="Demo",
+        chapters=(
+            Chapter(
+                chapter_id="source_demo_chapter_001",
+                story_id="source_demo",
+                chapter_index=1,
+                title="Chapter 1",
+                scenes=(
+                    Scene(
+                        scene_id="source_demo_chapter_001_scene_001",
+                        chapter_id="source_demo_chapter_001",
+                        scene_index=1,
+                        title="Scene 1",
+                    ),
+                ),
+            ),
+            Chapter(
+                chapter_id="source_demo_chapter_002",
+                story_id="source_demo",
+                chapter_index=2,
+                title="Chapter 2",
+                scenes=(
+                    Scene(
+                        scene_id="source_demo_chapter_002_scene_001",
+                        chapter_id="source_demo_chapter_002",
+                        scene_index=1,
+                        title="Scene 1",
+                    ),
+                ),
+            ),
+        ),
+    )
+    sentence = ImportedSentence(
+        sentence_id="source_demo_chapter_002_scene_001_paragraph_001_sentence_001",
+        paragraph_id="source_demo_chapter_002_scene_001_paragraph_001",
+        sentence_index=1,
+        text="Mark woke up.",
+    )
+    paragraph = SourceParagraph(
+        paragraph_id="source_demo_chapter_002_scene_001_paragraph_001",
+        scene_id="source_demo_chapter_002_scene_001",
+        paragraph_index=1,
+        text="Mark woke up.",
+        sentences=(sentence,),
+    )
+
+    with pytest.raises(ValueError, match="scene must belong"):
+        ImportedSource(
+            source_id="source_demo",
+            title="Demo",
+            story=story,
+            paragraphs=(paragraph,),
+            anchors=(
+                EvidenceAnchor(
+                    anchor_id=(
+                        "source_demo_chapter_002_scene_001_paragraph_001_"
+                        "sentence_001_anchor"
+                    ),
+                    source_id="source_demo",
+                    chapter_id="source_demo_chapter_001",
+                    scene_id="source_demo_chapter_002_scene_001",
+                    paragraph_id="source_demo_chapter_002_scene_001_paragraph_001",
+                    sentence_id=(
+                        "source_demo_chapter_002_scene_001_paragraph_001_"
+                        "sentence_001"
+                    ),
+                    paragraph_index=1,
+                    sentence_index=1,
+                    quote="Mark woke up.",
+                ),
+            ),
         )
 
 
@@ -663,6 +760,77 @@ def test_imported_source_rejects_anchor_sentence_paragraph_mismatch() -> None:
             paragraphs=(first_paragraph, second_paragraph),
             anchors=(demo_anchor(sentence_id=second_sentence.sentence_id),),
         )
+
+
+def test_imported_source_rejects_duplicate_scene_paragraph_indexes() -> None:
+    """Paragraph indexes must be unique inside a scene source map."""
+    first_sentence = ImportedSentence(
+        sentence_id="source_demo_chapter_001_scene_001_paragraph_001_sentence_001",
+        paragraph_id="source_demo_chapter_001_scene_001_paragraph_001",
+        sentence_index=1,
+        text="Mark woke up.",
+    )
+    second_sentence = ImportedSentence(
+        sentence_id="source_demo_chapter_001_scene_001_paragraph_002_sentence_001",
+        paragraph_id="source_demo_chapter_001_scene_001_paragraph_002",
+        sentence_index=1,
+        text="Mark stood up.",
+    )
+    first_paragraph = SourceParagraph(
+        paragraph_id="source_demo_chapter_001_scene_001_paragraph_001",
+        scene_id="source_demo_chapter_001_scene_001",
+        paragraph_index=1,
+        text="Mark woke up.",
+        sentences=(first_sentence,),
+    )
+    second_paragraph = SourceParagraph(
+        paragraph_id="source_demo_chapter_001_scene_001_paragraph_002",
+        scene_id="source_demo_chapter_001_scene_001",
+        paragraph_index=1,
+        text="Mark stood up.",
+        sentences=(second_sentence,),
+    )
+    story = Story(
+        story_id="source_demo",
+        title="Demo",
+        chapters=(
+            Chapter(
+                chapter_id="source_demo_chapter_001",
+                story_id="source_demo",
+                chapter_index=1,
+                title="Chapter 1",
+                scenes=(
+                    Scene(
+                        scene_id="source_demo_chapter_001_scene_001",
+                        chapter_id="source_demo_chapter_001",
+                        scene_index=1,
+                        title="Scene 1",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="duplicate paragraph indexes"):
+        ImportedSource(
+            source_id="source_demo",
+            title="Demo",
+            story=story,
+            paragraphs=(first_paragraph, second_paragraph),
+            anchors=(),
+        )
+
+
+def test_imported_source_rejects_anchor_paragraph_index_mismatch() -> None:
+    """Evidence anchors must keep paragraph indexes aligned with paragraphs."""
+    with pytest.raises(ValueError, match="paragraph index must match"):
+        imported_source_with_anchor(demo_anchor(paragraph_index=2))
+
+
+def test_imported_source_rejects_anchor_sentence_index_mismatch() -> None:
+    """Evidence anchors must keep sentence indexes aligned with sentences."""
+    with pytest.raises(ValueError, match="sentence index must match"):
+        imported_source_with_anchor(demo_anchor(sentence_index=2))
 
 
 def test_imported_source_rejects_anchor_quote_mismatch() -> None:

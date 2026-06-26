@@ -343,3 +343,86 @@ def test_production_pack_rejects_duplicate_list_items() -> None:
                 forbidden_elements=(),
             ),
         )
+
+
+def test_production_pack_normalizes_list_items() -> None:
+    """Production pack human-facing rows normalize whitespace."""
+    bundle = PromptBundle(
+        image_prompt="Image prompt.",
+        narration_prompt="Narration prompt.",
+        camera_prompt="Camera prompt.",
+        animation_prompt="Animation prompt.",
+    )
+
+    pack = ProductionPack(
+        scene_id="scene_001",
+        scene_summary="Scene summary.",
+        purpose="Purpose.",
+        conflict="Unknown",
+        mood="Unknown",
+        visual_highlights=("  Cold   room  ",),
+        character_goals=(),
+        important_objects=(),
+        environment_summary="Unknown",
+        continuity_notes=(),
+        forbidden_elements=(),
+        prompt_bundle=bundle,
+        analysis=SceneAnalysis(
+            scene_id="scene_001",
+            summary="Scene summary.",
+            purpose="Purpose.",
+            conflict="Unknown",
+            mood="Unknown",
+            visual_highlights=(),
+            character_goals=(),
+            character_emotions=(),
+            important_objects=(),
+            environment_summary="Unknown",
+            changes_introduced=(),
+            continuity_notes=(),
+            forbidden_elements=(),
+        ),
+    )
+
+    assert pack.visual_highlights == ("Cold room",)
+
+
+def test_production_pack_rejects_normalized_duplicate_list_items() -> None:
+    """Production packs reject duplicates after whitespace cleanup."""
+    bundle = PromptBundle(
+        image_prompt="Image prompt.",
+        narration_prompt="Narration prompt.",
+        camera_prompt="Camera prompt.",
+        animation_prompt="Animation prompt.",
+    )
+
+    with pytest.raises(ValueError, match="visual highlights must be unique"):
+        ProductionPack(
+            scene_id="scene_001",
+            scene_summary="Scene summary.",
+            purpose="Purpose.",
+            conflict="Unknown",
+            mood="Unknown",
+            visual_highlights=("Cold room", " Cold   room "),
+            character_goals=(),
+            important_objects=(),
+            environment_summary="Unknown",
+            continuity_notes=(),
+            forbidden_elements=(),
+            prompt_bundle=bundle,
+            analysis=SceneAnalysis(
+                scene_id="scene_001",
+                summary="Scene summary.",
+                purpose="Purpose.",
+                conflict="Unknown",
+                mood="Unknown",
+                visual_highlights=(),
+                character_goals=(),
+                character_emotions=(),
+                important_objects=(),
+                environment_summary="Unknown",
+                changes_introduced=(),
+                continuity_notes=(),
+                forbidden_elements=(),
+            ),
+        )

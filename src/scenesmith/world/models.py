@@ -28,7 +28,11 @@ class WorldEntityFact:
     def __post_init__(self) -> None:
         """Validate world fact view-model fields."""
         _require_machine_token(self.attribute, "World fact attribute")
-        _require_text(self.value, "World fact value")
+        object.__setattr__(
+            self,
+            "value",
+            _normalized_text(self.value, "World fact value"),
+        )
         _require_machine_token(
             self.valid_from_chapter_id,
             "World fact valid-from chapter ID",
@@ -63,7 +67,11 @@ class WorldEntityState:
         """Validate world entity state identity and position."""
         _require_machine_token(self.entity_id, "World entity ID")
         _require_machine_token(self.entity_type, "World entity type")
-        _require_text(self.display_name, "World entity display name")
+        object.__setattr__(
+            self,
+            "display_name",
+            _normalized_text(self.display_name, "World entity display name"),
+        )
         _require_positive_index(self.chapter_index, "World entity chapter index")
 
 
@@ -91,6 +99,12 @@ def _require_text(value: str, field_name: str) -> None:
     """Validate a required human-readable text field."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required.")
+
+
+def _normalized_text(value: str, field_name: str) -> str:
+    """Return normalized human-readable text or raise if it is blank."""
+    _require_text(value, field_name)
+    return " ".join(value.split())
 
 
 def _require_machine_token(value: str, field_name: str) -> None:

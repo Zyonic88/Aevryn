@@ -310,6 +310,62 @@ def test_extraction_models_reject_non_numeric_confidence() -> None:
         )
 
 
+def test_extraction_models_normalize_human_text_fields() -> None:
+    """Extraction candidates normalize text used by downstream canon updates."""
+    anchor = SceneEvidenceAnchor(anchor_id="anchor_001", quote=" Mark   draws sword. ")
+    scene_input = SceneExtractionInput(
+        scene_id="source_chapter_001_scene_001",
+        text=" Mark   draws sword. ",
+        evidence_anchor_ids=("anchor_001",),
+        evidence_anchors=(anchor,),
+    )
+    entity = ExtractedEntity(
+        entity_id="character_mark",
+        entity_type="character",
+        display_name=" Mark   Stone ",
+        evidence_anchor_id="anchor_001",
+        confidence=0.9,
+    )
+    fact = ExtractedFact(
+        fact_id="fact_001_weapon",
+        entity_id="character_mark",
+        attribute="current_weapon",
+        value=" Rusty   Dagger ",
+        evidence_anchor_id="anchor_001",
+        confidence=0.9,
+    )
+    state_change = ExtractedStateChange(
+        entity_id="character_mark",
+        attribute="current_weapon",
+        value=" Rusty   Dagger ",
+        valid_from_anchor_id="anchor_001",
+        confidence=0.9,
+    )
+
+    assert anchor.quote == " Mark   draws sword. "
+    assert scene_input.text == " Mark   draws sword. "
+    assert entity.display_name == "Mark Stone"
+    assert fact.value == "Rusty Dagger"
+    assert state_change.value == "Rusty Dagger"
+
+
+def test_extraction_result_rejects_direct_duplicate_candidates() -> None:
+    """Extraction results reject duplicate identities even outside the engine."""
+    entity = ExtractedEntity(
+        entity_id="character_mark",
+        entity_type="character",
+        display_name="Mark",
+        evidence_anchor_id="anchor_001",
+        confidence=0.9,
+    )
+
+    with pytest.raises(ValueError, match="duplicate entity IDs"):
+        ExtractionResult(
+            scene_id="source_chapter_001_scene_001",
+            entities=(entity, entity),
+        )
+
+
 def test_scene_evidence_anchor_rejects_blank_quote() -> None:
     """Scene evidence anchors sent to extractors must preserve source text."""
     with pytest.raises(ValueError, match="Scene evidence anchor quote"):

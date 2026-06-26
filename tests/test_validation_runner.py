@@ -11,6 +11,11 @@ from _pytest.logging import LogCaptureFixture
 from scenesmith.importing import ImportedSource, StoryImporter
 from scenesmith.validation import ValidationRunner
 from scenesmith.validation.runner import (
+    ExpectedExtractionMetrics,
+    ExpectedImportMetrics,
+    ValidationCaseResult,
+    ValidationSuiteResult,
+    ValidationTotals,
     _extraction_input_digest,
     _extraction_prompt_digest,
     _source_manifest_digest,
@@ -42,6 +47,72 @@ def test_validation_runner_passes_matching_import_metrics() -> None:
     assert result.results[0].actual_import.chapters == 2
     assert result.results[0].actual_import.evidence_anchors == 2
     assert result.results[0].actual_extraction.scene_inputs == 2
+
+
+def test_validation_case_result_rejects_passing_result_with_errors() -> None:
+    """Passing validation results cannot carry failure details."""
+    with pytest.raises(ValueError, match="cannot contain errors"):
+        ValidationCaseResult(
+            case_id="demo_validation_case",
+            title="Demo",
+            genre="Test",
+            passed=True,
+            actual_import=_expected_import_metric_model(),
+            actual_extraction=_expected_extraction_metric_model(),
+            errors=("unexpected drift",),
+        )
+
+
+def test_validation_case_result_rejects_passing_result_without_metrics() -> None:
+    """Passing validation results must include the metrics being certified."""
+    with pytest.raises(ValueError, match="require actual metrics"):
+        ValidationCaseResult(
+            case_id="demo_validation_case",
+            title="Demo",
+            genre="Test",
+            passed=True,
+            actual_import=None,
+            actual_extraction=None,
+        )
+
+
+def test_validation_totals_reject_unreconciled_case_counts() -> None:
+    """Validation totals must reconcile passed and failed case counts."""
+    with pytest.raises(ValueError, match="must reconcile"):
+        ValidationTotals(
+            cases=2,
+            passed=1,
+            failed=0,
+            chapter_files=1,
+            chapters=1,
+            scenes=1,
+            paragraphs=1,
+            sentences=1,
+            evidence_anchors=1,
+            extraction_inputs=1,
+            extraction_anchors=1,
+        )
+
+
+def test_validation_suite_result_rejects_duplicate_case_results() -> None:
+    """Validation suite result case IDs must be unique."""
+    result = ValidationCaseResult(
+        case_id="demo_validation_case",
+        title="Demo",
+        genre="Test",
+        passed=True,
+        actual_import=_expected_import_metric_model(),
+        actual_extraction=_expected_extraction_metric_model(),
+    )
+
+    with pytest.raises(ValueError, match="duplicate cases"):
+        ValidationSuiteResult(results=(result, result))
+
+
+def test_validation_suite_result_rejects_empty_results() -> None:
+    """Validation suite results must not treat empty suites as passing."""
+    with pytest.raises(ValueError, match="cannot be empty"):
+        ValidationSuiteResult(results=())
 
 
 def test_validation_runner_reports_metric_mismatches() -> None:
@@ -600,6 +671,30 @@ def _write_case(
     (case_dir / output_filename).write_text(
         json.dumps(case_payload),
         encoding="utf-8",
+    )
+
+
+def _expected_import_metric_model() -> ExpectedImportMetrics:
+    """Return a valid import metric model for direct validation tests."""
+    return ExpectedImportMetrics(
+        chapter_files=1,
+        source_manifest_digest="0" * 64,
+        chapters=1,
+        scenes=1,
+        paragraphs=1,
+        sentences=1,
+        evidence_anchors=1,
+        import_digest="1" * 64,
+    )
+
+
+def _expected_extraction_metric_model() -> ExpectedExtractionMetrics:
+    """Return a valid extraction metric model for direct validation tests."""
+    return ExpectedExtractionMetrics(
+        scene_inputs=1,
+        evidence_anchors=1,
+        extraction_input_digest="2" * 64,
+        extraction_prompt_digest="3" * 64,
     )
 
 

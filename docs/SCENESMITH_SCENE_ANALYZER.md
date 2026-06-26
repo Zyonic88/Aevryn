@@ -61,6 +61,8 @@ Scene Analysis outputs must have a valid scene ID and non-empty summary, purpose
 
 Scene Analysis list items must not be blank.
 
+Scene Analysis list items are whitespace-normalized before uniqueness checks.
+
 Scene Analysis list items must not repeat within the same output field.
 
 It may compress accepted facts and relationships into human-readable meaning.

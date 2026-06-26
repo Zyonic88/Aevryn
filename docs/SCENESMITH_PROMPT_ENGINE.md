@@ -82,6 +82,8 @@ Production Packs must reference Scene Analyzer output for the same scene ID.
 
 Production Pack list fields must not contain blank visible rows.
 
+Production Pack list fields are whitespace-normalized before uniqueness checks.
+
 Production Pack list fields must not contain duplicate visible rows.
 
 `Unknown` is allowed when evidence is absent.

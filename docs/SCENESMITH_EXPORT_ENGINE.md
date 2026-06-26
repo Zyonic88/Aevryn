@@ -11,7 +11,9 @@ It outputs:
 * CSV
 * Character Sheets
 * Scene Sheets
+* World Sheets
 * Prompt Sheets
+* Production Packs
 
 It does not own the data it exports.
 
@@ -46,11 +48,17 @@ JSON output is stable and sorted.
 
 JSON output preserves Unicode text instead of ASCII-escaping repaired names, titles, or dialogue.
 
+JSON output preserves machine-readable detail for audits, tests, and downstream tools.
+
 CSV output uses stable headers.
 
 CSV output must reject duplicate headers, missing row fields, and unexpected row fields.
 
 Markdown output remains human-readable and does not mix unrelated formats.
+
+Markdown output is presentation-first and optimized for creator scanning.
+
+Markdown list rows are whitespace-normalized before deduplication.
 
 Repeated Markdown list items are deduplicated.
 

@@ -480,6 +480,15 @@ def test_canon_update_summary_rejects_duplicate_ids() -> None:
         )
 
 
+def test_canon_update_summary_rejects_accepted_rejected_overlap() -> None:
+    """Canon update summaries cannot classify one ID both ways."""
+    with pytest.raises(ValueError, match="both accepted and rejected"):
+        CanonUpdateSummary(
+            accepted_entities=("character_mark",),
+            rejected_candidates=("character_mark",),
+        )
+
+
 def test_canon_update_summary_rejects_invalid_ids() -> None:
     """Canon update summaries require machine-safe candidate IDs."""
     with pytest.raises(ValueError, match="cannot contain whitespace"):

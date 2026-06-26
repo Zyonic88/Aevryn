@@ -30,9 +30,20 @@ class CharacterFact:
     def __post_init__(self) -> None:
         """Validate character fact view-model fields."""
         _require_machine_token(self.attribute, "Character fact attribute")
-        _require_text(self.value, "Character fact value")
+        object.__setattr__(
+            self,
+            "value",
+            _normalized_text(self.value, "Character fact value"),
+        )
         if self.previous_value is not None:
-            _require_text(self.previous_value, "Character fact previous value")
+            object.__setattr__(
+                self,
+                "previous_value",
+                _normalized_text(
+                    self.previous_value,
+                    "Character fact previous value",
+                ),
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,7 +67,11 @@ class CharacterCard:
     def __post_init__(self) -> None:
         """Validate character card view-model identity and fact mapping."""
         _require_machine_token(self.character_id, "Character card character ID")
-        _require_text(self.display_name, "Character card display name")
+        object.__setattr__(
+            self,
+            "display_name",
+            _normalized_text(self.display_name, "Character card display name"),
+        )
         for attribute, fact in self.facts.items():
             _require_machine_token(attribute, "Character card fact key")
             if attribute != fact.attribute:
@@ -67,6 +82,12 @@ def _require_text(value: str, field_name: str) -> None:
     """Validate a required human-readable text field."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required.")
+
+
+def _normalized_text(value: str, field_name: str) -> str:
+    """Return normalized human-readable text or raise if it is blank."""
+    _require_text(value, field_name)
+    return " ".join(value.split())
 
 
 def _require_machine_token(value: str, field_name: str) -> None:

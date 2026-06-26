@@ -296,6 +296,59 @@ def test_scene_snapshot_references_reconstructed_scene_state() -> None:
     assert snapshot.fact_ids == ("fact_mark_weapon",)
 
 
+@pytest.mark.parametrize(
+    ("field_name", "values", "message"),
+    (
+        ("character_ids", ("character_mark", "character_mark"), "character IDs"),
+        ("location_ids", ("location_bridge", "location_bridge"), "location IDs"),
+        ("fact_ids", ("fact_mark_weapon", "fact_mark_weapon"), "fact IDs"),
+        (
+            "relationship_ids",
+            ("relationship_mark_owns_sword", "relationship_mark_owns_sword"),
+            "relationship IDs",
+        ),
+        ("event_ids", ("event_bridge_crossing", "event_bridge_crossing"), "event IDs"),
+    ),
+)
+def test_scene_snapshot_rejects_duplicate_reference_ids(
+    field_name: str,
+    values: tuple[str, str],
+    message: str,
+) -> None:
+    """Scene snapshots cannot contain duplicate reference IDs."""
+    with pytest.raises(ValueError, match=message):
+        if field_name == "character_ids":
+            SceneSnapshot(
+                snapshot_id="snapshot_scene_014_001",
+                scene_id="scene_014_001",
+                character_ids=values,
+            )
+        elif field_name == "location_ids":
+            SceneSnapshot(
+                snapshot_id="snapshot_scene_014_001",
+                scene_id="scene_014_001",
+                location_ids=values,
+            )
+        elif field_name == "fact_ids":
+            SceneSnapshot(
+                snapshot_id="snapshot_scene_014_001",
+                scene_id="scene_014_001",
+                fact_ids=values,
+            )
+        elif field_name == "relationship_ids":
+            SceneSnapshot(
+                snapshot_id="snapshot_scene_014_001",
+                scene_id="scene_014_001",
+                relationship_ids=values,
+            )
+        else:
+            SceneSnapshot(
+                snapshot_id="snapshot_scene_014_001",
+                scene_id="scene_014_001",
+                event_ids=values,
+            )
+
+
 def test_core_models_are_immutable_data() -> None:
     """Core data models are frozen and do not expose mutation behavior."""
     entity = Entity(

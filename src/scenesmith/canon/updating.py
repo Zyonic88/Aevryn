@@ -40,6 +40,7 @@ class CanonUpdateSummary:
 
     def __post_init__(self) -> None:
         """Validate accepted and rejected candidate summary IDs."""
+        accepted_candidate_ids: list[str] = []
         for bucket_name, candidate_ids in (
             ("accepted entity", self.accepted_entities),
             ("accepted fact", self.accepted_facts),
@@ -48,6 +49,17 @@ class CanonUpdateSummary:
             ("rejected candidate", self.rejected_candidates),
         ):
             _require_unique_machine_tokens(candidate_ids, bucket_name)
+            if bucket_name != "rejected candidate":
+                accepted_candidate_ids.extend(candidate_ids)
+        rejected_accepted_overlap = set(accepted_candidate_ids).intersection(
+            self.rejected_candidates
+        )
+        if rejected_accepted_overlap:
+            overlap = ", ".join(sorted(rejected_accepted_overlap))
+            raise ValueError(
+                "Canon summary IDs cannot be both accepted and rejected: "
+                f"{overlap}"
+            )
 
 
 class CanonUpdater:

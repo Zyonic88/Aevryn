@@ -150,6 +150,19 @@ def test_import_help_describes_source_arguments(capsys: CaptureFixture[str]) -> 
     assert "Human-readable source title" in output
 
 
+def test_character_help_describes_presentation_and_machine_outputs(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Character help should explain markdown versus JSON and CSV outputs."""
+    with pytest.raises(SystemExit) as error:
+        main(["character", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Markdown is presentation-first" in output
+    assert "JSON/CSV preserve machine detail." in output
+
+
 def test_scene_help_describes_timeline_safe_arguments(
     capsys: CaptureFixture[str],
 ) -> None:
@@ -163,7 +176,8 @@ def test_scene_help_describes_timeline_safe_arguments(
     assert "Repeat for multiple" in output
     assert "characters." in output
     assert "Evidence-bounded AI JSON response" in output
-    assert "Output format." in output
+    assert "Markdown is presentation-first" in output
+    assert "preserves machine detail." in output
 
 
 def test_validate_help_describes_snapshot_and_source_root(
@@ -182,6 +196,22 @@ def test_validate_help_describes_snapshot_and_source_root(
     assert "List validation cases without importing source files." in output
     assert "deterministic snapshot" in output
     assert "metadata is written." in output
+    assert "Text is scan-friendly" in output
+    assert "JSON preserves" in output
+    assert "machine detail." in output
+
+
+def test_world_help_describes_presentation_and_machine_outputs(
+    capsys: CaptureFixture[str],
+) -> None:
+    """World help should explain markdown versus JSON outputs."""
+    with pytest.raises(SystemExit) as error:
+        main(["world", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Markdown is presentation-first" in output
+    assert "preserves machine detail." in output
 
 
 def ai_response_file(anchor_id: str) -> Path:
@@ -447,8 +477,10 @@ def test_character_command_prints_character_sheet(capsys: CaptureFixture[str]) -
     output = capsys.readouterr().out
 
     assert exit_code == 0
-    assert "# Character Sheet: Mark" in output
-    assert "Evidence: Mark bought an iron sword." in output
+    assert "# Mark" in output
+    assert "## Current Equipment" in output
+    assert "- Iron Sword" in output
+    assert "## Evidence" in output
 
 
 def test_scene_command_reports_unknown_scene(
@@ -482,8 +514,10 @@ def test_scene_command_prints_scene_sheet(capsys: CaptureFixture[str]) -> None:
     output = capsys.readouterr().out
 
     assert exit_code == 0
-    assert "# Scene Sheet: Scene 1" in output
-    assert "character_mark owns item_iron_sword" in output
+    assert "# Scene 1" in output
+    assert "## Characters Present" in output
+    assert "- Mark" in output
+    assert "## Continuity Changes" in output
 
 
 def test_scene_command_dedupes_repeated_character_ids(
@@ -507,7 +541,12 @@ def test_scene_command_dedupes_repeated_character_ids(
     output = capsys.readouterr().out
 
     assert exit_code == 0
-    assert "## Characters\nMark\n\n## Facts" in output
+    assert "## Characters Present\n- Mark" in output
+    characters_section = output.split("## Characters Present", maxsplit=1)[1].split(
+        "## Mood",
+        maxsplit=1,
+    )[0]
+    assert characters_section.count("- Mark") == 1
 
 
 def test_scene_command_rejects_invalid_character_id(
@@ -541,7 +580,7 @@ def test_prompt_command_prints_prompt_sheet(capsys: CaptureFixture[str]) -> None
     output = capsys.readouterr().out
 
     assert exit_code == 0
-    assert "# Prompt Sheet" in output
+    assert "## Image Prompt" in output
     assert "Narrate using only accepted canon facts." in output
 
 
@@ -938,7 +977,8 @@ def test_character_command_can_use_ai_json_scene_id(
     output = capsys.readouterr().out
 
     assert exit_code == 0
-    assert "current_weapon: Iron Sword" in output
+    assert "## Current Equipment" in output
+    assert "- Iron Sword" in output
 
 
 def test_character_command_uses_scene_id_for_final_view(
@@ -981,8 +1021,8 @@ def test_character_command_uses_scene_id_for_final_view(
 
     assert first_exit_code == 0
     assert second_exit_code == 0
-    assert "current_mood: Calm" in first_output
-    assert "current_mood: Alarmed" in second_output
+    assert "current_mood -> Calm" in first_output
+    assert "current_mood -> Alarmed" in second_output
 
 
 def test_world_command_can_use_ai_json_candidates(
@@ -1011,6 +1051,37 @@ def test_world_command_can_use_ai_json_candidates(
     assert exit_code == 0
     assert "# World Sheet" in output
     assert "Iron Sword (item)" in output
+
+
+def test_world_command_can_print_json(capsys: CaptureFixture[str]) -> None:
+    """World command can print machine-readable world state JSON."""
+    path = single_scene_source_file()
+    response_path = ai_response_file(
+        "demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+    )
+
+    exit_code = main(
+        [
+            "world",
+            str(path),
+            "--source-id",
+            "demo",
+            "--entity-id",
+            "item_iron_sword",
+            "--ai-response-file",
+            str(response_path),
+            "--format",
+            "json",
+        ]
+    )
+    output = capsys.readouterr().out
+    exported = json.loads(output)
+
+    assert exit_code == 0
+    assert exported["entities"][0]["entity_id"] == "item_iron_sword"
+    assert exported["entities"][0]["facts"][0]["evidence"]["quote"] == (
+        "Mark bought an iron sword."
+    )
 
 
 def test_world_command_uses_scene_id_for_final_view(

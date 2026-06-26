@@ -270,3 +270,12 @@ def test_markdown_list_rejects_blank_values() -> None:
 
     with pytest.raises(ValueError, match="cannot be blank"):
         ExportEngine._markdown_list(("Visible", cast(Any, 42)))
+
+
+def test_markdown_list_normalizes_and_dedupes_values() -> None:
+    """Markdown list exports normalize whitespace before deduplication."""
+    lines = ExportEngine._markdown_list(
+        (" Iron   Sword ", "Iron Sword", "Steel  Sword")
+    )
+
+    assert lines == ["- Iron Sword", "- Steel Sword"]

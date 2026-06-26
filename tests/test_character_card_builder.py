@@ -471,6 +471,21 @@ def test_canon_character_fact_rejects_invalid_display_fields() -> None:
         )
 
 
+def test_canon_character_fact_normalizes_display_values() -> None:
+    """Canon-backed character card facts normalize visible values."""
+    fact = CanonCharacterFact(
+        attribute="current_weapon",
+        value=" Rusty   Dagger ",
+        previous_value=" Old   Knife ",
+        evidence=evidence("evidence_001", "chapter_001", "scene_001", "Quote."),
+        valid_from_chapter_id="chapter_001",
+        valid_from_scene_id="scene_001",
+    )
+
+    assert fact.value == "Rusty Dagger"
+    assert fact.previous_value == "Old Knife"
+
+
 def test_canon_character_card_rejects_invalid_identity() -> None:
     """Character cards reject malformed identity and chapter values."""
     with pytest.raises(ValueError, match="character ID cannot contain whitespace"):
@@ -480,6 +495,18 @@ def test_canon_character_card_rejects_invalid_identity() -> None:
             chapter_index=1,
             facts=(),
         )
+
+
+def test_canon_character_card_normalizes_display_name() -> None:
+    """Canon-backed character cards normalize visible display names."""
+    card = CanonCharacterCard(
+        character_id="character_mark",
+        display_name=" Mark   Stone ",
+        chapter_index=1,
+        facts=(),
+    )
+
+    assert card.display_name == "Mark Stone"
 
     with pytest.raises(ValueError, match="chapter index must be at least 1"):
         CanonCharacterCard(

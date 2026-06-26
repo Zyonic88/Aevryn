@@ -203,6 +203,8 @@ A Scene Snapshot may include:
 * Active state changes
 * Timeline events
 
+Snapshot reference IDs must be unique within each reference bucket.
+
 ## Concept Flow
 
 ```text

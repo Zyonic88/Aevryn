@@ -101,11 +101,16 @@ Imported source structures must be internally consistent:
 * Imported source IDs must match the story ID.
 * Paragraphs must reference known scene IDs.
 * Sentences must reference their owning paragraph.
+* Sentence text must be traceable to the owning paragraph text.
 * Paragraph IDs, sentence IDs, and anchor IDs must be unique.
+* Paragraph indexes must be unique inside each scene.
 * Evidence anchors must reference known paragraphs and sentences.
 * Evidence anchors must reference known chapters and scenes.
+* Evidence anchor scenes must belong to their referenced chapters.
 * Evidence anchor scenes must match their paragraph scenes.
 * Evidence anchor sentences must belong to their referenced paragraphs.
+* Evidence anchor paragraph indexes must match their referenced paragraphs.
+* Evidence anchor sentence indexes must match their referenced sentences.
 * Evidence anchor quotes must exactly match their referenced sentence text.
 * Evidence anchors must belong to the imported source.
 

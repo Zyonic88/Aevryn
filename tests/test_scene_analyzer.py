@@ -69,6 +69,47 @@ def test_scene_analysis_rejects_duplicate_visible_rows() -> None:
         )
 
 
+def test_scene_analysis_normalizes_visible_rows() -> None:
+    """Scene analysis rows normalize whitespace before downstream use."""
+    analysis = SceneAnalysis(
+        scene_id="source_demo_chapter_001_scene_001",
+        summary="Mark wakes.",
+        purpose="Introduce Mark.",
+        conflict="Unknown",
+        mood="Quiet",
+        visual_highlights=("  Cold   room  ",),
+        character_goals=(),
+        character_emotions=(),
+        important_objects=(),
+        environment_summary="Cold room.",
+        changes_introduced=(),
+        continuity_notes=(),
+        forbidden_elements=(),
+    )
+
+    assert analysis.visual_highlights == ("Cold room",)
+
+
+def test_scene_analysis_rejects_normalized_duplicate_visible_rows() -> None:
+    """Scene analysis rejects duplicate rows after whitespace cleanup."""
+    with pytest.raises(ValueError, match="visual highlights must be unique"):
+        SceneAnalysis(
+            scene_id="source_demo_chapter_001_scene_001",
+            summary="Mark wakes.",
+            purpose="Introduce Mark.",
+            conflict="Unknown",
+            mood="Quiet",
+            visual_highlights=("Cold room", " Cold   room "),
+            character_goals=(),
+            character_emotions=(),
+            important_objects=(),
+            environment_summary="Cold room.",
+            changes_introduced=(),
+            continuity_notes=(),
+            forbidden_elements=(),
+        )
+
+
 def test_prompt_builder_builds_production_pack() -> None:
     """Prompt Builder produces a production pack from scene analysis."""
     pack = CanonPromptBuilder().build_production_pack(build_context())

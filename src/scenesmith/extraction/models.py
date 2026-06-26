@@ -62,7 +62,11 @@ class ExtractedEntity:
         """Validate extracted entity candidate fields."""
         _require_machine_token(self.entity_id, "Extracted entity ID")
         _require_machine_token(self.entity_type, "Extracted entity type")
-        _require_text(self.display_name, "Extracted entity display name")
+        object.__setattr__(
+            self,
+            "display_name",
+            _normalized_text(self.display_name, "Extracted entity display name"),
+        )
         _require_machine_token(self.evidence_anchor_id, "Extracted entity evidence anchor ID")
         _require_confidence(self.confidence)
 
@@ -114,7 +118,11 @@ class ExtractedFact:
         _require_machine_token(self.fact_id, "Extracted fact ID")
         _require_machine_token(self.entity_id, "Extracted fact entity ID")
         _require_machine_token(self.attribute, "Extracted fact attribute")
-        _require_text(self.value, "Extracted fact value")
+        object.__setattr__(
+            self,
+            "value",
+            _normalized_text(self.value, "Extracted fact value"),
+        )
         _require_machine_token(self.evidence_anchor_id, "Extracted fact evidence anchor ID")
         _require_confidence(self.confidence)
 
@@ -134,7 +142,11 @@ class ExtractedStateChange:
         """Validate extracted state-change candidate fields."""
         _require_machine_token(self.entity_id, "Extracted state-change entity ID")
         _require_machine_token(self.attribute, "Extracted state-change attribute")
-        _require_text(self.value, "Extracted state-change value")
+        object.__setattr__(
+            self,
+            "value",
+            _normalized_text(self.value, "Extracted state-change value"),
+        )
         _require_machine_token(
             self.valid_from_anchor_id,
             "Extracted state-change valid-from anchor ID",
@@ -160,12 +172,50 @@ class ExtractionResult:
     def __post_init__(self) -> None:
         """Validate extraction result identity."""
         _require_machine_token(self.scene_id, "Extraction result scene ID")
+        _require_unique_candidate_values(
+            tuple(entity.entity_id for entity in self.entities),
+            "entity IDs",
+        )
+        _require_unique_candidate_values(
+            tuple(fact.fact_id for fact in self.facts),
+            "fact IDs",
+        )
+        _require_unique_candidate_values(
+            tuple(
+                (
+                    relationship.source_entity_id,
+                    relationship.relationship_type,
+                    relationship.target_entity_id,
+                )
+                for relationship in self.relationships
+            ),
+            "relationship candidates",
+        )
+        _require_unique_candidate_values(
+            tuple(
+                (
+                    state_change.entity_id,
+                    state_change.attribute,
+                    state_change.value,
+                    state_change.valid_from_anchor_id,
+                    state_change.valid_until_anchor_id,
+                )
+                for state_change in self.state_changes
+            ),
+            "state-change candidates",
+        )
 
 
 def _require_text(value: str, field_name: str) -> None:
     """Validate a required human-readable text field."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required.")
+
+
+def _normalized_text(value: str, field_name: str) -> str:
+    """Return normalized human-readable text or raise if it is blank."""
+    _require_text(value, field_name)
+    return " ".join(value.split())
 
 
 def _require_machine_token(value: str, field_name: str) -> None:
@@ -189,3 +239,12 @@ def _require_unique_values(values: tuple[object, ...], field_name: str) -> None:
     """Validate that model-level identity values are unique."""
     if len(values) != len(set(values)):
         raise ValueError(f"{field_name} must be unique.")
+
+
+def _require_unique_candidate_values(
+    values: tuple[object, ...],
+    field_name: str,
+) -> None:
+    """Validate that extraction result candidate identities are unique."""
+    if len(values) != len(set(values)):
+        raise ValueError(f"Extraction result contains duplicate {field_name}.")

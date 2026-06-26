@@ -14,10 +14,14 @@ class PresentationSection:
 
     def __post_init__(self) -> None:
         """Validate section title and display items."""
-        _require_text(self.title, "Presentation section title")
-        for item in self.items:
-            _require_text(item, "Presentation section item")
-        if len(self.items) != len(set(self.items)):
+        normalized_title = _normalized_text(self.title, "Presentation section title")
+        normalized_items = tuple(
+            _normalized_text(item, "Presentation section item")
+            for item in self.items
+        )
+        object.__setattr__(self, "title", normalized_title)
+        object.__setattr__(self, "items", normalized_items)
+        if len(normalized_items) != len(set(normalized_items)):
             raise ValueError("Presentation section items must be unique.")
 
 
@@ -113,6 +117,12 @@ def _require_text(value: str, field_name: str) -> None:
     """Validate a required human-readable text field."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required.")
+
+
+def _normalized_text(value: str, field_name: str) -> str:
+    """Return normalized human-readable text or raise if it is blank."""
+    _require_text(value, field_name)
+    return " ".join(value.split())
 
 
 def _require_machine_token(value: str, field_name: str) -> None:

@@ -8,12 +8,14 @@ from pathlib import Path
 import pytest
 
 from scenesmith import (
+    CanonPromptBuilder,
     ExportEngine,
     ExtractedEntity,
     ExtractedFact,
     ExtractedRelationship,
     ExtractionResult,
     PresentationEngine,
+    SceneAnalyzer,
     SceneExtractionInput,
 )
 from scenesmith.projects import ProjectRunResult, SceneSmithProjectRunner
@@ -141,41 +143,48 @@ def build_snapshot_for_source(source_path: Path, output_dir: Path) -> CanonRebui
     exporter = ExportEngine()
     output_dir.mkdir(parents=True, exist_ok=True)
     latest_scene_id = runner.latest_scene_id(result)
+    latest_context = runner.build_scene_context(
+        result=result,
+        scene_id=latest_scene_id,
+        character_ids=("character_mark",),
+    )
+    latest_analysis = SceneAnalyzer().analyze(latest_context)
+    presentation = PresentationEngine()
+    latest_scene = presentation.scene_sheet(
+        context=latest_context,
+        analysis=latest_analysis,
+    )
+    latest_pack = CanonPromptBuilder().build_production_pack(latest_context)
     world_entity_id = (
         "item_iron_sword"
         if result.database.retrieve_entity("item_iron_sword") is not None
         else "item_rusty_dagger"
     )
+    world_state = runner.build_world_state(
+        result=result,
+        entity_ids=(world_entity_id,),
+    )
 
     outputs = {
-        "character_cards/character_mark.md": exporter.canon_character_sheet_markdown(
-            runner.build_character_card(result=result, character_id="character_mark")
+        "character_cards/character_mark.md": exporter.character_profile_markdown(
+            presentation.character_profile(
+                runner.build_character_card(result=result, character_id="character_mark")
+            )
         ),
         f"world_sheets/{world_entity_id}.md": exporter.world_sheet_view_markdown(
-            PresentationEngine().world_sheet(
-                runner.build_world_state(
-                    result=result,
-                    entity_ids=(world_entity_id,),
-                )
-            )
+            presentation.world_sheet(world_state)
         ),
-        f"scene_sheets/{latest_scene_id}.md": (
-            exporter.canon_scene_sheet_markdown(
-                runner.build_scene_context(
-                    result=result,
-                    scene_id=latest_scene_id,
-                    character_ids=("character_mark",),
-                )
-            )
+        f"world_sheets/{world_entity_id}.json": exporter.world_state_json(world_state),
+        f"scene_sheets/{latest_scene_id}.md": exporter.scene_sheet_view_markdown(
+            latest_scene
         ),
         "continuity_report.md": exporter.continuity_report_markdown(
             runner.build_continuity_report(result)
         ),
-        f"prompt_packs/{latest_scene_id}.md": exporter.prompt_sheet_markdown(
-            runner.build_prompt_bundle(
-                result=result,
-                scene_id=latest_scene_id,
-                character_ids=("character_mark",),
+        f"prompt_packs/{latest_scene_id}.md": exporter.production_pack_view_markdown(
+            presentation.production_pack(
+                pack=latest_pack,
+                scene=latest_scene,
             )
         ),
     }
@@ -255,6 +264,33 @@ def test_canon_rebuild_outputs_are_byte_deterministic() -> None:
         "warnings": 0,
         "errors": 0,
     }
+
+
+def test_canon_rebuild_outputs_are_presentation_first() -> None:
+    """Canon Rebuild snapshots should preserve product-facing output shape."""
+    snapshot = build_canon_rebuild_snapshot(
+        Path("build") / "test_canon_rebuild" / "presentation_first"
+    )
+
+    character_sheet = snapshot.outputs["character_cards/character_mark.md"].decode(
+        "utf-8"
+    )
+    scene_sheet_path = next(
+        path for path in snapshot.outputs if path.startswith("scene_sheets/")
+    )
+    scene_sheet = snapshot.outputs[scene_sheet_path].decode("utf-8")
+    prompt_pack_path = next(
+        path for path in snapshot.outputs if path.startswith("prompt_packs/")
+    )
+    prompt_pack = snapshot.outputs[prompt_pack_path].decode("utf-8")
+
+    assert "# Mark" in character_sheet
+    assert "# Character Sheet:" not in character_sheet
+    assert "## Characters Present" in scene_sheet
+    assert "# Scene Sheet:" not in scene_sheet
+    assert "## Image Prompt" in prompt_pack
+    assert "# Prompt Sheet" not in prompt_pack
+    assert any(path.endswith(".json") for path in snapshot.outputs)
 
 
 def test_incremental_rebuild_final_output_matches_full_rebuild() -> None:

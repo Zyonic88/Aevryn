@@ -63,11 +63,15 @@ Visible presentation sections must not contain blank titles or blank items.
 
 Visible presentation sections must not contain duplicate items.
 
+Visible presentation section titles and items are whitespace-normalized before rendering.
+
 Multi-section presentation views must not repeat visible section titles.
 
 Repeated display items are deduplicated.
 
 Long prompt lines are shortened for scan-friendly views.
+
+Prompt pack views must remove raw structural placeholders such as empty section labels, Unknown-only entries, and duplicated Markdown bullet markers.
 
 Character profile grouping must use genre-neutral attribute categories such as goals, tasks, plans, equipment, abilities, assets, relationships, and limitations.
 

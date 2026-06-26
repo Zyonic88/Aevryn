@@ -225,6 +225,20 @@ def test_character_fact_rejects_invalid_display_fields() -> None:
         )
 
 
+def test_character_fact_normalizes_display_values() -> None:
+    """Character fact view values normalize whitespace for stable display."""
+    fact = CharacterFact(
+        attribute="current_weapon",
+        value="  Rusty   Dagger ",
+        previous_value=" Old   Knife ",
+        evidence=evidence(),
+        valid_from=position(1, 1),
+    )
+
+    assert fact.value == "Rusty Dagger"
+    assert fact.previous_value == "Old Knife"
+
+
 def test_character_card_rejects_mismatched_fact_keys() -> None:
     """Character cards keep fact dictionary keys aligned with attributes."""
     fact = CharacterFact(

@@ -352,14 +352,22 @@ class SceneSnapshot:
         _require_machine_token(self.scene_id, "Scene snapshot scene ID")
         for character_id in self.character_ids:
             _require_machine_token(character_id, "Scene snapshot character ID")
+        _require_unique_values(self.character_ids, "Scene snapshot character IDs")
         for location_id in self.location_ids:
             _require_machine_token(location_id, "Scene snapshot location ID")
+        _require_unique_values(self.location_ids, "Scene snapshot location IDs")
         for fact_id in self.fact_ids:
             _require_machine_token(fact_id, "Scene snapshot fact ID")
+        _require_unique_values(self.fact_ids, "Scene snapshot fact IDs")
         for relationship_id in self.relationship_ids:
             _require_machine_token(relationship_id, "Scene snapshot relationship ID")
+        _require_unique_values(
+            self.relationship_ids,
+            "Scene snapshot relationship IDs",
+        )
         for event_id in self.event_ids:
             _require_machine_token(event_id, "Scene snapshot event ID")
+        _require_unique_values(self.event_ids, "Scene snapshot event IDs")
 
 
 def _require_text(value: str, field_name: str) -> None:
@@ -379,3 +387,9 @@ def _require_positive_index(value: int, field_name: str) -> None:
     """Validate a one-based source index."""
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise ValueError(f"{field_name} must be at least 1.")
+
+
+def _require_unique_values(values: tuple[str, ...], field_name: str) -> None:
+    """Validate that snapshot reference IDs are not duplicated."""
+    if len(values) != len(set(values)):
+        raise ValueError(f"{field_name} must be unique.")

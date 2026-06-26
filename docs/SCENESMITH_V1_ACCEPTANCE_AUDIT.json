@@ -76,7 +76,8 @@
         ],
         "source": [
           "src/scenesmith/extraction/ai.py",
-          "src/scenesmith/extraction/engine.py"
+          "src/scenesmith/extraction/engine.py",
+          "src/scenesmith/extraction/models.py"
         ],
         "tests": [
           "tests/test_entity_extraction.py",
@@ -204,7 +205,8 @@
         ],
         "source": [
           "src/scenesmith/characters/cards.py",
-          "src/scenesmith/characters/engine.py"
+          "src/scenesmith/characters/engine.py",
+          "src/scenesmith/characters/models.py"
         ],
         "tests": [
           "tests/test_character_card_builder.py",
@@ -236,7 +238,8 @@
           "docs/SCENESMITH_WORLD_ENGINE.md"
         ],
         "source": [
-          "src/scenesmith/world/engine.py"
+          "src/scenesmith/world/engine.py",
+          "src/scenesmith/world/models.py"
         ],
         "tests": [
           "tests/test_world_engine.py"
@@ -267,6 +270,7 @@
           "docs/SCENESMITH_SCENE_ENGINE.md"
         ],
         "source": [
+          "src/scenesmith/core/models.py",
           "src/scenesmith/scenes/context.py",
           "src/scenesmith/scenes/engine.py"
         ],

@@ -1,5 +1,6 @@
 """Tests for Presentation Engine."""
 
+import json
 from dataclasses import replace
 
 import pytest
@@ -64,6 +65,23 @@ def test_presentation_section_rejects_duplicate_items() -> None:
     """Presentation sections should not contain duplicate visible rows."""
     with pytest.raises(ValueError, match="items must be unique"):
         PresentationSection(title="Status", items=("Alive", "Alive"))
+
+
+def test_presentation_section_normalizes_display_text() -> None:
+    """Presentation sections normalize whitespace before rendering."""
+    section = PresentationSection(
+        title="  Current   Goal ",
+        items=("  Win   the contest  ",),
+    )
+
+    assert section.title == "Current Goal"
+    assert section.items == ("Win the contest",)
+
+
+def test_presentation_section_rejects_normalized_duplicate_items() -> None:
+    """Presentation sections should reject duplicates after whitespace cleanup."""
+    with pytest.raises(ValueError, match="items must be unique"):
+        PresentationSection(title="Status", items=("Alive", " Alive "))
 
 
 def test_scene_sheet_view_rejects_invalid_scene_id() -> None:
@@ -214,6 +232,34 @@ def test_presentation_engine_dedupes_and_limits_prompt_lines() -> None:
     assert view.image_prompt.items[0].endswith("...")
 
 
+def test_presentation_engine_removes_prompt_structural_placeholders() -> None:
+    """Prompt presentation should not expose raw prompt section placeholders."""
+    _card, context, analysis, pack = build_outputs()
+    prompt_bundle = PromptBundle(
+        image_prompt="\n".join(
+            [
+                "Visual Highlights:",
+                "- Unknown",
+                "- Iron Sword",
+                "Scene ID: source_demo_chapter_002_scene_001",
+            ]
+        ),
+        narration_prompt=pack.prompt_bundle.narration_prompt,
+        camera_prompt=pack.prompt_bundle.camera_prompt,
+        animation_prompt=pack.prompt_bundle.animation_prompt,
+    )
+    compact_pack = replace(pack, prompt_bundle=prompt_bundle)
+    engine = PresentationEngine()
+    scene = engine.scene_sheet(context=context, analysis=analysis)
+
+    view = engine.production_pack(pack=compact_pack, scene=scene)
+
+    assert view.image_prompt.items == (
+        "Iron Sword",
+        "Scene ID: source_demo_chapter_002_scene_001",
+    )
+
+
 def test_export_engine_writes_presentation_views() -> None:
     """Export Engine serializes presentation view models."""
     card, context, analysis, pack = build_outputs()
@@ -235,18 +281,32 @@ def test_export_engine_writes_presentation_views() -> None:
 
 def test_presentation_engine_builds_world_sheet() -> None:
     """Presentation Engine builds scan-friendly world sheets."""
-    state = PresentationEngine().world_sheet(
-        state=WorldStateBuilder(database=build_world_database()).build_state(
-            entity_ids=("location_northern_fortress",),
-            chapter_index=6,
-        )
+    world_state = WorldStateBuilder(database=build_world_database()).build_state(
+        entity_ids=("location_northern_fortress",),
+        chapter_index=6,
     )
+    state = PresentationEngine().world_sheet(state=world_state)
 
     markdown = ExportEngine().world_sheet_view_markdown(state)
 
     assert "# World Sheet" in markdown
     assert "Northern Fortress (location)" in markdown
     assert "damage: Walls damaged" in markdown
+
+
+def test_export_engine_writes_world_state_json() -> None:
+    """Export Engine writes machine-readable world state JSON."""
+    world_state = WorldStateBuilder(database=build_world_database()).build_state(
+        entity_ids=("location_northern_fortress",),
+        chapter_index=6,
+    )
+
+    exported = ExportEngine().world_state_json(world_state)
+    data = json.loads(exported)
+
+    assert data["chapter_index"] == 6
+    assert data["entities"][0]["entity_id"] == "location_northern_fortress"
+    assert data["entities"][0]["facts"][0]["evidence"]["quote"]
 
 
 def test_world_sheet_view_rejects_duplicate_section_titles() -> None:

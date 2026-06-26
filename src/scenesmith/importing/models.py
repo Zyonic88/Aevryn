@@ -42,9 +42,12 @@ class SourceParagraph:
         _require_text(self.text, "Paragraph text")
         sentence_ids: list[str] = []
         sentence_indexes: list[int] = []
+        normalized_paragraph_text = _normalize_source_whitespace(self.text)
         for sentence in self.sentences:
             if sentence.paragraph_id != self.paragraph_id:
                 raise ValueError("Paragraph sentences must reference the paragraph ID.")
+            if _normalize_source_whitespace(sentence.text) not in normalized_paragraph_text:
+                raise ValueError("Paragraph sentences must be traceable to paragraph text.")
             sentence_ids.append(sentence.sentence_id)
             sentence_indexes.append(sentence.sentence_index)
         if len(sentence_ids) != len(set(sentence_ids)):
@@ -98,18 +101,30 @@ class ImportedSource:
             raise ValueError("Imported source ID must match story ID.")
 
         chapter_ids = {chapter.chapter_id for chapter in self.story.chapters}
-        scene_ids = {
-            scene.scene_id
+        scene_chapters = {
+            scene.scene_id: chapter.chapter_id
             for chapter in self.story.chapters
             for scene in chapter.scenes
         }
+        scene_ids = set(scene_chapters)
         paragraphs_by_id: dict[str, SourceParagraph] = {}
         sentences_by_id: dict[str, ImportedSentence] = {}
+        paragraph_indexes_by_scene: dict[str, set[int]] = {}
         for paragraph in self.paragraphs:
             if paragraph.scene_id not in scene_ids:
                 raise ValueError("Imported paragraph references an unknown scene.")
             if paragraph.paragraph_id in paragraphs_by_id:
                 raise ValueError("Imported source cannot contain duplicate paragraphs.")
+            scene_paragraph_indexes = paragraph_indexes_by_scene.setdefault(
+                paragraph.scene_id,
+                set(),
+            )
+            if paragraph.paragraph_index in scene_paragraph_indexes:
+                raise ValueError(
+                    "Imported source cannot contain duplicate paragraph indexes "
+                    "within a scene."
+                )
+            scene_paragraph_indexes.add(paragraph.paragraph_index)
             paragraphs_by_id[paragraph.paragraph_id] = paragraph
             for sentence in paragraph.sentences:
                 if sentence.sentence_id in sentences_by_id:
@@ -128,6 +143,10 @@ class ImportedSource:
                 raise ValueError("Evidence anchor references an unknown chapter.")
             if anchor.scene_id not in scene_ids:
                 raise ValueError("Evidence anchor references an unknown scene.")
+            if scene_chapters[anchor.scene_id] != anchor.chapter_id:
+                raise ValueError(
+                    "Evidence anchor scene must belong to its chapter."
+                )
             anchor_paragraph = paragraphs_by_id.get(anchor.paragraph_id)
             if anchor_paragraph is None:
                 raise ValueError("Evidence anchor references an unknown paragraph.")
@@ -139,6 +158,14 @@ class ImportedSource:
             if anchor_sentence.paragraph_id != anchor.paragraph_id:
                 raise ValueError(
                     "Evidence anchor sentence must belong to its paragraph."
+                )
+            if anchor.paragraph_index != anchor_paragraph.paragraph_index:
+                raise ValueError(
+                    "Evidence anchor paragraph index must match its paragraph."
+                )
+            if anchor.sentence_index != anchor_sentence.sentence_index:
+                raise ValueError(
+                    "Evidence anchor sentence index must match its sentence."
                 )
             if anchor.quote != anchor_sentence.text:
                 raise ValueError("Evidence anchor quote must match sentence text.")
@@ -162,3 +189,8 @@ def _require_positive_index(value: int, field_name: str) -> None:
     """Validate a one-based source index."""
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise ValueError(f"{field_name} must be at least 1.")
+
+
+def _normalize_source_whitespace(value: str) -> str:
+    """Return source text with whitespace collapsed for structural comparison."""
+    return " ".join(value.split())

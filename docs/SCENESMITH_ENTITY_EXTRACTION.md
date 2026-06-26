@@ -42,7 +42,8 @@ Entity Extraction owns:
 * Rejecting whitespace in machine-token fields
 * Rejecting invalid candidate model construction
 * Rejecting duplicate or mismatched scene evidence anchors
-* Rejecting duplicate candidate identities within one scene result
+* Rejecting duplicate candidate identities within one scene result at the model boundary
+* Normalizing human-readable candidate text without changing source quotes
 * Returning extraction results for review or canon update
 
 It owns candidates.
@@ -130,6 +131,10 @@ Machine-token fields must be whitespace-free:
 * Evidence anchor IDs
 
 Human-readable values may contain spaces.
+
+Human-readable candidate text is whitespace-normalized before Canon Updating sees it.
+
+Imported scene text and evidence quotes remain source-faithful.
 
 Scene input anchor IDs and full evidence anchor objects must match exactly.
 

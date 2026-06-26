@@ -582,6 +582,19 @@ def test_world_entity_fact_rejects_invalid_display_fields() -> None:
         )
 
 
+def test_world_entity_fact_normalizes_display_values() -> None:
+    """World facts normalize visible values for stable sheets."""
+    fact = WorldEntityFact(
+        attribute="damage",
+        value=" Walls   damaged ",
+        evidence=evidence("evidence_damage", "chapter_006", "scene_006", "Quote."),
+        valid_from_chapter_id="chapter_006",
+        valid_from_scene_id="scene_006",
+    )
+
+    assert fact.value == "Walls damaged"
+
+
 def test_world_entity_state_rejects_invalid_identity() -> None:
     """World entity state requires valid identity and chapter values."""
     with pytest.raises(ValueError, match="World entity ID cannot contain whitespace"):
@@ -599,6 +612,18 @@ def test_world_entity_state_rejects_invalid_identity() -> None:
             display_name="Northern Fortress",
             chapter_index=0,
         )
+
+
+def test_world_entity_state_normalizes_display_name() -> None:
+    """World entity states normalize visible display names."""
+    state = WorldEntityState(
+        entity_id="location_northern_fortress",
+        entity_type="location",
+        display_name=" Northern   Fortress ",
+        chapter_index=1,
+    )
+
+    assert state.display_name == "Northern Fortress"
 
 
 def test_world_state_rejects_duplicate_entities() -> None:

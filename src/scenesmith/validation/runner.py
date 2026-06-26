@@ -128,6 +128,12 @@ class ValidationCaseResult:
             raise ValueError("Validation result passed flag must be boolean.")
         for error in self.errors:
             _require_text(error, "Validation result error")
+        if self.passed and self.errors:
+            raise ValueError("Passing validation results cannot contain errors.")
+        if self.passed and (
+            self.actual_import is None or self.actual_extraction is None
+        ):
+            raise ValueError("Passing validation results require actual metrics.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,6 +169,8 @@ class ValidationTotals:
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"Validation total {field_name} cannot be negative.")
+        if self.passed + self.failed != self.cases:
+            raise ValueError("Validation totals must reconcile passed and failed cases.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,6 +178,14 @@ class ValidationSuiteResult:
     """Result for an entire validation corpus run."""
 
     results: tuple[ValidationCaseResult, ...]
+
+    def __post_init__(self) -> None:
+        """Validate validation suite result identity."""
+        if not self.results:
+            raise ValueError("Validation suite results cannot be empty.")
+        case_ids = [result.case_id for result in self.results]
+        if len(case_ids) != len(set(case_ids)):
+            raise ValueError("Validation suite results cannot contain duplicate cases.")
 
     @property
     def passed(self) -> bool:

@@ -62,7 +62,7 @@ generation, video generation, or AI chat.
 
 Current RC1 validation:
 
-* 458 automated tests passing
+* 500 automated tests passing
 * Deterministic rebuild validation
 * Cross-genre validation
 * 7-genre validation corpus
@@ -167,6 +167,9 @@ scenesmith scene path\to\chapter_001.txt --source-id my_story --ai-response-file
 scenesmith prompt path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
 scenesmith continuity path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
 ```
+
+Markdown output is presentation-first for quick scanning. JSON and CSV outputs
+preserve machine-readable detail for audits, tests, and downstream tools.
 
 Run the validation corpus:
 

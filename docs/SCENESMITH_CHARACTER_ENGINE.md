@@ -55,6 +55,8 @@ Previous values must come from Canon history order, not string ordering or displ
 
 Unknown information remains absent or Unknown.
 
+Character card visible names and fact values are whitespace-normalized for stable display.
+
 Character card view models must reject malformed output:
 
 * Character IDs are required and must be machine-safe.

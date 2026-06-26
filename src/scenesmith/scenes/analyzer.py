@@ -48,26 +48,33 @@ class SceneAnalysis:
         _require_text(self.conflict, "Scene analysis conflict")
         _require_text(self.mood, "Scene analysis mood")
         _require_text(self.environment_summary, "Scene analysis environment summary")
-        for value in (
-            *self.visual_highlights,
-            *self.character_goals,
-            *self.character_emotions,
-            *self.important_objects,
-            *self.changes_introduced,
-            *self.continuity_notes,
-            *self.forbidden_elements,
+        for attribute_name, field_name, values in (
+            ("visual_highlights", "Scene analysis visual highlights", self.visual_highlights),
+            ("character_goals", "Scene analysis character goals", self.character_goals),
+            (
+                "character_emotions",
+                "Scene analysis character emotions",
+                self.character_emotions,
+            ),
+            ("important_objects", "Scene analysis important objects", self.important_objects),
+            (
+                "changes_introduced",
+                "Scene analysis changes introduced",
+                self.changes_introduced,
+            ),
+            ("continuity_notes", "Scene analysis continuity notes", self.continuity_notes),
+            (
+                "forbidden_elements",
+                "Scene analysis forbidden elements",
+                self.forbidden_elements,
+            ),
         ):
-            _require_text(value, "Scene analysis list item")
-        for field_name, values in (
-            ("Scene analysis visual highlights", self.visual_highlights),
-            ("Scene analysis character goals", self.character_goals),
-            ("Scene analysis character emotions", self.character_emotions),
-            ("Scene analysis important objects", self.important_objects),
-            ("Scene analysis changes introduced", self.changes_introduced),
-            ("Scene analysis continuity notes", self.continuity_notes),
-            ("Scene analysis forbidden elements", self.forbidden_elements),
-        ):
-            _require_unique_values(values, field_name)
+            normalized_values = tuple(
+                _normalized_text(value, "Scene analysis list item")
+                for value in values
+            )
+            object.__setattr__(self, attribute_name, normalized_values)
+            _require_unique_values(normalized_values, field_name)
 
 
 class SceneAnalyzer:
@@ -618,6 +625,12 @@ def _require_text(value: str, field_name: str) -> None:
     """Validate a required human-readable text field."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required.")
+
+
+def _normalized_text(value: str, field_name: str) -> str:
+    """Return normalized human-readable text or raise if it is blank."""
+    _require_text(value, field_name)
+    return " ".join(value.split())
 
 
 def _require_machine_token(value: str, field_name: str) -> None:

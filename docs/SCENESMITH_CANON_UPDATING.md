@@ -54,6 +54,8 @@ Accepted state-change summary IDs must refer to stored Canon Database state-chan
 
 Explicit state-change candidates validate the accepted fact state; they must not create phantom summary IDs.
 
+Canon update summaries must not classify the same candidate ID as both accepted and rejected.
+
 ## What Does It NOT Own?
 
 Canon Updating does not own:

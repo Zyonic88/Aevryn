@@ -226,6 +226,8 @@ Given the same Canon and the same chapter, it must always produce the same world
 
 Given the same Canon, chapter, and scene, it must always produce the same scene-position world state.
 
+World-state visible names and fact values are whitespace-normalized for stable display.
+
 Scene-position world state must not expose facts or relationships introduced later in the same chapter.
 
 World Engine output is only for World Objects.

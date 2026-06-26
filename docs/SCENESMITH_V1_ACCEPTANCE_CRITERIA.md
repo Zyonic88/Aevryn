@@ -46,9 +46,13 @@ V1 complete means Story Import:
 * Creates paragraph IDs
 * Creates sentence IDs
 * Creates evidence anchors
+* Requires sentence text to be traceable to paragraph text
+* Requires paragraph indexes to be unique inside each scene
 * Derives readable paragraphs from oversized unspaced source blocks
 * Does not split sentences inside decimals, titles, or numbered names
 * Validates evidence anchors against known chapters, scenes, paragraphs, and sentences
+* Requires evidence anchor scenes to belong to referenced chapters
+* Requires evidence anchor indexes to match referenced paragraphs and sentences
 * Requires evidence anchor quotes to match source sentence text
 * Preserves source quotes
 * Handles common text encoding artifacts
@@ -111,7 +115,10 @@ V1 complete means Entity Extraction:
 * Requires confidence for every candidate
 * Rejects boolean or out-of-range confidence
 * Rejects duplicate scene evidence anchors
+* Rejects duplicate candidate identities at the model boundary
 * Rejects unsupported claims
+* Normalizes human-readable candidate text
+* Preserves source scene text and evidence quotes
 * Preserves Unknown when evidence is missing
 * Does not update Canon directly
 * Does not remember story state
@@ -133,6 +140,7 @@ V1 complete means Canon Updating:
 * Stores accepted relationships
 * Stores state changes
 * Reports only stored state changes as accepted
+* Keeps accepted and rejected summary IDs mutually exclusive
 * Rejects unsupported candidates
 * Records rejected candidates
 * Never lets AI own truth
@@ -210,6 +218,7 @@ V1 complete means Character Engine:
 * Shows evidence
 * Tracks relationships when available
 * Handles unknown characters
+* Normalizes visible character card text
 * Does not mutate Canon
 * Does not generate story facts
 
@@ -233,6 +242,7 @@ V1 complete means World Engine:
 * Rejects boolean world lookup positions
 * Filters later same-chapter world facts and relationships
 * Handles unknown world entities
+* Normalizes visible world-state text
 * Does not mutate Canon
 * Does not generate world facts
 
@@ -251,6 +261,7 @@ V1 complete means Scene Engine:
 * Includes current equipment
 * Includes relevant world state when available
 * Produces scene snapshots
+* Rejects duplicate scene snapshot reference IDs
 * Handles unknown scenes
 * Handles unknown characters
 * Does not mutate Canon
@@ -275,6 +286,7 @@ V1 complete means Scene Analyzer:
 * Produces environment summary
 * Produces changes introduced
 * Produces continuity notes
+* Normalizes analysis row whitespace
 * Rejects blank or duplicate analysis rows
 * Does not mutate Canon
 * Does not generate final prompts
@@ -296,6 +308,7 @@ V1 complete means Prompt Engine:
 * Includes continuity notes
 * Includes forbidden elements
 * Avoids raw chapter dumps
+* Normalizes production-pack list row whitespace
 * Rejects blank or duplicate production-pack rows
 * Does not invent missing canon
 
@@ -313,6 +326,8 @@ V1 complete means Presentation Engine:
 * Builds continuity report views when available
 * Keeps evidence visible or reachable
 * Optimizes for fast human scanning
+* Removes prompt placeholders that are useful internally but noisy for users
+* Normalizes visible section whitespace
 * Rejects blank or duplicate visible rows
 * Does not mutate Canon
 * Does not write files
@@ -330,9 +345,13 @@ V1 complete means Export Engine:
 * Exports character sheets
 * Exports scene sheets
 * Exports world sheets
+* Exports machine-readable world state
 * Exports prompt sheets
 * Exports production packs
 * Preserves evidence references
+* Keeps Markdown presentation-first
+* Keeps JSON and CSV machine-readable
+* Normalizes Markdown list whitespace
 * Rejects blank Markdown list rows
 * Does not mutate Canon
 * Does not create presentation view models
@@ -372,9 +391,11 @@ V1 complete means the CLI can:
 * Show a character sheet
 * Show a scene sheet
 * Show a world sheet
+* Show machine-readable world state JSON
 * Use scene IDs for scene-position character and world sheets
 * Show a prompt sheet
 * Show a continuity report
+* Explain Markdown versus JSON/CSV output intent in command help
 * Run deterministically
 * Fail clearly on invalid input
 * Return a nonzero exit code for expected workflow errors
@@ -495,6 +516,10 @@ The automated Canon Rebuild ladder must also verify:
 * Incremental imports converge with full empty-project rebuilds
 * Out-of-order explicit chapters are rejected or require an explicit rebuild path
 * Saved outputs remain byte-stable across repeated rebuilds
+* Passing validation case results include actual metrics and no errors
+* Validation totals reconcile passed and failed case counts
+* Validation suite results cannot be empty
+* Validation suite results cannot contain duplicate case IDs
 
 ---
 

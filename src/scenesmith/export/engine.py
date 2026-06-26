@@ -28,6 +28,7 @@ from scenesmith.projects import ContinuityRecord, ContinuityReport, ContinuitySc
 from scenesmith.prompts import ProductionPack, PromptBundle
 from scenesmith.scenes import CanonSceneContext, SceneContext, SceneEnvironmentSnapshot
 from scenesmith.timeline import TimelineEvent, TimelineStateChange
+from scenesmith.world import WorldState
 
 logger = logging.getLogger(__name__)
 
@@ -371,6 +372,66 @@ class ExportEngine:
             lines.append("")
         lines.extend(["## Evidence", view.evidence_summary])
         return "\n".join(lines)
+
+    def world_state_json(self, state: WorldState) -> str:
+        """Export canon-backed world state as JSON text."""
+        return self._to_json(
+            {
+                "chapter_index": state.chapter_index,
+                "entities": [
+                    {
+                        "entity_id": entity.entity_id,
+                        "entity_type": entity.entity_type,
+                        "display_name": entity.display_name,
+                        "chapter_index": entity.chapter_index,
+                        "facts": [
+                            {
+                                "attribute": fact.attribute,
+                                "value": fact.value,
+                                "valid_from_chapter_id": fact.valid_from_chapter_id,
+                                "valid_from_scene_id": fact.valid_from_scene_id,
+                                "evidence": {
+                                    "evidence_id": fact.evidence.evidence_id,
+                                    "source_id": fact.evidence.source_id,
+                                    "chapter_id": fact.evidence.chapter_id,
+                                    "scene_id": fact.evidence.scene_id,
+                                    "paragraph_index": fact.evidence.paragraph_index,
+                                    "sentence_index": fact.evidence.sentence_index,
+                                    "quote": fact.evidence.quote,
+                                    "confidence": fact.evidence.confidence,
+                                },
+                            }
+                            for fact in sorted(
+                                entity.facts,
+                                key=lambda fact: (
+                                    fact.attribute,
+                                    fact.valid_from_chapter_id,
+                                    fact.valid_from_scene_id,
+                                    fact.value,
+                                ),
+                            )
+                        ],
+                        "relationships": [
+                            {
+                                "relationship_id": relationship.relationship_id,
+                                "source_entity_id": relationship.source_entity_id,
+                                "relationship_type": relationship.relationship_type,
+                                "target_entity_id": relationship.target_entity_id,
+                                "evidence_id": relationship.evidence_id,
+                            }
+                            for relationship in sorted(
+                                entity.relationships,
+                                key=lambda relationship: relationship.relationship_id,
+                            )
+                        ],
+                    }
+                    for entity in sorted(
+                        state.entities,
+                        key=lambda entity: entity.entity_id,
+                    )
+                ],
+            }
+        )
 
     def character_card_json(self, card: CharacterCard) -> str:
         """Export a character card as JSON text."""
@@ -793,11 +854,16 @@ class ExportEngine:
     def _markdown_list(values: tuple[str, ...]) -> list[str]:
         """Return Markdown bullet list lines."""
         if not values:
-            return ["Unknown"]
+            return ["- Unknown"]
         if any(not isinstance(value, str) or not value.strip() for value in values):
             raise ValueError("Markdown list values cannot be blank.")
 
-        return [f"- {value}" for value in ExportEngine._unique_values(values)]
+        return [
+            f"- {value}"
+            for value in ExportEngine._unique_values(
+                " ".join(value.split()) for value in values
+            )
+        ]
 
     @classmethod
     def _presentation_section_markdown(cls, section: PresentationSection) -> list[str]:

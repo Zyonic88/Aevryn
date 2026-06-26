@@ -58,16 +58,32 @@ class ProductionPack:
         _require_text(self.purpose, "Production pack purpose")
         _require_text(self.conflict, "Production pack conflict")
         _require_text(self.mood, "Production pack mood")
-        for field_name, values in (
-            ("Production pack visual highlight", self.visual_highlights),
-            ("Production pack character goal", self.character_goals),
-            ("Production pack important object", self.important_objects),
-            ("Production pack continuity note", self.continuity_notes),
-            ("Production pack forbidden element", self.forbidden_elements),
+        for attribute_name, field_name, values in (
+            (
+                "visual_highlights",
+                "Production pack visual highlight",
+                self.visual_highlights,
+            ),
+            ("character_goals", "Production pack character goal", self.character_goals),
+            (
+                "important_objects",
+                "Production pack important object",
+                self.important_objects,
+            ),
+            (
+                "continuity_notes",
+                "Production pack continuity note",
+                self.continuity_notes,
+            ),
+            (
+                "forbidden_elements",
+                "Production pack forbidden element",
+                self.forbidden_elements,
+            ),
         ):
-            for value in values:
-                _require_text(value, field_name)
-            _require_unique_values(values, f"{field_name}s")
+            normalized_values = tuple(_normalized_text(value, field_name) for value in values)
+            object.__setattr__(self, attribute_name, normalized_values)
+            _require_unique_values(normalized_values, f"{field_name}s")
         _require_text(
             self.environment_summary,
             "Production pack environment summary",
@@ -78,6 +94,12 @@ def _require_text(value: str, field_name: str) -> None:
     """Validate a required human-readable text field."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required.")
+
+
+def _normalized_text(value: str, field_name: str) -> str:
+    """Return normalized human-readable text or raise if it is blank."""
+    _require_text(value, field_name)
+    return " ".join(value.split())
 
 
 def _require_machine_token(value: str, field_name: str) -> None:
