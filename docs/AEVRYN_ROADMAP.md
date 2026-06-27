@@ -173,6 +173,10 @@ Everything the CLI can do
 
 ## Phase 2 - Project Database
 
+The database boundary is defined in `docs/AEVRYN_PROJECT_DATABASE.md`.
+
+Phase 2 completion is governed by `docs/AEVRYN_V2_PHASE_2_ACCEPTANCE.md`.
+
 The engine currently works on local projects.
 
 Version 2 adds persistent storage for product use.

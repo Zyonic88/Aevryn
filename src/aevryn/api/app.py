@@ -674,7 +674,7 @@ def _platform_limits() -> tuple[str, ...]:
     """Return current Phase 1 platform limits."""
     return (
         "Stateless preview routes only.",
-        "No persistent Project Database yet.",
+        "No production Project Database configured yet.",
         "Optional API-key protection for workflow routes.",
         "No background worker queue yet.",
         "No website or frontend runtime yet.",

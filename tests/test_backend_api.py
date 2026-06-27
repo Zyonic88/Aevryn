@@ -283,7 +283,7 @@ def test_api_index_reports_entrypoint_links() -> None:
     }
     assert links["capabilities"]["href"] == "/v2/capabilities"
     assert links["openapi"]["href"] == "/openapi.json"
-    assert "No persistent Project Database yet." in payload["platform_limits"]
+    assert "No production Project Database configured yet." in payload["platform_limits"]
 
 
 def test_source_formats_endpoint_reports_supported_and_deferred_formats() -> None:
@@ -337,7 +337,7 @@ def test_capabilities_endpoint_reports_routes_and_limits() -> None:
         item["extension"] for item in payload["source_formats"]["supported"]
     }
     assert export_capabilities["prompt_bundle"] == ["markdown", "json", "csv"]
-    assert "No persistent Project Database yet." in payload["platform_limits"]
+    assert "No production Project Database configured yet." in payload["platform_limits"]
 
 
 def test_openapi_schema_uses_stable_operation_ids_and_tags() -> None:
@@ -821,7 +821,7 @@ def test_projects_preview_returns_stateless_project_metadata() -> None:
     assert links["continuity"]["href"] == "/v2/continuity/preview"
     assert links["project_outputs"]["href"] == "/v2/project-outputs/preview"
     assert links["exports"]["href"] == "/v2/exports/preview"
-    assert "No persistent Project Database yet." in payload["platform_limits"]
+    assert "No production Project Database configured yet." in payload["platform_limits"]
     assert "Mark bought an iron sword." not in response.text
 
 

@@ -25,6 +25,9 @@ CORE_SUBSYSTEM_MODULES = (
     "src/aevryn/presentation/engine.py",
     "src/aevryn/export/engine.py",
     "src/aevryn/projects/runner.py",
+    "src/aevryn/persistence/json_file.py",
+    "src/aevryn/persistence/memory.py",
+    "src/aevryn/persistence/schema.py",
     "src/aevryn/validation/runner.py",
 )
 
