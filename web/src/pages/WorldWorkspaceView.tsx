@@ -169,8 +169,8 @@ function WorldEntitySection({ section }: { section: OutputSection }) {
       </header>
       {section.items.length > 0 ? (
         <ul className="world-item-list">
-          {section.items.map((item) => (
-            <li key={item}>{item}</li>
+          {section.items.map((item, index) => (
+            <li key={`${index}-${item}`}>{item}</li>
           ))}
         </ul>
       ) : (

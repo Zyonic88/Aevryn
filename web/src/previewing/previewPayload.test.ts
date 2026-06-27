@@ -57,6 +57,20 @@ describe("preview payload helpers", () => {
     });
   });
 
+  it("deduplicates repeated preview IDs while preserving first-seen order", () => {
+    const characterPayload = buildCharacterPreviewPayload({
+      ...validInput,
+      characterIdsText: "character_mark character_mark,character_luna character_mark",
+    });
+    const worldPayload = buildWorldPreviewPayload({
+      ...validInput,
+      worldEntityIdsText: "location_hangar location_hangar building_fortress",
+    });
+
+    expect(characterPayload.character_ids).toEqual(["character_mark", "character_luna"]);
+    expect(worldPayload.world_entity_ids).toEqual(["location_hangar", "building_fortress"]);
+  });
+
   it("accepts whitespace separated character IDs", () => {
     const payload = buildCharacterPreviewPayload({
       ...validInput,

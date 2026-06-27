@@ -101,8 +101,14 @@ function parseAiResponse(value: string): unknown {
 }
 
 function parseIdList(value: string): string[] {
-  return value
-    .split(/[\s,]+/u)
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const uniqueIds: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value.split(/[\s,]+/u)) {
+    const id = item.trim();
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      uniqueIds.push(id);
+    }
+  }
+  return uniqueIds;
 }
