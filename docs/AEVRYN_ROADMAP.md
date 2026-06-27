@@ -147,6 +147,8 @@ Everything goes through the API.
 
 The API boundary is defined in `docs/AEVRYN_BACKEND_API.md`.
 
+Phase 1 completion is governed by `docs/AEVRYN_V2_PHASE_1_ACCEPTANCE.md`.
+
 Systems:
 
 * REST API

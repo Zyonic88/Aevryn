@@ -16,7 +16,7 @@ It is not the database.
 
 # What Is It?
 
-The Backend API is the stable HTTP contract that platform clients use to access aevryn.
+The Backend API is the stable HTTP contract that platform clients use to access Aevryn.
 
 In Phase 1, it begins as a thin FastAPI application that calls the existing Aevryn Engine through Project Manager and Story Import.
 
@@ -48,6 +48,7 @@ The Backend API owns:
 * Response models
 * API error shape
 * API versioning
+* Optional workflow authentication enforcement
 * Client-facing source-format metadata
 * Temporary request file handling for import inspection
 
@@ -66,6 +67,7 @@ The Backend API does not own:
 * Export serialization
 * User interface behavior
 * Persistent project storage
+* Full user accounts or password authentication
 * Background job execution
 
 ---
@@ -115,6 +117,49 @@ The API should never use broad browser access by accident.
 
 Allowed origins are a platform deployment decision, not an engine decision.
 
+## Authentication Middleware
+
+Phase 1 supports optional API-key protection for workflow routes.
+
+This is not full user authentication.
+
+It is a deployment boundary that lets platform clients prove protected API calls before Version 2 adds users, sessions, project permissions, and account recovery.
+
+Configure keys explicitly when creating the app:
+
+```python
+from aevryn.api import create_app
+
+app = create_app(api_keys=("local-dev-key",))
+```
+
+Deployment environments may also set:
+
+```text
+AEVRYN_API_KEYS=local-dev-key,another-key
+```
+
+When API keys are configured, Phase 1 workflow routes require either:
+
+* `X-Aevryn-API-Key: <key>`
+* `Authorization: Bearer <key>`
+
+Protected routes currently include Version 2 `POST /v2/...` workflow endpoints such as import inspection, extraction application, project output previews, and export previews.
+
+Public discovery routes remain public:
+
+* `GET /v2`
+* `GET /v2/health`
+* `GET /v2/capabilities`
+* `GET /v2/source-formats`
+* `GET /openapi.json`
+
+Missing keys return `401 authentication_required`.
+
+Invalid keys return `403 invalid_api_key`.
+
+The middleware does not own user accounts, passwords, sessions, project permissions, or authorization policy. Those belong to later Version 2 authentication and project storage phases.
+
 ## OpenAPI Contract
 
 The Backend API exposes FastAPI's OpenAPI schema at:
@@ -131,8 +176,25 @@ Current route tag groups:
 * System
 * Import
 * Extraction
+* Canon
+* Timeline
+* Projects
+* Characters
+* Scenes
+* Prompts
+* World
+* Continuity
 * Project Outputs
 * Exports
+
+
+## Validation Workflow
+
+The local validation suite remains a CLI-only development workflow in Phase 1.
+
+It is not exposed through the public Backend API.
+
+A future admin-only validation API may be added deliberately, but normal platform clients should not run validation corpus jobs through Phase 1 routes.
 
 ## Response Headers
 
@@ -276,6 +338,119 @@ The API does not decide which candidates become canon.
 
 Canon Updating decides.
 
+## `POST /v2/canon/preview`
+
+Accepts source content plus an evidence-bounded AI response payload and returns compact accepted Canon metadata.
+
+This is the Phase 1 Canon API foundation.
+
+The response includes:
+
+* accepted entity counts and IDs
+* accepted fact counts and IDs
+* accepted relationship counts and IDs
+* accepted state-change counts and IDs
+* rejected candidate IDs
+
+The API does not own Canon truth.
+
+It only exposes the result of Canon Updating.
+
+## `POST /v2/timeline/preview`
+
+Accepts source content plus an evidence-bounded AI response payload and returns compact Timeline metadata.
+
+This is the Phase 1 Timeline API foundation.
+
+The response includes:
+
+* chapter IDs in story order
+* scene map in story order
+* current scene ID
+* accepted state-change IDs
+
+The API does not determine timeline validity.
+
+It only exposes the story order and state-change metadata produced by the engine workflow.
+
+## `POST /v2/projects/preview`
+
+Accepts source content plus an evidence-bounded AI response payload and returns stateless project-level metadata.
+
+This route is the Phase 1 Project Management API foundation.
+
+It does not create a persisted project.
+
+It does not write to a database.
+
+It asks Project Manager to run the same import and candidate-application workflow as the CLI, then returns enough metadata for a future frontend to decide what outputs can be requested next.
+
+The response includes:
+
+* source ID
+* source format
+* title
+* chapter IDs
+* scene IDs
+* current scene ID
+* evidence-anchor count
+* accepted entity IDs
+* accepted fact IDs
+* accepted relationship IDs
+* accepted state-change IDs
+* available output links for direct character, scene, prompt, world, continuity, aggregate output, and export previews
+* current platform limits
+
+The response must not include source quote text or full chapter text.
+
+Persistent project creation belongs to the Project Database phase.
+
+## `POST /v2/characters/preview`
+
+Accepts source content plus an evidence-bounded AI response payload and returns timeline-aware character profiles.
+
+This is the Phase 1 Character API foundation.
+
+It asks Project Manager and Character Engine for character state at the requested scene position.
+
+The API does not build character cards itself.
+
+## `POST /v2/scenes/preview`
+
+Accepts source content plus an evidence-bounded AI response payload and returns one timeline-aware scene sheet.
+
+This is the Phase 1 Scene API foundation.
+
+It asks Project Manager, Scene Engine, Scene Analyzer, and Presentation Engine for the view model.
+
+The API does not analyze scenes itself.
+
+## `POST /v2/prompts/preview`
+
+Accepts source content plus an evidence-bounded AI response payload and returns one production pack.
+
+This is the Phase 1 Prompt API foundation.
+
+It asks Prompt Engine and Presentation Engine for canon-backed prompt output.
+
+The API does not generate prompts by assembling strings directly.
+
+## `POST /v2/world/preview`
+
+Returns a timeline-aware world sheet for a requested scene.
+
+The route asks Project Manager to run the stateless preview, asks World Engine to reconstruct world state at the requested scene, and asks Presentation Engine to convert that state into a user-facing world sheet.
+
+The API does not reconstruct world state itself and does not return source prose.
+
+## `POST /v2/continuity/preview`
+
+Returns a project-level continuity report split into new, updated, still-known, and invalidated records by scene.
+
+The route asks Project Manager to build the continuity report from accepted Canon update summaries.
+
+The API does not compare source text, infer continuity changes, or mutate Canon.
+
 ## `POST /v2/project-outputs/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns
@@ -357,6 +532,8 @@ The API selects the export target.
 
 The Export Engine serializes it.
 
+For API previews, continuity report exports preserve evidence IDs and scene anchors but omit exact evidence quote text. Local engine exports may remain audit-complete.
+
 The frontend never generates export files directly.
 
 ---
@@ -399,10 +576,20 @@ Validation errors use:
 
 Route-level workflow errors use route-specific codes such as:
 
+* `authentication_required`
+* `invalid_api_key`
 * `invalid_base64`
 * `import_failed`
 * `extraction_prompt_failed`
 * `extraction_apply_failed`
+* `canon_preview_failed`
+* `timeline_preview_failed`
+* `project_preview_failed`
+* `character_preview_failed`
+* `scene_preview_failed`
+* `prompt_preview_failed`
+* `world_preview_failed`
+* `continuity_preview_failed`
 * `project_output_preview_failed`
 * `export_preview_failed`
 

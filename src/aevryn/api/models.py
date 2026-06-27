@@ -117,11 +117,43 @@ class ExtractionApplyRequest(ImportInspectRequest):
     scene_id: str | None = None
 
 
+class ProjectPreviewRequest(ExtractionApplyRequest):
+    """Request to preview stateless project metadata after candidate application."""
+
+
+class CanonPreviewRequest(ExtractionApplyRequest):
+    """Request to preview accepted Canon metadata from a stateless project run."""
+
+
+class TimelinePreviewRequest(ExtractionApplyRequest):
+    """Request to preview Timeline metadata from a stateless project run."""
+
+
 class ProjectOutputsPreviewRequest(ExtractionApplyRequest):
     """Request to preview platform outputs from a stateless project run."""
 
     character_ids: tuple[str, ...] = ()
     world_entity_ids: tuple[str, ...] = ()
+
+
+class CharacterPreviewRequest(ProjectOutputsPreviewRequest):
+    """Request to preview character profiles from a stateless project run."""
+
+
+class ScenePreviewRequest(ProjectOutputsPreviewRequest):
+    """Request to preview a scene sheet from a stateless project run."""
+
+
+class PromptPreviewRequest(ProjectOutputsPreviewRequest):
+    """Request to preview a production pack from a stateless project run."""
+
+
+class WorldPreviewRequest(ProjectOutputsPreviewRequest):
+    """Request to preview world state from a stateless project run."""
+
+
+class ContinuityPreviewRequest(ProjectOutputsPreviewRequest):
+    """Request to preview a continuity report from a stateless project run."""
 
 
 class ExportPreviewRequest(ProjectOutputsPreviewRequest):
@@ -213,6 +245,57 @@ class ExtractionApplyResponse(BaseModel):
     accepted_state_changes: int
     accepted_state_change_ids: tuple[str, ...]
     rejected_candidate_ids: tuple[str, ...]
+
+
+class CanonPreviewResponse(BaseModel):
+    """Canon API preview response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    source_format: str
+    accepted_entities: int
+    accepted_entity_ids: tuple[str, ...]
+    accepted_facts: int
+    accepted_fact_ids: tuple[str, ...]
+    accepted_relationships: int
+    accepted_relationship_ids: tuple[str, ...]
+    accepted_state_changes: int
+    accepted_state_change_ids: tuple[str, ...]
+    rejected_candidate_ids: tuple[str, ...]
+
+
+class TimelinePreviewResponse(BaseModel):
+    """Timeline API preview response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    source_format: str
+    current_scene_id: str
+    chapter_ids: tuple[str, ...]
+    scene_map: tuple[SceneMapEntry, ...]
+    accepted_state_change_ids: tuple[str, ...]
+
+
+class ProjectPreviewResponse(BaseModel):
+    """Stateless project metadata returned by the Project Management API."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    source_format: str
+    title: str
+    chapter_ids: tuple[str, ...]
+    scene_ids: tuple[str, ...]
+    current_scene_id: str
+    evidence_anchors: int
+    accepted_entity_ids: tuple[str, ...]
+    accepted_fact_ids: tuple[str, ...]
+    accepted_relationship_ids: tuple[str, ...]
+    accepted_state_change_ids: tuple[str, ...]
+    available_outputs: tuple[ApiLink, ...]
+    platform_limits: tuple[str, ...]
 
 
 class OutputSection(BaseModel):
@@ -316,6 +399,60 @@ class ContinuityReportOutput(BaseModel):
 
     source_id: str
     scenes: tuple[ContinuitySceneOutput, ...]
+
+
+class CharacterPreviewResponse(BaseModel):
+    """Character API preview response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    source_format: str
+    scene_id: str
+    character_profiles: tuple[CharacterProfileOutput, ...]
+
+
+class ScenePreviewResponse(BaseModel):
+    """Scene API preview response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    source_format: str
+    scene_id: str
+    scene_sheet: SceneSheetOutput
+
+
+class PromptPreviewResponse(BaseModel):
+    """Prompt API preview response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    source_format: str
+    scene_id: str
+    production_pack: ProductionPackOutput
+
+
+class WorldPreviewResponse(BaseModel):
+    """World API preview response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    source_format: str
+    scene_id: str
+    world_sheet: WorldSheetOutput
+
+
+class ContinuityPreviewResponse(BaseModel):
+    """Continuity API preview response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    source_format: str
+    continuity_report: ContinuityReportOutput
 
 
 class ProjectOutputsPreviewResponse(BaseModel):

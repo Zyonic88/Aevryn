@@ -22,8 +22,14 @@ from aevryn.api.models import (
     ApiIndexResponse,
     ApiLink,
     ApiRouteCapability,
+    CanonPreviewRequest,
+    CanonPreviewResponse,
     CapabilitiesResponse,
+    CharacterPreviewRequest,
+    CharacterPreviewResponse,
     CharacterProfileOutput,
+    ContinuityPreviewRequest,
+    ContinuityPreviewResponse,
     ContinuityRecordOutput,
     ContinuityReportOutput,
     ContinuitySceneOutput,
@@ -44,10 +50,20 @@ from aevryn.api.models import (
     ProductionPackOutput,
     ProjectOutputsPreviewRequest,
     ProjectOutputsPreviewResponse,
+    ProjectPreviewRequest,
+    ProjectPreviewResponse,
+    PromptPreviewRequest,
+    PromptPreviewResponse,
     SceneMapEntry,
+    ScenePreviewRequest,
+    ScenePreviewResponse,
     SceneSheetOutput,
     SourceFormat,
     SourceFormatsResponse,
+    TimelinePreviewRequest,
+    TimelinePreviewResponse,
+    WorldPreviewRequest,
+    WorldPreviewResponse,
     WorldSheetOutput,
 )
 from aevryn.export import ExportEngine
@@ -67,6 +83,7 @@ from aevryn.prompts import CanonPromptBuilder, ProductionPack
 
 API_VERSION = "v2"
 ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
+API_KEYS_ENV = "AEVRYN_API_KEYS"
 
 
 def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
@@ -81,20 +98,27 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
     Raises:
         ValueError: If configured CORS origins are unsafe or invalid.
     """
+    active_environ = environ or os.environ
     return create_app(
-        allowed_origins=_allowed_origins_from_env(environ or os.environ),
+        allowed_origins=_allowed_origins_from_env(active_environ),
+        api_keys=_api_keys_from_env(active_environ),
     )
 
 
-def create_app(allowed_origins: Sequence[str] = ()) -> FastAPI:
+def create_app(
+    allowed_origins: Sequence[str] = (),
+    api_keys: Sequence[str] = (),
+) -> FastAPI:
     """Create the Aevryn Backend API application.
 
     Parameters:
         allowed_origins: Optional browser origins allowed by CORS middleware.
+        api_keys: Optional deployment API keys that protect workflow routes.
 
     Returns:
         Configured FastAPI application.
     """
+    normalized_api_keys = _normalize_api_keys(api_keys)
     app = FastAPI(
         title="Aevryn Backend API",
         version="2.0.0",
@@ -121,9 +145,10 @@ def create_app(allowed_origins: Sequence[str] = ()) -> FastAPI:
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        """Attach stable Aevryn identity headers to every API response."""
+        """Attach identity headers and enforce optional workflow authentication."""
         request_id = _request_id(request)
-        response = await call_next(request)
+        auth_error = _authentication_error(request, normalized_api_keys)
+        response = auth_error if auth_error is not None else await call_next(request)
         response.headers["X-Aevryn-API-Version"] = API_VERSION
         response.headers["X-Aevryn-Engine"] = "Aevryn"
         response.headers["X-Request-ID"] = request_id
@@ -294,6 +319,166 @@ def create_app(allowed_origins: Sequence[str] = ()) -> FastAPI:
         return _extraction_apply_response(result)
 
     @app.post(
+        "/v2/canon/preview",
+        response_model=CanonPreviewResponse,
+        tags=["Canon"],
+        operation_id="postV2CanonPreview",
+    )
+    def preview_canon(request: CanonPreviewRequest) -> CanonPreviewResponse:
+        """Preview accepted Canon metadata through the Canon API."""
+        try:
+            result, source_format = _run_project_result(request)
+            return _canon_preview_response(result=result, source_format=source_format)
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "canon_preview_failed", "detail": str(error)},
+            ) from error
+
+    @app.post(
+        "/v2/timeline/preview",
+        response_model=TimelinePreviewResponse,
+        tags=["Timeline"],
+        operation_id="postV2TimelinePreview",
+    )
+    def preview_timeline(request: TimelinePreviewRequest) -> TimelinePreviewResponse:
+        """Preview Timeline metadata through the Timeline API."""
+        try:
+            result, source_format = _run_project_result(request)
+            return _timeline_preview_response(result=result, source_format=source_format)
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "timeline_preview_failed", "detail": str(error)},
+            ) from error
+
+    @app.post(
+        "/v2/projects/preview",
+        response_model=ProjectPreviewResponse,
+        tags=["Projects"],
+        operation_id="postV2ProjectsPreview",
+    )
+    def preview_project(request: ProjectPreviewRequest) -> ProjectPreviewResponse:
+        """Preview stateless project metadata through Project Manager."""
+        try:
+            result, source_format = _run_project_result(request)
+            return _project_preview_response(
+                result=result,
+                source_format=source_format,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "project_preview_failed", "detail": str(error)},
+            ) from error
+
+    @app.post(
+        "/v2/characters/preview",
+        response_model=CharacterPreviewResponse,
+        tags=["Characters"],
+        operation_id="postV2CharactersPreview",
+    )
+    def preview_characters(request: CharacterPreviewRequest) -> CharacterPreviewResponse:
+        """Preview character profiles through the Character API."""
+        try:
+            result, source_format = _run_project_result(request)
+            return _character_preview_response(
+                request=request,
+                result=result,
+                source_format=source_format,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "character_preview_failed", "detail": str(error)},
+            ) from error
+
+    @app.post(
+        "/v2/scenes/preview",
+        response_model=ScenePreviewResponse,
+        tags=["Scenes"],
+        operation_id="postV2ScenesPreview",
+    )
+    def preview_scene(request: ScenePreviewRequest) -> ScenePreviewResponse:
+        """Preview a scene sheet through the Scene API."""
+        try:
+            result, source_format = _run_project_result(request)
+            return _scene_preview_response(
+                request=request,
+                result=result,
+                source_format=source_format,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "scene_preview_failed", "detail": str(error)},
+            ) from error
+
+    @app.post(
+        "/v2/prompts/preview",
+        response_model=PromptPreviewResponse,
+        tags=["Prompts"],
+        operation_id="postV2PromptsPreview",
+    )
+    def preview_prompt(request: PromptPreviewRequest) -> PromptPreviewResponse:
+        """Preview a production pack through the Prompt API."""
+        try:
+            result, source_format = _run_project_result(request)
+            return _prompt_preview_response(
+                request=request,
+                result=result,
+                source_format=source_format,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "prompt_preview_failed", "detail": str(error)},
+            ) from error
+
+    @app.post(
+        "/v2/world/preview",
+        response_model=WorldPreviewResponse,
+        tags=["World"],
+        operation_id="postV2WorldPreview",
+    )
+    def preview_world(request: WorldPreviewRequest) -> WorldPreviewResponse:
+        """Preview world state through the World API."""
+        try:
+            result, source_format = _run_project_result(request)
+            return _world_preview_response(
+                request=request,
+                result=result,
+                source_format=source_format,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "world_preview_failed", "detail": str(error)},
+            ) from error
+
+    @app.post(
+        "/v2/continuity/preview",
+        response_model=ContinuityPreviewResponse,
+        tags=["Continuity"],
+        operation_id="postV2ContinuityPreview",
+    )
+    def preview_continuity(
+        request: ContinuityPreviewRequest,
+    ) -> ContinuityPreviewResponse:
+        """Preview continuity changes through the Continuity API."""
+        try:
+            result, source_format = _run_project_result(request)
+            return _continuity_preview_response(
+                result=result,
+                source_format=source_format,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "continuity_preview_failed", "detail": str(error)},
+            ) from error
+
+    @app.post(
         "/v2/project-outputs/preview",
         response_model=ProjectOutputsPreviewResponse,
         tags=["Project Outputs"],
@@ -423,12 +608,74 @@ def _allowed_origins_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
     return origins
 
 
+def _api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
+    """Return workflow API keys from deployment environment settings."""
+    return _normalize_api_keys(environ.get(API_KEYS_ENV, "").split(","))
+
+
+def _normalize_api_keys(api_keys: Sequence[str]) -> tuple[str, ...]:
+    """Return stable nonblank API keys or reject invalid key configuration."""
+    normalized = tuple(key.strip() for key in api_keys if key.strip())
+    if len(normalized) != len(set(normalized)):
+        raise ValueError("AEVRYN_API_KEYS cannot contain duplicate keys.")
+
+    return normalized
+
+
+def _authentication_error(
+    request: Request,
+    api_keys: Sequence[str],
+) -> JSONResponse | None:
+    """Return an authentication error for protected routes when configured."""
+    if not api_keys or not _is_auth_protected_route(request):
+        return None
+
+    provided_key = _extract_api_key(request)
+    if not provided_key:
+        return JSONResponse(
+            status_code=401,
+            content=ErrorResponse(
+                error="authentication_required",
+                detail="A valid API key is required for this workflow route.",
+            ).model_dump(),
+        )
+    if provided_key not in api_keys:
+        return JSONResponse(
+            status_code=403,
+            content=ErrorResponse(
+                error="invalid_api_key",
+                detail="The provided API key is not authorized.",
+            ).model_dump(),
+        )
+
+    return None
+
+
+def _is_auth_protected_route(request: Request) -> bool:
+    """Return whether a request touches a Phase 1 workflow route."""
+    return request.method.upper() == "POST" and request.url.path.startswith("/v2/")
+
+
+def _extract_api_key(request: Request) -> str:
+    """Return an API key from supported request headers."""
+    explicit_key = request.headers.get("X-Aevryn-API-Key", "").strip()
+    if explicit_key:
+        return explicit_key
+
+    authorization = request.headers.get("Authorization", "").strip()
+    scheme, separator, token = authorization.partition(" ")
+    if separator and scheme.lower() == "bearer":
+        return token.strip()
+
+    return ""
+
+
 def _platform_limits() -> tuple[str, ...]:
     """Return current Phase 1 platform limits."""
     return (
         "Stateless preview routes only.",
         "No persistent Project Database yet.",
-        "No authentication enforcement yet.",
+        "Optional API-key protection for workflow routes.",
         "No background worker queue yet.",
         "No website or frontend runtime yet.",
     )
@@ -471,6 +718,46 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="POST",
             path="/v2/extractions/apply",
             purpose="Apply extraction candidates through Canon Updating.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/canon/preview",
+            purpose="Preview accepted Canon metadata.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/timeline/preview",
+            purpose="Preview Timeline order and state-change metadata.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/projects/preview",
+            purpose="Preview stateless project metadata after candidate application.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/characters/preview",
+            purpose="Preview timeline-aware character profiles.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/scenes/preview",
+            purpose="Preview a timeline-aware scene sheet.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/prompts/preview",
+            purpose="Preview a canon-backed production prompt pack.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/world/preview",
+            purpose="Preview timeline-aware world state.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/continuity/preview",
+            purpose="Preview project continuity changes.",
         ),
         ApiRouteCapability(
             method="POST",
@@ -723,6 +1010,99 @@ def _extraction_apply_response(result: ProjectRunResult) -> ExtractionApplyRespo
     )
 
 
+def _canon_preview_response(
+    result: ProjectRunResult,
+    source_format: str,
+) -> CanonPreviewResponse:
+    """Return accepted Canon metadata for a stateless project preview."""
+    summary = _extraction_apply_response(result)
+    return CanonPreviewResponse(
+        source_id=result.imported_source.source_id,
+        source_format=source_format,
+        accepted_entities=summary.accepted_entities,
+        accepted_entity_ids=summary.accepted_entity_ids,
+        accepted_facts=summary.accepted_facts,
+        accepted_fact_ids=summary.accepted_fact_ids,
+        accepted_relationships=summary.accepted_relationships,
+        accepted_relationship_ids=summary.accepted_relationship_ids,
+        accepted_state_changes=summary.accepted_state_changes,
+        accepted_state_change_ids=summary.accepted_state_change_ids,
+        rejected_candidate_ids=summary.rejected_candidate_ids,
+    )
+
+
+def _timeline_preview_response(
+    result: ProjectRunResult,
+    source_format: str,
+) -> TimelinePreviewResponse:
+    """Return Timeline metadata for a stateless project preview."""
+    imported_source = result.imported_source
+    return TimelinePreviewResponse(
+        source_id=imported_source.source_id,
+        source_format=source_format,
+        current_scene_id=AevrynProjectRunner.latest_scene_id(result),
+        chapter_ids=tuple(chapter.chapter_id for chapter in imported_source.story.chapters),
+        scene_map=tuple(
+            SceneMapEntry(
+                chapter_id=chapter.chapter_id,
+                chapter_index=chapter.chapter_index,
+                scene_id=scene.scene_id,
+                scene_index=scene.scene_index,
+                title=scene.title,
+            )
+            for chapter in imported_source.story.chapters
+            for scene in chapter.scenes
+        ),
+        accepted_state_change_ids=_summary_ids(
+            summary.accepted_state_changes for summary in result.update_summaries
+        ),
+    )
+
+
+def _project_preview_response(
+    result: ProjectRunResult,
+    source_format: str,
+) -> ProjectPreviewResponse:
+    """Return stateless project metadata after import and candidate application."""
+    imported_source = result.imported_source
+    runner = AevrynProjectRunner()
+    return ProjectPreviewResponse(
+        source_id=imported_source.source_id,
+        source_format=source_format,
+        title=imported_source.title,
+        chapter_ids=tuple(chapter.chapter_id for chapter in imported_source.story.chapters),
+        scene_ids=tuple(
+            scene.scene_id
+            for chapter in imported_source.story.chapters
+            for scene in chapter.scenes
+        ),
+        current_scene_id=runner.latest_scene_id(result),
+        evidence_anchors=len(imported_source.anchors),
+        accepted_entity_ids=_summary_ids(
+            summary.accepted_entities for summary in result.update_summaries
+        ),
+        accepted_fact_ids=_summary_ids(
+            summary.accepted_facts for summary in result.update_summaries
+        ),
+        accepted_relationship_ids=_summary_ids(
+            summary.accepted_relationships for summary in result.update_summaries
+        ),
+        accepted_state_change_ids=_summary_ids(
+            summary.accepted_state_changes for summary in result.update_summaries
+        ),
+        available_outputs=(
+            ApiLink(rel="characters", href="/v2/characters/preview", method="POST"),
+            ApiLink(rel="scene", href="/v2/scenes/preview", method="POST"),
+            ApiLink(rel="prompts", href="/v2/prompts/preview", method="POST"),
+            ApiLink(rel="world", href="/v2/world/preview", method="POST"),
+            ApiLink(rel="continuity", href="/v2/continuity/preview", method="POST"),
+            ApiLink(rel="project_outputs", href="/v2/project-outputs/preview", method="POST"),
+            ApiLink(rel="exports", href="/v2/exports/preview", method="POST"),
+        ),
+        platform_limits=_platform_limits(),
+    )
+
+
 def _accepted_character_ids(result: ProjectRunResult) -> tuple[str, ...]:
     """Return accepted character IDs in first-seen scene order."""
     character_ids: dict[str, None] = {}
@@ -740,6 +1120,123 @@ def _source_quotes(result: ProjectRunResult) -> tuple[str, ...]:
         " ".join(anchor.quote.split())
         for anchor in result.imported_source.anchors
         if anchor.quote.strip()
+    )
+
+
+def _character_preview_response(
+    request: ProjectOutputsPreviewRequest,
+    result: ProjectRunResult,
+    source_format: str,
+) -> CharacterPreviewResponse:
+    """Return character profiles for a stateless project preview."""
+    runner = AevrynProjectRunner()
+    scene_id = request.scene_id or runner.latest_scene_id(result)
+    character_ids = request.character_ids or _accepted_character_ids(result)
+    presenter = PresentationEngine()
+    return CharacterPreviewResponse(
+        source_id=result.imported_source.source_id,
+        source_format=source_format,
+        scene_id=scene_id,
+        character_profiles=tuple(
+            _character_profile_output(
+                presenter.character_profile(
+                    runner.build_character_card_at_scene(
+                        result=result,
+                        character_id=character_id,
+                        scene_id=scene_id,
+                    )
+                )
+            )
+            for character_id in character_ids
+        ),
+    )
+
+
+def _scene_preview_response(
+    request: ProjectOutputsPreviewRequest,
+    result: ProjectRunResult,
+    source_format: str,
+) -> ScenePreviewResponse:
+    """Return a scene sheet for a stateless project preview."""
+    runner = AevrynProjectRunner()
+    scene_id = request.scene_id or runner.latest_scene_id(result)
+    context = runner.build_scene_context(
+        result=result,
+        scene_id=scene_id,
+        character_ids=request.character_ids or _accepted_character_ids(result),
+    )
+    pack = CanonPromptBuilder().build_production_pack(context)
+    scene_sheet = PresentationEngine().scene_sheet(context=context, analysis=pack.analysis)
+    return ScenePreviewResponse(
+        source_id=result.imported_source.source_id,
+        source_format=source_format,
+        scene_id=scene_id,
+        scene_sheet=_scene_sheet_output(
+            scene_sheet,
+            source_quotes=_source_quotes(result),
+        ),
+    )
+
+
+def _prompt_preview_response(
+    request: ProjectOutputsPreviewRequest,
+    result: ProjectRunResult,
+    source_format: str,
+) -> PromptPreviewResponse:
+    """Return a production pack for a stateless project preview."""
+    runner = AevrynProjectRunner()
+    scene_id = request.scene_id or runner.latest_scene_id(result)
+    context = runner.build_scene_context(
+        result=result,
+        scene_id=scene_id,
+        character_ids=request.character_ids or _accepted_character_ids(result),
+    )
+    pack = CanonPromptBuilder().build_production_pack(context)
+    presenter = PresentationEngine()
+    scene_sheet = presenter.scene_sheet(context=context, analysis=pack.analysis)
+    return PromptPreviewResponse(
+        source_id=result.imported_source.source_id,
+        source_format=source_format,
+        scene_id=scene_id,
+        production_pack=_production_pack_output(
+            presenter.production_pack(pack=pack, scene=scene_sheet),
+            source_quotes=_source_quotes(result),
+        ),
+    )
+
+
+def _continuity_preview_response(
+    result: ProjectRunResult,
+    source_format: str,
+) -> ContinuityPreviewResponse:
+    """Return a continuity report for a stateless project preview."""
+    return ContinuityPreviewResponse(
+        source_id=result.imported_source.source_id,
+        source_format=source_format,
+        continuity_report=_continuity_report_output(
+            AevrynProjectRunner().build_continuity_report(result)
+        ),
+    )
+
+
+def _world_preview_response(
+    request: ProjectOutputsPreviewRequest,
+    result: ProjectRunResult,
+    source_format: str,
+) -> WorldPreviewResponse:
+    """Return a world sheet for a stateless project preview."""
+    runner = AevrynProjectRunner()
+    scene_id = request.scene_id or runner.latest_scene_id(result)
+    world_state = runner.build_world_state_at_scene(
+        result=result,
+        entity_ids=request.world_entity_ids,
+        scene_id=scene_id,
+    )
+    return WorldPreviewResponse(
+        source_id=result.imported_source.source_id,
+        source_format=source_format,
+        scene_id=scene_id,
+        world_sheet=_world_sheet_output(PresentationEngine().world_sheet(world_state)),
     )
 
 
@@ -989,13 +1486,46 @@ def _serialized_export_content(
             return export_engine.prompt_bundle_csv(pack.prompt_bundle)
 
     if kind == "continuity_report":
-        report = runner.build_continuity_report(result)
+        report = _safe_continuity_report(runner.build_continuity_report(result))
         if export_format == "markdown":
             return export_engine.continuity_report_markdown(report)
         if export_format == "json":
             return export_engine.continuity_report_json(report)
 
     raise ValueError(f"Unsupported export preview: {kind}/{export_format}")
+
+
+def _safe_continuity_report(report: ContinuityReport) -> ContinuityReport:
+    """Return a continuity report without exact source prose for API previews."""
+    return ContinuityReport(
+        source_id=report.source_id,
+        scenes=tuple(_safe_continuity_scene(scene) for scene in report.scenes),
+    )
+
+
+def _safe_continuity_scene(scene: ContinuitySceneReport) -> ContinuitySceneReport:
+    """Return one continuity scene report without evidence quotes."""
+    return ContinuitySceneReport(
+        scene_id=scene.scene_id,
+        new=tuple(_safe_continuity_record(record) for record in scene.new),
+        updated=tuple(_safe_continuity_record(record) for record in scene.updated),
+        still_known=tuple(_safe_continuity_record(record) for record in scene.still_known),
+        invalidated=tuple(
+            _safe_continuity_record(record) for record in scene.invalidated
+        ),
+    )
+
+
+def _safe_continuity_record(record: ContinuityRecord) -> ContinuityRecord:
+    """Return one continuity record with evidence anchors but no quote text."""
+    return ContinuityRecord(
+        record_id=record.record_id,
+        record_type=record.record_type,
+        description=record.description,
+        evidence_id=record.evidence_id,
+        chapter_id=record.chapter_id,
+        scene_id=record.scene_id,
+    )
 
 
 def _first_character_id(
