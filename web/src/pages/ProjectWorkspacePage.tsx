@@ -1,7 +1,8 @@
-﻿import { NavLink, Navigate, useParams } from "react-router-dom";
+import { NavLink, Navigate, useParams } from "react-router-dom";
 
 import { EmptyState } from "../components/Feedback";
 import { readProjects } from "../projects/projectStore";
+import { CharacterWorkspaceView } from "./CharacterWorkspaceView";
 import { ImportWorkspaceView } from "./ImportWorkspaceView";
 
 const workspaceTabs = [
@@ -67,6 +68,9 @@ function WorkspaceTabContent({
 }) {
   if (tabId === "import") {
     return <ImportWorkspaceView project={project} />;
+  }
+  if (tabId === "characters") {
+    return <CharacterWorkspaceView project={project} />;
   }
 
   return <WorkspacePlaceholder tabId={tabId} label={label} />;

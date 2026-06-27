@@ -483,3 +483,85 @@ textarea:focus {
   color: #536174;
   font-weight: 700;
 }
+
+.profile-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-card {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.profile-card h3,
+.profile-card p {
+  margin: 0;
+}
+
+.profile-card h3 {
+  color: #111722;
+  font-size: 22px;
+}
+
+.profile-card header p:last-child {
+  margin-top: 4px;
+  color: #536174;
+}
+
+.profile-section-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-section {
+  padding: 12px;
+  border: 1px solid #e2e7ee;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.profile-section h4,
+.profile-section p,
+.profile-section ul {
+  margin: 0;
+}
+
+.profile-section h4 {
+  margin-bottom: 8px;
+  color: #536174;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.profile-section ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+}
+
+.profile-section li,
+.profile-section p,
+.evidence-note {
+  color: #263241;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.evidence-note {
+  padding-top: 12px;
+  border-top: 1px solid #e2e7ee;
+  font-weight: 700;
+}
+
+@media (max-width: 820px) {
+  .profile-section-grid {
+    grid-template-columns: 1fr;
+  }
+}

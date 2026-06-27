@@ -1,4 +1,4 @@
-﻿# Aevryn V2 Phase 5 Acceptance Criteria
+# Aevryn V2 Phase 5 Acceptance Criteria
 
 > Built by **Aetherra Labs**
 
@@ -112,7 +112,7 @@ Aevryn Web Alpha Shell is accepted when:
 
 Phase 5B begins only after Phase 5A is hardened.
 
-Phase 5B first slice accepts an API-backed Import view before broader output views.
+Phase 5B accepts API-backed engine output views one slice at a time. The Import inspection view and Character output view are now implemented as the first slices.
 
 Required later:
 
@@ -129,6 +129,14 @@ Required later:
 * Deferred source-format failures do not render stale import structure results
 * Failed follow-up inspections clear previous successful import results
 * Character output view
+* Character view calls `/v2/characters/preview` through the API client
+* Character view renders API character profile view models
+* Character preview payload construction preserves UTF-8 source text
+* Character preview payload construction validates AI response JSON before submission
+* Character view does not reconstruct Canon, Timeline, or Presentation data in React
+* Character view shows invalid AI JSON as a visible form error
+* Character view renders empty profile responses as an empty state
+* Failed follow-up character previews clear previous successful profile results
 * World output view
 * Timeline output view
 * Scene output view

@@ -1,4 +1,4 @@
-﻿# Aevryn Website
+# Aevryn Website
 
 > Built by **Aetherra Labs**
 
@@ -145,6 +145,11 @@ Required later:
 * Import API failures shown through accessible alerts
 * Stale import structure results cleared before follow-up inspections
 * Character view
+* Character profile previews through the Character API
+* Character profile sections rendered from API view models
+* Character preview input validates AI response JSON before submission
+* Character preview errors and empty states are visible and accessible
+* Failed follow-up character previews clear stale profile results
 * World view
 * Timeline view
 * Scene view

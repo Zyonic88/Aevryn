@@ -1,9 +1,10 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 import {
   authMeSchema,
   authSessionSchema,
   capabilitiesSchema,
+  characterPreviewSchema,
   healthSchema,
   importInspectSchema,
   sourceFormatsSchema,
@@ -11,6 +12,7 @@ import {
   type ApiHealth,
   type AuthSession,
   type AuthUser,
+  type CharacterPreview,
   type ImportInspect,
   type SourceFormats,
 } from "./schemas";
@@ -20,6 +22,7 @@ export const API_PATHS = {
   capabilities: "/v2/capabilities",
   sourceFormats: "/v2/source-formats",
   importsInspect: "/v2/imports/inspect",
+  charactersPreview: "/v2/characters/preview",
   authRegister: "/v2/auth/register",
   authLogin: "/v2/auth/login",
   authMe: "/v2/auth/me",
@@ -55,6 +58,12 @@ export type ImportInspectRequest = {
   title?: string;
 };
 
+export type CharacterPreviewRequest = ImportInspectRequest & {
+  ai_response: unknown;
+  character_ids?: string[];
+  scene_id?: string;
+};
+
 export class AevrynApiClient {
   readonly baseUrl: string;
 
@@ -76,6 +85,13 @@ export class AevrynApiClient {
 
   inspectImport(payload: ImportInspectRequest): Promise<ImportInspect> {
     return this.request(API_PATHS.importsInspect, importInspectSchema, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  previewCharacters(payload: CharacterPreviewRequest): Promise<CharacterPreview> {
+    return this.request(API_PATHS.charactersPreview, characterPreviewSchema, {
       method: "POST",
       body: JSON.stringify(payload),
     });

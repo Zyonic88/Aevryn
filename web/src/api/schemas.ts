@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 export const healthSchema = z.object({
   status: z.string(),
@@ -84,9 +84,40 @@ export const importInspectSchema = z.object({
   first_evidence_anchors: z.array(evidenceAnchorPreviewSchema),
 });
 
+export const outputSectionSchema = z.object({
+  title: z.string(),
+  items: z.array(z.string()),
+});
+
+export const characterProfileSchema = z.object({
+  character_id: z.string(),
+  display_name: z.string(),
+  subtitle: z.string(),
+  status: outputSectionSchema,
+  current_goal: outputSectionSchema,
+  current_equipment: outputSectionSchema,
+  current_abilities: outputSectionSchema,
+  current_assets: outputSectionSchema,
+  territory: outputSectionSchema,
+  relationships: outputSectionSchema,
+  current_limitations: outputSectionSchema,
+  recent_changes: outputSectionSchema,
+  evidence_summary: z.string(),
+});
+
+export const characterPreviewSchema = z.object({
+  source_id: z.string(),
+  source_format: z.string(),
+  scene_id: z.string(),
+  character_profiles: z.array(characterProfileSchema),
+});
+
 export type ApiHealth = z.infer<typeof healthSchema>;
 export type ApiCapabilities = z.infer<typeof capabilitiesSchema>;
 export type SourceFormats = z.infer<typeof sourceFormatsSchema>;
 export type ImportInspect = z.infer<typeof importInspectSchema>;
+export type OutputSection = z.infer<typeof outputSectionSchema>;
+export type CharacterProfile = z.infer<typeof characterProfileSchema>;
+export type CharacterPreview = z.infer<typeof characterPreviewSchema>;
 export type AuthSession = z.infer<typeof authSessionSchema>;
 export type AuthUser = z.infer<typeof authMeSchema>;

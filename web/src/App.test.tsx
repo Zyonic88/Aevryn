@@ -91,6 +91,29 @@ const importInspectPayload = {
     },
   ],
 };
+const characterPreviewPayload = {
+  source_id: "source_alpha",
+  source_format: "txt",
+  scene_id: "source_alpha_chapter_001_scene_001",
+  character_profiles: [
+    {
+      character_id: "character_mark",
+      display_name: "Mark",
+      subtitle: "Known character",
+      status: { title: "Status", items: ["Alive"] },
+      current_goal: { title: "Current Goal", items: ["Find the fortress"] },
+      current_equipment: { title: "Current Equipment", items: ["Rusty Dagger"] },
+      current_abilities: { title: "Current Abilities", items: ["Tracking"] },
+      current_assets: { title: "Current Assets", items: [] },
+      territory: { title: "Territory", items: [] },
+      relationships: { title: "Relationships", items: ["Luna - Ally"] },
+      current_limitations: { title: "Current Limitations", items: ["Injured arm"] },
+      recent_changes: { title: "Recent Changes", items: ["Equipped Rusty Dagger"] },
+      evidence_summary: "3 verified facts",
+    },
+  ],
+};
+
 const projectAlpha = {
   id: "project_alpha",
   name: "Alpha",
@@ -120,6 +143,9 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(API_PATHS.importsInspect)) {
           return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
+        }
+        if (url.endsWith(API_PATHS.charactersPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(characterPreviewPayload)));
         }
         if (url.endsWith(API_PATHS.authLogin) || url.endsWith(API_PATHS.authRegister)) {
           return Promise.resolve(new Response(JSON.stringify(session)));
@@ -534,6 +560,142 @@ describe("App shell routing", () => {
     expect(screen.getByText("Showing first 6 of 8 scenes.")).toBeInTheDocument();
     expect(screen.getByText("source_alpha_chapter_001_scene_001")).toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_007_scene_001")).not.toBeInTheDocument();
+  });
+
+  it("previews character profiles from the characters workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/characters"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.clear(screen.getByLabelText("Character IDs"));
+    await user.type(screen.getByLabelText("Character IDs"), "character_mark");
+    await user.click(screen.getByRole("button", { name: "Preview characters" }));
+
+    expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Mark" })).toBeInTheDocument();
+    expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
+    expect(screen.getByText("Luna - Ally")).toBeInTheDocument();
+    expect(screen.getByText("3 verified facts")).toBeInTheDocument();
+  });
+
+  it("shows invalid AI JSON errors on the characters workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/characters"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("AI response JSON"));
+    await user.type(screen.getByLabelText("AI response JSON"), "not json");
+    await user.click(screen.getByRole("button", { name: "Preview characters" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+  });
+
+  it("renders an empty state when the character preview has no profiles", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.charactersPreview)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...characterPreviewPayload,
+                character_profiles: [],
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/characters"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Characters" });
+    await user.click(screen.getByRole("button", { name: "Preview characters" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "No character profiles" }),
+    ).toBeInTheDocument();
+  });
+
+  it("clears stale character profiles when a later preview fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let failPreview = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.charactersPreview)) {
+          if (failPreview) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: "character_preview_failed",
+                  detail: "Unknown character: character_missing",
+                }),
+                { status: 400 },
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify(characterPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/characters"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Characters" });
+    await user.click(screen.getByRole("button", { name: "Preview characters" }));
+    expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
+
+    failPreview = true;
+    await user.clear(screen.getByLabelText("Character IDs"));
+    await user.type(screen.getByLabelText("Character IDs"), "character_missing");
+    await user.click(screen.getByRole("button", { name: "Preview characters" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Unknown character: character_missing",
+    );
+    expect(screen.queryByRole("heading", { name: "Character Profiles" })).not.toBeInTheDocument();
   });
 
   it("clears stale import structure when a later inspection fails", async () => {

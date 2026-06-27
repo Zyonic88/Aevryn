@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { AevrynApiClient, API_PATHS } from "./client";
 
@@ -58,6 +58,29 @@ const importInspectPayload = {
   ],
 };
 
+const characterPreviewPayload = {
+  source_id: "api_demo",
+  source_format: "txt",
+  scene_id: "api_demo_chapter_001_scene_001",
+  character_profiles: [
+    {
+      character_id: "character_mark",
+      display_name: "Mark",
+      subtitle: "Known character",
+      status: { title: "Status", items: ["Alive"] },
+      current_goal: { title: "Current Goal", items: ["Unknown"] },
+      current_equipment: { title: "Current Equipment", items: ["Rusty Dagger"] },
+      current_abilities: { title: "Current Abilities", items: [] },
+      current_assets: { title: "Current Assets", items: [] },
+      territory: { title: "Territory", items: [] },
+      relationships: { title: "Relationships", items: [] },
+      current_limitations: { title: "Current Limitations", items: [] },
+      recent_changes: { title: "Recent Changes", items: ["Weapon established"] },
+      evidence_summary: "1 verified fact",
+    },
+  ],
+};
+
 describe("AevrynApiClient", () => {
   it("validates successful API responses", async () => {
     const fetchMock = vi
@@ -109,6 +132,31 @@ describe("AevrynApiClient", () => {
     const [, init] = fetchMock.mock.calls[0];
     const headers = init.headers as Headers;
     expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.importsInspect}`);
+    expect(init.method).toBe("POST");
+    expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends JSON requests for character previews", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(characterPreviewPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.previewCharacters({
+        source_id: "api_demo",
+        filename: "chapter.txt",
+        title: "API Demo",
+        content_base64: "Q2hhcHRlciAx",
+        ai_response: { entities: [] },
+        character_ids: ["character_mark"],
+      }),
+    ).resolves.toEqual(characterPreviewPayload);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = init.headers as Headers;
+    expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.charactersPreview}`);
     expect(init.method).toBe("POST");
     expect(headers.get("Content-Type")).toBe("application/json");
   });
