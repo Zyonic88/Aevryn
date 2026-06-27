@@ -676,7 +676,7 @@ def _platform_limits() -> tuple[str, ...]:
         "Stateless preview routes only.",
         "No production Project Database configured yet.",
         "Optional API-key protection for workflow routes.",
-        "No background worker queue yet.",
+        "No production background worker queue configured yet.",
         "No website or frontend runtime yet.",
     )
 

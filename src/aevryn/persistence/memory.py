@@ -179,6 +179,10 @@ class InMemoryProjectRepository:
         self.get_project(user_id=user_id, project_id=run.project_id)
         return run
 
+    def get_engine_run_for_worker(self, run_id: str) -> EngineRunRecord:
+        """Return an engine run for trusted background worker execution."""
+        return self._get_required(self._runs, run_id, "engine run")
+
     def list_engine_runs_for_project(
         self,
         user_id: str,

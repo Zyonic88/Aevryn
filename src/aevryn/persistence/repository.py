@@ -83,6 +83,9 @@ class ProjectRepository(Protocol):
     def get_engine_run(self, user_id: str, run_id: str) -> EngineRunRecord:
         """Return an engine run accessible to a user."""
 
+    def get_engine_run_for_worker(self, run_id: str) -> EngineRunRecord:
+        """Return an engine run for trusted background worker execution."""
+
     def list_engine_runs_for_project(
         self,
         user_id: str,

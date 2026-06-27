@@ -1,4 +1,4 @@
-# Aevryn Development Roadmap
+﻿# Aevryn Development Roadmap
 
 > Built by **Aetherra Labs**
 
@@ -487,3 +487,4 @@ The Canon Engine will always remain the foundation of every future capability.
 Every future system must consume Canon.
 
 No future system may replace Canon.
+
