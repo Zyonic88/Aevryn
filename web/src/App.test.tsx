@@ -150,6 +150,45 @@ const scenePreviewPayload = {
   },
 };
 
+const promptPreviewPayload = {
+  source_id: "source_alpha",
+  source_format: "txt",
+  scene_id: "source_alpha_chapter_001_scene_001",
+  production_pack: {
+    scene: scenePreviewPayload.scene_sheet,
+    image_prompt: {
+      title: "Image Prompt",
+      items: [
+        "Generate this image using only accepted Aevryn canon.",
+        "Scene Summary: Mark prepares in the hangar.",
+      ],
+    },
+    narration_prompt: {
+      title: "Narration Prompt",
+      items: ["Narrate using only accepted canon facts."],
+    },
+    camera_prompt: {
+      title: "Camera Prompt",
+      items: ["Describe camera framing without inventing new canon."],
+    },
+    animation_prompt: {
+      title: "Animation Prompt",
+      items: ["Describe motion using only accepted scene facts."],
+    },
+  },
+};
+
+const exportPreviewPayload = {
+  source_id: "source_alpha",
+  source_format: "txt",
+  scene_id: "source_alpha_chapter_001_scene_001",
+  export_kind: "production_pack",
+  export_format: "markdown",
+  filename: "source_alpha_production_pack.md",
+  content_type: "text/markdown; charset=utf-8",
+  content: "# Scene 7\n\n## Image Prompt\nGenerate this image using only accepted Aevryn canon.",
+};
+
 const continuityPreviewPayload = {
   source_id: "source_alpha",
   source_format: "txt",
@@ -262,6 +301,12 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(API_PATHS.scenesPreview)) {
           return Promise.resolve(new Response(JSON.stringify(scenePreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.promptsPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(promptPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.exportsPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(exportPreviewPayload)));
         }
         if (url.endsWith(API_PATHS.continuityPreview)) {
           return Promise.resolve(new Response(JSON.stringify(continuityPreviewPayload)));
@@ -926,6 +971,245 @@ describe("App shell routing", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText(/source_alpha_anchor_002/u)).toBeInTheDocument();
+  });
+
+  it("previews production packs from the prompt packs workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/prompts"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Prompt Packs" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.clear(screen.getByLabelText("Character IDs"));
+    await user.type(screen.getByLabelText("Character IDs"), "character_mark");
+    await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
+
+    expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Image Prompt" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Narration Prompt" })).toBeInTheDocument();
+    expect(screen.getByText("Generate this image using only accepted Aevryn canon.")).toBeInTheDocument();
+    expect(screen.getByText("Scene Summary: Mark prepares in the hangar.")).toBeInTheDocument();
+    expect(screen.getByText("Chapter 1 / source_alpha_chapter_001_scene_001")).toBeInTheDocument();
+    expect(screen.getByText("1 verified evidence reference")).toBeInTheDocument();
+  });
+
+  it("renders unknown prompt sections when the production pack has empty sections", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.promptsPreview)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...promptPreviewPayload,
+                production_pack: {
+                  ...promptPreviewPayload.production_pack,
+                  image_prompt: {
+                    ...promptPreviewPayload.production_pack.image_prompt,
+                    items: [],
+                  },
+                },
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/prompts"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Prompt Packs" });
+    await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
+
+    expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
+  });
+
+  it("clears stale production packs when local AI JSON validation fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/prompts"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Prompt Packs" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
+    expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("AI response JSON"));
+    await user.type(screen.getByLabelText("AI response JSON"), "not json");
+    await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+    expect(screen.queryByRole("heading", { name: "Production Pack" })).not.toBeInTheDocument();
+  });
+
+  it("clears stale production packs when a later preview fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let failPreview = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.promptsPreview)) {
+          if (failPreview) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: "prompt_preview_failed",
+                  detail: "Prompt preview failed.",
+                }),
+                { status: 400 },
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify(promptPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/prompts"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Prompt Packs" });
+    await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
+    expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
+
+    failPreview = true;
+    await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Prompt preview failed.");
+    expect(screen.queryByRole("heading", { name: "Production Pack" })).not.toBeInTheDocument();
+  });
+
+  it("previews serialized exports from the exports workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/exports"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Exports" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.selectOptions(screen.getByLabelText("Export"), "production_pack:markdown");
+    await user.clear(screen.getByLabelText("Character IDs"));
+    await user.type(screen.getByLabelText("Character IDs"), "character_mark");
+    await user.click(screen.getByRole("button", { name: "Preview export" }));
+
+    expect(await screen.findByRole("heading", { name: "source_alpha_production_pack.md" })).toBeInTheDocument();
+    expect(screen.getByText("production_pack")).toBeInTheDocument();
+    expect(screen.getByText("markdown")).toBeInTheDocument();
+    expect(screen.getByText("text/markdown; charset=utf-8")).toBeInTheDocument();
+    expect(screen.getByText(/Generate this image using only accepted Aevryn canon/u)).toBeInTheDocument();
+  });
+
+  it("clears stale export previews when local AI JSON validation fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/exports"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Exports" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Preview export" }));
+    expect(await screen.findByRole("heading", { name: "source_alpha_production_pack.md" })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("AI response JSON"));
+    await user.type(screen.getByLabelText("AI response JSON"), "not json");
+    await user.click(screen.getByRole("button", { name: "Preview export" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+    expect(screen.queryByRole("heading", { name: "source_alpha_production_pack.md" })).not.toBeInTheDocument();
+  });
+
+  it("clears stale export previews when a later preview fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let failPreview = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.exportsPreview)) {
+          if (failPreview) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: "export_preview_failed",
+                  detail: "Export preview failed.",
+                }),
+                { status: 400 },
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify(exportPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/exports"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Exports" });
+    await user.click(screen.getByRole("button", { name: "Preview export" }));
+    expect(await screen.findByRole("heading", { name: "source_alpha_production_pack.md" })).toBeInTheDocument();
+
+    failPreview = true;
+    await user.click(screen.getByRole("button", { name: "Preview export" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Export preview failed.");
+    expect(screen.queryByRole("heading", { name: "source_alpha_production_pack.md" })).not.toBeInTheDocument();
   });
 
   it("renders an empty state when the continuity preview has no scenes", async () => {

@@ -18,9 +18,20 @@ export type ScenePreviewPayload = BasePreviewPayload & {
   character_ids: string[];
 };
 
+export type PromptPreviewPayload = BasePreviewPayload & {
+  character_ids: string[];
+};
+
 export type ContinuityPreviewPayload = BasePreviewPayload;
 
 export type WorldPreviewPayload = BasePreviewPayload & {
+  world_entity_ids: string[];
+};
+
+export type ExportPreviewPayload = BasePreviewPayload & {
+  export_kind: string;
+  export_format: string;
+  character_ids: string[];
   world_entity_ids: string[];
 };
 
@@ -45,6 +56,13 @@ export type ScenePreviewInput = PreviewInput & {
   characterIdsText: string;
 };
 
+export type ExportPreviewInput = PreviewInput & {
+  characterIdsText: string;
+  exportFormat: string;
+  exportKind: string;
+  worldEntityIdsText: string;
+};
+
 export function buildCharacterPreviewPayload(
   input: CharacterPreviewInput,
 ): CharacterPreviewPayload {
@@ -65,6 +83,13 @@ export function buildScenePreviewPayload(input: ScenePreviewInput): ScenePreview
   };
 }
 
+export function buildPromptPreviewPayload(input: ScenePreviewInput): PromptPreviewPayload {
+  return {
+    ...buildBasePreviewPayload(input),
+    character_ids: parseIdList(input.characterIdsText),
+  };
+}
+
 export function buildContinuityPreviewPayload(
   input: PreviewInput,
 ): ContinuityPreviewPayload {
@@ -74,6 +99,16 @@ export function buildContinuityPreviewPayload(
 export function buildWorldPreviewPayload(input: WorldPreviewInput): WorldPreviewPayload {
   return {
     ...buildBasePreviewPayload(input),
+    world_entity_ids: parseIdList(input.worldEntityIdsText),
+  };
+}
+
+export function buildExportPreviewPayload(input: ExportPreviewInput): ExportPreviewPayload {
+  return {
+    ...buildBasePreviewPayload(input),
+    export_kind: normalizedRequiredToken(input.exportKind, "Export kind"),
+    export_format: normalizedRequiredToken(input.exportFormat, "Export format"),
+    character_ids: parseIdList(input.characterIdsText),
     world_entity_ids: parseIdList(input.worldEntityIdsText),
   };
 }
@@ -105,6 +140,15 @@ export function canBuildScenePreviewPayload(input: ScenePreviewInput): boolean {
   }
 }
 
+export function canBuildPromptPreviewPayload(input: ScenePreviewInput): boolean {
+  try {
+    buildPromptPreviewPayload(input);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function canBuildContinuityPreviewPayload(input: PreviewInput): boolean {
   try {
     buildContinuityPreviewPayload(input);
@@ -123,6 +167,15 @@ export function canBuildWorldPreviewPayload(input: WorldPreviewInput): boolean {
   }
 }
 
+export function canBuildExportPreviewPayload(input: ExportPreviewInput): boolean {
+  try {
+    buildExportPreviewPayload(input);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function canSubmitCharacterPreviewInput(input: CharacterPreviewInput): boolean {
   return canSubmitPreviewInput(input);
 }
@@ -135,12 +188,24 @@ export function canSubmitScenePreviewInput(input: ScenePreviewInput): boolean {
   return canSubmitPreviewInput(input);
 }
 
+export function canSubmitPromptPreviewInput(input: ScenePreviewInput): boolean {
+  return canSubmitPreviewInput(input);
+}
+
 export function canSubmitContinuityPreviewInput(input: PreviewInput): boolean {
   return canSubmitPreviewInput(input);
 }
 
 export function canSubmitWorldPreviewInput(input: WorldPreviewInput): boolean {
   return canSubmitPreviewInput(input);
+}
+
+export function canSubmitExportPreviewInput(input: ExportPreviewInput): boolean {
+  return (
+    canSubmitPreviewInput(input) &&
+    input.exportKind.trim().length > 0 &&
+    input.exportFormat.trim().length > 0
+  );
 }
 
 function buildBasePreviewPayload(input: PreviewInput): BasePreviewPayload {
@@ -179,4 +244,12 @@ function parseIdList(value: string): string[] {
     }
   }
   return uniqueIds;
+}
+
+function normalizedRequiredToken(value: string, label: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    throw new Error(`${label} is required.`);
+  }
+  return normalized;
 }

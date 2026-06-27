@@ -4,7 +4,9 @@ import { EmptyState } from "../components/Feedback";
 import { readProjects } from "../projects/projectStore";
 import { CharacterWorkspaceView } from "./CharacterWorkspaceView";
 import { ContinuityWorkspaceView } from "./ContinuityWorkspaceView";
+import { ExportWorkspaceView } from "./ExportWorkspaceView";
 import { ImportWorkspaceView } from "./ImportWorkspaceView";
+import { PromptWorkspaceView } from "./PromptWorkspaceView";
 import { SceneWorkspaceView } from "./SceneWorkspaceView";
 import { TimelineWorkspaceView } from "./TimelineWorkspaceView";
 import { WorldWorkspaceView } from "./WorldWorkspaceView";
@@ -87,6 +89,12 @@ function WorkspaceTabContent({
   }
   if (tabId === "continuity") {
     return <ContinuityWorkspaceView project={project} />;
+  }
+  if (tabId === "prompts") {
+    return <PromptWorkspaceView project={project} />;
+  }
+  if (tabId === "exports") {
+    return <ExportWorkspaceView project={project} />;
   }
 
   return <WorkspacePlaceholder tabId={tabId} label={label} />;

@@ -175,7 +175,19 @@ Required later:
 * Continuity preview errors and empty states are visible and accessible
 * Failed follow-up continuity previews clear stale continuity report results
 * Prompt Pack view
+* Prompt Pack previews through the Prompt API
+* Production pack sections rendered from API view models
+* Prompt Pack preview input validates AI response JSON before submission
+* Prompt Pack preview errors and empty prompt sections are visible and accessible
+* Failed follow-up Prompt Pack previews clear stale production pack results
 * Export request UI
+* Export previews through the Export API
+* Export kind and format options match supported API preview combinations
+* Export preview payloads preserve UTF-8 source text and selected output IDs
+* Serialized export content, filename, and content type render from API responses
+* Export preview input validates AI response JSON before submission
+* Export preview errors are visible and accessible
+* Failed follow-up export previews clear stale serialized content
 
 ---
 

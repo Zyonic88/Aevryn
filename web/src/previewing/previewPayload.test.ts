@@ -3,16 +3,22 @@ import { describe, expect, it } from "vitest";
 import {
   buildCharacterPreviewPayload,
   buildContinuityPreviewPayload,
+  buildExportPreviewPayload,
+  buildPromptPreviewPayload,
   buildScenePreviewPayload,
   buildTimelinePreviewPayload,
   buildWorldPreviewPayload,
   canBuildCharacterPreviewPayload,
   canBuildContinuityPreviewPayload,
+  canBuildExportPreviewPayload,
+  canBuildPromptPreviewPayload,
   canBuildScenePreviewPayload,
   canBuildTimelinePreviewPayload,
   canBuildWorldPreviewPayload,
   canSubmitCharacterPreviewInput,
   canSubmitContinuityPreviewInput,
+  canSubmitExportPreviewInput,
+  canSubmitPromptPreviewInput,
   canSubmitScenePreviewInput,
   canSubmitTimelinePreviewInput,
   canSubmitWorldPreviewInput,
@@ -91,6 +97,40 @@ describe("preview payload helpers", () => {
     });
   });
 
+  it("builds prompt preview payloads", () => {
+    const payload = buildPromptPreviewPayload(validInput);
+
+    expect(payload).toMatchObject({
+      source_id: "source_demo",
+      filename: "chapter.txt",
+      title: "Demo",
+      ai_response: { entities: [] },
+      character_ids: ["character_mark", "character_luna"],
+      scene_id: "source_demo_chapter_001_scene_001",
+    });
+  });
+
+  it("builds export preview payloads", () => {
+    const payload = buildExportPreviewPayload({
+      ...validInput,
+      exportKind: " Production_Pack ",
+      exportFormat: " Markdown ",
+      worldEntityIdsText: "location_hangar item_sword",
+    });
+
+    expect(payload).toMatchObject({
+      source_id: "source_demo",
+      filename: "chapter.txt",
+      title: "Demo",
+      ai_response: { entities: [] },
+      export_kind: "production_pack",
+      export_format: "markdown",
+      character_ids: ["character_mark", "character_luna"],
+      world_entity_ids: ["location_hangar", "item_sword"],
+      scene_id: "source_demo_chapter_001_scene_001",
+    });
+  });
+
   it("builds continuity preview payloads", () => {
     const payload = buildContinuityPreviewPayload(validInput);
 
@@ -143,6 +183,18 @@ describe("preview payload helpers", () => {
       false,
     );
     expect(canBuildScenePreviewPayload({ ...validInput, aiResponseText: "not json" })).toBe(false);
+    expect(canBuildPromptPreviewPayload({ ...validInput, aiResponseText: "not json" })).toBe(
+      false,
+    );
+    expect(
+      canBuildExportPreviewPayload({
+        ...validInput,
+        exportKind: "production_pack",
+        exportFormat: "markdown",
+        worldEntityIdsText: "",
+        aiResponseText: "not json",
+      }),
+    ).toBe(false);
     expect(canBuildContinuityPreviewPayload({ ...validInput, aiResponseText: "not json" })).toBe(
       false,
     );
@@ -164,6 +216,16 @@ describe("preview payload helpers", () => {
       true,
     );
     expect(canSubmitScenePreviewInput({ ...validInput, aiResponseText: "not json" })).toBe(true);
+    expect(canSubmitPromptPreviewInput({ ...validInput, aiResponseText: "not json" })).toBe(true);
+    expect(
+      canSubmitExportPreviewInput({
+        ...validInput,
+        exportKind: "production_pack",
+        exportFormat: "markdown",
+        worldEntityIdsText: "",
+        aiResponseText: "not json",
+      }),
+    ).toBe(true);
     expect(canSubmitContinuityPreviewInput({ ...validInput, aiResponseText: "not json" })).toBe(
       true,
     );

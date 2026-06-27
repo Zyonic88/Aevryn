@@ -62,11 +62,10 @@ Recent completed V2 work:
 - Timeline workspace view completed
 - Scene workspace view completed
 - Continuity workspace view completed
+- Prompt Pack workspace view completed
+- Export request UI completed
 
-Next expected Phase 5B targets:
-
-- Prompt Pack view
-- Export request UI
+Phase 5B engine output views are implemented. Harden before moving to the next phase.
 
 ---
 

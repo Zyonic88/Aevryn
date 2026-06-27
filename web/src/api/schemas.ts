@@ -142,6 +142,32 @@ export const scenePreviewSchema = z.object({
   scene_sheet: sceneSheetSchema,
 });
 
+export const productionPackSchema = z.object({
+  scene: sceneSheetSchema,
+  image_prompt: outputSectionSchema,
+  narration_prompt: outputSectionSchema,
+  camera_prompt: outputSectionSchema,
+  animation_prompt: outputSectionSchema,
+});
+
+export const promptPreviewSchema = z.object({
+  source_id: z.string(),
+  source_format: z.string(),
+  scene_id: z.string(),
+  production_pack: productionPackSchema,
+});
+
+export const exportPreviewSchema = z.object({
+  source_id: z.string(),
+  source_format: z.string(),
+  scene_id: z.string(),
+  export_kind: z.string(),
+  export_format: z.string(),
+  filename: z.string(),
+  content_type: z.string(),
+  content: z.string(),
+});
+
 export const continuityRecordSchema = z.object({
   record_id: z.string(),
   record_type: z.string(),
@@ -194,6 +220,9 @@ export type CharacterPreview = z.infer<typeof characterPreviewSchema>;
 export type TimelinePreview = z.infer<typeof timelinePreviewSchema>;
 export type SceneSheet = z.infer<typeof sceneSheetSchema>;
 export type ScenePreview = z.infer<typeof scenePreviewSchema>;
+export type ProductionPack = z.infer<typeof productionPackSchema>;
+export type PromptPreview = z.infer<typeof promptPreviewSchema>;
+export type ExportPreview = z.infer<typeof exportPreviewSchema>;
 export type ContinuityRecord = z.infer<typeof continuityRecordSchema>;
 export type ContinuityScene = z.infer<typeof continuitySceneSchema>;
 export type ContinuityReport = z.infer<typeof continuityReportSchema>;

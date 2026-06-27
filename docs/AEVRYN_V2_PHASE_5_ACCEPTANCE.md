@@ -112,7 +112,7 @@ Aevryn Web Alpha Shell is accepted when:
 
 Phase 5B begins only after Phase 5A is hardened.
 
-Phase 5B accepts API-backed engine output views one slice at a time. The Import inspection, Character, World, Timeline, Scene, and Continuity output views are now implemented as the first slices.
+Phase 5B accepts API-backed engine output views one slice at a time. The Import inspection, Character, World, Timeline, Scene, Continuity, Prompt Pack, and Export request views are now implemented.
 
 Required later:
 
@@ -174,7 +174,24 @@ Required later:
 * Continuity view renders empty report scenes as an empty state
 * Failed follow-up continuity previews clear previous successful continuity report results
 * Prompt Pack output view
+* Prompt Pack view calls `/v2/prompts/preview` through the API client
+* Prompt Pack view renders API production pack view models
+* Prompt Pack preview payload construction preserves UTF-8 source text
+* Prompt Pack preview payload construction validates AI response JSON before submission
+* Prompt Pack view does not reconstruct Canon, Scene Analysis, Prompt, or Presentation data in React
+* Prompt Pack view shows invalid AI JSON as a visible form error
+* Prompt Pack view renders empty prompt sections as Unknown
+* Failed follow-up Prompt Pack previews clear previous successful production pack results
 * Export request UI
+* Export view calls `/v2/exports/preview` through the API client
+* Export view renders API filename, content type, export metadata, and serialized content
+* Export preview payload construction preserves UTF-8 source text
+* Export preview payload construction validates AI response JSON before submission
+* Export view sends selected export kind and format through the API contract
+* Export view can send optional scene, character, and world entity IDs
+* Export view does not serialize Character, Scene, Prompt, World, Continuity, or Presentation data in React
+* Export view shows invalid AI JSON as a visible form error
+* Failed follow-up export previews clear previous successful serialized export results
 
 ---
 

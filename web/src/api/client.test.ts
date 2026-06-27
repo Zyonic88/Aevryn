@@ -140,6 +140,42 @@ const scenePreviewPayload = {
   },
 };
 
+const promptPreviewPayload = {
+  source_id: "api_demo",
+  source_format: "txt",
+  scene_id: "api_demo_chapter_001_scene_001",
+  production_pack: {
+    scene: scenePreviewPayload.scene_sheet,
+    image_prompt: {
+      title: "Image Prompt",
+      items: ["Generate this image using only accepted Aevryn canon."],
+    },
+    narration_prompt: {
+      title: "Narration Prompt",
+      items: ["Narrate using only accepted canon facts."],
+    },
+    camera_prompt: {
+      title: "Camera Prompt",
+      items: ["Describe camera framing without inventing new canon."],
+    },
+    animation_prompt: {
+      title: "Animation Prompt",
+      items: ["Describe motion using only accepted scene facts."],
+    },
+  },
+};
+
+const exportPreviewPayload = {
+  source_id: "api_demo",
+  source_format: "txt",
+  scene_id: "api_demo_chapter_001_scene_001",
+  export_kind: "production_pack",
+  export_format: "markdown",
+  filename: "api_demo_production_pack.md",
+  content_type: "text/markdown; charset=utf-8",
+  content: "# Scene 1\n\n## Image Prompt\nGenerate this image using only accepted Aevryn canon.",
+};
+
 const continuityPreviewPayload = {
   source_id: "api_demo",
   source_format: "txt",
@@ -316,6 +352,58 @@ describe("AevrynApiClient", () => {
     const [, init] = fetchMock.mock.calls[0];
     const headers = init.headers as Headers;
     expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.scenesPreview}`);
+    expect(init.method).toBe("POST");
+    expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends JSON requests for prompt previews", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(promptPreviewPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.previewPrompts({
+        source_id: "api_demo",
+        filename: "chapter.txt",
+        title: "API Demo",
+        content_base64: "Q2hhcHRlciAx",
+        ai_response: { entities: [] },
+        character_ids: ["character_mark"],
+      }),
+    ).resolves.toEqual(promptPreviewPayload);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = init.headers as Headers;
+    expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.promptsPreview}`);
+    expect(init.method).toBe("POST");
+    expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends JSON requests for export previews", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(exportPreviewPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.previewExport({
+        source_id: "api_demo",
+        filename: "chapter.txt",
+        title: "API Demo",
+        content_base64: "Q2hhcHRlciAx",
+        ai_response: { entities: [] },
+        character_ids: ["character_mark"],
+        export_kind: "production_pack",
+        export_format: "markdown",
+      }),
+    ).resolves.toEqual(exportPreviewPayload);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = init.headers as Headers;
+    expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.exportsPreview}`);
     expect(init.method).toBe("POST");
     expect(headers.get("Content-Type")).toBe("application/json");
   });

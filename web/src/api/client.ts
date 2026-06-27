@@ -6,6 +6,8 @@ import {
   capabilitiesSchema,
   characterPreviewSchema,
   continuityPreviewSchema,
+  exportPreviewSchema,
+  promptPreviewSchema,
   scenePreviewSchema,
   timelinePreviewSchema,
   worldPreviewSchema,
@@ -18,6 +20,8 @@ import {
   type AuthUser,
   type CharacterPreview,
   type ContinuityPreview,
+  type ExportPreview,
+  type PromptPreview,
   type ScenePreview,
   type TimelinePreview,
   type WorldPreview,
@@ -32,6 +36,8 @@ export const API_PATHS = {
   importsInspect: "/v2/imports/inspect",
   charactersPreview: "/v2/characters/preview",
   continuityPreview: "/v2/continuity/preview",
+  exportsPreview: "/v2/exports/preview",
+  promptsPreview: "/v2/prompts/preview",
   scenesPreview: "/v2/scenes/preview",
   timelinePreview: "/v2/timeline/preview",
   worldPreview: "/v2/world/preview",
@@ -87,6 +93,12 @@ export type ScenePreviewRequest = ImportInspectRequest & {
   scene_id?: string;
 };
 
+export type PromptPreviewRequest = ImportInspectRequest & {
+  ai_response: unknown;
+  character_ids?: string[];
+  scene_id?: string;
+};
+
 export type ContinuityPreviewRequest = ImportInspectRequest & {
   ai_response: unknown;
   scene_id?: string;
@@ -96,6 +108,15 @@ export type WorldPreviewRequest = ImportInspectRequest & {
   ai_response: unknown;
   world_entity_ids?: string[];
   scene_id?: string;
+};
+
+export type ExportPreviewRequest = ImportInspectRequest & {
+  ai_response: unknown;
+  export_kind: string;
+  export_format: string;
+  character_ids?: string[];
+  scene_id?: string;
+  world_entity_ids?: string[];
 };
 
 export class AevrynApiClient {
@@ -145,6 +166,13 @@ export class AevrynApiClient {
     });
   }
 
+  previewPrompts(payload: PromptPreviewRequest): Promise<PromptPreview> {
+    return this.request(API_PATHS.promptsPreview, promptPreviewSchema, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
   previewContinuity(payload: ContinuityPreviewRequest): Promise<ContinuityPreview> {
     return this.request(API_PATHS.continuityPreview, continuityPreviewSchema, {
       method: "POST",
@@ -154,6 +182,13 @@ export class AevrynApiClient {
 
   previewWorld(payload: WorldPreviewRequest): Promise<WorldPreview> {
     return this.request(API_PATHS.worldPreview, worldPreviewSchema, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  previewExport(payload: ExportPreviewRequest): Promise<ExportPreview> {
+    return this.request(API_PATHS.exportsPreview, exportPreviewSchema, {
       method: "POST",
       body: JSON.stringify(payload),
     });
