@@ -42,6 +42,9 @@ class ProjectRepository(Protocol):
     def get_user(self, user_id: str) -> UserRecord:
         """Return a persisted user or raise if missing."""
 
+    def delete_user_for_auth_rollback(self, user_id: str) -> None:
+        """Delete a user created by a failed authentication registration."""
+
     def create_project(self, project: ProjectRecord) -> None:
         """Persist a project owned by an existing user."""
 

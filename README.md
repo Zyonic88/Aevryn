@@ -1,4 +1,4 @@
-# Aevryn
+﻿# Aevryn
 
 > **AI-Powered Story Continuity Engine**
 >
@@ -66,7 +66,7 @@ Final V1 acceptance validation:
 
 * V1 Engine Complete
 * Final V1 acceptance sweep passed
-* 644 automated tests passing
+* 664 automated tests passing
 * Deterministic rebuild validation
 * Cross-genre validation
 * 8-genre validation corpus
@@ -248,6 +248,7 @@ The long-term goal is to allow creators to upload an entire story and immediatel
 ---
 
 Built by Aetherra Labs.
+
 
 
 

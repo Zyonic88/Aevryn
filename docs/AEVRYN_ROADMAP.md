@@ -1,4 +1,4 @@
-﻿# Aevryn Development Roadmap
+# Aevryn Development Roadmap
 
 > Built by **Aetherra Labs**
 
@@ -223,6 +223,10 @@ Possible worker systems:
 ---
 
 ## Phase 4 - Authentication
+
+System authority is defined in `docs/AEVRYN_AUTHENTICATION.md`.
+
+Acceptance criteria are defined in `docs/AEVRYN_V2_PHASE_4_ACCEPTANCE.md`.
 
 Keep authentication simple for Version 2.
 

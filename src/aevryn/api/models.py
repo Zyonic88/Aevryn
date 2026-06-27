@@ -93,6 +93,88 @@ class CapabilitiesResponse(BaseModel):
     platform_limits: tuple[str, ...]
 
 
+class AuthRegisterRequest(BaseModel):
+    """Request to register a platform user."""
+
+    model_config = ConfigDict(frozen=True)
+
+    user_id: str = Field(min_length=1)
+    email: str = Field(min_length=1)
+    display_name: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+    now: str = Field(min_length=1)
+
+
+class AuthLoginRequest(BaseModel):
+    """Request to log in a platform user."""
+
+    model_config = ConfigDict(frozen=True)
+
+    email: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+    now: str = Field(min_length=1)
+
+
+class AuthPasswordResetRequest(BaseModel):
+    """Request to issue a password reset token."""
+
+    model_config = ConfigDict(frozen=True)
+
+    email: str = Field(min_length=1)
+    reset_id: str = Field(min_length=1)
+    now: str = Field(min_length=1)
+
+
+class AuthPasswordResetCompleteRequest(BaseModel):
+    """Request to complete a password reset."""
+
+    model_config = ConfigDict(frozen=True)
+
+    reset_token: str = Field(min_length=1)
+    new_password: str = Field(min_length=1)
+    now: str = Field(min_length=1)
+
+
+class AuthSessionResponse(BaseModel):
+    """Authenticated user session response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    user_id: str
+    email: str
+    display_name: str
+    session_token: str
+    expires_at: str
+
+
+class AuthPasswordResetResponse(BaseModel):
+    """Password reset token response for delivery by the platform."""
+
+    model_config = ConfigDict(frozen=True)
+
+    user_id: str
+    reset_token: str
+    expires_at: str
+
+
+class AuthMeResponse(BaseModel):
+    """Current authenticated user response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    user_id: str
+    email: str
+    display_name: str
+
+
+class AuthMessageResponse(BaseModel):
+    """Simple authentication action response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    status: str
+
+
 class ImportInspectRequest(BaseModel):
     """Request to inspect imported source structure without storing a project."""
 

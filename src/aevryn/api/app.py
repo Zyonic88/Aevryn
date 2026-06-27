@@ -22,6 +22,14 @@ from aevryn.api.models import (
     ApiIndexResponse,
     ApiLink,
     ApiRouteCapability,
+    AuthLoginRequest,
+    AuthMeResponse,
+    AuthMessageResponse,
+    AuthPasswordResetCompleteRequest,
+    AuthPasswordResetRequest,
+    AuthPasswordResetResponse,
+    AuthRegisterRequest,
+    AuthSessionResponse,
     CanonPreviewRequest,
     CanonPreviewResponse,
     CapabilitiesResponse,
@@ -66,6 +74,14 @@ from aevryn.api.models import (
     WorldPreviewResponse,
     WorldSheetOutput,
 )
+from aevryn.auth import (
+    AuthenticationError,
+    AuthenticationService,
+    InvalidCredentialsError,
+    InvalidResetTokenError,
+    InvalidSessionError,
+    PasswordPolicyError,
+)
 from aevryn.export import ExportEngine
 from aevryn.extraction import EvidenceBoundedAIExtractor, StaticAIExtractionClient
 from aevryn.importing import ImportedSource, SourceFileTextExtractor
@@ -108,12 +124,14 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
 def create_app(
     allowed_origins: Sequence[str] = (),
     api_keys: Sequence[str] = (),
+    authentication_service: AuthenticationService | None = None,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
 
     Parameters:
         allowed_origins: Optional browser origins allowed by CORS middleware.
         api_keys: Optional deployment API keys that protect workflow routes.
+        authentication_service: Optional Phase 4 authentication service.
 
     Returns:
         Configured FastAPI application.
@@ -249,6 +267,151 @@ def create_app(
     def source_formats() -> SourceFormatsResponse:
         """Return native source-format support metadata."""
         return _source_formats_response()
+
+    @app.post(
+        "/v2/auth/register",
+        response_model=AuthSessionResponse,
+        tags=["Authentication"],
+        operation_id="postV2AuthRegister",
+    )
+    def auth_register(request: AuthRegisterRequest) -> AuthSessionResponse:
+        """Register a platform user through the Authentication boundary."""
+        service = _require_authentication_service(authentication_service)
+        try:
+            result = service.register(
+                user_id=request.user_id,
+                email=request.email,
+                display_name=request.display_name,
+                password=request.password,
+                now=request.now,
+            )
+        except PasswordPolicyError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "password_policy_failed", "detail": str(error)},
+            ) from error
+        except AuthenticationError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "registration_failed", "detail": str(error)},
+            ) from error
+        return _auth_session_response(result.session)
+
+    @app.post(
+        "/v2/auth/login",
+        response_model=AuthSessionResponse,
+        tags=["Authentication"],
+        operation_id="postV2AuthLogin",
+    )
+    def auth_login(request: AuthLoginRequest) -> AuthSessionResponse:
+        """Log in a platform user through the Authentication boundary."""
+        service = _require_authentication_service(authentication_service)
+        try:
+            session = service.login(
+                email=request.email,
+                password=request.password,
+                now=request.now,
+            )
+        except InvalidCredentialsError as error:
+            raise HTTPException(
+                status_code=401,
+                detail={"error": "invalid_credentials", "detail": str(error)},
+            ) from error
+        return _auth_session_response(session)
+
+    @app.get(
+        "/v2/auth/me",
+        response_model=AuthMeResponse,
+        tags=["Authentication"],
+        operation_id="getV2AuthMe",
+    )
+    def auth_me(request: Request) -> AuthMeResponse:
+        """Return the authenticated user for a bearer session token."""
+        service = _require_authentication_service(authentication_service)
+        token = _extract_bearer_token(request)
+        if not token:
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "error": "session_required",
+                    "detail": "A bearer session token is required.",
+                },
+            )
+        now = request.headers.get("X-Aevryn-Now", "").strip()
+        if not now:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "missing_time", "detail": "X-Aevryn-Now is required."},
+            )
+        try:
+            user = service.validate_session(session_token=token, now=now)
+        except InvalidSessionError as error:
+            raise HTTPException(
+                status_code=401,
+                detail={"error": "invalid_session", "detail": str(error)},
+            ) from error
+        return AuthMeResponse(
+            user_id=user.user_id,
+            email=user.email,
+            display_name=user.display_name,
+        )
+
+    @app.post(
+        "/v2/auth/password-reset/request",
+        response_model=AuthPasswordResetResponse,
+        tags=["Authentication"],
+        operation_id="postV2AuthPasswordResetRequest",
+    )
+    def auth_password_reset_request(
+        request: AuthPasswordResetRequest,
+    ) -> AuthPasswordResetResponse:
+        """Issue a password reset token through the Authentication boundary."""
+        service = _require_authentication_service(authentication_service)
+        try:
+            reset = service.request_password_reset(
+                email=request.email,
+                reset_id=request.reset_id,
+                now=request.now,
+            )
+        except AuthenticationError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "password_reset_request_failed", "detail": str(error)},
+            ) from error
+        return AuthPasswordResetResponse(
+            user_id=reset.user_id,
+            reset_token=reset.reset_token,
+            expires_at=reset.expires_at,
+        )
+
+    @app.post(
+        "/v2/auth/password-reset/complete",
+        response_model=AuthMessageResponse,
+        tags=["Authentication"],
+        operation_id="postV2AuthPasswordResetComplete",
+    )
+    def auth_password_reset_complete(
+        request: AuthPasswordResetCompleteRequest,
+    ) -> AuthMessageResponse:
+        """Complete a password reset through the Authentication boundary."""
+        service = _require_authentication_service(authentication_service)
+        try:
+            service.complete_password_reset(
+                reset_token=request.reset_token,
+                new_password=request.new_password,
+                now=request.now,
+            )
+        except PasswordPolicyError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "password_policy_failed", "detail": str(error)},
+            ) from error
+        except InvalidResetTokenError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "invalid_reset_token", "detail": str(error)},
+            ) from error
+        return AuthMessageResponse(status="password_reset_complete")
 
     @app.post(
         "/v2/imports/inspect",
@@ -653,7 +816,10 @@ def _authentication_error(
 
 def _is_auth_protected_route(request: Request) -> bool:
     """Return whether a request touches a Phase 1 workflow route."""
-    return request.method.upper() == "POST" and request.url.path.startswith("/v2/")
+    path = request.url.path
+    if path.startswith("/v2/auth/"):
+        return False
+    return request.method.upper() == "POST" and path.startswith("/v2/")
 
 
 def _extract_api_key(request: Request) -> str:
@@ -667,6 +833,41 @@ def _extract_api_key(request: Request) -> str:
     if separator and scheme.lower() == "bearer":
         return token.strip()
 
+    return ""
+
+
+def _require_authentication_service(
+    authentication_service: AuthenticationService | None,
+) -> AuthenticationService:
+    """Return the configured Authentication service or fail clearly."""
+    if authentication_service is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "authentication_unavailable",
+                "detail": "Authentication service is not configured.",
+            },
+        )
+    return authentication_service
+
+
+def _auth_session_response(session: Any) -> AuthSessionResponse:
+    """Convert an authenticated session to the API contract."""
+    return AuthSessionResponse(
+        user_id=session.user.user_id,
+        email=session.user.email,
+        display_name=session.user.display_name,
+        session_token=session.session_token,
+        expires_at=session.expires_at,
+    )
+
+
+def _extract_bearer_token(request: Request) -> str:
+    """Return a bearer token from the Authorization header."""
+    authorization = request.headers.get("Authorization", "").strip()
+    scheme, separator, token = authorization.partition(" ")
+    if separator and scheme.lower() == "bearer":
+        return token.strip()
     return ""
 
 
@@ -703,6 +904,31 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="GET",
             path="/v2/source-formats",
             purpose="Report supported and deferred source formats.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/auth/register",
+            purpose="Register a platform user and issue a session.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/auth/login",
+            purpose="Log in a platform user and issue a session.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/auth/me",
+            purpose="Return the current authenticated user.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/auth/password-reset/request",
+            purpose="Issue a password reset token for delivery.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/auth/password-reset/complete",
+            purpose="Complete a password reset with a valid token.",
         ),
         ApiRouteCapability(
             method="POST",

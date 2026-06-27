@@ -60,6 +60,14 @@ class InMemoryProjectRepository:
         """Return a persisted user or raise if missing."""
         return self._get_required(self._users, user_id, "user")
 
+    def delete_user_for_auth_rollback(self, user_id: str) -> None:
+        """Delete a user created by a failed authentication registration."""
+        user = self._get_required(self._users, user_id, "user")
+        if any(project.owner_user_id == user.user_id for project in self._projects.values()):
+            raise ValueError("Cannot roll back a user that owns projects.")
+        del self._users[user_id]
+        logger.debug("user_record_deleted_for_auth_rollback", extra={"user_id": user_id})
+
     def create_project(self, project: ProjectRecord) -> None:
         """Persist a project owned by an existing user."""
         self.get_user(project.owner_user_id)
