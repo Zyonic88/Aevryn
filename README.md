@@ -86,7 +86,7 @@ snapshots/v1_final_acceptance_20260626_122543
 Current validation digest:
 
 ```text
-b911bda5279c30ead1830f58efa640d83bc66e41f3a50e96846804b428dec9d1
+ecd12849eeeaf8f9638a6c77b3e3dbb7c4a0dc0cd29fd869983e85dd5e88d69c
 ```
 
 ---

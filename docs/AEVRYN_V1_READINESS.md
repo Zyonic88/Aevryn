@@ -130,5 +130,5 @@ The current validation corpus fingerprint is:
 ```text
 cases=8 passed=8 failed=0 files=80 chapters=80 scenes=80 paragraphs=2294 sentences=8828 anchors=8828
 extraction_inputs=80 extraction_anchors=8828
-digest=b911bda5279c30ead1830f58efa640d83bc66e41f3a50e96846804b428dec9d1
+digest=ecd12849eeeaf8f9638a6c77b3e3dbb7c4a0dc0cd29fd869983e85dd5e88d69c
 ```

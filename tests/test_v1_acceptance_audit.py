@@ -156,7 +156,7 @@ def test_v1_acceptance_audit_records_rc1_snapshot_comparison() -> None:
     assert audit["audit_status"] == "rc1_ready"
     assert comparison["status"] == "pass"
     assert comparison["suite_digest"] == (
-        "b911bda5279c30ead1830f58efa640d83bc66e41f3a50e96846804b428dec9d1"
+        "ecd12849eeeaf8f9638a6c77b3e3dbb7c4a0dc0cd29fd869983e85dd5e88d69c"
     )
     assert comparison["compared_files"] == [
         "README.md",

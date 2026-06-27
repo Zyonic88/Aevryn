@@ -1,9 +1,12 @@
 {
   "case_id": "historical_crown_prince_france",
-  "title": "I Am the Crown Prince in France",
-  "genre": "Historical",
-  "source_directory": "I Am the Crown Prince in France (Historical)",
   "chapter_glob": "*.txt",
+  "expected_extraction": {
+    "evidence_anchors": 1125,
+    "extraction_input_digest": "d925127479a7d3b171d3ae4bbe23d9009fa22becb011d939ba093ffcfcc7a2d8",
+    "extraction_prompt_digest": "f2adde1fb33f25d56a9451abc316c9ce6c7f977f66ac6998e744eab42645de5f",
+    "scene_inputs": 10
+  },
   "expected_import": {
     "chapter_files": 10,
     "chapters": 10,
@@ -14,10 +17,7 @@
     "sentences": 1125,
     "source_manifest_digest": "9ccf9c81ef1f78fdabc0824e300e990d382cbc100d9f8239d971ac0ac9138a44"
   },
-  "expected_extraction": {
-    "scene_inputs": 10,
-    "evidence_anchors": 1125,
-    "extraction_input_digest": "d925127479a7d3b171d3ae4bbe23d9009fa22becb011d939ba093ffcfcc7a2d8",
-    "extraction_prompt_digest": "aa88185aef7134cb9b375cd1bc1724e148ef370b4f73a1704467f4ee6607cb67"
-  }
+  "genre": "Historical",
+  "source_directory": "I Am the Crown Prince in France (Historical)",
+  "title": "I Am the Crown Prince in France"
 }
