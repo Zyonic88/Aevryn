@@ -1,19 +1,25 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 import {
   authMeSchema,
   authSessionSchema,
   capabilitiesSchema,
   healthSchema,
+  importInspectSchema,
+  sourceFormatsSchema,
   type ApiCapabilities,
   type ApiHealth,
   type AuthSession,
   type AuthUser,
+  type ImportInspect,
+  type SourceFormats,
 } from "./schemas";
 
 export const API_PATHS = {
   health: "/v2/health",
   capabilities: "/v2/capabilities",
+  sourceFormats: "/v2/source-formats",
+  importsInspect: "/v2/imports/inspect",
   authRegister: "/v2/auth/register",
   authLogin: "/v2/auth/login",
   authMe: "/v2/auth/me",
@@ -42,6 +48,13 @@ export type RegisterRequest = LoginRequest & {
   display_name: string;
 };
 
+export type ImportInspectRequest = {
+  source_id: string;
+  filename: string;
+  content_base64: string;
+  title?: string;
+};
+
 export class AevrynApiClient {
   readonly baseUrl: string;
 
@@ -55,6 +68,17 @@ export class AevrynApiClient {
 
   capabilities(): Promise<ApiCapabilities> {
     return this.request(API_PATHS.capabilities, capabilitiesSchema);
+  }
+
+  sourceFormats(): Promise<SourceFormats> {
+    return this.request(API_PATHS.sourceFormats, sourceFormatsSchema);
+  }
+
+  inspectImport(payload: ImportInspectRequest): Promise<ImportInspect> {
+    return this.request(API_PATHS.importsInspect, importInspectSchema, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   }
 
   register(payload: RegisterRequest): Promise<AuthSession> {

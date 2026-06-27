@@ -1,7 +1,8 @@
-import { NavLink, Navigate, useParams } from "react-router-dom";
+﻿import { NavLink, Navigate, useParams } from "react-router-dom";
 
 import { EmptyState } from "../components/Feedback";
 import { readProjects } from "../projects/projectStore";
+import { ImportWorkspaceView } from "./ImportWorkspaceView";
 
 const workspaceTabs = [
   { id: "overview", label: "Overview" },
@@ -43,7 +44,7 @@ export function ProjectWorkspacePage() {
       </aside>
       <section className="workspace-content">
         {activeTab ? (
-          <WorkspacePlaceholder tabId={activeTab.id} label={activeTab.label} />
+          <WorkspaceTabContent tabId={activeTab.id} label={activeTab.label} project={project} />
         ) : (
           <EmptyState title="Unknown workspace section">
             This project route is valid, but the requested section does not exist in the Web Alpha
@@ -53,6 +54,22 @@ export function ProjectWorkspacePage() {
       </section>
     </div>
   );
+}
+
+function WorkspaceTabContent({
+  tabId,
+  label,
+  project,
+}: {
+  tabId: WorkspaceTabId;
+  label: string;
+  project: ReturnType<typeof readProjects>[number];
+}) {
+  if (tabId === "import") {
+    return <ImportWorkspaceView project={project} />;
+  }
+
+  return <WorkspacePlaceholder tabId={tabId} label={label} />;
 }
 
 function WorkspacePlaceholder({ tabId, label }: { tabId: WorkspaceTabId; label: string }) {
@@ -73,9 +90,6 @@ function findWorkspaceTab(tabId: string): (typeof workspaceTabs)[number] | null 
 }
 
 function placeholderTitle(tabId: WorkspaceTabId): string {
-  if (tabId === "import") {
-    return "Import workflow will land here in Phase 5B.";
-  }
   if (tabId === "overview") {
     return "Workspace shell is connected.";
   }
@@ -86,8 +100,5 @@ function placeholderBody(tabId: WorkspaceTabId): string {
   if (tabId === "overview") {
     return "This page proves routing, sidebar navigation, and project shell state without duplicating engine logic.";
   }
-  if (tabId === "import") {
-    return "The future import UI will call the API and background job boundary. It will not parse stories in React.";
-  }
-  return "This section will render API view models after the app shell is hardened.";
+  return "This section will render API view models after the import workflow is hardened.";
 }

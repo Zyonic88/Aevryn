@@ -136,6 +136,14 @@ Phase 5B exposes API-backed engine outputs.
 Required later:
 
 * Import UI
+* Paste-source inspection through the Import API
+* Source-format discovery through the API
+* Import structure results rendered from API view models
+* UTF-8 source payload preparation before API submission
+* Visible source text size guard for pasted imports
+* Import result totals and scene preview summaries
+* Import API failures shown through accessible alerts
+* Stale import structure results cleared before follow-up inspections
 * Character view
 * World view
 * Timeline view

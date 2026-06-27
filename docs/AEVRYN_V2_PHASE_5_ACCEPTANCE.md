@@ -112,9 +112,22 @@ Aevryn Web Alpha Shell is accepted when:
 
 Phase 5B begins only after Phase 5A is hardened.
 
+Phase 5B first slice accepts an API-backed Import view before broader output views.
+
 Required later:
 
 * Import UI
+* Import UI displays supported and deferred source formats from the API
+* Import UI can inspect pasted source text through `/v2/imports/inspect`
+* Import UI renders chapter, scene, paragraph, and evidence-anchor counts
+* Import UI does not parse source text in React
+* Import payload construction preserves UTF-8 source text
+* Import payload construction is covered by unit tests
+* Import UI shows source text character count and blocks oversized pasted submissions
+* Import results summarize totals and clearly label truncated scene previews
+* Import UI renders source-format and inspection API failures as accessible alerts
+* Deferred source-format failures do not render stale import structure results
+* Failed follow-up inspections clear previous successful import results
 * Character output view
 * World output view
 * Timeline output view

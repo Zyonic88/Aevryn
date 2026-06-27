@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+﻿import { describe, expect, it, vi } from "vitest";
 
 import { AevrynApiClient, API_PATHS } from "./client";
 
@@ -14,6 +14,48 @@ const sessionPayload = {
   display_name: "Demo User",
   session_token: "session-token",
   expires_at: "2026-06-27T00:00:00.000Z",
+};
+const sourceFormatsPayload = {
+  supported: [
+    {
+      extension: ".txt",
+      status: "supported",
+      adapter: "plain_text",
+      evidence_anchor_status: "preserved",
+      notes: "Plain text import.",
+    },
+  ],
+  deferred: [],
+};
+
+const importInspectPayload = {
+  source_id: "api_demo",
+  source_format: "txt",
+  title: "API Demo",
+  chapters: 1,
+  chapter_ids: ["api_demo_chapter_001"],
+  scenes: 1,
+  scene_ids: ["api_demo_chapter_001_scene_001"],
+  scene_map: [
+    {
+      chapter_id: "api_demo_chapter_001",
+      chapter_index: 1,
+      scene_id: "api_demo_chapter_001_scene_001",
+      scene_index: 1,
+      title: "Chapter 1",
+    },
+  ],
+  paragraphs: 1,
+  evidence_anchors: 1,
+  first_evidence_anchors: [
+    {
+      anchor_id: "api_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor",
+      chapter_id: "api_demo_chapter_001",
+      scene_id: "api_demo_chapter_001_scene_001",
+      paragraph_index: 1,
+      sentence_index: 1,
+    },
+  ],
 };
 
 describe("AevrynApiClient", () => {
@@ -31,6 +73,44 @@ describe("AevrynApiClient", () => {
       `${baseUrl}${API_PATHS.health}`,
       expect.objectContaining({ headers: expect.any(Headers) }),
     );
+  });
+
+  it("loads source formats", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(sourceFormatsPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+
+    await expect(client.sourceFormats()).resolves.toEqual(sourceFormatsPayload);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `https://api.aevryn.ai${API_PATHS.sourceFormats}`,
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    );
+  });
+
+  it("sends JSON requests for import inspection", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(importInspectPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.inspectImport({
+        source_id: "api_demo",
+        filename: "chapter.txt",
+        title: "API Demo",
+        content_base64: "Q2hhcHRlciAx",
+      }),
+    ).resolves.toEqual(importInspectPayload);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = init.headers as Headers;
+    expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.importsInspect}`);
+    expect(init.method).toBe("POST");
+    expect(headers.get("Content-Type")).toBe("application/json");
   });
 
   it("sends JSON requests for authentication", async () => {

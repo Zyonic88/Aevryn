@@ -54,7 +54,39 @@ export const authMeSchema = z.object({
   display_name: z.string(),
 });
 
+export const evidenceAnchorPreviewSchema = z.object({
+  anchor_id: z.string(),
+  chapter_id: z.string(),
+  scene_id: z.string(),
+  paragraph_index: z.number(),
+  sentence_index: z.number(),
+});
+
+export const sceneMapEntrySchema = z.object({
+  chapter_id: z.string(),
+  chapter_index: z.number(),
+  scene_id: z.string(),
+  scene_index: z.number(),
+  title: z.string(),
+});
+
+export const importInspectSchema = z.object({
+  source_id: z.string(),
+  source_format: z.string(),
+  title: z.string(),
+  chapters: z.number(),
+  chapter_ids: z.array(z.string()),
+  scenes: z.number(),
+  scene_ids: z.array(z.string()),
+  scene_map: z.array(sceneMapEntrySchema),
+  paragraphs: z.number(),
+  evidence_anchors: z.number(),
+  first_evidence_anchors: z.array(evidenceAnchorPreviewSchema),
+});
+
 export type ApiHealth = z.infer<typeof healthSchema>;
 export type ApiCapabilities = z.infer<typeof capabilitiesSchema>;
+export type SourceFormats = z.infer<typeof sourceFormatsSchema>;
+export type ImportInspect = z.infer<typeof importInspectSchema>;
 export type AuthSession = z.infer<typeof authSessionSchema>;
 export type AuthUser = z.infer<typeof authMeSchema>;

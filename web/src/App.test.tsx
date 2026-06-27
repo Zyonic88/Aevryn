@@ -1,10 +1,11 @@
-﻿import { render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 import { API_PATHS } from "./api/client";
+import { MAX_IMPORT_SOURCE_CHARACTERS } from "./importing/importPayload";
 
 const session = {
   user_id: "user_demo",
@@ -32,6 +33,74 @@ const capabilitiesPayload = {
   export_capabilities: [],
   platform_limits: [],
 };
+const sourceFormatsPayload = {
+  supported: [
+    {
+      extension: ".txt",
+      status: "supported",
+      adapter: "plain_text",
+      evidence_anchor_status: "preserved",
+      notes: "Plain text import.",
+    },
+    {
+      extension: ".epub",
+      status: "supported",
+      adapter: "epub",
+      evidence_anchor_status: "preserved",
+      notes: "EPUB spine import.",
+    },
+  ],
+  deferred: [
+    {
+      extension: ".pdf",
+      status: "deferred",
+      adapter: "none",
+      evidence_anchor_status: "not_available",
+      notes: "Deferred for V1.1.",
+    },
+  ],
+};
+
+const importInspectPayload = {
+  source_id: "source_alpha",
+  source_format: "txt",
+  title: "Alpha",
+  chapters: 1,
+  chapter_ids: ["source_alpha_chapter_001"],
+  scenes: 8,
+  scene_ids: Array.from(
+    { length: 8 },
+    (_, index) => `source_alpha_chapter_${String(index + 1).padStart(3, "0")}_scene_001`,
+  ),
+  scene_map: Array.from({ length: 8 }, (_, index) => ({
+    chapter_id: `source_alpha_chapter_${String(index + 1).padStart(3, "0")}`,
+    chapter_index: index + 1,
+    scene_id: `source_alpha_chapter_${String(index + 1).padStart(3, "0")}_scene_001`,
+    scene_index: 1,
+    title: `Scene ${index + 1}`,
+  })),
+  paragraphs: 1,
+  evidence_anchors: 1,
+  first_evidence_anchors: [
+    {
+      anchor_id: "source_alpha_chapter_001_scene_001_paragraph_001_sentence_001_anchor",
+      chapter_id: "source_alpha_chapter_001",
+      scene_id: "source_alpha_chapter_001_scene_001",
+      paragraph_index: 1,
+      sentence_index: 1,
+    },
+  ],
+};
+const projectAlpha = {
+  id: "project_alpha",
+  name: "Alpha",
+  updatedAt: "2026-06-27T00:00:00.000Z",
+};
+
+function storeAuthenticatedProject() {
+  window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+  window.localStorage.setItem("aevryn.projects", JSON.stringify([projectAlpha]));
+}
 
 describe("App shell routing", () => {
   beforeEach(() => {
@@ -45,6 +114,12 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.importsInspect)) {
+          return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
         }
         if (url.endsWith(API_PATHS.authLogin) || url.endsWith(API_PATHS.authRegister)) {
           return Promise.resolve(new Response(JSON.stringify(session)));
@@ -425,6 +500,191 @@ describe("App shell routing", () => {
     await user.type(input, "   ");
 
     expect(screen.getByRole("button", { name: "Create shell" })).toBeDisabled();
+  });
+
+  it("inspects pasted source from the import workspace tab", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    window.localStorage.setItem(
+      "aevryn.projects",
+      JSON.stringify([
+        {
+          id: "project_alpha",
+          name: "Alpha",
+          updatedAt: "2026-06-27T00:00:00.000Z",
+        },
+      ]),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByText(".txt")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+
+    expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
+    expect(screen.getByText("Evidence anchors")).toBeInTheDocument();
+    expect(screen.getByText("1 chapter, 8 scenes, 1 evidence anchor.")).toBeInTheDocument();
+    expect(screen.getByText("Showing first 6 of 8 scenes.")).toBeInTheDocument();
+    expect(screen.getByText("source_alpha_chapter_001_scene_001")).toBeInTheDocument();
+    expect(screen.queryByText("source_alpha_chapter_007_scene_001")).not.toBeInTheDocument();
+  });
+
+  it("clears stale import structure when a later inspection fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let failImport = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.importsInspect)) {
+          if (failImport) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({ error: "import_failed", detail: "Import inspection failed." }),
+                { status: 400 },
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText(".txt");
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
+
+    failImport = true;
+    await user.clear(screen.getByLabelText("Filename"));
+    await user.type(screen.getByLabelText("Filename"), "chapter.pdf");
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Import inspection failed.");
+    expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();
+  });
+
+  it("shows source text character counts and blocks oversized pasted imports", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("10 / 500,000 characters")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.click(screen.getByLabelText("Source text"));
+    await user.paste("a".repeat(MAX_IMPORT_SOURCE_CHARACTERS + 1));
+
+    expect(await screen.findByText("500,001 / 500,000 characters")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Inspect import" })).toBeDisabled();
+  });
+
+  it("shows source-format API failures on the import workspace tab", async () => {
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ error: "source_formats_failed", detail: "Formats unavailable." }),
+              { status: 503 },
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Formats unavailable.");
+  });
+
+  it("shows import inspection failures for deferred source formats", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.importsInspect)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                error: "import_failed",
+                detail: ".pdf import requires a dedicated parser dependency.",
+              }),
+              { status: 400 },
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(".pdf")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Filename"));
+    await user.type(screen.getByLabelText("Filename"), "chapter.pdf");
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      ".pdf import requires a dedicated parser dependency.",
+    );
+    expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();
   });
 
   it("renders a controlled empty state for unknown workspace tabs", async () => {
