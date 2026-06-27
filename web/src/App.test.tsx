@@ -268,6 +268,12 @@ const projectAlpha = {
   name: "Alpha",
   updatedAt: "2026-06-27T00:00:00.000Z",
 };
+const projectAlphaPayload = {
+  project_id: projectAlpha.id,
+  name: projectAlpha.name,
+  created_at: projectAlpha.updatedAt,
+  updated_at: projectAlpha.updatedAt,
+};
 
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
@@ -279,13 +285,32 @@ describe("App shell routing", () => {
     window.localStorage.clear();
     vi.stubGlobal(
       "fetch",
-      vi.fn((input: RequestInfo | URL) => {
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
         if (url.endsWith(API_PATHS.health)) {
           return Promise.resolve(new Response(JSON.stringify(healthPayload)));
         }
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(API_PATHS.projects)) {
+          if (init?.method === "POST") {
+            const body = JSON.parse(String(init.body));
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  project_id: body.project_id,
+                  name: body.name,
+                  created_at: body.now,
+                  updated_at: body.now,
+                }),
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify({ projects: [] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
         }
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
@@ -594,9 +619,10 @@ describe("App shell routing", () => {
     );
 
     const statuses = await screen.findAllByRole("status");
-    expect(statuses).toHaveLength(2);
+    expect(statuses).toHaveLength(3);
     expect(statuses[0]).toHaveTextContent("Checking API health.");
     expect(statuses[1]).toHaveTextContent("Loading capabilities.");
+    expect(statuses[2]).toHaveTextContent("Loading projects.");
   });
 
   it("renders dashboard API errors as alerts", async () => {
@@ -618,6 +644,9 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
+        if (url.endsWith(API_PATHS.projects)) {
+          return Promise.resolve(new Response(JSON.stringify({ projects: [] })));
+        }
         return Promise.resolve(new Response("{}", { status: 404 }));
       }),
     );
@@ -631,17 +660,33 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Health check failed.");
   });
 
-  it("keeps a project shell usable when project persistence fails", async () => {
+  it("shows project API create failures", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
-    const originalSetItem = Storage.prototype.setItem;
-    const setItem = vi.spyOn(Storage.prototype, "setItem");
-    setItem.mockImplementation(function setStorageItem(this: Storage, key: string, value: string) {
-      if (key === "aevryn.projects") {
-        throw new Error("storage unavailable");
-      }
-      return originalSetItem.call(this, key, value);
-    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(API_PATHS.projects) && init?.method !== "POST") {
+          return Promise.resolve(new Response(JSON.stringify({ projects: [] })));
+        }
+        if (url.endsWith(API_PATHS.projects) && init?.method === "POST") {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ error: "project_create_failed", detail: "Project storage failed." }),
+              { status: 503 },
+            ),
+          );
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
 
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
@@ -654,8 +699,8 @@ describe("App shell routing", () => {
     await user.type(input, "Temporary Project");
     await user.click(screen.getByRole("button", { name: "Create shell" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("browser storage failed");
-    expect(screen.getByRole("link", { name: /Temporary Project/ })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Project storage failed.");
+    expect(screen.queryByRole("link", { name: /Temporary Project/ })).not.toBeInTheDocument();
   });
 
   it("creates and opens a project shell", async () => {

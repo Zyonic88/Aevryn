@@ -56,6 +56,17 @@ export function createProject(
   projects: ProjectSummary[],
   options: ProjectFactoryOptions = {},
 ): ProjectSummary[] {
+  const project = createProjectShell(name, options);
+  return [project, ...projects.filter((candidate) => candidate.id !== project.id)].slice(
+    0,
+    MAX_STORED_PROJECTS,
+  );
+}
+
+export function createProjectShell(
+  name: string,
+  options: ProjectFactoryOptions = {},
+): ProjectSummary {
   const normalizedName = normalizeProjectName(name);
   if (!normalizedName) {
     throw new Error("Project name is required.");
@@ -68,10 +79,7 @@ export function createProject(
     name: normalizedName,
     updatedAt: timestamp,
   };
-  return [project, ...projects.filter((candidate) => candidate.id !== project.id)].slice(
-    0,
-    MAX_STORED_PROJECTS,
-  );
+  return project;
 }
 
 function createUuid(): string {

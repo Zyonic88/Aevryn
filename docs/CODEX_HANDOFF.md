@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 5B - Engine Output Views**
+Current phase: **Phase 6 implementation - Project Storage**
 
 Recent completed V2 work:
 
@@ -66,6 +66,19 @@ Recent completed V2 work:
 - Export request UI completed
 
 Phase 5B engine output views are implemented. Harden before moving to the next phase.
+
+Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 has working API-backed views, but the next frontend experience pass should start with workspace architecture and low-fidelity wireframes, not colors, icons, gradients, or animation.
+
+Next expected V2 target:
+
+- Phase 6 Project Storage, governed by `docs/AEVRYN_V2_PHASE_6_ACCEPTANCE.md`
+
+Phase 6 first project-storage slice implemented:
+
+- Durable project storage API routes added for list/create/detail
+- Routes use bearer-session authentication plus the Project Repository boundary
+- Dashboard list/create now uses the project storage API instead of browser project shells as source of truth
+- Direct workspace project routes load project detail through the API, with legacy local shell fallback only for compatibility
 
 ---
 
@@ -93,7 +106,9 @@ Follow the project rules in:
 - `docs/DEVELOPMENT_RULES.md`
 - `docs/AEVRYN_V1_ACCEPTANCE_CRITERIA.md`
 - `docs/AEVRYN_V2_PHASE_5_ACCEPTANCE.md`
+- `docs/AEVRYN_V2_PHASE_6_ACCEPTANCE.md`
 - `docs/AEVRYN_PLATFORM_ARCHITECTURE.md`
+- `docs/AEVRYN_UX_ARCHITECTURE.md`
 
 Project rules that matter most:
 

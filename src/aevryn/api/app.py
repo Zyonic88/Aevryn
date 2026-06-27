@@ -56,6 +56,9 @@ from aevryn.api.models import (
     ImportInspectResponse,
     OutputSection,
     ProductionPackOutput,
+    ProjectCreateRequest,
+    ProjectListResponse,
+    ProjectOutput,
     ProjectOutputsPreviewRequest,
     ProjectOutputsPreviewResponse,
     ProjectPreviewRequest,
@@ -85,6 +88,15 @@ from aevryn.auth import (
 from aevryn.export import ExportEngine
 from aevryn.extraction import EvidenceBoundedAIExtractor, StaticAIExtractionClient
 from aevryn.importing import ImportedSource, SourceFileTextExtractor
+from aevryn.persistence import (
+    AccessDeniedError,
+    DuplicateRecordError,
+    PersistenceError,
+    ProjectRecord,
+    ProjectRepository,
+    RecordNotFoundError,
+    UserRecord,
+)
 from aevryn.presentation import (
     CharacterProfileView,
     PresentationEngine,
@@ -125,6 +137,7 @@ def create_app(
     allowed_origins: Sequence[str] = (),
     api_keys: Sequence[str] = (),
     authentication_service: AuthenticationService | None = None,
+    project_repository: ProjectRepository | None = None,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
 
@@ -132,6 +145,7 @@ def create_app(
         allowed_origins: Optional browser origins allowed by CORS middleware.
         api_keys: Optional deployment API keys that protect workflow routes.
         authentication_service: Optional Phase 4 authentication service.
+        project_repository: Optional Phase 6 project storage repository.
 
     Returns:
         Configured FastAPI application.
@@ -412,6 +426,91 @@ def create_app(
                 detail={"error": "invalid_reset_token", "detail": str(error)},
             ) from error
         return AuthMessageResponse(status="password_reset_complete")
+
+    @app.get(
+        "/v2/projects",
+        response_model=ProjectListResponse,
+        tags=["Projects"],
+        operation_id="getV2Projects",
+    )
+    def list_projects(request: Request) -> ProjectListResponse:
+        """Return durable projects owned by the authenticated user."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            projects = repository.list_projects_for_user(user.user_id)
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return ProjectListResponse(
+            projects=tuple(_project_output(project) for project in projects),
+        )
+
+    @app.post(
+        "/v2/projects",
+        response_model=ProjectOutput,
+        tags=["Projects"],
+        operation_id="postV2Projects",
+    )
+    def create_project(
+        request_body: ProjectCreateRequest,
+        request: Request,
+    ) -> ProjectOutput:
+        """Create one durable project for the authenticated user."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            project = ProjectRecord(
+                project_id=request_body.project_id,
+                owner_user_id=user.user_id,
+                name=_normalized_project_name(request_body.name),
+                created_at=request_body.now,
+                updated_at=request_body.now,
+            )
+            repository.create_project(project)
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "project_create_failed", "detail": str(error)},
+            ) from error
+        except DuplicateRecordError as error:
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "project_exists", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _project_output(project)
+
+    @app.get(
+        "/v2/projects/{project_id}",
+        response_model=ProjectOutput,
+        tags=["Projects"],
+        operation_id="getV2Project",
+    )
+    def get_project(project_id: str, request: Request) -> ProjectOutput:
+        """Return one durable project inside the authenticated user's boundary."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            return _project_output(
+                repository.get_project(user_id=user.user_id, project_id=project_id)
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
 
     @app.post(
         "/v2/imports/inspect",
@@ -851,6 +950,74 @@ def _require_authentication_service(
     return authentication_service
 
 
+def _require_project_repository(
+    project_repository: ProjectRepository | None,
+) -> ProjectRepository:
+    """Return the configured Project Repository or fail clearly."""
+    if project_repository is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "project_storage_unavailable",
+                "detail": "Project storage is not configured.",
+            },
+        )
+    return project_repository
+
+
+def _authenticated_user(
+    request: Request,
+    authentication_service: AuthenticationService | None,
+) -> UserRecord:
+    """Return the authenticated user for project storage routes."""
+    service = _require_authentication_service(authentication_service)
+    token = _extract_bearer_token(request)
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error": "session_required",
+                "detail": "A bearer session token is required.",
+            },
+        )
+    now = request.headers.get("X-Aevryn-Now", "").strip()
+    if not now:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "missing_time", "detail": "X-Aevryn-Now is required."},
+        )
+    try:
+        return service.validate_session(session_token=token, now=now)
+    except InvalidSessionError as error:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "invalid_session", "detail": str(error)},
+        ) from error
+
+
+def _project_output(project: ProjectRecord) -> ProjectOutput:
+    """Convert persisted project metadata to the API contract."""
+    return ProjectOutput(
+        project_id=project.project_id,
+        name=project.name,
+        created_at=project.created_at,
+        updated_at=project.updated_at,
+    )
+
+
+def _normalized_project_name(value: str) -> str:
+    """Return normalized project display text."""
+    return " ".join(value.split())
+
+
+def _project_storage_error(error: PersistenceError) -> HTTPException:
+    """Return a stable project storage failure."""
+    return HTTPException(
+        status_code=503,
+        detail={"error": "project_storage_failed", "detail": str(error)},
+    )
+
+
 def _auth_session_response(session: Any) -> AuthSessionResponse:
     """Convert an authenticated session to the API contract."""
     return AuthSessionResponse(
@@ -929,6 +1096,21 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="POST",
             path="/v2/auth/password-reset/complete",
             purpose="Complete a password reset with a valid token.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects",
+            purpose="List durable projects owned by the authenticated user.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/projects",
+            purpose="Create a durable project for the authenticated user.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}",
+            purpose="Return durable project metadata for the authenticated user.",
         ),
         ApiRouteCapability(
             method="POST",

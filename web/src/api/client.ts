@@ -13,6 +13,8 @@ import {
   worldPreviewSchema,
   healthSchema,
   importInspectSchema,
+  projectListSchema,
+  projectSchema,
   sourceFormatsSchema,
   type ApiCapabilities,
   type ApiHealth,
@@ -26,6 +28,8 @@ import {
   type TimelinePreview,
   type WorldPreview,
   type ImportInspect,
+  type Project,
+  type ProjectList,
   type SourceFormats,
 } from "./schemas";
 
@@ -44,6 +48,7 @@ export const API_PATHS = {
   authRegister: "/v2/auth/register",
   authLogin: "/v2/auth/login",
   authMe: "/v2/auth/me",
+  projects: "/v2/projects",
 } as const;
 
 export class ApiError extends Error {
@@ -67,6 +72,12 @@ export type LoginRequest = {
 export type RegisterRequest = LoginRequest & {
   user_id: string;
   display_name: string;
+};
+
+export type ProjectCreateRequest = {
+  project_id: string;
+  name: string;
+  now: string;
 };
 
 export type ImportInspectRequest = {
@@ -217,6 +228,26 @@ export class AevrynApiClient {
     });
   }
 
+  listProjects(sessionToken: string, now: string): Promise<ProjectList> {
+    return this.request(API_PATHS.projects, projectListSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  createProject(payload: ProjectCreateRequest, sessionToken: string, now: string): Promise<Project> {
+    return this.request(API_PATHS.projects, projectSchema, {
+      method: "POST",
+      headers: authHeaders(sessionToken, now),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  getProject(projectId: string, sessionToken: string, now: string): Promise<Project> {
+    return this.request(`${API_PATHS.projects}/${encodeURIComponent(projectId)}`, projectSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
   private async request<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
@@ -257,6 +288,13 @@ export class AevrynApiClient {
     }
     return parsed.data;
   }
+}
+
+function authHeaders(sessionToken: string, now: string): HeadersInit {
+  return {
+    Authorization: `Bearer ${sessionToken}`,
+    "X-Aevryn-Now": now,
+  };
 }
 
 async function readJsonPayload(response: Response): Promise<unknown> {

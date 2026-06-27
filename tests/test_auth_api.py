@@ -193,12 +193,169 @@ def test_auth_routes_are_reported_in_capabilities_and_openapi() -> None:
     assert paths["/v2/auth/me"]["get"]["operationId"] == "getV2AuthMe"
 
 
+def test_project_storage_api_creates_lists_and_loads_projects() -> None:
+    """Project storage API should persist project metadata behind auth."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
 
-def auth_service() -> AuthenticationService:
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={
+            "project_id": "project_alpha",
+            "name": "  Alpha   Project  ",
+            "now": NOW,
+        },
+    )
+
+    assert created.status_code == 200
+    assert created.json() == {
+        "project_id": "project_alpha",
+        "name": "Alpha Project",
+        "created_at": NOW,
+        "updated_at": NOW,
+    }
+
+    listed = client.get("/v2/projects", headers=auth_headers("token_001"))
+    assert listed.status_code == 200
+    assert listed.json()["projects"] == [created.json()]
+
+    loaded = client.get("/v2/projects/project_alpha", headers=auth_headers("token_001"))
+    assert loaded.status_code == 200
+    assert loaded.json() == created.json()
+
+
+def test_project_storage_api_requires_configured_storage() -> None:
+    """Project routes should fail clearly when no repository is configured."""
+    client = TestClient(create_app(authentication_service=auth_service()))
+
+    response = client.get("/v2/projects", headers=auth_headers("token_001"))
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "error": "project_storage_unavailable",
+        "detail": "Project storage is not configured.",
+    }
+
+
+def test_project_storage_api_requires_authentication() -> None:
+    """Project routes should require a bearer session."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+
+    response = client.get("/v2/projects", headers={"X-Aevryn-Now": SOON})
+
+    assert response.status_code == 401
+    assert response.json()["error"] == "session_required"
+
+
+def test_project_storage_api_rejects_cross_user_project_reads() -> None:
+    """Project detail reads must not cross ownership boundaries."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created.status_code == 200
+
+    response = client.get("/v2/projects/project_alpha", headers=auth_headers("token_002"))
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": "project_not_found",
+        "detail": "Project not found.",
+    }
+
+
+def test_project_storage_api_rejects_duplicate_project_ids() -> None:
+    """Project creation should surface duplicate project identities clearly."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    payload = {"project_id": "project_alpha", "name": "Alpha", "now": NOW}
+    first = client.post("/v2/projects", headers=auth_headers("token_001"), json=payload)
+    assert first.status_code == 200
+
+    duplicate = client.post("/v2/projects", headers=auth_headers("token_001"), json=payload)
+
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"] == "project_exists"
+
+
+def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> None:
+    """Project storage routes should be discoverable through API metadata."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+
+    capabilities = client.get("/v2/capabilities")
+    route_paths = {route["path"] for route in capabilities.json()["routes"]}
+    assert "/v2/projects" in route_paths
+    assert "/v2/projects/{project_id}" in route_paths
+
+    paths = client.get("/openapi.json").json()["paths"]
+    assert paths["/v2/projects"]["get"]["operationId"] == "getV2Projects"
+    assert paths["/v2/projects"]["post"]["operationId"] == "postV2Projects"
+    assert paths["/v2/projects/{project_id}"]["get"]["operationId"] == "getV2Project"
+
+
+def register_user(client: TestClient, *, user_id: str, email: str) -> None:
+    """Register one deterministic user for project API tests."""
+    response = client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": user_id,
+            "email": email,
+            "display_name": "Demo User",
+            "password": PASSWORD,
+            "now": NOW,
+        },
+    )
+    assert response.status_code == 200
+
+
+def auth_headers(token: str) -> dict[str, str]:
+    """Return authorization headers for API tests."""
+    return {"Authorization": f"Bearer {token}", "X-Aevryn-Now": SOON}
+
+
+
+def auth_service(
+    repository: InMemoryProjectRepository | None = None,
+) -> AuthenticationService:
     """Return a deterministic authentication service for API tests."""
     token_factory = TokenFactory()
     return AuthenticationService(
-        repository=InMemoryProjectRepository(),
+        repository=repository or InMemoryProjectRepository(),
         credential_store=InMemoryCredentialStore(),
         session_store=InMemorySessionStore(),
         password_hasher=PasswordHasher(iterations=10),

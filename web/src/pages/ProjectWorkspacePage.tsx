@@ -1,7 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { NavLink, Navigate, useParams } from "react-router-dom";
 
-import { EmptyState } from "../components/Feedback";
-import { readProjects } from "../projects/projectStore";
+import { ApiError, apiClient } from "../api/client";
+import { useAuth } from "../auth/useAuth";
+import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
+import { projectSummaryFromApiProject } from "../projects/projectMapping";
+import { readProjects, type ProjectSummary } from "../projects/projectStore";
 import { CharacterWorkspaceView } from "./CharacterWorkspaceView";
 import { ContinuityWorkspaceView } from "./ContinuityWorkspaceView";
 import { ExportWorkspaceView } from "./ExportWorkspaceView";
@@ -26,9 +30,36 @@ const workspaceTabs = [
 type WorkspaceTabId = (typeof workspaceTabs)[number]["id"];
 
 export function ProjectWorkspacePage() {
+  const { session } = useAuth();
   const { projectId, tabId = "overview" } = useParams();
-  const project = readProjects().find((candidate) => candidate.id === projectId);
-  if (!project) {
+  const projectQuery = useQuery({
+    queryKey: ["project", projectId, session?.session_token],
+    queryFn: () =>
+      apiClient.getProject(requireProjectId(projectId), requireSessionToken(session), new Date().toISOString()),
+    enabled: session !== null && projectId !== undefined,
+  });
+  const legacyProject = readProjects().find((candidate) => candidate.id === projectId) ?? null;
+
+  if (projectId === undefined) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const project = projectQuery.data
+    ? projectSummaryFromApiProject(projectQuery.data)
+    : legacyProject;
+
+  if (projectQuery.isLoading && project === null) {
+    return <LoadingMessage>Loading project.</LoadingMessage>;
+  }
+
+  if (projectQuery.error && project === null) {
+    if (projectQuery.error instanceof ApiError && projectQuery.error.status === 404) {
+      return <Navigate to="/dashboard" replace />;
+    }
+    return <ErrorMessage>{projectQuery.error.message}</ErrorMessage>;
+  }
+
+  if (project === null) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -70,7 +101,7 @@ function WorkspaceTabContent({
 }: {
   tabId: WorkspaceTabId;
   label: string;
-  project: ReturnType<typeof readProjects>[number];
+  project: ProjectSummary;
 }) {
   if (tabId === "import") {
     return <ImportWorkspaceView project={project} />;
@@ -129,4 +160,18 @@ function placeholderBody(tabId: WorkspaceTabId): string {
     return "This page proves routing, sidebar navigation, and project shell state without duplicating engine logic.";
   }
   return "This section will render API view models after the import workflow is hardened.";
+}
+
+function requireProjectId(projectId: string | undefined): string {
+  if (projectId === undefined) {
+    throw new Error("Aevryn project id is required.");
+  }
+  return projectId;
+}
+
+function requireSessionToken(session: { session_token: string } | null): string {
+  if (!session) {
+    throw new Error("Aevryn session is required.");
+  }
+  return session.session_token;
 }

@@ -15,6 +15,12 @@ const sessionPayload = {
   session_token: "session-token",
   expires_at: "2026-06-27T00:00:00.000Z",
 };
+const projectPayload = {
+  project_id: "project_alpha",
+  name: "Alpha",
+  created_at: "2026-06-27T00:00:00.000Z",
+  updated_at: "2026-06-27T00:00:00.000Z",
+};
 const sourceFormatsPayload = {
   supported: [
     {
@@ -451,6 +457,50 @@ describe("AevrynApiClient", () => {
     const headers = init.headers as Headers;
     expect(init.method).toBe("POST");
     expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends authenticated requests for durable projects", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ projects: [projectPayload] }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify(projectPayload), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(projectPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.listProjects("session-token", "2026-06-27T00:00:00.000Z"),
+    ).resolves.toEqual({
+      projects: [projectPayload],
+    });
+    await expect(
+      client.createProject(
+        {
+          project_id: "project_alpha",
+          name: "Alpha",
+          now: "2026-06-27T00:00:00.000Z",
+        },
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toEqual(projectPayload);
+    await expect(
+      client.getProject("project_alpha", "session-token", "2026-06-27T00:00:00.000Z"),
+    ).resolves.toEqual(projectPayload);
+
+    expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.projects}`);
+    expect(fetchMock.mock.calls[1][0]).toBe(`https://api.aevryn.ai${API_PATHS.projects}`);
+    expect(fetchMock.mock.calls[1][1].method).toBe("POST");
+    expect(fetchMock.mock.calls[2][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.projects}/project_alpha`,
+    );
+    for (const [, init] of fetchMock.mock.calls) {
+      const headers = init.headers as Headers;
+      expect(headers.get("Authorization")).toBe("Bearer session-token");
+      expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
+    }
   });
 
   it("normalizes API errors", async () => {

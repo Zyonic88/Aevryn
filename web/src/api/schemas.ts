@@ -54,6 +54,17 @@ export const authMeSchema = z.object({
   display_name: z.string(),
 });
 
+export const projectSchema = z.object({
+  project_id: z.string(),
+  name: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const projectListSchema = z.object({
+  projects: z.array(projectSchema),
+});
+
 export const evidenceAnchorPreviewSchema = z.object({
   anchor_id: z.string(),
   chapter_id: z.string(),
@@ -231,3 +242,5 @@ export type WorldSheet = z.infer<typeof worldSheetSchema>;
 export type WorldPreview = z.infer<typeof worldPreviewSchema>;
 export type AuthSession = z.infer<typeof authSessionSchema>;
 export type AuthUser = z.infer<typeof authMeSchema>;
+export type Project = z.infer<typeof projectSchema>;
+export type ProjectList = z.infer<typeof projectListSchema>;

@@ -4,6 +4,8 @@
 
 This document defines the Version 2 Phase 5 Website boundary.
 
+Workspace UX architecture is defined in `docs/AEVRYN_UX_ARCHITECTURE.md`.
+
 ---
 
 # Purpose

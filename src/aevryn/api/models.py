@@ -175,6 +175,35 @@ class AuthMessageResponse(BaseModel):
     status: str
 
 
+class ProjectCreateRequest(BaseModel):
+    """Request to create a durable platform project."""
+
+    model_config = ConfigDict(frozen=True)
+
+    project_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    now: str = Field(min_length=1)
+
+
+class ProjectOutput(BaseModel):
+    """Ownership-safe project metadata returned by the API."""
+
+    model_config = ConfigDict(frozen=True)
+
+    project_id: str
+    name: str
+    created_at: str
+    updated_at: str
+
+
+class ProjectListResponse(BaseModel):
+    """Projects owned by the authenticated user."""
+
+    model_config = ConfigDict(frozen=True)
+
+    projects: tuple[ProjectOutput, ...]
+
+
 class ImportInspectRequest(BaseModel):
     """Request to inspect imported source structure without storing a project."""
 

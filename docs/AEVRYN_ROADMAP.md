@@ -247,6 +247,8 @@ Not required:
 
 The website boundary is defined in `docs/AEVRYN_WEBSITE.md`.
 
+Workspace UX architecture is defined in `docs/AEVRYN_UX_ARCHITECTURE.md`.
+
 Phase 5 completion is governed by `docs/AEVRYN_V2_PHASE_5_ACCEPTANCE.md`.
 
 The frontend is built after the backend API, storage, workers, and authentication boundaries exist.
@@ -332,6 +334,8 @@ Continuity view:
 ---
 
 ## Phase 6 - Project Storage
+
+Phase 6 completion is governed by `docs/AEVRYN_V2_PHASE_6_ACCEPTANCE.md`.
 
 Users should never lose work.
 
@@ -514,4 +518,3 @@ The Canon Engine will always remain the foundation of every future capability.
 Every future system must consume Canon.
 
 No future system may replace Canon.
-

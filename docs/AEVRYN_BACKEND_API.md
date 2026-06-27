@@ -373,6 +373,44 @@ The API does not determine timeline validity.
 
 It only exposes the story order and state-change metadata produced by the engine workflow.
 
+## `GET /v2/projects`
+
+Returns durable project metadata for the authenticated user.
+
+This is the Phase 6 Project Storage API foundation.
+
+The route requires a bearer session token and `X-Aevryn-Now` header.
+
+It reads through the Project Repository boundary.
+
+It does not read browser storage.
+
+It does not run the engine.
+
+## `POST /v2/projects`
+
+Creates one durable project for the authenticated user.
+
+The request includes:
+
+* `project_id`
+* `name`
+* `now`
+
+Project names are normalized before storage.
+
+The route writes through the Project Repository boundary.
+
+Duplicate project IDs fail clearly.
+
+## `GET /v2/projects/{project_id}`
+
+Returns one durable project inside the authenticated user's ownership boundary.
+
+Missing projects and cross-user project reads return a stable project-not-found response.
+
+The route must not leak whether another user owns the requested project ID.
+
 ## `POST /v2/projects/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns stateless project-level metadata.
