@@ -29,6 +29,7 @@ web/.vite/
 *.tsbuildinfo
 
 # Local environment
+.codex/
 .env
 .env.*
 
