@@ -4,8 +4,8 @@ from typing import Any, cast
 
 import pytest
 
-from scenesmith import CanonCharacterCard, CanonCharacterFact, CanonDatabase, CharacterCardBuilder
-from scenesmith.core import Chapter, Character, Entity, Evidence, Fact, StateChange, TimelineEvent
+from aevryn import CanonCharacterCard, CanonCharacterFact, CanonDatabase, CharacterCardBuilder
+from aevryn.core import Chapter, Character, Entity, Evidence, Fact, StateChange, TimelineEvent
 
 
 def chapter(chapter_id: str, chapter_index: int) -> Chapter:

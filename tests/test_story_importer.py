@@ -5,14 +5,14 @@ from typing import Any, cast
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     EvidenceAnchor,
     ImportedSentence,
     ImportedSource,
     SourceParagraph,
     StoryImporter,
 )
-from scenesmith.core import Chapter, Scene, Story
+from aevryn.core import Chapter, Scene, Story
 
 
 def imported_source_with_anchor(anchor: EvidenceAnchor) -> ImportedSource:
@@ -863,7 +863,7 @@ def test_import_text_logs_import_summary(caplog: pytest.LogCaptureFixture) -> No
     """Story Import logs source structure counts."""
     importer = StoryImporter()
 
-    with caplog.at_level(logging.INFO, logger="scenesmith.importing.engine"):
+    with caplog.at_level(logging.INFO, logger="aevryn.importing.engine"):
         importer.import_text(
             source_id="source_logging",
             title="Logging Story",

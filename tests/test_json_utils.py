@@ -4,7 +4,7 @@ from typing import Any, cast
 
 import pytest
 
-from scenesmith.json_utils import loads_json_without_duplicate_keys
+from aevryn.json_utils import loads_json_without_duplicate_keys
 
 
 def test_strict_json_parser_accepts_utf8_bom_text() -> None:

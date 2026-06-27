@@ -1,4 +1,4 @@
-# SceneSmith Development Rules
+# Aevryn Development Rules
 
 Every line of code must be written as if another professional engineer will inherit the project tomorrow.
 
@@ -52,7 +52,7 @@ But AI never becomes the source of truth.
 
 Only the Canon Engine stores canonical truth, and only when the fact is evidence-backed.
 
-This distinction is what makes SceneSmith a trusted production tool instead of just another AI app.
+This distinction is what makes Aevryn a trusted production tool instead of just another AI app.
 
 ## 4. Single Responsibility
 
@@ -146,7 +146,7 @@ If we are copying code, we are probably designing something incorrectly.
 
 ## 12. Evidence Over Assumption
 
-This should become SceneSmith's defining philosophy.
+This should become Aevryn's defining philosophy.
 
 If the story does not explicitly say:
 
@@ -209,7 +209,7 @@ Before a subsystem is considered complete, we must be able to explain:
 * What authority it owns
 * What authority it does NOT own
 * How it fails
-* How it interacts with the rest of SceneSmith
+* How it interacts with the rest of Aevryn
 
 without reading the code.
 
@@ -247,7 +247,7 @@ Allowed work:
 
 The goal is confidence, not more scope.
 
-SceneSmith V1 is now moving toward Release Candidate 1.
+Aevryn V1 is now moving toward Release Candidate 1.
 
 ## 20. V2 Platform Boundaries
 
@@ -277,9 +277,9 @@ Browser
 -> API
 -> Authentication
 -> Project Manager
--> SceneSmith Engine
+-> Aevryn Engine
 -> Database
 -> Storage
 ```
 
-Before any Version 2 subsystem is implemented, its authority boundary must be documented in `docs/SCENESMITH_PLATFORM_ARCHITECTURE.md` or a dedicated system document.
+Before any Version 2 subsystem is implemented, its authority boundary must be documented in `docs/AEVRYN_PLATFORM_ARCHITECTURE.md` or a dedicated system document.

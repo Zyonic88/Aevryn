@@ -1,6 +1,6 @@
 # License Notice
 
-SceneSmith is built by Aetherra Labs.
+Aevryn is built by Aetherra Labs.
 
 No open-source license has been granted yet.
 

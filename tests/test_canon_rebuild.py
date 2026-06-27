@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     CanonPromptBuilder,
     ExportEngine,
     ExtractedEntity,
@@ -18,7 +18,7 @@ from scenesmith import (
     SceneAnalyzer,
     SceneExtractionInput,
 )
-from scenesmith.projects import ProjectRunResult, SceneSmithProjectRunner
+from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,7 +130,7 @@ def build_canon_rebuild_snapshot(output_dir: Path) -> CanonRebuildSnapshot:
 
 def build_snapshot_for_source(source_path: Path, output_dir: Path) -> CanonRebuildSnapshot:
     """Run an empty-project rebuild for a source path and save outputs."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(
         path=source_path,
         source_id="rebuild",
@@ -205,7 +205,7 @@ def build_snapshot_for_source(source_path: Path, output_dir: Path) -> CanonRebui
 
 def canon_rebuild_metrics(result: ProjectRunResult) -> dict[str, int]:
     """Return deterministic run metrics for Canon Rebuild comparison."""
-    continuity_report = SceneSmithProjectRunner().build_continuity_report(result)
+    continuity_report = AevrynProjectRunner().build_continuity_report(result)
     return {
         "characters": len(
             {
@@ -335,7 +335,7 @@ def test_out_of_order_rebuild_source_is_rejected() -> None:
     )
 
     with pytest.raises(ValueError, match="increasing order"):
-        SceneSmithProjectRunner().import_text_file(
+        AevrynProjectRunner().import_text_file(
             path=source_path,
             source_id="rebuild",
             title="Canon Rebuild Fixture",

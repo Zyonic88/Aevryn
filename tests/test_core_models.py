@@ -1,11 +1,11 @@
-"""Tests for Phase 1 core SceneSmith data models."""
+"""Tests for Phase 1 core Aevryn data models."""
 
 from dataclasses import FrozenInstanceError
 from typing import Any, cast
 
 import pytest
 
-from scenesmith.core import (
+from aevryn.core import (
     Chapter,
     Character,
     Entity,

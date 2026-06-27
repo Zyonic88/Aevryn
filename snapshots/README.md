@@ -1,4 +1,4 @@
-# SceneSmith Snapshots
+# Aevryn Snapshots
 
 This directory stores reference snapshots for future comparison.
 

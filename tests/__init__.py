@@ -1,1 +1,1 @@
-"""Test package for SceneSmith."""
+"""Test package for aevryn."""

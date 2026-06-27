@@ -1,6 +1,6 @@
-# SceneSmith Architecture
+# Aevryn Architecture
 
-SceneSmith is a Story Continuity Engine.
+Aevryn is a Story Continuity Engine.
 
 Its responsibility is to understand existing stories and maintain their current canonical state.
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from scenesmith.projects import SceneSmithProjectRunner
+from aevryn.projects import AevrynProjectRunner
 
 
 def test_markdown_import_preserves_headings() -> None:
@@ -17,7 +17,7 @@ def test_markdown_import_preserves_headings() -> None:
         "# Chapter 1\n\nIshmael wrote in **bold** markdown.",
     )
 
-    imported = SceneSmithProjectRunner().import_text_file(
+    imported = AevrynProjectRunner().import_text_file(
         path=path,
         source_id="markdown_story",
     )
@@ -38,7 +38,7 @@ def test_html_import_extracts_visible_text() -> None:
         ),
     )
 
-    imported = SceneSmithProjectRunner().import_text_file(
+    imported = AevrynProjectRunner().import_text_file(
         path=path,
         source_id="html_story",
     )
@@ -59,7 +59,7 @@ def test_fb2_import_extracts_paragraph_text() -> None:
         ),
     )
 
-    imported = SceneSmithProjectRunner().import_text_file(
+    imported = AevrynProjectRunner().import_text_file(
         path=path,
         source_id="fb2_story",
     )
@@ -82,7 +82,7 @@ def test_docx_import_extracts_paragraph_text() -> None:
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("word/document.xml", document)
 
-    imported = SceneSmithProjectRunner().import_text_file(
+    imported = AevrynProjectRunner().import_text_file(
         path=path,
         source_id="docx_story",
     )
@@ -107,7 +107,7 @@ def test_odt_import_extracts_paragraph_text() -> None:
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("content.xml", content)
 
-    imported = SceneSmithProjectRunner().import_text_file(
+    imported = AevrynProjectRunner().import_text_file(
         path=path,
         source_id="odt_story",
     )
@@ -122,7 +122,7 @@ def test_binary_formats_fail_with_clear_dependency_message(suffix: str) -> None:
     path = write_file(f"chapter{suffix}", "binary placeholder")
 
     with pytest.raises(ValueError, match="requires a dedicated parser dependency"):
-        SceneSmithProjectRunner().import_text_file(
+        AevrynProjectRunner().import_text_file(
             path=path,
             source_id="unsupported_story",
         )

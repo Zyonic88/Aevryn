@@ -4,8 +4,8 @@ from typing import Any, cast
 
 import pytest
 
-from scenesmith import CanonDatabase
-from scenesmith.core import (
+from aevryn import CanonDatabase
+from aevryn.core import (
     Chapter,
     Character,
     Entity,

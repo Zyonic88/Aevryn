@@ -1,4 +1,4 @@
-"""Tests for SceneSmith's V1 logging policy."""
+"""Tests for Aevryn's V1 logging policy."""
 
 from __future__ import annotations
 
@@ -7,31 +7,31 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 CORE_SUBSYSTEM_MODULES = (
-    "src/scenesmith/importing/engine.py",
-    "src/scenesmith/extraction/ai.py",
-    "src/scenesmith/extraction/engine.py",
-    "src/scenesmith/canon/updating.py",
-    "src/scenesmith/canon/database.py",
-    "src/scenesmith/canon/engine.py",
-    "src/scenesmith/timeline/engine.py",
-    "src/scenesmith/characters/cards.py",
-    "src/scenesmith/characters/engine.py",
-    "src/scenesmith/world/engine.py",
-    "src/scenesmith/scenes/context.py",
-    "src/scenesmith/scenes/engine.py",
-    "src/scenesmith/scenes/analyzer.py",
-    "src/scenesmith/prompts/builder.py",
-    "src/scenesmith/prompts/engine.py",
-    "src/scenesmith/presentation/engine.py",
-    "src/scenesmith/export/engine.py",
-    "src/scenesmith/projects/runner.py",
-    "src/scenesmith/validation/runner.py",
+    "src/aevryn/importing/engine.py",
+    "src/aevryn/extraction/ai.py",
+    "src/aevryn/extraction/engine.py",
+    "src/aevryn/canon/updating.py",
+    "src/aevryn/canon/database.py",
+    "src/aevryn/canon/engine.py",
+    "src/aevryn/timeline/engine.py",
+    "src/aevryn/characters/cards.py",
+    "src/aevryn/characters/engine.py",
+    "src/aevryn/world/engine.py",
+    "src/aevryn/scenes/context.py",
+    "src/aevryn/scenes/engine.py",
+    "src/aevryn/scenes/analyzer.py",
+    "src/aevryn/prompts/builder.py",
+    "src/aevryn/prompts/engine.py",
+    "src/aevryn/presentation/engine.py",
+    "src/aevryn/export/engine.py",
+    "src/aevryn/projects/runner.py",
+    "src/aevryn/validation/runner.py",
 )
 
 
 def test_logging_policy_document_exists() -> None:
     """The V1 logging policy must be documented."""
-    assert (ROOT / "docs" / "SCENESMITH_LOGGING_POLICY.md").exists()
+    assert (ROOT / "docs" / "AEVRYN_LOGGING_POLICY.md").exists()
 
 
 def test_repository_line_endings_are_normalized() -> None:
@@ -56,8 +56,8 @@ def test_repository_ignores_generated_reference_outputs() -> None:
 
 
 def test_package_installs_null_handler() -> None:
-    """SceneSmith must not leak library logs unless an app configures logging."""
-    source_text = (ROOT / "src" / "scenesmith" / "__init__.py").read_text(
+    """Aevryn must not leak library logs unless an app configures logging."""
+    source_text = (ROOT / "src" / "aevryn" / "__init__.py").read_text(
         encoding="utf-8"
     )
 
@@ -75,7 +75,7 @@ def test_core_subsystem_modules_define_module_loggers() -> None:
 
 def test_core_subsystems_do_not_print_user_output() -> None:
     """Core subsystems must keep presentation output out of subsystem code."""
-    source_root = ROOT / "src" / "scenesmith"
+    source_root = ROOT / "src" / "aevryn"
 
     for path in source_root.rglob("*.py"):
         if path.name == "cli.py":

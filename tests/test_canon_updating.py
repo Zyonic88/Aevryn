@@ -5,15 +5,15 @@ from typing import Any, cast
 
 import pytest
 
-from scenesmith import CanonDatabase, CanonUpdater, CanonUpdateSummary
-from scenesmith.extraction import (
+from aevryn import CanonDatabase, CanonUpdater, CanonUpdateSummary
+from aevryn.extraction import (
     ExtractedEntity,
     ExtractedFact,
     ExtractedRelationship,
     ExtractedStateChange,
     ExtractionResult,
 )
-from scenesmith.importing import EvidenceAnchor
+from aevryn.importing import EvidenceAnchor
 
 
 def anchor(
@@ -463,7 +463,7 @@ def test_canon_updater_logs_rejected_candidates(
         confidence=0.95,
     )
 
-    with caplog.at_level(logging.WARNING, logger="scenesmith.canon.updating"):
+    with caplog.at_level(logging.WARNING, logger="aevryn.canon.updating"):
         updater.apply_extraction_result(
             result=extraction_result(entities=(bad_anchor,)),
             anchors=(anchor(),),

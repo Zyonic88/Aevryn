@@ -1,4 +1,4 @@
-"""Tests for the SceneSmith Export Engine."""
+"""Tests for the Aevryn Export Engine."""
 
 import csv
 import io
@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     CanonEngine,
     CanonEntity,
     CharacterCard,

@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     EvidenceBoundedAIExtractor,
     ExportEngine,
     ExtractedEntity,
@@ -14,14 +14,14 @@ from scenesmith import (
     ExtractionResult,
     SceneExtractionInput,
 )
-from scenesmith.core import Story
-from scenesmith.importing import ImportedSource
-from scenesmith.projects import (
+from aevryn.core import Story
+from aevryn.importing import ImportedSource
+from aevryn.projects import (
+    AevrynProjectRunner,
     ContinuityRecord,
     ContinuityReport,
     ContinuitySceneReport,
     ProjectRunResult,
-    SceneSmithProjectRunner,
 )
 
 
@@ -82,7 +82,7 @@ def two_scene_source_file() -> Path:
 
 def test_runner_imports_text_file() -> None:
     """Project runner imports source files through Story Import."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
 
     imported_source = runner.import_text_file(
         path=source_file(),
@@ -96,7 +96,7 @@ def test_runner_imports_text_file() -> None:
 
 def test_runner_builds_character_card_from_demo_pipeline() -> None:
     """Project runner builds character cards from accepted Canon."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     result = runner.run_demo_text_file(path=source_file(), source_id="demo")
 
     card = runner.build_character_card(result=result, character_id="character_mark")
@@ -107,7 +107,7 @@ def test_runner_builds_character_card_from_demo_pipeline() -> None:
 
 def test_runner_builds_scene_position_character_card() -> None:
     """Project runner can build character cards at exact scene positions."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(
         path=two_scene_source_file(),
         source_id="demo",
@@ -149,7 +149,7 @@ def test_runner_builds_scene_position_character_card() -> None:
 
 def test_runner_builds_prompt_bundle_from_demo_pipeline() -> None:
     """Project runner builds prompt bundles from scene context."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     result = runner.run_demo_text_file(path=source_file(), source_id="demo")
 
     bundle = runner.build_prompt_bundle(result=result)
@@ -176,7 +176,7 @@ class WrongSceneExtractor:
 
 def test_runner_accepts_pluggable_extractor() -> None:
     """Project runner can run any evidence-bounded extractor."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
 
     result = runner.run_imported_source(
@@ -190,7 +190,7 @@ def test_runner_accepts_pluggable_extractor() -> None:
 
 def test_runner_rejects_empty_imported_source() -> None:
     """Project runner reports empty imported sources clearly."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = ImportedSource(
         source_id="empty",
         title="Empty",
@@ -208,7 +208,7 @@ def test_runner_rejects_empty_imported_source() -> None:
 
 def test_runner_can_extract_one_imported_scene() -> None:
     """Project runner can apply an extractor to one selected scene."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
 
     result = runner.run_imported_scene(
@@ -222,7 +222,7 @@ def test_runner_can_extract_one_imported_scene() -> None:
 
 def test_runner_rejects_wrong_scene_extractor_result() -> None:
     """Single-scene workflows require extractor output for the requested scene."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
 
     with pytest.raises(ValueError, match="wrong scene"):
@@ -296,7 +296,7 @@ class ChapterWeaponExtractor:
 
 def test_runner_updates_character_card_and_prompt_from_ai_candidates() -> None:
     """A chapter can flow from AI candidates into Canon-backed outputs."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(
         path=single_chapter_source_file(),
         source_id="demo",
@@ -374,7 +374,7 @@ def test_runner_updates_character_card_and_prompt_from_ai_candidates() -> None:
 
 def test_runner_builds_scene_position_world_state() -> None:
     """Project runner can build world state at exact scene positions."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(
         path=two_scene_source_file(),
         source_id="demo",
@@ -420,7 +420,7 @@ def test_runner_builds_scene_position_world_state() -> None:
 
 def test_runner_dedupes_selected_ids_for_views() -> None:
     """Project runner dedupes selected IDs before building downstream views."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     result = runner.run_demo_text_file(path=source_file(), source_id="demo")
 
     context = runner.build_scene_context(
@@ -438,7 +438,7 @@ def test_runner_dedupes_selected_ids_for_views() -> None:
 
 def test_runner_scene_position_views_reject_unknown_scene() -> None:
     """Scene-position project views require imported scene IDs."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     result = runner.run_demo_text_file(path=source_file(), source_id="demo")
 
     with pytest.raises(ValueError, match="Unknown scene"):
@@ -458,7 +458,7 @@ def test_runner_scene_position_views_reject_unknown_scene() -> None:
 
 def test_runner_builds_continuity_report_across_chapters() -> None:
     """Project runner reports new, updated, still-known, and invalidated canon."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     result = runner.run_imported_source(
         imported_source=imported_source,
@@ -498,7 +498,7 @@ def test_runner_builds_continuity_report_across_chapters() -> None:
 
 def test_runner_can_apply_multi_scene_ai_payloads() -> None:
     """Project runner can apply precomputed AI payloads across all scenes."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     first_anchor_id = imported_source.anchors[0].anchor_id
     second_anchor_id = imported_source.anchors[1].anchor_id
@@ -527,7 +527,7 @@ def test_runner_can_apply_multi_scene_ai_payloads() -> None:
 
 def test_continuity_report_keeps_additive_facts_as_new() -> None:
     """Additive fact attributes accumulate instead of invalidating prior values."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     first_anchor_id = imported_source.anchors[0].anchor_id
     second_anchor_id = imported_source.anchors[1].anchor_id
@@ -568,7 +568,7 @@ def test_continuity_report_keeps_additive_facts_as_new() -> None:
 
 def test_runner_rejects_multi_scene_ai_payloads_missing_scene() -> None:
     """Project runner requires one payload for every imported scene."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     first_anchor_id = imported_source.anchors[0].anchor_id
 
@@ -586,7 +586,7 @@ def test_runner_rejects_multi_scene_ai_payloads_missing_scene() -> None:
 
 def test_runner_rejects_multi_scene_ai_payloads_unknown_scene() -> None:
     """Project runner rejects payloads that do not belong to imported scenes."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     first_anchor_id = imported_source.anchors[0].anchor_id
     second_anchor_id = imported_source.anchors[1].anchor_id
@@ -613,7 +613,7 @@ def test_runner_rejects_multi_scene_ai_payloads_unknown_scene() -> None:
 
 def test_runner_rejects_blank_multi_scene_ai_payload_scene_id() -> None:
     """Project runner rejects blank multi-scene payload IDs at the API boundary."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     first_anchor_id = imported_source.anchors[0].anchor_id
 
@@ -631,7 +631,7 @@ def test_runner_rejects_blank_multi_scene_ai_payload_scene_id() -> None:
 
 def test_runner_rejects_non_string_multi_scene_ai_payload_scene_id() -> None:
     """Project runner rejects non-string multi-scene payload IDs cleanly."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     first_anchor_id = imported_source.anchors[0].anchor_id
     payloads = cast(
@@ -653,7 +653,7 @@ def test_runner_rejects_non_string_multi_scene_ai_payload_scene_id() -> None:
 
 def test_runner_rejects_whitespace_multi_scene_ai_payload_scene_id() -> None:
     """Project runner rejects non-machine-safe multi-scene payload IDs."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     first_anchor_id = imported_source.anchors[0].anchor_id
 
@@ -671,7 +671,7 @@ def test_runner_rejects_whitespace_multi_scene_ai_payload_scene_id() -> None:
 
 def test_runner_rejects_malformed_multi_scene_ai_payload() -> None:
     """Project runner uses the strict evidence-bounded AI payload schema."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     second_anchor_id = imported_source.anchors[1].anchor_id
 
@@ -694,7 +694,7 @@ def test_runner_rejects_malformed_multi_scene_ai_payload() -> None:
 
 def test_continuity_report_exports_as_json_and_markdown() -> None:
     """Continuity reports can be exported for the Canon Test proof."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     result = runner.run_imported_source(
         imported_source=imported_source,
@@ -726,7 +726,7 @@ def test_continuity_report_exports_as_json_and_markdown() -> None:
 
 def test_continuity_report_markdown_limits_retained_canon_noise() -> None:
     """Continuity Markdown summarizes retained records while JSON keeps them."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(path=source_file(), source_id="demo")
     result = runner.run_imported_source(
         imported_source=imported_source,
@@ -778,7 +778,7 @@ def test_continuity_report_markdown_omits_excess_retained_records() -> None:
 
 def test_project_run_result_rejects_misaligned_summaries() -> None:
     """Project run results keep extraction results aligned with update summaries."""
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
     result = runner.run_demo_text_file(path=source_file(), source_id="demo")
 
     with pytest.raises(ValueError, match="must align"):

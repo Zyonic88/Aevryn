@@ -1,4 +1,4 @@
-"""Tests for SceneSmith's machine-readable V1 acceptance audit."""
+"""Tests for Aevryn's machine-readable V1 acceptance audit."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-AUDIT_PATH = ROOT / "docs" / "SCENESMITH_V1_ACCEPTANCE_AUDIT.json"
+AUDIT_PATH = ROOT / "docs" / "AEVRYN_V1_ACCEPTANCE_AUDIT.json"
 
 EXPECTED_IMPLEMENTED_SYSTEMS = {
     "Story Import",
@@ -114,7 +114,7 @@ def test_cli_proof_workflow_audit_includes_validation_evidence() -> None:
     )
     evidence = cli_system["evidence"]
 
-    assert "src/scenesmith/validation/runner.py" in evidence["source"]
+    assert "src/aevryn/validation/runner.py" in evidence["source"]
     assert "tests/test_validation_runner.py" in evidence["tests"]
     assert "tests/test_validation_corpus.py" in evidence["tests"]
 

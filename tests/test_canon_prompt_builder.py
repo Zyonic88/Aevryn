@@ -2,7 +2,7 @@
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     CanonPromptBuilder,
     CanonSceneContext,
     CharacterCardBuilder,
@@ -10,7 +10,7 @@ from scenesmith import (
     SceneAnalyzer,
     SceneContextBuilder,
 )
-from scenesmith.core import Fact, StateChange
+from aevryn.core import Fact, StateChange
 from tests.test_scene_context_builder import build_database, build_imported_source
 
 
@@ -32,7 +32,7 @@ def test_canon_prompt_builder_builds_image_prompt_from_scene_context() -> None:
     """Image prompts include accepted scene facts and relationships."""
     prompt = CanonPromptBuilder().build_image_prompt(build_context())
 
-    assert "Generate this image using only accepted SceneSmith canon." in prompt
+    assert "Generate this image using only accepted Aevryn canon." in prompt
     assert "Scene Summary:" in prompt
     assert "Purpose:" in prompt
     assert "Character: Mark (character_mark)" in prompt

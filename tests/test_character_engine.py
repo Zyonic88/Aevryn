@@ -1,8 +1,8 @@
-"""Tests for the SceneSmith Character Engine."""
+"""Tests for the Aevryn Character Engine."""
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     CanonEngine,
     CanonEntity,
     CharacterCard,

@@ -5,7 +5,7 @@ import io
 import json
 from dataclasses import replace
 
-from scenesmith import (
+from aevryn import (
     CanonCharacterCard,
     CanonPromptBuilder,
     CanonSceneContext,
@@ -13,8 +13,8 @@ from scenesmith import (
     ExportEngine,
     SceneContextBuilder,
 )
-from scenesmith.core import Entity, Relationship
-from scenesmith.prompts import PromptBundle
+from aevryn.core import Entity, Relationship
+from aevryn.prompts import PromptBundle
 from tests.test_scene_context_builder import build_database, build_imported_source
 
 

@@ -1,11 +1,11 @@
-"""Tests for the SceneSmith Timeline Engine."""
+"""Tests for the Aevryn Timeline Engine."""
 
 from typing import Any, cast
 
 import pytest
 
-from scenesmith import StoryPosition
-from scenesmith.timeline import (
+from aevryn import StoryPosition
+from aevryn.timeline import (
     DuplicateChapterError,
     DuplicateEventError,
     DuplicateSceneError,

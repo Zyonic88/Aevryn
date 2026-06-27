@@ -1,4 +1,4 @@
-# SceneSmith Validation Corpus
+# Aevryn Validation Corpus
 
 The validation corpus stores regression case definitions for local story chapters.
 
@@ -6,7 +6,7 @@ It does not store copyrighted chapter text.
 
 ## Purpose
 
-The validation suite exists to prove that SceneSmith remains stable across genres as
+The validation suite exists to prove that Aevryn remains stable across genres as
 the V1 engines are hardened.
 
 Each case checks:
@@ -45,35 +45,35 @@ drift without storing prompts or chapter text.
 By default, the CLI looks for local chapters at:
 
 ```text
-~/Desktop/SceneSmith test chapters
+~/Desktop/Aevryn test chapters
 ```
 
 Override the source root with either:
 
 ```powershell
-$env:SCENESMITH_VALIDATION_ROOT = "C:\path\to\chapters"
+$env:AEVRYN_VALIDATION_ROOT = "C:\path\to\chapters"
 ```
 
 or:
 
 ```powershell
-scenesmith validate --source-root "C:\path\to\chapters"
+aevryn validate --source-root "C:\path\to\chapters"
 ```
 
-`--source-root` takes priority over `SCENESMITH_VALIDATION_ROOT`.
+`--source-root` takes priority over `AEVRYN_VALIDATION_ROOT`.
 
-`SCENESMITH_VALIDATION_ROOT` must not be blank.
+`AEVRYN_VALIDATION_ROOT` must not be blank.
 
 ## Running
 
 ```powershell
-scenesmith validate
+aevryn validate
 ```
 
 or from a source checkout:
 
 ```powershell
-python -m scenesmith.cli validate
+python -m aevryn.cli validate
 ```
 
 The command prints one result per case plus suite-level totals and a suite digest:
@@ -89,7 +89,7 @@ b911bda5279c30ead1830f58efa640d83bc66e41f3a50e96846804b428dec9d1
 For quick repeat checks, suppress per-case output:
 
 ```powershell
-scenesmith validate --summary-only
+aevryn validate --summary-only
 ```
 
 ## Writing Snapshots
@@ -97,17 +97,17 @@ scenesmith validate --summary-only
 Save deterministic validation metadata for future comparison:
 
 ```powershell
-scenesmith validate --summary-only --snapshot-dir snapshots/validation_v1_rc1
+aevryn validate --summary-only --snapshot-dir snapshots/validation_v1_rc1
 ```
 
-Snapshot directories must be empty or absent. SceneSmith refuses to overwrite a
+Snapshot directories must be empty or absent. Aevryn refuses to overwrite a
 non-empty snapshot directory.
 
 Validation snapshots contain metrics, digests, and result metadata. They do not
 store chapter text or extraction prompt bodies.
 
 `validation_result.json` uses the same deterministic JSON as
-`scenesmith validate --format json`.
+`aevryn validate --format json`.
 
 Snapshots are only valid for actual validation runs. `--snapshot-dir` cannot be
 combined with `--list-cases`.
@@ -119,13 +119,13 @@ The snapshot path must be a directory path, not a file path.
 List available case IDs without importing chapter files:
 
 ```powershell
-scenesmith validate --list-cases
+aevryn validate --list-cases
 ```
 
 Machine-readable case listing:
 
 ```powershell
-scenesmith validate --list-cases --format json
+aevryn validate --list-cases --format json
 ```
 
 ## Focused Runs
@@ -133,13 +133,13 @@ scenesmith validate --list-cases --format json
 Run one case:
 
 ```powershell
-scenesmith validate --case-id adventure_starfleet
+aevryn validate --case-id adventure_starfleet
 ```
 
 Run multiple selected cases:
 
 ```powershell
-scenesmith validate --case-id adventure_starfleet --case-id mystery_super_dimensional_wizard
+aevryn validate --case-id adventure_starfleet --case-id mystery_super_dimensional_wizard
 ```
 
 Unknown case IDs fail loudly.
@@ -149,7 +149,7 @@ Unknown case IDs fail loudly.
 Validation can emit machine-readable results:
 
 ```powershell
-scenesmith validate --format json
+aevryn validate --format json
 ```
 
 If validation fails, JSON is still printed to stdout and the command exits with a

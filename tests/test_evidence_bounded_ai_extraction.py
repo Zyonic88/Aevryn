@@ -1,10 +1,10 @@
-﻿"""Tests for evidence-bounded AI extraction."""
+"""Tests for evidence-bounded AI extraction."""
 
 import json
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     EntityExtractionEngine,
     EvidenceBoundedAIExtractor,
     ExtractedFact,

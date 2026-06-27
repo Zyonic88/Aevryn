@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     CanonCharacterCard,
     CanonCharacterFact,
     CanonPromptBuilder,

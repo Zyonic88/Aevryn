@@ -1,10 +1,10 @@
-"""Tests for the SceneSmith Canon Engine."""
+"""Tests for the Aevryn Canon Engine."""
 
 from typing import Any, cast
 
 import pytest
 
-from scenesmith.canon import (
+from aevryn.canon import (
     CanonConflict,
     CanonEngine,
     CanonEntity,

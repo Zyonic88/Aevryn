@@ -1,6 +1,6 @@
-# SceneSmith Build Order
+# Aevryn Build Order
 
-SceneSmith is built documentation-first.
+Aevryn is built documentation-first.
 
 No subsystem should be implemented until its purpose, authority, boundaries, failure modes, and tests are understood.
 
@@ -98,7 +98,7 @@ It may later support:
 
 It must respect site terms, robots.txt, login and paywall rules, and rate limits.
 
-It must never present scraped copyrighted text as SceneSmith-owned content.
+It must never present scraped copyrighted text as Aevryn-owned content.
 
 ## Phase 3B: Translation Engine Boundary
 
@@ -154,7 +154,7 @@ First proof:
 
 ```text
 Upload or paste one real chapter
--> SceneSmith extracts candidates
+-> Aevryn extracts candidates
 -> Canon accepts or rejects
 -> Character card updates
 -> Prompt updates
@@ -168,7 +168,7 @@ The AI may say:
 Mark now owns Iron Sword.
 ```
 
-SceneSmith asks:
+Aevryn asks:
 
 * Evidence?
 * Confidence?
@@ -193,7 +193,7 @@ It does not extract entities, own canon truth, or generate prompts.
 
 Canon stores truth.
 
-Timeline tells SceneSmith when that truth is valid.
+Timeline tells Aevryn when that truth is valid.
 
 ## Phase 7: Character Cards
 
@@ -327,11 +327,11 @@ The first proof should be ugly and useful.
 Example:
 
 ```text
-scenesmith import chapter_001.txt
-scenesmith extract
-scenesmith character Mark
-scenesmith scene 42
-scenesmith prompt scene 42
+aevryn import chapter_001.txt
+Aevryn extract
+aevryn character Mark
+aevryn scene 42
+aevryn prompt scene 42
 ```
 
 If the CLI works, the website becomes a presentation layer.
@@ -358,7 +358,7 @@ It does not own canon truth.
 
 ## V1 RC1 Status
 
-SceneSmith has reached V1 RC1 for the implemented continuity engine.
+Aevryn has reached V1 RC1 for the implemented continuity engine.
 
 Implemented RC1 systems:
 

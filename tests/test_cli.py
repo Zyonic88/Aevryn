@@ -1,6 +1,7 @@
-"""Tests for the SceneSmith command line interface."""
+"""Tests for the Aevryn command line interface."""
 
 import json
+import os
 import re
 import shutil
 from pathlib import Path
@@ -8,9 +9,9 @@ from pathlib import Path
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
-from scenesmith.cli import main
-from scenesmith.importing import StoryImporter
-from scenesmith.validation.runner import (
+from aevryn.cli import main
+from aevryn.importing import StoryImporter
+from aevryn.validation.runner import (
     _extraction_input_digest,
     _extraction_prompt_digest,
     _source_manifest_digest,
@@ -115,10 +116,11 @@ def test_cli_help_shows_v1_workflow(capsys: CaptureFixture[str]) -> None:
     output = capsys.readouterr().out
 
     assert error.value.code == 0
-    assert "SceneSmith V1 proof CLI" in output
+    assert "Aevryn V1 proof CLI" in output
     assert "Typical V1 flow:" in output
-    assert "scenesmith import chapter_001.txt --source-id my_story" in output
-    assert "scenesmith validate --summary-only --snapshot-dir snapshots/run_name" in output
+    assert "aevryn import chapter_001.txt --source-id my_story" in output
+    assert "aevryn validate --summary-only --snapshot-dir snapshots/run_name" in output
+    assert "aevryn api --host 127.0.0.1 --port 8000" in output
 
 
 def test_cli_help_describes_current_command_purpose(
@@ -197,7 +199,7 @@ def test_validate_help_describes_snapshot_and_source_root(
     assert "Directory containing validation case metadata JSON" in output
     assert "files." in output
     assert "Root directory containing local validation chapter" in output
-    assert "folders. Overrides SCENESMITH_VALIDATION_ROOT." in output
+    assert "folders. Overrides AEVRYN_VALIDATION_ROOT." in output
     assert "List validation cases without importing source files." in output
     assert "deterministic snapshot" in output
     assert "metadata is written." in output
@@ -217,6 +219,89 @@ def test_world_help_describes_presentation_and_machine_outputs(
     assert error.value.code == 0
     assert "Markdown is presentation-first" in output
     assert "preserves machine detail." in output
+
+
+def test_api_help_describes_server_options(capsys: CaptureFixture[str]) -> None:
+    """API help should describe local platform server options."""
+    with pytest.raises(SystemExit) as error:
+        main(["api", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Run the V2 Backend API" in output
+    assert "--allowed-origin" in output
+    assert "--reload" in output
+
+
+def test_api_command_runs_configured_server(monkeypatch: MonkeyPatch) -> None:
+    """API command should create the app and pass server options to Uvicorn."""
+    captured: dict[str, object] = {}
+
+    def fake_run_api_server(
+        app: object,
+        host: str,
+        port: int,
+        reload: bool,
+        factory: bool = False,
+    ) -> None:
+        captured["app"] = app
+        captured["host"] = host
+        captured["port"] = port
+        captured["reload"] = reload
+        captured["factory"] = factory
+
+    monkeypatch.setattr("aevryn.cli._run_api_server", fake_run_api_server)
+
+    exit_code = main(
+        [
+            "api",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "9000",
+            "--allowed-origin",
+            "http://localhost:5173",
+            "--reload",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["host"] == "0.0.0.0"
+    assert captured["port"] == 9000
+    assert captured["reload"] is True
+    assert captured["factory"] is True
+    assert captured["app"] == "aevryn.api.app:create_app_from_env"
+
+
+def test_api_command_passes_app_object_without_reload(monkeypatch: MonkeyPatch) -> None:
+    """API command should pass a concrete app object when reload is disabled."""
+    captured: dict[str, object] = {}
+    monkeypatch.delenv("AEVRYN_API_ALLOWED_ORIGINS", raising=False)
+
+    def fake_run_api_server(
+        app: object,
+        host: str,
+        port: int,
+        reload: bool,
+        factory: bool = False,
+    ) -> None:
+        captured["app"] = app
+        captured["host"] = host
+        captured["port"] = port
+        captured["reload"] = reload
+        captured["factory"] = factory
+
+    monkeypatch.setattr("aevryn.cli._run_api_server", fake_run_api_server)
+
+    exit_code = main(["api", "--allowed-origin", "http://localhost:5173"])
+
+    assert exit_code == 0
+    assert captured["host"] == "127.0.0.1"
+    assert captured["port"] == 8000
+    assert captured["reload"] is False
+    assert captured["factory"] is False
+    assert captured["app"] != "aevryn.api.app:create_app_from_env"
+    assert "AEVRYN_API_ALLOWED_ORIGINS" not in os.environ
 
 
 def ai_response_file(anchor_id: str) -> Path:
@@ -607,7 +692,7 @@ def test_scene_command_reports_unknown_scene(
     assert exit_code == 1
     assert captured.out == ""
     assert "Unknown scene" in captured.err
-    assert "scenesmith import <path> --source-id <id>" in captured.err
+    assert "aevryn import <path> --source-id <id>" in captured.err
 
 
 def test_character_command_reports_unknown_character_with_hint(
@@ -1479,7 +1564,7 @@ def test_validate_command_uses_environment_source_root(
     capsys: CaptureFixture[str],
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """Validate command uses SCENESMITH_VALIDATION_ROOT when no source root is passed."""
+    """Validate command uses AEVRYN_VALIDATION_ROOT when no source root is passed."""
     source_root = Path("build") / "test_cli_validate_env" / "sources"
     source_dir = source_root / "Demo Genre"
     case_dir = Path("build") / "test_cli_validate_env" / "cases"
@@ -1509,7 +1594,7 @@ def test_validate_command_uses_environment_source_root(
         ),
         encoding="utf-8",
     )
-    monkeypatch.setenv("SCENESMITH_VALIDATION_ROOT", str(source_root))
+    monkeypatch.setenv("AEVRYN_VALIDATION_ROOT", str(source_root))
 
     exit_code = main(["validate", "--case-dir", str(case_dir)])
     output = capsys.readouterr().out
@@ -1523,7 +1608,7 @@ def test_validate_source_root_argument_overrides_environment(
     capsys: CaptureFixture[str],
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """Validate --source-root has priority over SCENESMITH_VALIDATION_ROOT."""
+    """Validate --source-root has priority over AEVRYN_VALIDATION_ROOT."""
     source_root = Path("build") / "test_cli_validate_arg_over_env" / "sources"
     source_dir = source_root / "Demo Genre"
     env_root = Path("build") / "test_cli_validate_arg_over_env" / "wrong_sources"
@@ -1555,7 +1640,7 @@ def test_validate_source_root_argument_overrides_environment(
         ),
         encoding="utf-8",
     )
-    monkeypatch.setenv("SCENESMITH_VALIDATION_ROOT", str(env_root))
+    monkeypatch.setenv("AEVRYN_VALIDATION_ROOT", str(env_root))
 
     exit_code = main(
         [
@@ -1577,18 +1662,18 @@ def test_validate_rejects_blank_environment_source_root(
     capsys: CaptureFixture[str],
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """Validate command reports blank SCENESMITH_VALIDATION_ROOT clearly."""
+    """Validate command reports blank AEVRYN_VALIDATION_ROOT clearly."""
     case_dir = Path("build") / "test_cli_validate_blank_env" / "cases"
     case_dir.mkdir(parents=True, exist_ok=True)
     for existing_case in case_dir.glob("*.json"):
         existing_case.unlink()
-    monkeypatch.setenv("SCENESMITH_VALIDATION_ROOT", "   ")
+    monkeypatch.setenv("AEVRYN_VALIDATION_ROOT", "   ")
 
     exit_code = main(["validate", "--case-dir", str(case_dir)])
     captured = capsys.readouterr()
 
     assert exit_code == 1
-    assert "SCENESMITH_VALIDATION_ROOT cannot be blank." in captured.err
+    assert "AEVRYN_VALIDATION_ROOT cannot be blank." in captured.err
 
 
 def test_validate_command_can_print_summary_only(capsys: CaptureFixture[str]) -> None:

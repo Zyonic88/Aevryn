@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     CanonDatabase,
     CanonSceneContext,
     CharacterCardBuilder,
@@ -12,7 +12,7 @@ from scenesmith import (
     SceneContextBuilder,
     StoryImporter,
 )
-from scenesmith.core import (
+from aevryn.core import (
     Character,
     Entity,
     Evidence,

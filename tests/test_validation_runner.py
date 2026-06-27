@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 from _pytest.logging import LogCaptureFixture
 
-from scenesmith.importing import ImportedSource, StoryImporter
-from scenesmith.validation import ValidationRunner
-from scenesmith.validation.runner import (
+from aevryn.importing import ImportedSource, StoryImporter
+from aevryn.validation import ValidationRunner
+from aevryn.validation.runner import (
     ExpectedExtractionMetrics,
     ExpectedImportMetrics,
     ValidationCaseResult,
@@ -141,7 +141,7 @@ def test_validation_runner_logs_failed_cases(caplog: LogCaptureFixture) -> None:
     _write_validation_source(source_root)
     _write_case(case_dir, case_id="demo_validation_case", evidence_anchors=999)
 
-    with caplog.at_level(logging.WARNING, logger="scenesmith.validation.runner"):
+    with caplog.at_level(logging.WARNING, logger="aevryn.validation.runner"):
         result = ValidationRunner(case_dir=case_dir, source_root=source_root).run()
 
     assert result.passed is False
@@ -160,7 +160,7 @@ def test_validation_runner_logs_suite_elapsed_time(caplog: LogCaptureFixture) ->
     _write_validation_source(source_root)
     _write_case(case_dir, case_id="demo_validation_case")
 
-    with caplog.at_level(logging.INFO, logger="scenesmith.validation.runner"):
+    with caplog.at_level(logging.INFO, logger="aevryn.validation.runner"):
         result = ValidationRunner(case_dir=case_dir, source_root=source_root).run()
 
     completed_records = [

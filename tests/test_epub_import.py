@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from scenesmith.importing import EpubTextExtractor
-from scenesmith.projects import SceneSmithProjectRunner
+from aevryn.importing import EpubTextExtractor
+from aevryn.projects import AevrynProjectRunner
 
 
 def test_epub_extractor_uses_spine_text_and_excludes_navigation() -> None:
@@ -62,7 +62,7 @@ def test_epub_extractor_trims_leading_chapter_list_reset() -> None:
     )
 
     extracted = EpubTextExtractor().extract_path(epub_path)
-    imported = SceneSmithProjectRunner().import_text_file(
+    imported = AevrynProjectRunner().import_text_file(
         path=epub_path,
         source_id="moby_demo",
     )
@@ -87,7 +87,7 @@ def test_epub_import_is_deterministic() -> None:
         },
         spine_ids=("chapter",),
     )
-    runner = SceneSmithProjectRunner()
+    runner = AevrynProjectRunner()
 
     first = runner.import_text_file(path=epub_path, source_id="deterministic")
     second = runner.import_text_file(path=epub_path, source_id="deterministic")

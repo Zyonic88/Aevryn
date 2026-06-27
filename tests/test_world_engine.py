@@ -4,14 +4,14 @@ from typing import Any, cast
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     CanonDatabase,
     WorldEntityFact,
     WorldEntityState,
     WorldState,
     WorldStateBuilder,
 )
-from scenesmith.core import (
+from aevryn.core import (
     Chapter,
     Character,
     Entity,

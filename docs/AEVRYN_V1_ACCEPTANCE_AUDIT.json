@@ -1,0 +1,505 @@
+{
+  "schema_version": 1,
+  "audit_status": "rc1_ready",
+  "universal_criteria": [
+    "purpose_defined",
+    "authority_defined",
+    "boundaries_enforced",
+    "unit_tests_pass",
+    "integration_tests_pass",
+    "no_todo_placeholders",
+    "proper_documentation",
+    "stable_interfaces",
+    "deterministic_behavior",
+    "failure_modes_handled",
+    "logging",
+    "type_safety",
+    "no_unnecessary_complexity"
+  ],
+  "accepted_criterion_values": [
+    "pass"
+  ],
+  "global_blockers": [],
+  "implemented_systems": [
+    {
+      "name": "Story Import",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_STORY_IMPORT.md"
+        ],
+        "source": [
+          "src/aevryn/importing/engine.py"
+        ],
+        "tests": [
+          "tests/test_story_importer.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Entity Extraction",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_ENTITY_EXTRACTION.md"
+        ],
+        "source": [
+          "src/aevryn/extraction/ai.py",
+          "src/aevryn/extraction/engine.py",
+          "src/aevryn/extraction/models.py"
+        ],
+        "tests": [
+          "tests/test_entity_extraction.py",
+          "tests/test_evidence_bounded_ai_extraction.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Canon Updating",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_CANON_UPDATING.md"
+        ],
+        "source": [
+          "src/aevryn/canon/updating.py"
+        ],
+        "tests": [
+          "tests/test_canon_updating.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Canon Engine",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_CANON_ENGINE.md"
+        ],
+        "source": [
+          "src/aevryn/canon/database.py",
+          "src/aevryn/canon/engine.py"
+        ],
+        "tests": [
+          "tests/test_canon_database.py",
+          "tests/test_canon_engine.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Timeline Engine",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_TIMELINE_ENGINE.md"
+        ],
+        "source": [
+          "src/aevryn/timeline/engine.py"
+        ],
+        "tests": [
+          "tests/test_timeline_engine.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Character Engine",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_CHARACTER_ENGINE.md"
+        ],
+        "source": [
+          "src/aevryn/characters/cards.py",
+          "src/aevryn/characters/engine.py",
+          "src/aevryn/characters/models.py"
+        ],
+        "tests": [
+          "tests/test_character_card_builder.py",
+          "tests/test_character_engine.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "World Engine",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_WORLD_ENGINE.md"
+        ],
+        "source": [
+          "src/aevryn/world/engine.py",
+          "src/aevryn/world/models.py"
+        ],
+        "tests": [
+          "tests/test_world_engine.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Scene Engine",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_SCENE_ENGINE.md"
+        ],
+        "source": [
+          "src/aevryn/core/models.py",
+          "src/aevryn/scenes/context.py",
+          "src/aevryn/scenes/engine.py"
+        ],
+        "tests": [
+          "tests/test_scene_context_builder.py",
+          "tests/test_scene_engine.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Scene Analyzer",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_SCENE_ANALYZER.md"
+        ],
+        "source": [
+          "src/aevryn/scenes/analyzer.py"
+        ],
+        "tests": [
+          "tests/test_scene_analyzer.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Prompt Engine",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_PROMPT_ENGINE.md"
+        ],
+        "source": [
+          "src/aevryn/prompts/builder.py",
+          "src/aevryn/prompts/engine.py"
+        ],
+        "tests": [
+          "tests/test_canon_prompt_builder.py",
+          "tests/test_prompt_engine.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Presentation Engine",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_PRESENTATION_ENGINE.md"
+        ],
+        "source": [
+          "src/aevryn/presentation/engine.py"
+        ],
+        "tests": [
+          "tests/test_presentation_engine.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Export Engine",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_EXPORT_ENGINE.md"
+        ],
+        "source": [
+          "src/aevryn/export/engine.py"
+        ],
+        "tests": [
+          "tests/test_export_engine.py",
+          "tests/test_phase9_export.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "Project Manager",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/AEVRYN_PROJECT_MANAGER.md"
+        ],
+        "source": [
+          "src/aevryn/projects/runner.py"
+        ],
+        "tests": [
+          "tests/test_project_runner.py"
+        ]
+      },
+      "remaining_blockers": []
+    },
+    {
+      "name": "CLI Proof Workflow",
+      "status": "v1_complete_rc1",
+      "criteria": {
+        "purpose_defined": "pass",
+        "authority_defined": "pass",
+        "boundaries_enforced": "pass",
+        "unit_tests_pass": "pass",
+        "integration_tests_pass": "pass",
+        "no_todo_placeholders": "pass",
+        "proper_documentation": "pass",
+        "stable_interfaces": "pass",
+        "deterministic_behavior": "pass",
+        "failure_modes_handled": "pass",
+        "logging": "pass",
+        "type_safety": "pass",
+        "no_unnecessary_complexity": "pass"
+      },
+      "evidence": {
+        "documentation": [
+          "docs/BUILD_ORDER.md",
+          "docs/AEVRYN_V1_ACCEPTANCE_CRITERIA.md"
+        ],
+        "source": [
+          "src/aevryn/cli.py",
+          "src/aevryn/validation/runner.py"
+        ],
+        "tests": [
+          "tests/test_cli.py",
+          "tests/test_validation_corpus.py",
+          "tests/test_validation_runner.py"
+        ]
+      },
+      "remaining_blockers": []
+    }
+  ],
+  "boundary_systems": [
+    {
+      "name": "Translation Engine",
+      "status": "foundation_only",
+      "documentation": [
+        "docs/AEVRYN_TRANSLATION_ENGINE.md"
+      ],
+      "reason": "Translation is documented as an optional V1-adjacent module, but the core continuity loop does not require implementation yet."
+    },
+    {
+      "name": "Web Import",
+      "status": "documented_only",
+      "documentation": [
+        "docs/AEVRYN_WEB_IMPORT_SYSTEM.md"
+      ],
+      "reason": "Manual upload and paste remain the V1 import path until permission checks, rate limits, and source handling are implemented."
+    }
+  ],
+  "rc1_snapshot_comparison": {
+    "status": "pass",
+    "snapshot_base": "snapshots/v1_rc1_validation_comparison_20260626_014637",
+    "suite_digest": "b911bda5279c30ead1830f58efa640d83bc66e41f3a50e96846804b428dec9d1",
+    "compared_files": [
+      "README.md",
+      "validation_result.json"
+    ]
+  }
+}

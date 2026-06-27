@@ -1,17 +1,19 @@
-# SceneSmith
+# Aevryn
 
 > **AI-Powered Story Continuity Engine**
 >
 > Built by **Aetherra Labs**
+>
+> Primary domain: **https://aevryn.ai**
 
-Upload a story. SceneSmith builds a living canon that stays consistent across
+Upload a story. Aevryn builds a living canon that stays consistent across
 every chapter.
 
 **Evidence in. Canon out.**
 
 ## Overview
 
-SceneSmith is an AI-powered Story Continuity Engine designed for creators who
+Aevryn is an AI-powered Story Continuity Engine designed for creators who
 work with novels, manga, manhwa, web novels, comics, scripts, and other
 long-form stories.
 
@@ -19,7 +21,7 @@ Its purpose is not to generate stories.
 
 Its purpose is to understand existing stories.
 
-SceneSmith continuously analyzes chapters, tracks characters, locations, items,
+Aevryn continuously analyzes chapters, tracks characters, locations, items,
 relationships, timeline progression, and world state, building a living canon
 database that evolves alongside the story.
 
@@ -30,9 +32,9 @@ narration prompts, and future AI-assisted media without continuity errors.
 
 ChatGPT can answer from a prompt.
 
-SceneSmith maintains evidence-backed story state.
+Aevryn maintains evidence-backed story state.
 
-Instead of asking an AI to remember everything every time, SceneSmith imports
+Instead of asking an AI to remember everything every time, Aevryn imports
 story evidence, accepts or rejects extracted candidates, versions canon changes,
 and reconstructs what was true at a specific chapter or scene.
 
@@ -48,7 +50,7 @@ Story evidence
 
 ## Current Status
 
-SceneSmith is currently **V1 Engine Complete** for the terminal-based story
+Aevryn is currently **V1 Engine Complete** for the terminal-based story
 continuity workflow.
 
 V1 understands story structure, evidence anchors, candidate extraction payloads,
@@ -64,7 +66,7 @@ Final V1 acceptance validation:
 
 * V1 Engine Complete
 * Final V1 acceptance sweep passed
-* 518 automated tests passing
+* 548 automated tests passing
 * Deterministic rebuild validation
 * Cross-genre validation
 * 8-genre validation corpus
@@ -109,9 +111,9 @@ Every prompt starts almost from scratch.
 
 ## The Solution
 
-SceneSmith creates a continuously evolving Story State.
+Aevryn creates a continuously evolving Story State.
 
-Instead of asking AI to remember everything every time, SceneSmith maintains the
+Instead of asking AI to remember everything every time, Aevryn maintains the
 current canonical truth.
 
 Every generated prompt references the latest known state of the story.
@@ -148,7 +150,7 @@ pip install -e .[dev]
 Inspect a text chapter import:
 
 ```powershell
-scenesmith import path\to\chapter_001.txt --source-id my_story
+aevryn import path\to\chapter_001.txt --source-id my_story
 ```
 
 The import command prints chapter IDs, scene IDs, a scene map, and a bounded
@@ -158,13 +160,13 @@ timeline-safe character, scene, world, and prompt views.
 Generate the evidence-bounded extraction prompt for one scene:
 
 ```powershell
-scenesmith extraction-prompt path\to\chapter_001.txt --source-id my_story
+aevryn extraction-prompt path\to\chapter_001.txt --source-id my_story
 ```
 
 Apply an AI extraction response from JSON:
 
 ```powershell
-scenesmith extract-ai-json path\to\chapter_001.txt path\to\ai_response.json --source-id my_story
+aevryn extract-ai-json path\to\chapter_001.txt path\to\ai_response.json --source-id my_story
 ```
 
 The command prints accepted and rejected candidate counts plus stable accepted
@@ -174,10 +176,10 @@ IDs, such as `accepted_entity_ids`. Use those IDs in follow-up commands like
 Generate canon-backed outputs from that response:
 
 ```powershell
-scenesmith character path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json --character-id character_mark
-scenesmith scene path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
-scenesmith prompt path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
-scenesmith continuity path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
+aevryn character path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json --character-id character_mark
+aevryn scene path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
+aevryn prompt path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
+aevryn continuity path\to\chapter_001.txt --source-id my_story --ai-response-file path\to\ai_response.json
 ```
 
 Markdown output is presentation-first for quick scanning. JSON and CSV outputs
@@ -186,22 +188,22 @@ preserve machine-readable detail for audits, tests, and downstream tools.
 Run the validation corpus:
 
 ```powershell
-scenesmith validate --summary-only
+aevryn validate --summary-only
 ```
 
 The default validation source root is:
 
 ```text
-~/Desktop/SceneSmith test chapters
+~/Desktop/Aevryn test chapters
 ```
 
-Use `--source-root` or `SCENESMITH_VALIDATION_ROOT` to point validation at a
+Use `--source-root` or `AEVRYN_VALIDATION_ROOT` to point validation at a
 different local corpus.
 
 Create a deterministic validation snapshot:
 
 ```powershell
-scenesmith validate --summary-only --snapshot-dir snapshots/my_run
+aevryn validate --summary-only --snapshot-dir snapshots/my_run
 ```
 
 Snapshot artifact directories are ignored by git. They store deterministic
@@ -217,14 +219,14 @@ Run these before committing:
 ruff check pyproject.toml docs src tests validation
 mypy src tests
 pytest -q
-scenesmith validate --summary-only
+aevryn validate --summary-only
 ```
 
 ---
 
 ## Design Philosophy
 
-SceneSmith never invents canon.
+Aevryn never invents canon.
 
 Every extracted fact should include:
 
@@ -239,7 +241,7 @@ If evidence does not exist, the system records the information as Unknown rather
 
 ## Long-Term Vision
 
-SceneSmith aims to become the industry's most accurate AI-powered story continuity platform.
+Aevryn aims to become the industry's most accurate AI-powered story continuity platform.
 
 The long-term goal is to allow creators to upload an entire story and immediately begin producing canonically accurate AI-assisted content with minimal manual work.
 

@@ -4,7 +4,7 @@ from typing import Any, cast
 
 import pytest
 
-from scenesmith import (
+from aevryn import (
     EntityExtractionEngine,
     ExtractedEntity,
     ExtractedFact,

@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "scenesmith"
+name = "aevryn"
 version = "0.1.0"
 description = "AI-powered story continuity engine for maintaining evidence-backed canon state."
 readme = "README.md"
@@ -26,16 +26,21 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-dependencies = []
+dependencies = [
+    "fastapi>=0.116",
+]
 
 [project.scripts]
-scenesmith = "scenesmith.cli:main"
+aevryn = "aevryn.cli:main"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4",
     "ruff>=0.6",
     "mypy>=1.11",
+]
+platform = [
+    "uvicorn>=0.30",
 ]
 
 [tool.setuptools.packages.find]
