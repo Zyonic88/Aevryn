@@ -1,0 +1,214 @@
+﻿# Aevryn Website
+
+> Built by **Aetherra Labs**
+
+This document defines the Version 2 Phase 5 Website boundary.
+
+---
+
+# Purpose
+
+The Aevryn Website is the browser client for the platform API.
+
+It exists to make Aevryn usable without touching the CLI while keeping the engine completely independent.
+
+---
+
+# What Is It?
+
+The website is a frontend application.
+
+It owns interaction, navigation, browser state, loading states, error states, and rendering API view models.
+
+It does not own business logic.
+
+---
+
+# Why Does It Exist?
+
+Version 1 proved the engine.
+
+Version 2 proves the platform.
+
+Creators need a clear app shell where they can authenticate, choose a project, reach import flows, and eventually view character cards, world state, scene sheets, continuity reports, prompt packs, and exports.
+
+---
+
+# Authority Owned
+
+The Website owns:
+
+* Browser routing
+* Login and registration screens
+* Auth token storage in the browser
+* Dashboard interaction
+* Project workspace shell interaction
+* Sidebar and tab navigation
+* Loading, empty, and error states
+* API client calls
+* Rendering API response contracts
+
+---
+
+# Authority Not Owned
+
+The Website does not own:
+
+* Canon truth
+* Story Import parsing
+* Entity Extraction
+* Background job execution
+* Authentication policy
+* Project persistence rules
+* Presentation view model construction
+* Export serialization
+* Payments
+* Collaboration
+* Image generation
+* Video generation
+
+---
+
+# Core Rule
+
+The frontend owns interaction.
+
+The API owns contracts.
+
+The engine owns continuity.
+
+No UI may bypass the API.
+
+No UI may duplicate engine rules.
+
+The frontend API client is the only frontend layer that may know concrete endpoint paths.
+
+Components never call `fetch` directly.
+
+Components never shape backend data into engine meaning.
+
+---
+
+# Phase 5 Split
+
+## Phase 5A - App Shell
+
+Phase 5A proves the frontend architecture.
+
+Required:
+
+* Vite
+* React
+* TypeScript
+* React Router
+* TanStack Query
+* Zod
+* Vitest
+* React Testing Library
+* ESLint
+* Prettier
+* Login screen
+* Register screen
+* Auth token handling
+* Dashboard
+* Project workspace shell
+* Sidebar
+* Placeholder workspace tabs
+* API health check
+* API capabilities check
+* Loading, error, and empty states
+
+Not required:
+
+* Full import processing UI
+* Character cards
+* World views
+* Timeline views
+* Scene views
+* Prompt packs
+* Exports
+* Website polish pass
+
+## Phase 5B - Engine Output Views
+
+Phase 5B exposes API-backed engine outputs.
+
+Required later:
+
+* Import UI
+* Character view
+* World view
+* Timeline view
+* Scene view
+* Continuity view
+* Prompt Pack view
+* Export request UI
+
+---
+
+# First Milestone
+
+Aevryn Web Alpha Shell.
+
+Acceptance:
+
+* User can register
+* User can log in
+* Auth token is stored and reused
+* Expired stored sessions are rejected
+* Dashboard loads
+* API health and capabilities display correctly
+* User can create and open a project shell
+* Workspace sidebar renders
+* Placeholder tabs open and close
+* Loading states exist
+* Error states exist
+* Empty states exist
+* No engine logic exists in the frontend
+* Frontend tests, lint, type checks, and build pass
+* Backend gates still pass
+
+No engine logic lives in the frontend.
+
+---
+
+# Failure Modes
+
+The Website can fail if:
+
+* API base URL is missing or wrong
+* API health request fails
+* API capabilities request fails
+* Authentication requests fail
+* Authentication form input is invalid
+* Session token is missing, invalid, or expired
+* A route is unknown
+* An authenticated user opens a public-only auth route
+* A project route references a missing project shell
+* A workspace tab route is unknown
+* Browser storage is unavailable or rejects reads/writes
+* Session persistence fails after successful authentication
+* API response shape changes
+* API returns invalid JSON
+* Browser project storage is malformed
+* Project shell names are blank
+* A workspace tab ID is unknown
+
+Failures must be visible to the user, exposed through accessible alerts where appropriate, and testable. Browser storage failures must never crash the shell; when project persistence fails, the project shell may remain usable for the current session with a visible warning.
+
+---
+
+# V2 Phase 5 Rule
+
+Phase 5 builds the browser client.
+
+Do not build:
+
+* Engine logic in React
+* Payments
+* Collaboration
+* Social login
+* Image generation
+* Video generation
+* Production media pipelines
+

@@ -12,16 +12,21 @@ env/
 build/
 dist/
 *.egg-info/
+web/dist/
 
 # Test and coverage output
 .pytest_cache/
 .coverage
 coverage.xml
 htmlcov/
+web/coverage/
 
 # Tool caches
 .mypy_cache/
 .ruff_cache/
+web/node_modules/
+web/.vite/
+*.tsbuildinfo
 
 # Local environment
 .env

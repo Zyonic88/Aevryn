@@ -1,0 +1,162 @@
+﻿# Aevryn V2 Phase 5 Acceptance Criteria
+
+> Built by **Aetherra Labs**
+
+This document defines when Version 2 Phase 5, the Website, can be considered complete.
+
+---
+
+# Goal
+
+Create a usable web client for Aevryn without moving platform or engine logic into the browser.
+
+---
+
+# Phase 5A - Aevryn Web Alpha Shell Acceptance
+
+Phase 5A locks the first website milestone: Aevryn Web Alpha Shell.
+
+Aevryn Web Alpha Shell is accepted when:
+
+* User can register
+* User can log in
+* Auth token is stored and reused
+* Expired stored sessions are rejected
+* Dashboard loads
+* API health and capabilities display correctly
+* User can create and open a project shell
+* Workspace sidebar renders
+* Placeholder tabs open and close
+* Loading states exist and use accessible status messages
+* Error states exist
+* Empty states exist
+* No engine logic exists in the frontend
+* Frontend tests, lint, type checks, and build pass
+* Backend gates still pass
+
+## Frontend Stack
+
+* Vite is configured
+* React is configured
+* TypeScript is configured
+* React Router is configured
+* TanStack Query is configured
+* Zod validates API responses
+* Vitest is configured
+* React Testing Library is configured
+* ESLint is configured
+* Prettier is configured
+
+## Authentication UI
+
+* User can reach login screen
+* User can reach register screen
+* Authenticated users are redirected away from login and register screens
+* Login input is normalized before Auth API calls
+* Register input is normalized before Auth API calls
+* Register form mirrors the backend password policy for early user feedback
+* Login calls the Auth API
+* Register calls the Auth API
+* Session token is stored through one auth boundary
+* Expired sessions are removed through the auth boundary
+* Logout clears the session token
+* Logout returns the user to login
+* Auth API failures render accessible error alerts
+* Auth session persistence failures render accessible shell alerts
+* Auth failures render visible errors
+
+## Dashboard
+
+* Authenticated user can see dashboard
+* Dashboard shows API health state
+* Dashboard shows API capabilities state
+* Dashboard API failures render accessible error alerts
+* Empty project state is visible
+* User can create a placeholder project shell
+* Blank project names are rejected
+* Project names are normalized
+* Malformed project storage is handled safely
+* Browser storage failures are handled without crashing the shell
+* User can open a project shell
+
+## Workspace Shell
+
+* Workspace route exists
+* Unknown routes redirect predictably
+* Public-only auth routes redirect authenticated users predictably
+* Missing project shells redirect predictably
+* Direct workspace tab URLs open predictably
+* Workspace sidebar exists
+* Placeholder tabs exist for Overview, Import, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports
+* Active workspace tabs expose `aria-current`
+* Unknown workspace tabs show a stable empty state
+* No engine output view is built in Phase 5A
+
+## API Client
+
+* API base URL is centralized
+* Auth token handling is centralized
+* API errors are normalized
+* Network failures are normalized
+* Invalid JSON responses are normalized
+* API response validation is centralized
+* Unexpected API response shapes fail clearly
+* Frontend API client is the only frontend layer that knows endpoint paths
+* Components never call `fetch` directly
+* Components never shape backend data into engine meaning
+* Frontend does not call engine modules directly
+
+---
+
+# Phase 5B - Engine Output View Acceptance
+
+Phase 5B begins only after Phase 5A is hardened.
+
+Required later:
+
+* Import UI
+* Character output view
+* World output view
+* Timeline output view
+* Scene output view
+* Continuity output view
+* Prompt Pack output view
+* Export request UI
+
+---
+
+# Tests Required
+
+* App shell renders
+* Login form calls auth boundary
+* Login form rejects invalid email and blank password before API calls
+* Register form calls auth boundary
+* Register form rejects invalid email, blank display name, and weak passwords before API calls
+* Dashboard renders accessible loading, error, and empty states
+* Project shell navigation works
+* API client validates health and capabilities responses
+* API client normalizes network, invalid JSON, and invalid response-shape failures
+* Auth session storage works
+* Logout clears stored auth session
+* Expired auth sessions redirect to login
+* Project shell storage validates malformed browser data
+* Browser storage read/write failures do not crash auth or project shell flows
+* Auth persistence failure keeps the current tab usable and warns the user
+* Frontend has no direct imports from `src/aevryn`
+* Frontend has no direct `fetch` calls outside the API client
+* Frontend endpoint paths stay inside the API layer
+
+---
+
+# Phase 5A Complete Means
+
+Phase 5A is complete when:
+
+* Frontend lint passes
+* Frontend type checks pass
+* Frontend tests pass
+* Backend tests still pass
+* Website docs are complete
+* App shell can be run locally
+* Remaining work is engine output views, not shell architecture
+

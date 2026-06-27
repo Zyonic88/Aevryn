@@ -245,13 +245,36 @@ Not required:
 
 ## Phase 5 - Website
 
+The website boundary is defined in `docs/AEVRYN_WEBSITE.md`.
+
+Phase 5 completion is governed by `docs/AEVRYN_V2_PHASE_5_ACCEPTANCE.md`.
+
 The frontend is built after the backend API, storage, workers, and authentication boundaries exist.
 
-Required views:
+Phase 5 is split into two hardening passes.
 
+### Phase 5A - App Shell
+
+Required first:
+
+* Login
+* Register
 * Dashboard
-* Projects
-* Recent Activity
+* Project workspace shell
+* Sidebar
+* Placeholder workspace tabs
+* API health check
+* API capabilities check
+* Auth token handling
+* Basic routing
+* Loading states
+* Error states
+* Empty states
+
+### Phase 5B - Engine Output Views
+
+Required after Phase 5A is hardened:
+
 * Import Story
 * Project
 * Story
