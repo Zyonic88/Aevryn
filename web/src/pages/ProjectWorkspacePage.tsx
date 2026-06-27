@@ -4,6 +4,7 @@ import { EmptyState } from "../components/Feedback";
 import { readProjects } from "../projects/projectStore";
 import { CharacterWorkspaceView } from "./CharacterWorkspaceView";
 import { ImportWorkspaceView } from "./ImportWorkspaceView";
+import { WorldWorkspaceView } from "./WorldWorkspaceView";
 
 const workspaceTabs = [
   { id: "overview", label: "Overview" },
@@ -71,6 +72,9 @@ function WorkspaceTabContent({
   }
   if (tabId === "characters") {
     return <CharacterWorkspaceView project={project} />;
+  }
+  if (tabId === "world") {
+    return <WorldWorkspaceView project={project} />;
   }
 
   return <WorkspacePlaceholder tabId={tabId} label={label} />;

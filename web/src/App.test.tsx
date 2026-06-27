@@ -91,6 +91,22 @@ const importInspectPayload = {
     },
   ],
 };
+const worldPreviewPayload = {
+  source_id: "source_alpha",
+  source_format: "txt",
+  scene_id: "source_alpha_chapter_002_scene_001",
+  world_sheet: {
+    chapter_label: "Chapter 2",
+    entity_sections: [
+      {
+        title: "Hangar (location)",
+        items: ["condition: Alarm active", "ownership: Academy"],
+      },
+    ],
+    evidence_summary: "2 verified world facts",
+  },
+};
+
 const characterPreviewPayload = {
   source_id: "source_alpha",
   source_format: "txt",
@@ -146,6 +162,9 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(API_PATHS.charactersPreview)) {
           return Promise.resolve(new Response(JSON.stringify(characterPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.worldPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(worldPreviewPayload)));
         }
         if (url.endsWith(API_PATHS.authLogin) || url.endsWith(API_PATHS.authRegister)) {
           return Promise.resolve(new Response(JSON.stringify(session)));
@@ -696,6 +715,140 @@ describe("App shell routing", () => {
       "Unknown character: character_missing",
     );
     expect(screen.queryByRole("heading", { name: "Character Profiles" })).not.toBeInTheDocument();
+  });
+
+  it("previews world sheets from the world workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/world"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "World" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}The hangar was quiet.");
+    await user.clear(screen.getByLabelText("World entity IDs"));
+    await user.type(screen.getByLabelText("World entity IDs"), "location_hangar");
+    await user.click(screen.getByRole("button", { name: "Preview world" }));
+
+    expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Hangar (location)" })).toBeInTheDocument();
+    expect(screen.getByText("condition: Alarm active")).toBeInTheDocument();
+    expect(screen.getByText("ownership: Academy")).toBeInTheDocument();
+    expect(screen.getByText("2 verified world facts")).toBeInTheDocument();
+  });
+
+  it("shows invalid AI JSON errors on the world workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/world"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "World" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("AI response JSON"));
+    await user.type(screen.getByLabelText("AI response JSON"), "not json");
+    await user.click(screen.getByRole("button", { name: "Preview world" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+  });
+
+  it("renders an empty state when the world preview has no entity sections", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.worldPreview)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...worldPreviewPayload,
+                world_sheet: { ...worldPreviewPayload.world_sheet, entity_sections: [] },
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/world"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "World" });
+    await user.click(screen.getByRole("button", { name: "Preview world" }));
+
+    expect(await screen.findByRole("heading", { name: "No world entities" })).toBeInTheDocument();
+  });
+
+  it("clears stale world sheets when a later preview fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let failPreview = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.worldPreview)) {
+          if (failPreview) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: "world_preview_failed",
+                  detail: "Unknown world entity: location_missing",
+                }),
+                { status: 400 },
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify(worldPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/world"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "World" });
+    await user.click(screen.getByRole("button", { name: "Preview world" }));
+    expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
+
+    failPreview = true;
+    await user.clear(screen.getByLabelText("World entity IDs"));
+    await user.type(screen.getByLabelText("World entity IDs"), "location_missing");
+    await user.click(screen.getByRole("button", { name: "Preview world" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Unknown world entity: location_missing",
+    );
+    expect(screen.queryByRole("heading", { name: "World Sheet" })).not.toBeInTheDocument();
   });
 
   it("clears stale import structure when a later inspection fails", async () => {

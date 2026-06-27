@@ -3,31 +3,49 @@ import {
   canBuildImportInspectPayload,
 } from "../importing/importPayload";
 
-export type CharacterPreviewPayload = ReturnType<typeof buildImportInspectPayload> & {
+export type BasePreviewPayload = ReturnType<typeof buildImportInspectPayload> & {
   ai_response: unknown;
-  character_ids: string[];
   scene_id?: string;
 };
 
-export type CharacterPreviewInput = {
+export type CharacterPreviewPayload = BasePreviewPayload & {
+  character_ids: string[];
+};
+
+export type WorldPreviewPayload = BasePreviewPayload & {
+  world_entity_ids: string[];
+};
+
+export type PreviewInput = {
   sourceId: string;
   filename: string;
   title: string;
   sourceText: string;
   aiResponseText: string;
-  characterIdsText: string;
   sceneId: string;
+};
+
+export type CharacterPreviewInput = PreviewInput & {
+  characterIdsText: string;
+};
+
+export type WorldPreviewInput = PreviewInput & {
+  worldEntityIdsText: string;
 };
 
 export function buildCharacterPreviewPayload(
   input: CharacterPreviewInput,
 ): CharacterPreviewPayload {
-  const basePayload = buildImportInspectPayload(input);
   return {
-    ...basePayload,
-    ai_response: parseAiResponse(input.aiResponseText),
+    ...buildBasePreviewPayload(input),
     character_ids: parseIdList(input.characterIdsText),
-    ...(input.sceneId.trim() ? { scene_id: input.sceneId.trim() } : {}),
+  };
+}
+
+export function buildWorldPreviewPayload(input: WorldPreviewInput): WorldPreviewPayload {
+  return {
+    ...buildBasePreviewPayload(input),
+    world_entity_ids: parseIdList(input.worldEntityIdsText),
   };
 }
 
@@ -40,7 +58,33 @@ export function canBuildCharacterPreviewPayload(input: CharacterPreviewInput): b
   }
 }
 
+export function canBuildWorldPreviewPayload(input: WorldPreviewInput): boolean {
+  try {
+    buildWorldPreviewPayload(input);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function canSubmitCharacterPreviewInput(input: CharacterPreviewInput): boolean {
+  return canSubmitPreviewInput(input);
+}
+
+export function canSubmitWorldPreviewInput(input: WorldPreviewInput): boolean {
+  return canSubmitPreviewInput(input);
+}
+
+function buildBasePreviewPayload(input: PreviewInput): BasePreviewPayload {
+  const basePayload = buildImportInspectPayload(input);
+  return {
+    ...basePayload,
+    ai_response: parseAiResponse(input.aiResponseText),
+    ...(input.sceneId.trim() ? { scene_id: input.sceneId.trim() } : {}),
+  };
+}
+
+function canSubmitPreviewInput(input: PreviewInput): boolean {
   return canBuildImportInspectPayload(input) && input.aiResponseText.trim().length > 0;
 }
 

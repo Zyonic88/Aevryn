@@ -565,3 +565,16 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 }
+
+.world-item-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.world-item-list li {
+  color: #263241;
+  font-size: 14px;
+  line-height: 1.45;
+}

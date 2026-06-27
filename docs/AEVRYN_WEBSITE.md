@@ -151,6 +151,11 @@ Required later:
 * Character preview errors and empty states are visible and accessible
 * Failed follow-up character previews clear stale profile results
 * World view
+* World sheet previews through the World API
+* World entity sections rendered from API view models
+* World preview input validates AI response JSON before submission
+* World preview errors and empty states are visible and accessible
+* Failed follow-up world previews clear stale world sheet results
 * Timeline view
 * Scene view
 * Continuity view

@@ -138,6 +138,14 @@ Required later:
 * Character view renders empty profile responses as an empty state
 * Failed follow-up character previews clear previous successful profile results
 * World output view
+* World view calls `/v2/world/preview` through the API client
+* World view renders API world sheet view models
+* World preview payload construction preserves UTF-8 source text
+* World preview payload construction validates AI response JSON before submission
+* World view does not reconstruct Canon, Timeline, or Presentation data in React
+* World view shows invalid AI JSON as a visible form error
+* World view renders empty world sections as an empty state
+* Failed follow-up world previews clear previous successful world sheet results
 * Timeline output view
 * Scene output view
 * Continuity output view

@@ -58,6 +58,22 @@ const importInspectPayload = {
   ],
 };
 
+const worldPreviewPayload = {
+  source_id: "api_demo",
+  source_format: "txt",
+  scene_id: "api_demo_chapter_002_scene_001",
+  world_sheet: {
+    chapter_label: "Chapter 2",
+    entity_sections: [
+      {
+        title: "Hangar (location)",
+        items: ["condition: Alarm active"],
+      },
+    ],
+    evidence_summary: "1 verified world fact",
+  },
+};
+
 const characterPreviewPayload = {
   source_id: "api_demo",
   source_format: "txt",
@@ -132,6 +148,31 @@ describe("AevrynApiClient", () => {
     const [, init] = fetchMock.mock.calls[0];
     const headers = init.headers as Headers;
     expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.importsInspect}`);
+    expect(init.method).toBe("POST");
+    expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends JSON requests for world previews", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(worldPreviewPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.previewWorld({
+        source_id: "api_demo",
+        filename: "chapter.txt",
+        title: "API Demo",
+        content_base64: "Q2hhcHRlciAx",
+        ai_response: { entities: [] },
+        world_entity_ids: ["location_hangar"],
+      }),
+    ).resolves.toEqual(worldPreviewPayload);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = init.headers as Headers;
+    expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.worldPreview}`);
     expect(init.method).toBe("POST");
     expect(headers.get("Content-Type")).toBe("application/json");
   });

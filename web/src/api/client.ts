@@ -5,6 +5,7 @@ import {
   authSessionSchema,
   capabilitiesSchema,
   characterPreviewSchema,
+  worldPreviewSchema,
   healthSchema,
   importInspectSchema,
   sourceFormatsSchema,
@@ -13,6 +14,7 @@ import {
   type AuthSession,
   type AuthUser,
   type CharacterPreview,
+  type WorldPreview,
   type ImportInspect,
   type SourceFormats,
 } from "./schemas";
@@ -23,6 +25,7 @@ export const API_PATHS = {
   sourceFormats: "/v2/source-formats",
   importsInspect: "/v2/imports/inspect",
   charactersPreview: "/v2/characters/preview",
+  worldPreview: "/v2/world/preview",
   authRegister: "/v2/auth/register",
   authLogin: "/v2/auth/login",
   authMe: "/v2/auth/me",
@@ -64,6 +67,12 @@ export type CharacterPreviewRequest = ImportInspectRequest & {
   scene_id?: string;
 };
 
+export type WorldPreviewRequest = ImportInspectRequest & {
+  ai_response: unknown;
+  world_entity_ids?: string[];
+  scene_id?: string;
+};
+
 export class AevrynApiClient {
   readonly baseUrl: string;
 
@@ -92,6 +101,13 @@ export class AevrynApiClient {
 
   previewCharacters(payload: CharacterPreviewRequest): Promise<CharacterPreview> {
     return this.request(API_PATHS.charactersPreview, characterPreviewSchema, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  previewWorld(payload: WorldPreviewRequest): Promise<WorldPreview> {
+    return this.request(API_PATHS.worldPreview, worldPreviewSchema, {
       method: "POST",
       body: JSON.stringify(payload),
     });

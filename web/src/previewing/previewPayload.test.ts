@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCharacterPreviewPayload,
+  buildWorldPreviewPayload,
   canBuildCharacterPreviewPayload,
+  canBuildWorldPreviewPayload,
   canSubmitCharacterPreviewInput,
+  canSubmitWorldPreviewInput,
 } from "./previewPayload";
 
 const validInput = {
@@ -41,6 +44,19 @@ describe("preview payload helpers", () => {
     expect(payload).not.toHaveProperty("scene_id");
   });
 
+  it("builds world preview payloads", () => {
+    const payload = buildWorldPreviewPayload({
+      ...validInput,
+      worldEntityIdsText: "location_hangar building_fortress",
+    });
+
+    expect(payload).toMatchObject({
+      ai_response: { entities: [] },
+      world_entity_ids: ["location_hangar", "building_fortress"],
+      scene_id: "source_demo_chapter_001_scene_001",
+    });
+  });
+
   it("accepts whitespace separated character IDs", () => {
     const payload = buildCharacterPreviewPayload({
       ...validInput,
@@ -63,6 +79,13 @@ describe("preview payload helpers", () => {
     expect(canBuildCharacterPreviewPayload({ ...validInput, aiResponseText: "not json" })).toBe(
       false,
     );
+    expect(
+      canBuildWorldPreviewPayload({
+        ...validInput,
+        worldEntityIdsText: "location_hangar",
+        aiResponseText: "not json",
+      }),
+    ).toBe(false);
   });
 
   it("allows invalid JSON to be submitted so the form can show a precise error", () => {
@@ -72,5 +95,12 @@ describe("preview payload helpers", () => {
     );
     expect(canSubmitCharacterPreviewInput({ ...validInput, aiResponseText: "" })).toBe(false);
     expect(canSubmitCharacterPreviewInput({ ...validInput, sourceText: "" })).toBe(false);
+    expect(
+      canSubmitWorldPreviewInput({
+        ...validInput,
+        worldEntityIdsText: "location_hangar",
+        aiResponseText: "not json",
+      }),
+    ).toBe(true);
   });
 });

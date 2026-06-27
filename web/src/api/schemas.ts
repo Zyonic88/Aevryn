@@ -112,6 +112,19 @@ export const characterPreviewSchema = z.object({
   character_profiles: z.array(characterProfileSchema),
 });
 
+export const worldSheetSchema = z.object({
+  chapter_label: z.string(),
+  entity_sections: z.array(outputSectionSchema),
+  evidence_summary: z.string(),
+});
+
+export const worldPreviewSchema = z.object({
+  source_id: z.string(),
+  source_format: z.string(),
+  scene_id: z.string(),
+  world_sheet: worldSheetSchema,
+});
+
 export type ApiHealth = z.infer<typeof healthSchema>;
 export type ApiCapabilities = z.infer<typeof capabilitiesSchema>;
 export type SourceFormats = z.infer<typeof sourceFormatsSchema>;
@@ -119,5 +132,7 @@ export type ImportInspect = z.infer<typeof importInspectSchema>;
 export type OutputSection = z.infer<typeof outputSectionSchema>;
 export type CharacterProfile = z.infer<typeof characterProfileSchema>;
 export type CharacterPreview = z.infer<typeof characterPreviewSchema>;
+export type WorldSheet = z.infer<typeof worldSheetSchema>;
+export type WorldPreview = z.infer<typeof worldPreviewSchema>;
 export type AuthSession = z.infer<typeof authSessionSchema>;
 export type AuthUser = z.infer<typeof authMeSchema>;
