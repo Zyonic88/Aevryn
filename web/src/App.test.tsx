@@ -107,6 +107,100 @@ const worldPreviewPayload = {
   },
 };
 
+const timelinePreviewPayload = {
+  source_id: "source_alpha",
+  source_format: "txt",
+  current_scene_id: "source_alpha_chapter_002_scene_001",
+  chapter_ids: ["source_alpha_chapter_001", "source_alpha_chapter_002"],
+  scene_map: [
+    {
+      chapter_id: "source_alpha_chapter_001",
+      chapter_index: 1,
+      scene_id: "source_alpha_chapter_001_scene_001",
+      scene_index: 1,
+      title: "Scene 1",
+    },
+    {
+      chapter_id: "source_alpha_chapter_002",
+      chapter_index: 2,
+      scene_id: "source_alpha_chapter_002_scene_001",
+      scene_index: 1,
+      title: "Scene 1",
+    },
+  ],
+  accepted_state_change_ids: ["state_fact_character_mark_current_weapon_iron_sword"],
+};
+
+const scenePreviewPayload = {
+  source_id: "source_alpha",
+  source_format: "txt",
+  scene_id: "source_alpha_chapter_001_scene_001",
+  scene_sheet: {
+    scene_id: "source_alpha_chapter_001_scene_001",
+    title: "Scene 7",
+    chapter_label: "Chapter 1",
+    location: { title: "Location", items: ["Hangar"] },
+    characters_present: { title: "Characters Present", items: ["Mark"] },
+    mood: { title: "Mood", items: ["Tense"] },
+    purpose: { title: "Purpose", items: ["Establish current state."] },
+    visual_highlights: { title: "Visual Highlights", items: ["Rusty Dagger"] },
+    continuity_changes: { title: "Continuity Changes", items: ["Mark equipped Rusty Dagger"] },
+    environment: { title: "Environment", items: ["Quiet hangar"] },
+    evidence_summary: "1 verified evidence reference",
+  },
+};
+
+const continuityPreviewPayload = {
+  source_id: "source_alpha",
+  source_format: "txt",
+  continuity_report: {
+    source_id: "source_alpha",
+    scenes: [
+      {
+        scene_id: "source_alpha_chapter_001_scene_001",
+        new: [
+          {
+            record_id: "fact_character_mark_current_weapon_rusty_dagger",
+            record_type: "fact",
+            description: "character_mark current_weapon = Rusty Dagger.",
+            evidence_id: "source_alpha_anchor_001",
+            chapter_id: "source_alpha_chapter_001",
+            scene_id: "source_alpha_chapter_001_scene_001",
+          },
+        ],
+        updated: [],
+        still_known: [],
+        invalidated: [],
+      },
+      {
+        scene_id: "source_alpha_chapter_002_scene_001",
+        new: [],
+        updated: [
+          {
+            record_id: "fact_character_mark_current_weapon_iron_sword",
+            record_type: "fact",
+            description: "character_mark current_weapon = Iron Sword.",
+            evidence_id: "source_alpha_anchor_002",
+            chapter_id: "source_alpha_chapter_002",
+            scene_id: "source_alpha_chapter_002_scene_001",
+          },
+        ],
+        still_known: [],
+        invalidated: [
+          {
+            record_id: "fact_character_mark_current_weapon_rusty_dagger_invalidated",
+            record_type: "fact",
+            description: "character_mark current_weapon = Rusty Dagger.",
+            evidence_id: "source_alpha_anchor_001",
+            chapter_id: "source_alpha_chapter_001",
+            scene_id: "source_alpha_chapter_001_scene_001",
+          },
+        ],
+      },
+    ],
+  },
+};
+
 const characterPreviewPayload = {
   source_id: "source_alpha",
   source_format: "txt",
@@ -162,6 +256,15 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(API_PATHS.charactersPreview)) {
           return Promise.resolve(new Response(JSON.stringify(characterPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.timelinePreview)) {
+          return Promise.resolve(new Response(JSON.stringify(timelinePreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.scenesPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(scenePreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.continuityPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(continuityPreviewPayload)));
         }
         if (url.endsWith(API_PATHS.worldPreview)) {
           return Promise.resolve(new Response(JSON.stringify(worldPreviewPayload)));
@@ -605,7 +708,7 @@ describe("App shell routing", () => {
     expect(screen.getByText("3 verified facts")).toBeInTheDocument();
   });
 
-  it("shows invalid AI JSON errors on the characters workspace tab", async () => {
+  it("clears stale character profiles when local AI JSON validation fails", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
 
@@ -616,11 +719,15 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Preview characters" }));
+    expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
+
     await user.clear(screen.getByLabelText("AI response JSON"));
     await user.type(screen.getByLabelText("AI response JSON"), "not json");
     await user.click(screen.getByRole("button", { name: "Preview characters" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+    expect(screen.queryByRole("heading", { name: "Character Profiles" })).not.toBeInTheDocument();
   });
 
   it("renders an empty state when the character preview has no profiles", async () => {
@@ -741,7 +848,435 @@ describe("App shell routing", () => {
     expect(screen.getByText("2 verified world facts")).toBeInTheDocument();
   });
 
-  it("shows invalid AI JSON errors on the world workspace tab", async () => {
+  it("previews timeline order from the timeline workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/timeline"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Timeline" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.click(screen.getByRole("button", { name: "Preview timeline" }));
+
+    expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
+    expect(screen.getByText("source_alpha_chapter_001_scene_001")).toBeInTheDocument();
+    expect(screen.getByText("source_alpha_chapter_002_scene_001")).toBeInTheDocument();
+    expect(screen.getByText("Current")).toBeInTheDocument();
+    expect(
+      screen.getByText("state_fact_character_mark_current_weapon_iron_sword"),
+    ).toBeInTheDocument();
+  });
+
+  it("previews scene sheets from the scenes workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/scenes"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Scenes" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.clear(screen.getByLabelText("Character IDs"));
+    await user.type(screen.getByLabelText("Character IDs"), "character_mark");
+    await user.click(screen.getByRole("button", { name: "Preview scene" }));
+
+    expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
+    expect(screen.getByText("Chapter 1 for source_alpha_chapter_001_scene_001.")).toBeInTheDocument();
+    expect(screen.getByText("Hangar")).toBeInTheDocument();
+    expect(screen.getByText("Mark")).toBeInTheDocument();
+    expect(screen.getByText("Mark equipped Rusty Dagger")).toBeInTheDocument();
+    expect(screen.getByText("1 verified evidence reference")).toBeInTheDocument();
+  });
+
+  it("previews continuity reports from the continuity workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/continuity"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Continuity" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.click(screen.getByRole("button", { name: "Preview continuity" }));
+
+    expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "source_alpha_chapter_001_scene_001" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "source_alpha_chapter_002_scene_001" })).toBeInTheDocument();
+    expect(
+      screen.getAllByText((_content, element) => {
+        return element?.tagName === "LI" && element.textContent?.includes("character_mark current_weapon = Rusty Dagger.");
+      }),
+    ).toHaveLength(2);
+    expect(
+      screen.getByText((_content, element) => {
+        return element?.tagName === "LI" && element.textContent?.includes("character_mark current_weapon = Iron Sword.");
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/source_alpha_anchor_002/u)).toBeInTheDocument();
+  });
+
+  it("renders an empty state when the continuity preview has no scenes", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.continuityPreview)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...continuityPreviewPayload,
+                continuity_report: {
+                  ...continuityPreviewPayload.continuity_report,
+                  scenes: [],
+                },
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/continuity"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Continuity" });
+    await user.click(screen.getByRole("button", { name: "Preview continuity" }));
+
+    expect(await screen.findByRole("heading", { name: "No continuity scenes" })).toBeInTheDocument();
+  });
+
+  it("clears stale continuity reports when local AI JSON validation fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/continuity"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Continuity" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Preview continuity" }));
+    expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("AI response JSON"));
+    await user.type(screen.getByLabelText("AI response JSON"), "not json");
+    await user.click(screen.getByRole("button", { name: "Preview continuity" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+    expect(screen.queryByRole("heading", { name: "Continuity Report" })).not.toBeInTheDocument();
+  });
+
+  it("clears stale continuity reports when a later preview fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let failPreview = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.continuityPreview)) {
+          if (failPreview) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: "continuity_preview_failed",
+                  detail: "Continuity preview failed.",
+                }),
+                { status: 400 },
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify(continuityPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/continuity"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Continuity" });
+    await user.click(screen.getByRole("button", { name: "Preview continuity" }));
+    expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
+
+    failPreview = true;
+    await user.click(screen.getByRole("button", { name: "Preview continuity" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Continuity preview failed.");
+    expect(screen.queryByRole("heading", { name: "Continuity Report" })).not.toBeInTheDocument();
+  });
+
+  it("clears stale scene sheets when local AI JSON validation fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/scenes"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Scenes" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Preview scene" }));
+    expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("AI response JSON"));
+    await user.type(screen.getByLabelText("AI response JSON"), "not json");
+    await user.click(screen.getByRole("button", { name: "Preview scene" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+    expect(screen.queryByRole("heading", { name: "Scene 7" })).not.toBeInTheDocument();
+  });
+
+  it("renders unknown scene sections when the scene sheet has empty sections", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.scenesPreview)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...scenePreviewPayload,
+                scene_sheet: {
+                  ...scenePreviewPayload.scene_sheet,
+                  location: { title: "Location", items: [] },
+                  visual_highlights: { title: "Visual Highlights", items: [] },
+                },
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/scenes"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Scenes" });
+    await user.click(screen.getByRole("button", { name: "Preview scene" }));
+
+    expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
+    expect(screen.getAllByText("Unknown").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("clears stale scene sheets when a later preview fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let failPreview = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.scenesPreview)) {
+          if (failPreview) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: "scene_preview_failed",
+                  detail: "Unknown scene: source_alpha_scene_missing",
+                }),
+                { status: 400 },
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify(scenePreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/scenes"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Scenes" });
+    await user.click(screen.getByRole("button", { name: "Preview scene" }));
+    expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
+
+    failPreview = true;
+    await user.clear(screen.getByLabelText("Scene ID"));
+    await user.type(screen.getByLabelText("Scene ID"), "source_alpha_scene_missing");
+    await user.click(screen.getByRole("button", { name: "Preview scene" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Unknown scene: source_alpha_scene_missing",
+    );
+    expect(screen.queryByRole("heading", { name: "Scene 7" })).not.toBeInTheDocument();
+  });
+
+  it("clears stale timeline previews when local AI JSON validation fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/timeline"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Timeline" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Preview timeline" }));
+    expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("AI response JSON"));
+    await user.type(screen.getByLabelText("AI response JSON"), "not json");
+    await user.click(screen.getByRole("button", { name: "Preview timeline" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+    expect(screen.queryByRole("heading", { name: "Timeline Order" })).not.toBeInTheDocument();
+  });
+
+  it("renders an empty state when the timeline preview has no scene order", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.timelinePreview)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...timelinePreviewPayload,
+                scene_map: [],
+                accepted_state_change_ids: [],
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/timeline"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Timeline" });
+    await user.click(screen.getByRole("button", { name: "Preview timeline" }));
+
+    expect(await screen.findByRole("heading", { name: "No timeline scenes" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No state changes" })).toBeInTheDocument();
+  });
+
+  it("clears stale timeline previews when a later preview fails", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let failPreview = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.timelinePreview)) {
+          if (failPreview) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: "timeline_preview_failed",
+                  detail: "Unknown scene: source_alpha_scene_missing",
+                }),
+                { status: 400 },
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify(timelinePreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/timeline"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Timeline" });
+    await user.click(screen.getByRole("button", { name: "Preview timeline" }));
+    expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
+
+    failPreview = true;
+    await user.clear(screen.getByLabelText("Scene ID"));
+    await user.type(screen.getByLabelText("Scene ID"), "source_alpha_scene_missing");
+    await user.click(screen.getByRole("button", { name: "Preview timeline" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Unknown scene: source_alpha_scene_missing",
+    );
+    expect(screen.queryByRole("heading", { name: "Timeline Order" })).not.toBeInTheDocument();
+  });
+
+  it("clears stale world sheets when local AI JSON validation fails", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
 
@@ -752,11 +1287,15 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "World" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Preview world" }));
+    expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
+
     await user.clear(screen.getByLabelText("AI response JSON"));
     await user.type(screen.getByLabelText("AI response JSON"), "not json");
     await user.click(screen.getByRole("button", { name: "Preview world" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+    expect(screen.queryByRole("heading", { name: "World Sheet" })).not.toBeInTheDocument();
   });
 
   it("renders an empty state when the world preview has no entity sections", async () => {

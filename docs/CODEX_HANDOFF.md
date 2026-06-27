@@ -59,12 +59,12 @@ Recent completed V2 work:
 - Import workspace view completed
 - Character workspace view completed
 - World workspace view completed
+- Timeline workspace view completed
+- Scene workspace view completed
+- Continuity workspace view completed
 
 Next expected Phase 5B targets:
 
-- Timeline view
-- Scene view
-- Continuity view
 - Prompt Pack view
 - Export request UI
 

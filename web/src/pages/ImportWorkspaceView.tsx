@@ -53,6 +53,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       setInspectionResult(null);
       inspectImport.mutate(payload);
     } catch (error) {
+      setInspectionResult(null);
       setFormError(error instanceof Error ? error.message : "Import form is invalid.");
     }
   }

@@ -112,7 +112,7 @@ Aevryn Web Alpha Shell is accepted when:
 
 Phase 5B begins only after Phase 5A is hardened.
 
-Phase 5B accepts API-backed engine output views one slice at a time. The Import inspection view and Character output view are now implemented as the first slices.
+Phase 5B accepts API-backed engine output views one slice at a time. The Import inspection, Character, World, Timeline, Scene, and Continuity output views are now implemented as the first slices.
 
 Required later:
 
@@ -147,8 +147,32 @@ Required later:
 * World view renders empty world sections as an empty state
 * Failed follow-up world previews clear previous successful world sheet results
 * Timeline output view
+* Timeline view calls `/v2/timeline/preview` through the API client
+* Timeline view renders API scene-order and state-change metadata
+* Timeline preview payload construction preserves UTF-8 source text
+* Timeline preview payload construction validates AI response JSON before submission
+* Timeline view does not reconstruct Canon, Timeline, or Presentation data in React
+* Timeline view shows invalid AI JSON as a visible form error
+* Timeline view renders empty scene order and empty state-change responses as empty states
+* Failed follow-up timeline previews clear previous successful timeline results
 * Scene output view
+* Scene view calls `/v2/scenes/preview` through the API client
+* Scene view renders API scene sheet view models
+* Scene preview payload construction preserves UTF-8 source text
+* Scene preview payload construction validates AI response JSON before submission
+* Scene view does not reconstruct Canon, Timeline, Scene Analysis, or Presentation data in React
+* Scene view shows invalid AI JSON as a visible form error
+* Scene view renders empty scene sheet sections as Unknown
+* Failed follow-up scene previews clear previous successful scene sheet results
 * Continuity output view
+* Continuity view calls `/v2/continuity/preview` through the API client
+* Continuity view renders API continuity report scene buckets
+* Continuity preview payload construction preserves UTF-8 source text
+* Continuity preview payload construction validates AI response JSON before submission
+* Continuity view does not reconstruct Canon, Timeline, Continuity, or Presentation data in React
+* Continuity view shows invalid AI JSON as a visible form error
+* Continuity view renders empty report scenes as an empty state
+* Failed follow-up continuity previews clear previous successful continuity report results
 * Prompt Pack output view
 * Export request UI
 
@@ -188,4 +212,3 @@ Phase 5A is complete when:
 * Website docs are complete
 * App shell can be run locally
 * Remaining work is engine output views, not shell architecture
-

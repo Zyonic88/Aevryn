@@ -97,6 +97,75 @@ const characterPreviewPayload = {
   ],
 };
 
+const timelinePreviewPayload = {
+  source_id: "api_demo",
+  source_format: "txt",
+  current_scene_id: "api_demo_chapter_002_scene_001",
+  chapter_ids: ["api_demo_chapter_001", "api_demo_chapter_002"],
+  scene_map: [
+    {
+      chapter_id: "api_demo_chapter_001",
+      chapter_index: 1,
+      scene_id: "api_demo_chapter_001_scene_001",
+      scene_index: 1,
+      title: "Scene 1",
+    },
+    {
+      chapter_id: "api_demo_chapter_002",
+      chapter_index: 2,
+      scene_id: "api_demo_chapter_002_scene_001",
+      scene_index: 1,
+      title: "Scene 1",
+    },
+  ],
+  accepted_state_change_ids: ["state_fact_character_mark_current_weapon_iron_sword"],
+};
+
+const scenePreviewPayload = {
+  source_id: "api_demo",
+  source_format: "txt",
+  scene_id: "api_demo_chapter_001_scene_001",
+  scene_sheet: {
+    scene_id: "api_demo_chapter_001_scene_001",
+    title: "Scene 1",
+    chapter_label: "Chapter 1",
+    location: { title: "Location", items: ["Hangar"] },
+    characters_present: { title: "Characters Present", items: ["Mark"] },
+    mood: { title: "Mood", items: ["Tense"] },
+    purpose: { title: "Purpose", items: ["Establish current state."] },
+    visual_highlights: { title: "Visual Highlights", items: ["Rusty Dagger"] },
+    continuity_changes: { title: "Continuity Changes", items: ["Mark equipped Rusty Dagger"] },
+    environment: { title: "Environment", items: ["Quiet hangar"] },
+    evidence_summary: "1 verified evidence reference",
+  },
+};
+
+const continuityPreviewPayload = {
+  source_id: "api_demo",
+  source_format: "txt",
+  continuity_report: {
+    source_id: "api_demo",
+    scenes: [
+      {
+        scene_id: "api_demo_chapter_001_scene_001",
+        new: [
+          {
+            record_id: "fact_character_mark_current_weapon_rusty_dagger",
+            record_type: "fact",
+            description: "character_mark current_weapon = Rusty Dagger.",
+            evidence_id: "anchor_001",
+            chapter_id: "api_demo_chapter_001",
+            scene_id: "api_demo_chapter_001_scene_001",
+          },
+        ],
+        updated: [],
+        still_known: [],
+        invalidated: [],
+      },
+    ],
+  },
+};
+
 describe("AevrynApiClient", () => {
   it("validates successful API responses", async () => {
     const fetchMock = vi
@@ -198,6 +267,81 @@ describe("AevrynApiClient", () => {
     const [, init] = fetchMock.mock.calls[0];
     const headers = init.headers as Headers;
     expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.charactersPreview}`);
+    expect(init.method).toBe("POST");
+    expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends JSON requests for timeline previews", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(timelinePreviewPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.previewTimeline({
+        source_id: "api_demo",
+        filename: "chapter.txt",
+        title: "API Demo",
+        content_base64: "Q2hhcHRlciAx",
+        ai_response: { entities: [] },
+      }),
+    ).resolves.toEqual(timelinePreviewPayload);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = init.headers as Headers;
+    expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.timelinePreview}`);
+    expect(init.method).toBe("POST");
+    expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends JSON requests for scene previews", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(scenePreviewPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.previewScene({
+        source_id: "api_demo",
+        filename: "chapter.txt",
+        title: "API Demo",
+        content_base64: "Q2hhcHRlciAx",
+        ai_response: { entities: [] },
+        character_ids: ["character_mark"],
+      }),
+    ).resolves.toEqual(scenePreviewPayload);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = init.headers as Headers;
+    expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.scenesPreview}`);
+    expect(init.method).toBe("POST");
+    expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends JSON requests for continuity previews", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(continuityPreviewPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.previewContinuity({
+        source_id: "api_demo",
+        filename: "chapter.txt",
+        title: "API Demo",
+        content_base64: "Q2hhcHRlciAx",
+        ai_response: { entities: [] },
+      }),
+    ).resolves.toEqual(continuityPreviewPayload);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const headers = init.headers as Headers;
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.continuityPreview}`,
+    );
     expect(init.method).toBe("POST");
     expect(headers.get("Content-Type")).toBe("application/json");
   });

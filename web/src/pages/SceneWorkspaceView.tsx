@@ -1,12 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 
-import { apiClient, type CharacterPreviewRequest } from "../api/client";
-import type { CharacterPreview, CharacterProfile, OutputSection } from "../api/schemas";
-import { EmptyState, ErrorMessage } from "../components/Feedback";
+import { apiClient, type ScenePreviewRequest } from "../api/client";
+import type { OutputSection, ScenePreview } from "../api/schemas";
+import { ErrorMessage } from "../components/Feedback";
 import {
-  buildCharacterPreviewPayload,
-  canSubmitCharacterPreviewInput,
+  buildScenePreviewPayload,
+  canSubmitScenePreviewInput,
 } from "../previewing/previewPayload";
 import type { ProjectSummary } from "../projects/projectStore";
 
@@ -14,7 +14,7 @@ const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
 const DEFAULT_AI_RESPONSE =
   '{\n  "entities": [],\n  "facts": [],\n  "relationships": [],\n  "state_changes": []\n}';
 
-export function CharacterWorkspaceView({ project }: { project: ProjectSummary }) {
+export function SceneWorkspaceView({ project }: { project: ProjectSummary }) {
   const [sourceId, setSourceId] = useState(project.id.replace(/^project_/, "source_"));
   const [filename, setFilename] = useState("chapter_001.txt");
   const [title, setTitle] = useState(project.name);
@@ -23,10 +23,10 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
   const [characterIdsText, setCharacterIdsText] = useState("");
   const [sceneId, setSceneId] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
-  const [previewResult, setPreviewResult] = useState<CharacterPreview | null>(null);
+  const [previewResult, setPreviewResult] = useState<ScenePreview | null>(null);
 
-  const previewCharacters = useMutation({
-    mutationFn: (payload: CharacterPreviewRequest) => apiClient.previewCharacters(payload),
+  const previewScene = useMutation({
+    mutationFn: (payload: ScenePreviewRequest) => apiClient.previewScene(payload),
     onSuccess(result) {
       setPreviewResult(result);
     },
@@ -35,7 +35,7 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
     },
   });
 
-  const canSubmit = canSubmitCharacterPreviewInput({
+  const canSubmit = canSubmitScenePreviewInput({
     sourceId,
     filename,
     title,
@@ -48,7 +48,7 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      const payload = buildCharacterPreviewPayload({
+      const payload = buildScenePreviewPayload({
         sourceId,
         filename,
         title,
@@ -59,22 +59,22 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
       });
       setFormError(null);
       setPreviewResult(null);
-      previewCharacters.mutate(payload);
+      previewScene.mutate(payload);
     } catch (error) {
       setPreviewResult(null);
-      setFormError(error instanceof Error ? error.message : "Character preview form is invalid.");
+      setFormError(error instanceof Error ? error.message : "Scene preview form is invalid.");
     }
   }
 
   return (
     <div className="workspace-view-stack">
       <div>
-        <p className="eyebrow">Characters</p>
-        <h2>Characters</h2>
+        <p className="eyebrow">Scenes</p>
+        <h2>Scenes</h2>
       </div>
 
       <section className="project-panel">
-        <h2>Character Preview</h2>
+        <h2>Scene Preview</h2>
         <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
@@ -125,72 +125,45 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
             </label>
           </div>
           {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
-          {previewCharacters.error ? (
-            <ErrorMessage>{previewCharacters.error.message}</ErrorMessage>
-          ) : null}
+          {previewScene.error ? <ErrorMessage>{previewScene.error.message}</ErrorMessage> : null}
           <button
             type="submit"
             className="primary-button"
-            disabled={!canSubmit || previewCharacters.isPending}
+            disabled={!canSubmit || previewScene.isPending}
           >
-            {previewCharacters.isPending ? "Building preview" : "Preview characters"}
+            {previewScene.isPending ? "Building preview" : "Preview scene"}
           </button>
         </form>
       </section>
 
-      {previewResult ? <CharacterPreviewResult result={previewResult} /> : null}
+      {previewResult ? <ScenePreviewResult result={previewResult} /> : null}
     </div>
   );
 }
 
-function CharacterPreviewResult({ result }: { result: CharacterPreview }) {
+function ScenePreviewResult({ result }: { result: ScenePreview }) {
+  const scene = result.scene_sheet;
   return (
-    <section className="project-panel" aria-label="Character preview result">
-      <h2>Character Profiles</h2>
+    <section className="project-panel" aria-label="Scene preview result">
+      <h2>{scene.title}</h2>
       <p className="result-summary">
-        {result.character_profiles.length.toLocaleString()} character profile
-        {result.character_profiles.length === 1 ? "" : "s"} for {result.scene_id}.
+        {scene.chapter_label} for {result.scene_id}.
       </p>
-      {result.character_profiles.length > 0 ? (
-        <div className="profile-grid">
-          {result.character_profiles.map((profile) => (
-            <CharacterProfileCard key={profile.character_id} profile={profile} />
-          ))}
-        </div>
-      ) : (
-        <EmptyState title="No character profiles">
-          The API returned no character profiles for this preview.
-        </EmptyState>
-      )}
+      <div className="profile-section-grid">
+        <SceneSection section={scene.location} />
+        <SceneSection section={scene.characters_present} />
+        <SceneSection section={scene.mood} />
+        <SceneSection section={scene.purpose} />
+        <SceneSection section={scene.visual_highlights} />
+        <SceneSection section={scene.continuity_changes} />
+        <SceneSection section={scene.environment} />
+      </div>
+      <p className="evidence-note">{scene.evidence_summary}</p>
     </section>
   );
 }
 
-function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
-  return (
-    <article className="profile-card">
-      <header>
-        <p className="eyebrow">{profile.character_id}</p>
-        <h3>{profile.display_name}</h3>
-        <p>{profile.subtitle}</p>
-      </header>
-      <div className="profile-section-grid">
-        <ProfileSection section={profile.status} />
-        <ProfileSection section={profile.current_goal} />
-        <ProfileSection section={profile.current_equipment} />
-        <ProfileSection section={profile.current_abilities} />
-        <ProfileSection section={profile.current_assets} />
-        <ProfileSection section={profile.territory} />
-        <ProfileSection section={profile.relationships} />
-        <ProfileSection section={profile.current_limitations} />
-        <ProfileSection section={profile.recent_changes} />
-      </div>
-      <p className="evidence-note">{profile.evidence_summary}</p>
-    </article>
-  );
-}
-
-function ProfileSection({ section }: { section: OutputSection }) {
+function SceneSection({ section }: { section: OutputSection }) {
   return (
     <section className="profile-section">
       <h4>{section.title}</h4>

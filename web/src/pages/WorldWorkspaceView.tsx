@@ -58,6 +58,7 @@ export function WorldWorkspaceView({ project }: { project: ProjectSummary }) {
       setPreviewResult(null);
       previewWorld.mutate(payload);
     } catch (error) {
+      setPreviewResult(null);
       setFormError(error instanceof Error ? error.message : "World preview form is invalid.");
     }
   }

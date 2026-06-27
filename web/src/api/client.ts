@@ -5,6 +5,9 @@ import {
   authSessionSchema,
   capabilitiesSchema,
   characterPreviewSchema,
+  continuityPreviewSchema,
+  scenePreviewSchema,
+  timelinePreviewSchema,
   worldPreviewSchema,
   healthSchema,
   importInspectSchema,
@@ -14,6 +17,9 @@ import {
   type AuthSession,
   type AuthUser,
   type CharacterPreview,
+  type ContinuityPreview,
+  type ScenePreview,
+  type TimelinePreview,
   type WorldPreview,
   type ImportInspect,
   type SourceFormats,
@@ -25,6 +31,9 @@ export const API_PATHS = {
   sourceFormats: "/v2/source-formats",
   importsInspect: "/v2/imports/inspect",
   charactersPreview: "/v2/characters/preview",
+  continuityPreview: "/v2/continuity/preview",
+  scenesPreview: "/v2/scenes/preview",
+  timelinePreview: "/v2/timeline/preview",
   worldPreview: "/v2/world/preview",
   authRegister: "/v2/auth/register",
   authLogin: "/v2/auth/login",
@@ -67,6 +76,22 @@ export type CharacterPreviewRequest = ImportInspectRequest & {
   scene_id?: string;
 };
 
+export type TimelinePreviewRequest = ImportInspectRequest & {
+  ai_response: unknown;
+  scene_id?: string;
+};
+
+export type ScenePreviewRequest = ImportInspectRequest & {
+  ai_response: unknown;
+  character_ids?: string[];
+  scene_id?: string;
+};
+
+export type ContinuityPreviewRequest = ImportInspectRequest & {
+  ai_response: unknown;
+  scene_id?: string;
+};
+
 export type WorldPreviewRequest = ImportInspectRequest & {
   ai_response: unknown;
   world_entity_ids?: string[];
@@ -101,6 +126,27 @@ export class AevrynApiClient {
 
   previewCharacters(payload: CharacterPreviewRequest): Promise<CharacterPreview> {
     return this.request(API_PATHS.charactersPreview, characterPreviewSchema, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  previewTimeline(payload: TimelinePreviewRequest): Promise<TimelinePreview> {
+    return this.request(API_PATHS.timelinePreview, timelinePreviewSchema, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  previewScene(payload: ScenePreviewRequest): Promise<ScenePreview> {
+    return this.request(API_PATHS.scenesPreview, scenePreviewSchema, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  previewContinuity(payload: ContinuityPreviewRequest): Promise<ContinuityPreview> {
+    return this.request(API_PATHS.continuityPreview, continuityPreviewSchema, {
       method: "POST",
       body: JSON.stringify(payload),
     });

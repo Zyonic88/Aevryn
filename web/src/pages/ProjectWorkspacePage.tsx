@@ -3,7 +3,10 @@ import { NavLink, Navigate, useParams } from "react-router-dom";
 import { EmptyState } from "../components/Feedback";
 import { readProjects } from "../projects/projectStore";
 import { CharacterWorkspaceView } from "./CharacterWorkspaceView";
+import { ContinuityWorkspaceView } from "./ContinuityWorkspaceView";
 import { ImportWorkspaceView } from "./ImportWorkspaceView";
+import { SceneWorkspaceView } from "./SceneWorkspaceView";
+import { TimelineWorkspaceView } from "./TimelineWorkspaceView";
 import { WorldWorkspaceView } from "./WorldWorkspaceView";
 
 const workspaceTabs = [
@@ -75,6 +78,15 @@ function WorkspaceTabContent({
   }
   if (tabId === "world") {
     return <WorldWorkspaceView project={project} />;
+  }
+  if (tabId === "timeline") {
+    return <TimelineWorkspaceView project={project} />;
+  }
+  if (tabId === "scenes") {
+    return <SceneWorkspaceView project={project} />;
+  }
+  if (tabId === "continuity") {
+    return <ContinuityWorkspaceView project={project} />;
   }
 
   return <WorkspacePlaceholder tabId={tabId} label={label} />;

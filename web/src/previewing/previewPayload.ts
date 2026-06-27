@@ -12,6 +12,14 @@ export type CharacterPreviewPayload = BasePreviewPayload & {
   character_ids: string[];
 };
 
+export type TimelinePreviewPayload = BasePreviewPayload;
+
+export type ScenePreviewPayload = BasePreviewPayload & {
+  character_ids: string[];
+};
+
+export type ContinuityPreviewPayload = BasePreviewPayload;
+
 export type WorldPreviewPayload = BasePreviewPayload & {
   world_entity_ids: string[];
 };
@@ -33,6 +41,10 @@ export type WorldPreviewInput = PreviewInput & {
   worldEntityIdsText: string;
 };
 
+export type ScenePreviewInput = PreviewInput & {
+  characterIdsText: string;
+};
+
 export function buildCharacterPreviewPayload(
   input: CharacterPreviewInput,
 ): CharacterPreviewPayload {
@@ -40,6 +52,23 @@ export function buildCharacterPreviewPayload(
     ...buildBasePreviewPayload(input),
     character_ids: parseIdList(input.characterIdsText),
   };
+}
+
+export function buildTimelinePreviewPayload(input: PreviewInput): TimelinePreviewPayload {
+  return buildBasePreviewPayload(input);
+}
+
+export function buildScenePreviewPayload(input: ScenePreviewInput): ScenePreviewPayload {
+  return {
+    ...buildBasePreviewPayload(input),
+    character_ids: parseIdList(input.characterIdsText),
+  };
+}
+
+export function buildContinuityPreviewPayload(
+  input: PreviewInput,
+): ContinuityPreviewPayload {
+  return buildBasePreviewPayload(input);
 }
 
 export function buildWorldPreviewPayload(input: WorldPreviewInput): WorldPreviewPayload {
@@ -58,6 +87,33 @@ export function canBuildCharacterPreviewPayload(input: CharacterPreviewInput): b
   }
 }
 
+export function canBuildTimelinePreviewPayload(input: PreviewInput): boolean {
+  try {
+    buildTimelinePreviewPayload(input);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function canBuildScenePreviewPayload(input: ScenePreviewInput): boolean {
+  try {
+    buildScenePreviewPayload(input);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function canBuildContinuityPreviewPayload(input: PreviewInput): boolean {
+  try {
+    buildContinuityPreviewPayload(input);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function canBuildWorldPreviewPayload(input: WorldPreviewInput): boolean {
   try {
     buildWorldPreviewPayload(input);
@@ -68,6 +124,18 @@ export function canBuildWorldPreviewPayload(input: WorldPreviewInput): boolean {
 }
 
 export function canSubmitCharacterPreviewInput(input: CharacterPreviewInput): boolean {
+  return canSubmitPreviewInput(input);
+}
+
+export function canSubmitTimelinePreviewInput(input: PreviewInput): boolean {
+  return canSubmitPreviewInput(input);
+}
+
+export function canSubmitScenePreviewInput(input: ScenePreviewInput): boolean {
+  return canSubmitPreviewInput(input);
+}
+
+export function canSubmitContinuityPreviewInput(input: PreviewInput): boolean {
   return canSubmitPreviewInput(input);
 }
 

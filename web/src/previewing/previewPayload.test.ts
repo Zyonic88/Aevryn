@@ -2,10 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCharacterPreviewPayload,
+  buildContinuityPreviewPayload,
+  buildScenePreviewPayload,
+  buildTimelinePreviewPayload,
   buildWorldPreviewPayload,
   canBuildCharacterPreviewPayload,
+  canBuildContinuityPreviewPayload,
+  canBuildScenePreviewPayload,
+  canBuildTimelinePreviewPayload,
   canBuildWorldPreviewPayload,
   canSubmitCharacterPreviewInput,
+  canSubmitContinuityPreviewInput,
+  canSubmitScenePreviewInput,
+  canSubmitTimelinePreviewInput,
   canSubmitWorldPreviewInput,
 } from "./previewPayload";
 
@@ -57,6 +66,43 @@ describe("preview payload helpers", () => {
     });
   });
 
+  it("builds timeline preview payloads", () => {
+    const payload = buildTimelinePreviewPayload(validInput);
+
+    expect(payload).toMatchObject({
+      source_id: "source_demo",
+      filename: "chapter.txt",
+      title: "Demo",
+      ai_response: { entities: [] },
+      scene_id: "source_demo_chapter_001_scene_001",
+    });
+  });
+
+  it("builds scene preview payloads", () => {
+    const payload = buildScenePreviewPayload(validInput);
+
+    expect(payload).toMatchObject({
+      source_id: "source_demo",
+      filename: "chapter.txt",
+      title: "Demo",
+      ai_response: { entities: [] },
+      character_ids: ["character_mark", "character_luna"],
+      scene_id: "source_demo_chapter_001_scene_001",
+    });
+  });
+
+  it("builds continuity preview payloads", () => {
+    const payload = buildContinuityPreviewPayload(validInput);
+
+    expect(payload).toMatchObject({
+      source_id: "source_demo",
+      filename: "chapter.txt",
+      title: "Demo",
+      ai_response: { entities: [] },
+      scene_id: "source_demo_chapter_001_scene_001",
+    });
+  });
+
   it("deduplicates repeated preview IDs while preserving first-seen order", () => {
     const characterPayload = buildCharacterPreviewPayload({
       ...validInput,
@@ -93,6 +139,13 @@ describe("preview payload helpers", () => {
     expect(canBuildCharacterPreviewPayload({ ...validInput, aiResponseText: "not json" })).toBe(
       false,
     );
+    expect(canBuildTimelinePreviewPayload({ ...validInput, aiResponseText: "not json" })).toBe(
+      false,
+    );
+    expect(canBuildScenePreviewPayload({ ...validInput, aiResponseText: "not json" })).toBe(false);
+    expect(canBuildContinuityPreviewPayload({ ...validInput, aiResponseText: "not json" })).toBe(
+      false,
+    );
     expect(
       canBuildWorldPreviewPayload({
         ...validInput,
@@ -105,6 +158,13 @@ describe("preview payload helpers", () => {
   it("allows invalid JSON to be submitted so the form can show a precise error", () => {
     expect(canSubmitCharacterPreviewInput(validInput)).toBe(true);
     expect(canSubmitCharacterPreviewInput({ ...validInput, aiResponseText: "not json" })).toBe(
+      true,
+    );
+    expect(canSubmitTimelinePreviewInput({ ...validInput, aiResponseText: "not json" })).toBe(
+      true,
+    );
+    expect(canSubmitScenePreviewInput({ ...validInput, aiResponseText: "not json" })).toBe(true);
+    expect(canSubmitContinuityPreviewInput({ ...validInput, aiResponseText: "not json" })).toBe(
       true,
     );
     expect(canSubmitCharacterPreviewInput({ ...validInput, aiResponseText: "" })).toBe(false);

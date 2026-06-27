@@ -157,8 +157,23 @@ Required later:
 * World preview errors and empty states are visible and accessible
 * Failed follow-up world previews clear stale world sheet results
 * Timeline view
+* Timeline previews through the Timeline API
+* Timeline scene order and state-change IDs rendered from API metadata
+* Timeline preview input validates AI response JSON before submission
+* Timeline preview errors and empty states are visible and accessible
+* Failed follow-up timeline previews clear stale timeline results
 * Scene view
+* Scene sheet previews through the Scene API
+* Scene sheet sections rendered from API view models
+* Scene preview input validates AI response JSON before submission
+* Scene preview errors and empty states are visible and accessible
+* Failed follow-up scene previews clear stale scene sheet results
 * Continuity view
+* Continuity previews through the Continuity API
+* Continuity scene buckets rendered from API view models
+* Continuity preview input validates AI response JSON before submission
+* Continuity preview errors and empty states are visible and accessible
+* Failed follow-up continuity previews clear stale continuity report results
 * Prompt Pack view
 * Export request UI
 
@@ -229,4 +244,3 @@ Do not build:
 * Image generation
 * Video generation
 * Production media pipelines
-

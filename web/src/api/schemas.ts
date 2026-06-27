@@ -112,6 +112,64 @@ export const characterPreviewSchema = z.object({
   character_profiles: z.array(characterProfileSchema),
 });
 
+export const timelinePreviewSchema = z.object({
+  source_id: z.string(),
+  source_format: z.string(),
+  current_scene_id: z.string(),
+  chapter_ids: z.array(z.string()),
+  scene_map: z.array(sceneMapEntrySchema),
+  accepted_state_change_ids: z.array(z.string()),
+});
+
+export const sceneSheetSchema = z.object({
+  scene_id: z.string(),
+  title: z.string(),
+  chapter_label: z.string(),
+  location: outputSectionSchema,
+  characters_present: outputSectionSchema,
+  mood: outputSectionSchema,
+  purpose: outputSectionSchema,
+  visual_highlights: outputSectionSchema,
+  continuity_changes: outputSectionSchema,
+  environment: outputSectionSchema,
+  evidence_summary: z.string(),
+});
+
+export const scenePreviewSchema = z.object({
+  source_id: z.string(),
+  source_format: z.string(),
+  scene_id: z.string(),
+  scene_sheet: sceneSheetSchema,
+});
+
+export const continuityRecordSchema = z.object({
+  record_id: z.string(),
+  record_type: z.string(),
+  description: z.string(),
+  evidence_id: z.string(),
+  chapter_id: z.string(),
+  scene_id: z.string(),
+});
+
+export const continuitySceneSchema = z.object({
+  scene_id: z.string(),
+  new: z.array(continuityRecordSchema),
+  updated: z.array(continuityRecordSchema),
+  still_known: z.array(continuityRecordSchema),
+  invalidated: z.array(continuityRecordSchema),
+});
+
+export const continuityReportSchema = z.object({
+  source_id: z.string(),
+  scenes: z.array(continuitySceneSchema),
+});
+
+export const continuityPreviewSchema = z.object({
+  source_id: z.string(),
+  source_format: z.string(),
+  continuity_report: continuityReportSchema,
+});
+
 export const worldSheetSchema = z.object({
   chapter_label: z.string(),
   entity_sections: z.array(outputSectionSchema),
@@ -129,9 +187,17 @@ export type ApiHealth = z.infer<typeof healthSchema>;
 export type ApiCapabilities = z.infer<typeof capabilitiesSchema>;
 export type SourceFormats = z.infer<typeof sourceFormatsSchema>;
 export type ImportInspect = z.infer<typeof importInspectSchema>;
+export type SceneMapEntry = z.infer<typeof sceneMapEntrySchema>;
 export type OutputSection = z.infer<typeof outputSectionSchema>;
 export type CharacterProfile = z.infer<typeof characterProfileSchema>;
 export type CharacterPreview = z.infer<typeof characterPreviewSchema>;
+export type TimelinePreview = z.infer<typeof timelinePreviewSchema>;
+export type SceneSheet = z.infer<typeof sceneSheetSchema>;
+export type ScenePreview = z.infer<typeof scenePreviewSchema>;
+export type ContinuityRecord = z.infer<typeof continuityRecordSchema>;
+export type ContinuityScene = z.infer<typeof continuitySceneSchema>;
+export type ContinuityReport = z.infer<typeof continuityReportSchema>;
+export type ContinuityPreview = z.infer<typeof continuityPreviewSchema>;
 export type WorldSheet = z.infer<typeof worldSheetSchema>;
 export type WorldPreview = z.infer<typeof worldPreviewSchema>;
 export type AuthSession = z.infer<typeof authSessionSchema>;
