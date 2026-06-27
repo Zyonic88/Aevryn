@@ -45,6 +45,7 @@ export function TimelineWorkspaceView({ project }: { project: ProjectSummary }) 
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    previewTimeline.reset();
     try {
       const payload = buildTimelinePreviewPayload({
         sourceId,

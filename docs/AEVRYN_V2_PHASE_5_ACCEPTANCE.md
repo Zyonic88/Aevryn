@@ -128,6 +128,7 @@ Required later:
 * Import UI renders source-format and inspection API failures as accessible alerts
 * Deferred source-format failures do not render stale import structure results
 * Failed follow-up inspections clear previous successful import results
+* Follow-up submissions clear stale API errors before showing local validation errors
 * Character output view
 * Character view calls `/v2/characters/preview` through the API client
 * Character view renders API character profile view models

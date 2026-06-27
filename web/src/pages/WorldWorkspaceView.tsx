@@ -44,6 +44,7 @@ export function WorldWorkspaceView({ project }: { project: ProjectSummary }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    previewWorld.reset();
     try {
       const payload = buildWorldPreviewPayload({
         sourceId,

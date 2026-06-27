@@ -1212,6 +1212,52 @@ describe("App shell routing", () => {
     expect(screen.queryByRole("heading", { name: "source_alpha_production_pack.md" })).not.toBeInTheDocument();
   });
 
+  it("clears stale export API errors before showing local validation errors", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.exportsPreview)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                error: "export_preview_failed",
+                detail: "Export preview failed.",
+              }),
+              { status: 400 },
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/exports"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Exports" });
+    await user.click(screen.getByRole("button", { name: "Preview export" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Export preview failed.");
+
+    await user.clear(screen.getByLabelText("AI response JSON"));
+    await user.type(screen.getByLabelText("AI response JSON"), "not json");
+    await user.click(screen.getByRole("button", { name: "Preview export" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+    expect(screen.queryByText("Export preview failed.")).not.toBeInTheDocument();
+  });
+
   it("renders an empty state when the continuity preview has no scenes", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();

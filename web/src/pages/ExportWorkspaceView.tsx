@@ -65,6 +65,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    previewExport.reset();
     try {
       const payload = buildExportPreviewPayload({
         sourceId,

@@ -47,6 +47,7 @@ export function PromptWorkspaceView({ project }: { project: ProjectSummary }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    previewPrompts.reset();
     try {
       const payload = buildPromptPreviewPayload({
         sourceId,

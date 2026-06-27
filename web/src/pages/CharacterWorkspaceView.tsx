@@ -47,6 +47,7 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    previewCharacters.reset();
     try {
       const payload = buildCharacterPreviewPayload({
         sourceId,

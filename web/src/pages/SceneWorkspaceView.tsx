@@ -47,6 +47,7 @@ export function SceneWorkspaceView({ project }: { project: ProjectSummary }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    previewScene.reset();
     try {
       const payload = buildScenePreviewPayload({
         sourceId,

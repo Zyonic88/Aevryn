@@ -54,6 +54,7 @@ export function ContinuityWorkspaceView({ project }: { project: ProjectSummary }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    previewContinuity.reset();
     try {
       const payload = buildContinuityPreviewPayload({
         sourceId,

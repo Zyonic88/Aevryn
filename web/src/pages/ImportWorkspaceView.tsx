@@ -47,6 +47,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    inspectImport.reset();
     try {
       const payload = buildImportInspectPayload({ sourceId, filename, title, sourceText });
       setFormError(null);
