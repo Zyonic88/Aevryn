@@ -40,6 +40,9 @@ def test_phase10_internal_alpha_docs_define_private_readiness_boundary() -> None
     assert "Register\n-> Create Project\n-> Upload Story" in alpha_doc
     assert "backend owns workflow state" in alpha_doc
     assert "performance metadata stays outside canon" in alpha_doc
+    assert "# Automated Gates" in alpha_doc
+    assert "# Manual Alpha Checks" in alpha_doc
+    assert "Manual checks must not expand Phase 10" in alpha_doc
     assert "Phase 10 is accepted when:" in acceptance_doc
     assert "Aevryn validation passes." in acceptance_doc
     assert "public launch" in acceptance_doc

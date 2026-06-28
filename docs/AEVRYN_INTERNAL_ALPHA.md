@@ -87,6 +87,36 @@ The smoke path should be automated where practical and documented where manual v
 
 ---
 
+# Automated Gates
+
+Automated alpha gates should include:
+
+* backend tests
+* frontend tests
+* backend lint and type checks
+* frontend lint, type checks, and production build
+* Aevryn validation
+* local performance baseline generation
+* backend alpha smoke path
+* frontend alpha route smoke where practical
+
+---
+
+# Manual Alpha Checks
+
+Manual alpha checks should cover the parts automation cannot fully judge yet:
+
+* whether the creator path feels understandable without CLI knowledge
+* whether loading, empty, and failure states explain what happened
+* whether Monitoring helps a tester recover when a workflow fails
+* whether output views are useful enough for private testing
+* whether export previews produce a file shape a creator recognizes
+* whether known limitations are visible before they become confusing
+
+Manual checks must not expand Phase 10 into branding polish, public launch readiness, or media-generation scope.
+
+---
+
 # Known Non-Goals
 
 Phase 10 does not include:
@@ -105,4 +135,3 @@ Phase 10 does not include:
 * new admin console
 
 Those belong to later phases unless explicitly rescoped.
-
