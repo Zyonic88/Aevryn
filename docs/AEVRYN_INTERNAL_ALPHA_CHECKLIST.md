@@ -32,7 +32,7 @@ Local Windows workspace at `C:\Users\enigm\Documents\Aevryn`; validation source 
 
 Result:
 
-Automated readiness gates passed. Manual alpha UX checks are still pending.
+Automated readiness gates passed. Manual alpha UX pass started and found a release-candidate blocker.
 
 Known Limitations:
 
@@ -40,7 +40,7 @@ Production database, identity provider, object storage, deployment, public launc
 
 Can the tester continue?
 
-Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, and worker interruption observability. Manual tester experience review is still required before inviting trusted testers.
+Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, and worker interruption observability. No for trusted tester invitation until output views render processed-story results without requiring tester-supplied source text and AI JSON.
 
 ---
 
@@ -157,12 +157,21 @@ Required checks:
 
 Result:
 
-PENDING. Automated gates passed, but manual alpha checks still need to be performed before trusted tester invitation.
+BLOCKED. Automated gates passed, and the manual browser pass proved registration, project creation, story creation, supported text import, import save, run submission, local worker processing, Monitoring, snapshot availability, and refresh recovery. The pass found that Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports still behave as preview workbenches requiring source text and AI response JSON instead of rendering processed-story output after a successful run.
 
 Known Limitations:
 
-Manual checks still need to confirm that the creator path feels understandable, Monitoring explains recovery clearly, output views are useful enough for private testing, export preview shape is recognizable, and known limitations are visible before they confuse testers.
+Manual browser pass findings:
+
+* Dashboard project creation succeeds but stays on Dashboard and uses "Create shell" / "placeholder shell" wording.
+* Project and Overview still use "Project shell" / "Workspace shell is connected" wording.
+* Project and story lists show raw ISO timestamps.
+* Import inspection, save, run submission, worker processing, Monitoring, and refresh recovery are usable.
+* The initial Project Runs panel showed "Failed to fetch" before a run existed, then recovered after run submission.
+* The Source text control is visible but was not reachable through the label API during browser automation.
+* Web Import is clearly unavailable, as expected for Phase 10.
+* Output views do not yet satisfy the creator promise of viewing generated character cards, world, timeline, scene sheets, continuity, prompt packs, and exports after processing.
 
 Can the tester continue?
 
-Not yet for tester invitation. The codebase is automated-gate green, but Phase 10 release-candidate acceptance should wait for the manual alpha pass and closeout documentation.
+Not yet for tester invitation. The codebase is automated-gate green and the import/monitoring path is strong, but Phase 10 release-candidate acceptance should wait until output views consume processed project results or otherwise present a clear alpha-safe generated-output path.
