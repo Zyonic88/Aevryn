@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 7 planning - Import UI hardening**
+Current phase: **Phase 7 in progress - Import UI hardening**
 
 Recent completed V2 work:
 
@@ -106,6 +106,11 @@ Phase 7 starting point:
 - Verify TXT, Markdown, HTML, FB2, DOCX, ODT, EPUB, Paste Text, and deferred format behavior through the UI/API path
 - Keep Web Import experimental and permission-aware until explicitly scoped
 - Improve saved import, run, and snapshot visibility in the workspace only where it supports the storage-backed workflow
+
+Phase 7 progress:
+
+- Import workspace now has a source file input that reads selected bytes, derives source IDs from filenames, sends the same `content_base64` API payload as pasted text, and blocks deferred source formats before inspection/save
+- Frontend coverage now includes file-upload inspect payloads, byte base64 encoding, filename-derived source IDs, and deferred-format preflight behavior
 
 ---
 

@@ -8,7 +8,9 @@ import {
   MAX_IMPORT_SOURCE_CHARACTERS,
   buildImportInspectPayload,
   canBuildImportInspectPayload,
+  encodeBytesBase64,
   importSourceCharacterCountLabel,
+  sourceIdFromFilename,
 } from "../importing/importPayload";
 import {
   importResultTotalsLabel,
@@ -16,6 +18,7 @@ import {
   importScenePreviewSummary,
 } from "../importing/importResult";
 import type { EngineRun, ImportInspect, ImportRecord } from "../api/schemas";
+import type { SourceFormats } from "../api/schemas";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_IMPORT_TEXT = "Chapter 1\n";
@@ -29,6 +32,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [filename, setFilename] = useState("chapter_001.txt");
   const [title, setTitle] = useState(project.name);
   const [sourceText, setSourceText] = useState(DEFAULT_IMPORT_TEXT);
+  const [fileContentBase64, setFileContentBase64] = useState("");
+  const [selectedFileName, setSelectedFileName] = useState("");
+  const [selectedFileSize, setSelectedFileSize] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
   const [savedImport, setSavedImport] = useState<ImportRecord | null>(null);
@@ -120,9 +126,17 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     },
   });
 
-  const canSubmit = canBuildImportInspectPayload({ sourceId, filename, title, sourceText });
+  const canSubmit = canBuildImportInspectPayload({
+    sourceId,
+    filename,
+    title,
+    sourceText,
+    contentBase64: fileContentBase64,
+  });
   const isSourceTextOversized = sourceText.length > MAX_IMPORT_SOURCE_CHARACTERS;
-  const sourceCountLabel = importSourceCharacterCountLabel(sourceText);
+  const sourceCountLabel = fileContentBase64
+    ? `${selectedFileName} / ${selectedFileSize.toLocaleString()} bytes selected`
+    : importSourceCharacterCountLabel(sourceText);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -130,7 +144,17 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     createImport.reset();
     submitRun.reset();
     try {
-      const payload = buildImportInspectPayload({ sourceId, filename, title, sourceText });
+      const deferredFormatError = deferredFormatMessage(filename, sourceFormats.data);
+      if (deferredFormatError) {
+        throw new Error(deferredFormatError);
+      }
+      const payload = buildImportInspectPayload({
+        sourceId,
+        filename,
+        title,
+        sourceText,
+        contentBase64: fileContentBase64,
+      });
       setFormError(null);
       setInspectionResult(null);
       setSavedImport(null);
@@ -155,7 +179,17 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       return;
     }
     try {
-      const payload = buildImportInspectPayload({ sourceId, filename, title, sourceText });
+      const deferredFormatError = deferredFormatMessage(filename, sourceFormats.data);
+      if (deferredFormatError) {
+        throw new Error(deferredFormatError);
+      }
+      const payload = buildImportInspectPayload({
+        sourceId,
+        filename,
+        title,
+        sourceText,
+        contentBase64: fileContentBase64,
+      });
       setFormError(null);
       createImport.mutate(payload);
     } catch (error) {
@@ -167,6 +201,36 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     submitRun.reset();
     setSubmittedRun(null);
     submitRun.mutate(importRecord);
+  }
+
+  async function selectSourceFile(file: File | null) {
+    if (!file) {
+      clearSelectedFile();
+      return;
+    }
+    setFilename(file.name);
+    const generatedSourceId = sourceIdFromFilename(file.name);
+    if (generatedSourceId) {
+      setSourceId(generatedSourceId);
+    }
+    setSelectedFileName(file.name);
+    setSelectedFileSize(file.size);
+    setFormError(null);
+    try {
+      const bytes = await readFileBytes(file);
+      setFileContentBase64(encodeBytesBase64(bytes));
+    } catch {
+      setFileContentBase64("");
+      setSelectedFileName("");
+      setSelectedFileSize(0);
+      setFormError("Selected file could not be read.");
+    }
+  }
+
+  function clearSelectedFile() {
+    setFileContentBase64("");
+    setSelectedFileName("");
+    setSelectedFileSize(0);
   }
 
   return (
@@ -194,7 +258,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       </StatusPanel>
 
       <section className="project-panel">
-        <h2>Paste Source</h2>
+        <h2>Source Intake</h2>
         <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
@@ -231,12 +295,27 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             <input value={title} onChange={(event) => setTitle(event.target.value)} />
           </label>
           <label>
+            Source file
+            <input
+              type="file"
+              onChange={(event) => {
+                void selectSourceFile(event.target.files?.[0] ?? null);
+              }}
+            />
+          </label>
+          {fileContentBase64 ? (
+            <button type="button" className="secondary-button" onClick={clearSelectedFile}>
+              Clear selected file
+            </button>
+          ) : null}
+          <label>
             Source text
             <textarea
               value={sourceText}
               onChange={(event) => setSourceText(event.target.value)}
               rows={10}
               aria-describedby="source-text-count"
+              disabled={Boolean(fileContentBase64)}
             />
           </label>
           <p
@@ -382,6 +461,50 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         </section>
     </div>
   );
+}
+
+async function readFileBytes(file: File): Promise<Uint8Array> {
+  if (typeof file.arrayBuffer === "function") {
+    try {
+      return new Uint8Array(await file.arrayBuffer());
+    } catch {
+      // Fall through to alternate browser/jsdom readers.
+    }
+  }
+  if (typeof file.text === "function") {
+    try {
+      return new TextEncoder().encode(await file.text());
+    } catch {
+      // Fall through to FileReader.
+    }
+  }
+  return readFileBytesWithFileReader(file);
+}
+
+function readFileBytesWithFileReader(file: File): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("File could not be read."));
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(new Uint8Array(reader.result));
+        return;
+      }
+      reject(new Error("File reader returned an unexpected result."));
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function deferredFormatMessage(filename: string, formats: SourceFormats | undefined): string {
+  const normalizedFilename = filename.trim().toLowerCase();
+  const match = formats?.deferred.find((format) =>
+    normalizedFilename.endsWith(format.extension.toLowerCase()),
+  );
+  if (!match) {
+    return "";
+  }
+  return `${match.extension} import is deferred. ${match.notes}`;
 }
 
 function importQueryKey(projectId: string, storyId: string, sessionToken: string | undefined) {

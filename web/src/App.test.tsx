@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -883,6 +883,70 @@ describe("App shell routing", () => {
     expect(screen.getByText("Showing first 6 of 8 scenes.")).toBeInTheDocument();
     expect(screen.getByText("source_alpha_chapter_001_scene_001")).toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_007_scene_001")).not.toBeInTheDocument();
+  });
+
+  it("inspects selected source files from the import workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.importsInspect)) {
+        const body = JSON.parse(String(init?.body));
+        expect(body.filename).toBe("chapter_upload.md");
+        expect(body.source_id).toBe("chapter_upload");
+        expect(atob(body.content_base64)).toBe("Chapter 1\nUploaded from disk.");
+        return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
+      }
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+        return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+        )
+      ) {
+        return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+        return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+      }
+      if (url.endsWith(API_PATHS.sourceFormats)) {
+        return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    await user.upload(
+      screen.getByLabelText("Source file"),
+      new File(["Chapter 1\nUploaded from disk."], "chapter_upload.md", {
+        type: "text/markdown",
+      }),
+    );
+    await waitFor(() => expect(screen.getByText(/chapter_upload\.md/u)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+
+    expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(API_PATHS.importsInspect),
+      expect.anything(),
+    );
   });
 
   it("saves import metadata from the import workspace tab", async () => {
@@ -2011,7 +2075,7 @@ describe("App shell routing", () => {
 
     failImport = true;
     await user.clear(screen.getByLabelText("Filename"));
-    await user.type(screen.getByLabelText("Filename"), "chapter.pdf");
+    await user.type(screen.getByLabelText("Filename"), "chapter.txt");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Import inspection failed.");
@@ -2070,35 +2134,28 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Formats unavailable.");
   });
 
-  it("shows import inspection failures for deferred source formats", async () => {
+  it("blocks deferred source formats before import inspection", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.sourceFormats)) {
+        return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+      }
+      if (url.endsWith(API_PATHS.importsInspect)) {
+        return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
+      }
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
     vi.stubGlobal(
       "fetch",
-      vi.fn((input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.endsWith(API_PATHS.sourceFormats)) {
-          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
-        }
-        if (url.endsWith(API_PATHS.importsInspect)) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                error: "import_failed",
-                detail: ".pdf import requires a dedicated parser dependency.",
-              }),
-              { status: 400 },
-            ),
-          );
-        }
-        if (url.endsWith(API_PATHS.health)) {
-          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
-        }
-        if (url.endsWith(API_PATHS.capabilities)) {
-          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
-        }
-        return Promise.resolve(new Response("{}", { status: 404 }));
-      }),
+      fetchMock,
     );
 
     render(
@@ -2113,9 +2170,13 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      ".pdf import requires a dedicated parser dependency.",
+      ".pdf import is deferred. Deferred for V1.1.",
     );
     expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining(API_PATHS.importsInspect),
+      expect.anything(),
+    );
   });
 
   it("renders a controlled empty state for unknown workspace tabs", async () => {

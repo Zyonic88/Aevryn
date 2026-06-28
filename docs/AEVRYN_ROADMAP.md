@@ -399,7 +399,7 @@ Projects contain:
 
 ## Phase 7 - Import UI
 
-Status: **Next**
+Status: **In Progress**
 
 Phase 7 should harden the storage-backed import workflow already started in Phase 5B and Phase 6.
 

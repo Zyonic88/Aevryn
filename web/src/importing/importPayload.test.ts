@@ -5,7 +5,9 @@ import {
   buildImportInspectPayload,
   canBuildImportInspectPayload,
   encodeUtf8Base64,
+  encodeBytesBase64,
   importSourceCharacterCountLabel,
+  sourceIdFromFilename,
 } from "./importPayload";
 
 describe("import payload builder", () => {
@@ -43,7 +45,23 @@ describe("import payload builder", () => {
         title: "Demo",
         sourceText: "Chapter 1",
       }),
-    ).toThrow("Source ID, filename, and source text are required.");
+    ).toThrow("Source ID, filename, and source content are required.");
+  });
+
+  it("builds payloads from selected file bytes", () => {
+    expect(
+      buildImportInspectPayload({
+        sourceId: "source_demo",
+        filename: "chapter_001.docx",
+        title: "Demo",
+        contentBase64: "AAEC",
+      }),
+    ).toMatchObject({
+      source_id: "source_demo",
+      filename: "chapter_001.docx",
+      content_base64: "AAEC",
+      title: "Demo",
+    });
   });
 
   it("rejects oversized pasted source text", () => {
@@ -82,6 +100,14 @@ describe("import payload builder", () => {
         sourceText: "a".repeat(MAX_IMPORT_SOURCE_CHARACTERS + 1),
       }),
     ).toBe(false);
+    expect(
+      canBuildImportInspectPayload({
+        sourceId: "source_demo",
+        filename: "chapter_001.epub",
+        title: "",
+        contentBase64: "AAEC",
+      }),
+    ).toBe(true);
   });
 
   it("formats visible source character counts", () => {
@@ -95,5 +121,14 @@ describe("import payload builder", () => {
     );
 
     expect(decoded).toBe("fiancée 你好 星舰");
+  });
+
+  it("encodes selected file bytes as base64", () => {
+    expect(encodeBytesBase64(new Uint8Array([0, 1, 2, 255]))).toBe("AAEC/w==");
+  });
+
+  it("derives source IDs from filenames", () => {
+    expect(sourceIdFromFilename("Chapter 001 - Arrival.md")).toBe("chapter_001_arrival");
+    expect(sourceIdFromFilename("C:\\Stories\\Book One.epub")).toBe("book_one");
   });
 });
