@@ -126,6 +126,7 @@ Phase 8 starting point:
 - Project workspace now has a restrained Monitoring tab for API health, current project run state, latest failure, snapshot/export availability, and recent workflow events
 - Monitoring tab coverage now proves status API failures surface backend-provided errors without inventing workflow state
 - Preview and extraction workflows now emit metadata-only API logs for success/failure with stable workflow kinds and error codes, without source prose or raw AI payloads
+- API health now reports metadata-only project/import storage adapter availability, and Monitoring displays those API-provided storage states
 
 ---
 

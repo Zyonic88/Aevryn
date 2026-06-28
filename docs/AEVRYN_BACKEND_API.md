@@ -273,7 +273,9 @@ future frontend clients.
 
 ## `GET /v2/health`
 
-Returns API health metadata.
+Returns API health metadata, including metadata-only storage adapter availability.
+
+The route reports whether project storage and import-content storage adapters are configured. It does not read project rows, import bytes, source prose, or engine state.
 
 It does not touch project or engine state.
 

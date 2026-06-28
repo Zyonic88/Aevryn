@@ -82,6 +82,8 @@ It must not include the source payload or generated prose that caused the status
 
 Preview and extraction workflows emit metadata-only API logs for success and failure. These logs may include source IDs, safe filenames, source formats, scene IDs, scene counts, workflow kinds, status values, and stable error codes. They must not include full chapter text or raw AI responses.
 
+API health reports storage adapter availability as configured or unconfigured. It must not read stored project records, import bytes, source prose, generated exports, or engine state.
+
 ---
 
 # Acceptance Standard

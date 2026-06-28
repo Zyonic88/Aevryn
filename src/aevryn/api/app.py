@@ -90,6 +90,7 @@ from aevryn.api.models import (
     SnapshotStoreRequest,
     SourceFormat,
     SourceFormatsResponse,
+    StorageHealth,
     StoryCreateRequest,
     StoryListResponse,
     StoryOutput,
@@ -320,6 +321,10 @@ def create_app(
             status="ok",
             api_version=API_VERSION,
             engine="Aevryn",
+            storage=StorageHealth(
+                project_storage=_adapter_status(project_repository),
+                import_content_storage=_adapter_status(import_content_store),
+            ),
         )
 
     @app.get(
@@ -1489,6 +1494,11 @@ def _decode_base64(value: str) -> bytes:
             status_code=400,
             detail={"error": "invalid_base64", "detail": "content_base64 is invalid."},
         ) from error
+
+
+def _adapter_status(adapter: object | None) -> str:
+    """Return a metadata-only configured/unconfigured storage status."""
+    return "configured" if adapter is not None else "unconfigured"
 
 
 def _validation_error_detail(error: RequestValidationError) -> str:

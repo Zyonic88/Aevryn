@@ -49,6 +49,14 @@ export function MonitoringWorkspaceView({ project }: { project: ProjectSummary }
               <dt>API</dt>
               <dd>{healthQuery.data.api_version}</dd>
             </div>
+            <div>
+              <dt>Project Storage</dt>
+              <dd>{healthQuery.data.storage.project_storage}</dd>
+            </div>
+            <div>
+              <dt>Import Storage</dt>
+              <dd>{healthQuery.data.storage.import_content_storage}</dd>
+            </div>
           </dl>
         ) : null}
       </section>

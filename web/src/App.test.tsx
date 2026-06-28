@@ -19,6 +19,10 @@ const healthPayload = {
   status: "ok",
   api_version: "v2",
   engine: "Aevryn",
+  storage: {
+    project_storage: "configured",
+    import_content_storage: "configured",
+  },
 };
 
 const capabilitiesPayload = {
@@ -840,6 +844,12 @@ describe("App shell routing", () => {
       "page",
     );
     expect(await screen.findByRole("region", { name: "API health" })).toHaveTextContent("ok");
+    expect(screen.getByRole("region", { name: "API health" })).toHaveTextContent(
+      "Project Storageconfigured",
+    );
+    expect(screen.getByRole("region", { name: "API health" })).toHaveTextContent(
+      "Import Storageconfigured",
+    );
     expect(screen.getByRole("region", { name: "Current project run state" })).toHaveTextContent(
       "succeeded",
     );

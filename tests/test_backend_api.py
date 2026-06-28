@@ -17,6 +17,8 @@ from aevryn.api import (
     create_app,
     create_app_from_env,
 )
+from aevryn.import_storage import InMemoryImportContentStore
+from aevryn.persistence import InMemoryProjectRepository
 
 
 def test_health_endpoint_reports_api_status() -> None:
@@ -29,7 +31,29 @@ def test_health_endpoint_reports_api_status() -> None:
     assert response.json() == {
         "api_version": "v2",
         "engine": "Aevryn",
+        "storage": {
+            "project_storage": "unconfigured",
+            "import_content_storage": "unconfigured",
+        },
         "status": "ok",
+    }
+
+
+def test_health_endpoint_reports_configured_storage() -> None:
+    """Health endpoint should report storage adapter availability without reading data."""
+    client = TestClient(
+        create_app(
+            project_repository=InMemoryProjectRepository(),
+            import_content_store=InMemoryImportContentStore(),
+        )
+    )
+
+    response = client.get("/v2/health")
+
+    assert response.status_code == 200
+    assert response.json()["storage"] == {
+        "project_storage": "configured",
+        "import_content_storage": "configured",
     }
 
 

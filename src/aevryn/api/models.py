@@ -7,6 +7,15 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class StorageHealth(BaseModel):
+    """Storage adapter availability metadata for health checks."""
+
+    model_config = ConfigDict(frozen=True)
+
+    project_storage: str
+    import_content_storage: str
+
+
 class HealthResponse(BaseModel):
     """Health response for the Backend API."""
 
@@ -15,6 +24,7 @@ class HealthResponse(BaseModel):
     status: str
     api_version: str
     engine: str
+    storage: StorageHealth
 
 
 class SourceFormat(BaseModel):

@@ -94,6 +94,10 @@ export function DashboardPage() {
               <dt>API</dt>
               <dd>{health.data.api_version}</dd>
             </div>
+            <div>
+              <dt>Storage</dt>
+              <dd>{health.data.storage.project_storage}</dd>
+            </div>
           </dl>
         ) : null}
       </StatusPanel>

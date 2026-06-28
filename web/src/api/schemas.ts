@@ -4,6 +4,10 @@ export const healthSchema = z.object({
   status: z.string(),
   api_version: z.string(),
   engine: z.string(),
+  storage: z.object({
+    project_storage: z.string(),
+    import_content_storage: z.string(),
+  }),
 });
 
 export const routeCapabilitySchema = z.object({

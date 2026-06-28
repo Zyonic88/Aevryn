@@ -6,6 +6,10 @@ const healthPayload = {
   status: "ok",
   api_version: "2.0",
   engine: "Aevryn",
+  storage: {
+    project_storage: "configured",
+    import_content_storage: "configured",
+  },
 };
 
 const sessionPayload = {
