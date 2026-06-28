@@ -882,6 +882,40 @@ def test_project_status_reports_metadata_only_monitoring_summary() -> None:
     assert "storage://exports/canon.md" not in response.text
 
 
+def test_project_status_responses_include_request_ids() -> None:
+    """Project status should carry request IDs on success and error responses."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+
+    success = client.get(
+        "/v2/projects/project_alpha/status",
+        headers={
+            **auth_headers("token_001"),
+            "X-Request-ID": "phase-8-status-success",
+        },
+    )
+    missing = client.get(
+        "/v2/projects/missing/status",
+        headers={
+            **auth_headers("token_001"),
+            "X-Request-ID": "phase-8-status-error",
+        },
+    )
+
+    assert success.status_code == 200
+    assert success.headers["x-request-id"] == "phase-8-status-success"
+    assert missing.status_code == 404
+    assert missing.headers["x-request-id"] == "phase-8-status-error"
+    assert missing.json()["error"] == "project_not_found"
+
+
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:
     """Worker processing should not fabricate snapshots without source bytes."""
     repository = InMemoryProjectRepository()

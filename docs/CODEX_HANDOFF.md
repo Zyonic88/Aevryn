@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 8 in progress - Monitoring**
+Current phase: **Phase 9 planned - Performance**
 
 Recent completed V2 work:
 
@@ -57,6 +57,8 @@ Recent completed V2 work:
 - Phase 5A: Web Alpha Shell
 - Phase 5B: Engine Output Views
 - Phase 6: Project Storage
+- Phase 7: Import UI
+- Phase 8: Monitoring
 - Import workspace view completed
 - Character workspace view completed
 - World workspace view completed
@@ -72,7 +74,7 @@ Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 ha
 
 Next expected V2 target:
 
-- Phase 7 Import UI hardening, governed by `docs/AEVRYN_ROADMAP.md`, `docs/AEVRYN_IMPORT_FORMAT_MATRIX.md`, and `docs/AEVRYN_WEB_IMPORT_SYSTEM.md`
+- Phase 9 Performance planning and implementation, governed by `docs/AEVRYN_ROADMAP.md`
 
 Phase 6 Project Storage accepted:
 
@@ -117,7 +119,7 @@ Phase 7 progress:
 - Web Import is visible as an unavailable, permission-check-gated placeholder; no URL fetching is enabled
 - Deferred PDF, MOBI, and AZW3 formats are all covered by UI preflight tests that block inspection before the API import endpoint is called
 
-Phase 8 starting point:
+Phase 8 accepted:
 
 - Monitoring is metadata-only observability, not Phase 9 performance optimization
 - `docs/AEVRYN_MONITORING.md` defines the first monitoring contract and privacy boundary
@@ -127,6 +129,13 @@ Phase 8 starting point:
 - Monitoring tab coverage now proves status API failures surface backend-provided errors without inventing workflow state
 - Preview and extraction workflows now emit metadata-only API logs for success/failure with stable workflow kinds and error codes, without source prose or raw AI payloads
 - API health now reports metadata-only project/import storage adapter availability, and Monitoring displays those API-provided storage states
+- Phase 8 exit verification passed before closeout: backend and frontend gates were green before the final closeout docs pass
+
+Phase 9 starting point:
+
+- Optimize after monitoring gives real workflow data
+- Keep performance work bounded to measured bottlenecks
+- Do not add new product surfaces before the monitored V2 path is stable
 
 ---
 

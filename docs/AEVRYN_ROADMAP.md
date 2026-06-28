@@ -19,16 +19,20 @@ If a feature is not required for the current version, it must wait.
 Current active target:
 
 ```text
-V2 Phase 7
--> Import UI hardening
--> Supported-format workflow completion
+V2 Phase 9
+-> Performance planning
+-> Optimize only after monitoring data exists
 ```
 
 Phase 6 Project Storage is accepted.
 
-The product path now has durable project identity, storage-backed workspace access, saved imports, queued runs, import source-byte storage, and deterministic `canon` snapshots from successful import runs.
+Phase 7 Import UI is accepted.
 
-Phase 7 should make the import workflow feel complete and trustworthy before Aevryn moves into monitoring, performance, and internal alpha work.
+Phase 8 Monitoring is accepted.
+
+The product path now has durable project identity, storage-backed workspace access, saved imports, queued runs, import source-byte storage, deterministic `canon` snapshots from successful import runs, supported-format import UI hardening, and metadata-only workflow observability.
+
+Phase 9 should optimize only after the monitored workflow path identifies meaningful bottlenecks.
 
 ---
 
@@ -171,7 +175,7 @@ Everything the CLI can do, the API must be able to do.
 | 5B | Engine Output Views | Accepted | Workspace output views and API-backed previews exist. |
 | 6 | Project Storage | Accepted | Durable project workflows, saved imports, runs, import content storage, and snapshots exist. |
 | 7 | Import UI | Accepted | Supported import formats, deferred-format failures, refresh visibility, snapshots, failed runs, and Web Import boundary are hardened. |
-| 8 | Monitoring | In Progress | Metadata-only project status and observability contracts are being added. |
+| 8 | Monitoring | Accepted | Metadata-only project status, workflow observability, health/storage status, and restrained monitoring UI exist. |
 | 9 | Performance | Planned | Optimize after monitoring gives real workflow data. |
 | 10 | Internal Alpha | Planned | Private alpha after import, monitoring, and performance are stable. |
 
@@ -457,7 +461,7 @@ Parser-backed future import paths:
 
 ## Phase 8 - Monitoring
 
-Status: **In Progress**
+Status: **Accepted**
 
 Every meaningful workflow must be observable.
 
@@ -467,6 +471,17 @@ Log:
 * Every extraction
 * Every failure
 * Every export
+
+Phase 8 completion is governed by `docs/AEVRYN_V2_PHASE_8_ACCEPTANCE.md`.
+
+Accepted monitoring scope:
+
+* `GET /v2/projects/{project_id}/status` reports metadata-only project status inside the authenticated project boundary.
+* Project status reports latest import, latest engine run, worker/job state, snapshot availability, export availability, latest failure summary, and recent workflow events.
+* API health reports metadata-only project and import storage adapter availability.
+* Preview and extraction workflows emit metadata-only success and failure logs with stable workflow kinds and error codes.
+* The frontend Monitoring tab displays API health, current project run state, latest failure, snapshot/export availability, storage availability, and recent workflow events from API-provided data.
+* Monitoring observes workflows; it does not execute workflows.
 
 ---
 

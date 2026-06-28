@@ -45,7 +45,9 @@ It must not return:
 
 # Acceptance Criteria
 
-Phase 8 is accepted when:
+Phase 8 is accepted.
+
+Accepted criteria:
 
 * API request IDs are present on success and error responses.
 * Workflow errors use stable machine codes.
@@ -58,6 +60,12 @@ Phase 8 is accepted when:
 * Frontend does not infer backend workflow state.
 * Backend gates pass.
 * Frontend gates pass.
+
+Accepted implementation:
+
+* `GET /v2/projects/{project_id}/status` returns authenticated, ownership-scoped, metadata-only workflow status.
+* Import, run, worker, snapshot, export, preview, and extraction workflow events are observable without exposing source prose, raw AI payloads, generated export content, credentials, or tokens.
+* Frontend monitoring consumes the API status contract directly and does not infer backend workflow state when the status API fails.
 
 ---
 
