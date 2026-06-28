@@ -67,6 +67,9 @@ class ProjectRepository(Protocol):
     ) -> tuple[StoryRecord, ...]:
         """Return stories inside a project in deterministic order."""
 
+    def delete_story(self, user_id: str, story_id: str) -> tuple[ImportRecord, ...]:
+        """Hard-delete a story and all metadata scoped to it."""
+
     def record_import(self, import_record: ImportRecord) -> None:
         """Persist source import metadata."""
 

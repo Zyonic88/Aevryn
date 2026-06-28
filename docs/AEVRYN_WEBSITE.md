@@ -2,9 +2,17 @@
 
 > Built by **Aetherra Labs**
 
-This document defines the Version 2 Phase 5 Website boundary.
+This document defines the Version 2 Website boundary.
 
 Workspace UX architecture is defined in `docs/AEVRYN_UX_ARCHITECTURE.md`.
+
+Phase-specific acceptance remains governed by:
+
+* `docs/AEVRYN_V2_PHASE_5_ACCEPTANCE.md`
+* `docs/AEVRYN_V2_PHASE_7_ACCEPTANCE.md`
+* `docs/AEVRYN_V2_PHASE_8_ACCEPTANCE.md`
+* `docs/AEVRYN_V2_PHASE_9_ACCEPTANCE.md`
+* `docs/AEVRYN_V2_PHASE_10_ACCEPTANCE.md`
 
 ---
 
@@ -23,6 +31,8 @@ The website is a frontend application.
 It owns interaction, navigation, browser state, loading states, error states, and rendering API view models.
 
 It does not own business logic.
+
+The website is currently in private internal-alpha hardening. It should become more trustworthy and usable without broad redesign or public-launch scope.
 
 ---
 
@@ -49,6 +59,9 @@ The Website owns:
 * Loading, empty, and error states
 * API client calls
 * Rendering API response contracts
+* Creator-facing copy for frontend states
+* Local form state needed to prepare API requests
+* Explicit browser recovery states after refresh, login, or interrupted navigation
 
 ---
 
@@ -68,6 +81,9 @@ The Website does not own:
 * Collaboration
 * Image generation
 * Video generation
+* Workflow execution
+* Monitoring state inference
+* Performance measurement authority
 
 ---
 
@@ -89,15 +105,108 @@ Components never call `fetch` directly.
 
 Components never shape backend data into engine meaning.
 
+Monitoring observes workflows. It does not execute workflows.
+
+Frontend workspace views display API-provided workflow state. They do not infer pending, running, succeeded, failed, snapshot, export, or worker state from local assumptions.
+
+The UI may prepare request payloads, but the API owns all durable identities, persistence rules, run lifecycle rules, snapshot availability, and failure contracts.
+
+No website surface may expose full source prose, full AI responses, generated export payloads, credentials, bearer tokens, machine-local paths, or diagnostic payload dumps.
+
 ---
 
-# Phase 5 Split
+# Current Website Shape
+
+The current website includes:
+
+* Login and registration.
+* Dashboard with API health and project listing.
+* Project creation and project opening.
+* Project workspace shell.
+* Story metadata creation.
+* Import workspace.
+* API-backed output workspaces for characters, world, timeline, scenes, continuity, prompt packs, and exports.
+* Settings workspace.
+* Explicit Monitoring view for diagnostics.
+
+The default workspace navigation should stay creator-focused. Monitoring should remain available only through an explicit action or route, not as everyday workspace noise.
+
+---
+
+# Import Workspace Rules
+
+The Import workspace is the main internal-alpha intake path.
+
+Required behavior:
+
+* Source text starts blank.
+* Paste input remains available for manual source text.
+* File upload supports single-file intake.
+* Multi-file upload supports bundled text-like chapter intake.
+* TXT, Markdown, HTML, FB2, DOCX, ODT, and EPUB are exposed only through API-supported paths.
+* Deferred formats are blocked before inspection with API-owned format guidance.
+* Web Import remains unavailable until permission checks, attribution, rate limits, and safety boundaries are scoped.
+* Inspect Import calls the Import API and renders API-provided structure metadata.
+* Save Import writes durable story import metadata through the API.
+* Submit Processing submits a saved import through the background job boundary.
+* Duplicate processing submissions are blocked in the UI and rejected by the API.
+* Failed processing remains retryable.
+
+The Import workspace must not:
+
+* Seed misleading source text.
+* Keep stale inspected structure after a new source selection starts.
+* Reuse an import reference for a newly selected source or bundle.
+* Display long filenames as creator-facing status noise.
+* Display machine identifiers unless the user opens an explicit advanced/developer affordance.
+* Present imported source text as generated output.
+
+---
+
+# Monitoring Rules
+
+Monitoring exists for trust and recovery, not daily creation.
+
+The Monitoring view may display:
+
+* API health.
+* Current project run state.
+* Latest failure summary.
+* Snapshot and export availability.
+* Storage adapter availability.
+* Recent workflow events.
+
+Monitoring must use only API-provided status data.
+
+Monitoring must not:
+
+* Execute workflows.
+* Drain workers.
+* Submit imports.
+* Infer backend state from frontend cache.
+* Become a broad admin console during private alpha.
+
+---
+
+# Output Workspace Rules
+
+Character, World, Timeline, Scene, Continuity, Prompt Pack, and Export workspaces render processed project outputs from API contracts.
+
+Before a canon snapshot exists, these views should explain whether output is unavailable or processing is underway.
+
+After a canon snapshot exists, these views should summarize the API-provided output without exposing full source prose or raw snapshot payloads.
+
+Developer previews may remain behind explicit disclosure controls while alpha hardening continues.
+
+---
+
+# Phase 5 Historical Split
 
 ## Phase 5A - App Shell
 
-Phase 5A proves the frontend architecture.
+Phase 5A proved the frontend architecture.
 
-Required:
+Accepted scope:
 
 * Vite
 * React
@@ -120,7 +229,7 @@ Required:
 * API capabilities check
 * Loading, error, and empty states
 
-Not required:
+Not required at that time:
 
 * Full import processing UI
 * Character cards
@@ -133,9 +242,9 @@ Not required:
 
 ## Phase 5B - Engine Output Views
 
-Phase 5B exposes API-backed engine outputs.
+Phase 5B exposed API-backed engine outputs.
 
-Required later:
+Accepted scope:
 
 * Import UI
 * Paste-source inspection through the Import API
@@ -143,7 +252,7 @@ Required later:
 * Import structure results rendered from API view models
 * UTF-8 source payload preparation before API submission
 * Visible source text size guard for pasted imports
-* Import result totals and scene preview summaries
+* Import result totals and scene preview rows
 * Import API failures shown through accessible alerts
 * Stale import structure results cleared before follow-up inspections
 * Character view
@@ -193,9 +302,9 @@ Required later:
 
 ---
 
-# First Milestone
+# Internal Alpha Milestone
 
-Aevryn Web Alpha Shell.
+Aevryn Internal Alpha.
 
 Acceptance:
 
@@ -207,7 +316,15 @@ Acceptance:
 * API health and capabilities display correctly
 * User can create and open a project shell
 * Workspace sidebar renders
-* Placeholder tabs open and close
+* Workspace tabs open and recover after refresh
+* Story/import workflow can be completed without the CLI
+* Saved imports survive refresh
+* Background runs are observable
+* Successful runs produce canon snapshots
+* Output views render API-backed processed summaries
+* Export preview remains API-backed
+* Monitoring remains restrained and explicit
+* Recovery checks explain whether the user can continue
 * Loading states exist
 * Error states exist
 * Empty states exist
@@ -240,14 +357,22 @@ The Website can fail if:
 * Browser project storage is malformed
 * Project shell names are blank
 * A workspace tab ID is unknown
+* A selected source file cannot be read
+* A multi-file source bundle contains unsupported file types
+* Import inspection fails
+* Import save fails
+* Import processing is already active
+* A worker is queued, interrupted, failed, or unavailable
+* A snapshot is missing after a run
+* A user refreshes during import or processing
 
 Failures must be visible to the user, exposed through accessible alerts where appropriate, and testable. Browser storage failures must never crash the shell; when project persistence fails, the project shell may remain usable for the current session with a visible warning.
 
 ---
 
-# V2 Phase 5 Rule
+# V2 Website Rule
 
-Phase 5 builds the browser client.
+The website makes the platform usable in a browser.
 
 Do not build:
 
@@ -258,3 +383,6 @@ Do not build:
 * Image generation
 * Video generation
 * Production media pipelines
+* Public launch pages
+* Chatbot behavior
+* Broad redesigns during private-alpha hardening

@@ -251,6 +251,29 @@ def test_project_database_records_full_project_flow() -> None:
     )
 
 
+def test_repository_hard_deletes_story_scoped_records() -> None:
+    """Story deletion should remove imports, runs, snapshots, and exports."""
+    repository = seeded_repository()
+    repository.record_import(import_record())
+    repository.record_engine_run(engine_run_record())
+    repository.store_snapshot(snapshot_record())
+    repository.record_export(export_record())
+
+    deleted_imports = repository.delete_story("user_demo", "story_demo")
+
+    assert tuple(import_record.import_id for import_record in deleted_imports) == ("import_demo",)
+    with pytest.raises(RecordNotFoundError):
+        repository.get_story("user_demo", "story_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_import("user_demo", "import_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_engine_run("user_demo", "run_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_snapshot("user_demo", "snapshot_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_export("user_demo", "export_demo")
+
+
 def test_json_project_repository_persists_records_across_instances(
     tmp_path: Path,
 ) -> None:

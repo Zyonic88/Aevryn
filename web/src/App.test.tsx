@@ -3239,4 +3239,76 @@ describe("App shell routing", () => {
 
     expect(await screen.findByText("Alpha Story")).toBeInTheDocument();
   });
+
+  it("selects and deletes stories from the story workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const betaStory = {
+      ...storyAlphaPayload,
+      story_id: "story_beta",
+      title: "Beta Story",
+    };
+    let stories = [storyAlphaPayload, betaStory];
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+        return Promise.resolve(new Response(JSON.stringify({ stories })));
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/story_beta`,
+        ) &&
+        init?.method === "DELETE"
+      ) {
+        stories = stories.filter((story) => story.story_id !== "story_beta");
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+        return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+      }
+      if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+        return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/story"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Alpha Story")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Beta Story Select story/ }));
+
+    expect(window.localStorage.getItem("aevryn.activeStory.project_alpha")).toBe("story_beta");
+    await user.click(screen.getByRole("button", { name: "Delete Beta Story" }));
+
+    expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete project Beta Story?");
+    expect(confirmSpy).toHaveBeenNthCalledWith(
+      2,
+      "Story data will be lost forever, are you sure?",
+    );
+    expect(await screen.findByText("Alpha Story")).toBeInTheDocument();
+    expect(screen.queryByText("Beta Story")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("aevryn.activeStory.project_alpha")).toBe("story_alpha");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`${API_PATHS.projects}/project_alpha/stories/story_beta`),
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
 });

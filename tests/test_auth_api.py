@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import logging
 
+import pytest
 from _pytest.logging import LogCaptureFixture
 from fastapi.testclient import TestClient
 
@@ -16,7 +17,7 @@ from aevryn.auth import (
     InMemorySessionStore,
     PasswordHasher,
 )
-from aevryn.import_storage import InMemoryImportContentStore
+from aevryn.import_storage import ImportContentNotFoundError, InMemoryImportContentStore
 from aevryn.persistence import ExportRecord, InMemoryProjectRepository
 from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
 from aevryn.workers.models import BackgroundJob
@@ -619,6 +620,97 @@ def test_import_runs_api_rejects_duplicate_and_cross_user_submissions() -> None:
     )
     assert cross_user.status_code == 404
     assert cross_user.json()["error"] == "import_not_found"
+
+
+def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
+    """Story deletion should remove scoped metadata and stored source bytes."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            import_content_store=content_store,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    storage_ref = created_import.json()["storage_ref"]
+    assert content_store.read_import_content(storage_ref)
+
+    response = client.delete(
+        "/v2/projects/project_alpha/stories/story_alpha",
+        headers=auth_headers("token_001"),
+    )
+
+    assert response.status_code == 204
+    listed_stories = client.get(
+        "/v2/projects/project_alpha/stories",
+        headers=auth_headers("token_001"),
+    )
+    assert listed_stories.json() == {"stories": []}
+    listed_runs = client.get(
+        "/v2/projects/project_alpha/runs",
+        headers=auth_headers("token_001"),
+    )
+    assert listed_runs.json() == {"runs": []}
+    with pytest.raises(ImportContentNotFoundError):
+        content_store.read_import_content(storage_ref)
+
+
+def test_import_runs_api_allows_retry_after_stale_active_run() -> None:
+    """Old alpha runs should not block retry forever."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+
+    retry = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={
+            "run_id": "run_retry",
+            "job_id": "job_retry",
+            "now": "2026-06-27T00:31:00Z",
+        },
+    )
+
+    assert retry.status_code == 200
+    runs = client.get(
+        "/v2/projects/project_alpha/runs",
+        headers=auth_headers("token_001"),
+    ).json()["runs"]
+    assert [run["run_id"] for run in runs] == ["run_alpha", "run_retry"]
+    assert runs[0]["status"] == "failed"
+    assert runs[0]["error_summary"] == "Processing timed out before completion."
+    assert runs[1]["status"] == "pending"
 
 
 def test_import_runs_api_requires_configured_queue() -> None:

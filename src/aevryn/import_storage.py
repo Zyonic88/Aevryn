@@ -20,6 +20,9 @@ class ImportContentStore(Protocol):
     def read_import_content(self, storage_ref: str) -> bytes:
         """Read source bytes for a stable storage reference."""
 
+    def delete_import_content(self, storage_ref: str) -> None:
+        """Delete source bytes for a stable storage reference if present."""
+
 
 class InMemoryImportContentStore:
     """Deterministic in-memory import content store for API and worker tests."""
@@ -44,6 +47,11 @@ class InMemoryImportContentStore:
             raise ImportContentNotFoundError(
                 f"Missing import content: {storage_ref}"
             ) from error
+
+    def delete_import_content(self, storage_ref: str) -> None:
+        """Delete source bytes for a stable storage reference if present."""
+        _require_storage_ref(storage_ref)
+        self._content_by_ref.pop(storage_ref, None)
 
 
 class FileSystemImportContentStore:
@@ -75,6 +83,11 @@ class FileSystemImportContentStore:
         if not content:
             raise ImportContentNotFoundError(f"Missing import content: {storage_ref}")
         return content
+
+    def delete_import_content(self, storage_ref: str) -> None:
+        """Delete source bytes for a stable storage reference if present."""
+        _require_storage_ref(storage_ref)
+        self._path_for_ref(storage_ref).unlink(missing_ok=True)
 
     def _path_for_ref(self, storage_ref: str) -> Path:
         """Return the deterministic local path for a storage reference."""

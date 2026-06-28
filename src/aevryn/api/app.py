@@ -11,6 +11,8 @@ import tempfile
 import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
+from dataclasses import replace
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -167,6 +169,7 @@ PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
 IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
 PLATFORM_ENGINE_VERSION = "aevryn_v1"
+ALPHA_ACTIVE_RUN_TIMEOUT = timedelta(minutes=30)
 
 
 def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
@@ -806,6 +809,39 @@ def create_app(
             raise _project_storage_error(error) from error
         return _story_output(story)
 
+    @app.delete(
+        "/v2/projects/{project_id}/stories/{story_id}",
+        status_code=204,
+        tags=["Projects"],
+        operation_id="deleteV2ProjectStory",
+    )
+    def delete_project_story(project_id: str, story_id: str, request: Request) -> Response:
+        """Hard-delete a story and all stored metadata/content scoped to it."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            _require_story_scope(
+                repository=repository,
+                user_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+            )
+            deleted_imports = repository.delete_story(user_id=user.user_id, story_id=story_id)
+            if import_content_store is not None:
+                for import_record in deleted_imports:
+                    import_content_store.delete_import_content(import_record.storage_ref)
+        except (AccessDeniedError, RecordNotFoundError, ValueError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "story_not_found", "detail": "Story not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return Response(status_code=204)
+
     @app.get(
         "/v2/projects/{project_id}/stories/{story_id}/snapshots",
         response_model=SnapshotListResponse,
@@ -1087,13 +1123,24 @@ def create_app(
                 import_id=import_id,
             )
             if existing_run is not None:
-                raise HTTPException(
-                    status_code=409,
-                    detail={
-                        "error": "import_run_already_active",
-                        "detail": _import_run_already_active_detail(existing_run),
-                    },
-                )
+                if _run_is_stale(existing_run, request_body.now):
+                    repository.update_engine_run(
+                        replace(
+                            existing_run,
+                            status="failed",
+                            status_updated_at=request_body.now,
+                            finished_at=request_body.now,
+                            error_summary="Processing timed out before completion.",
+                        )
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "error": "import_run_already_active",
+                            "detail": _import_run_already_active_detail(existing_run),
+                        },
+                    )
             BackgroundJobService(
                 repository=repository,
                 queue=queue,
@@ -1107,6 +1154,8 @@ def create_app(
                 queued_at=request_body.now,
             )
             run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
+        except HTTPException:
+            raise
         except (DuplicateRecordError, DuplicateJobError) as error:
             raise HTTPException(
                 status_code=409,
@@ -2442,6 +2491,31 @@ def _active_or_completed_import_run(
     return _latest_run(matching_runs)
 
 
+def _run_is_stale(run: EngineRunRecord, now: str) -> bool:
+    """Return true when an active alpha run is old enough to retry."""
+    if run.status not in {"pending", "running"}:
+        return False
+    try:
+        run_updated_at = _parse_api_utc(run.status_updated_at or run.started_at)
+        submitted_at = _parse_api_utc(now)
+    except ValueError:
+        return False
+    return submitted_at - run_updated_at > ALPHA_ACTIVE_RUN_TIMEOUT
+
+
+def _parse_api_utc(value: str) -> datetime:
+    """Parse API UTC timestamps accepted by alpha routes."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("Timestamp cannot be blank.")
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = f"{normalized[:-1]}+00:00"
+    parsed = datetime.fromisoformat(normalized)
+    if parsed.tzinfo is None:
+        raise ValueError("Timestamp must include timezone.")
+    return parsed
+
+
 def _import_run_already_active_detail(run: EngineRunRecord) -> str:
     """Return creator-facing duplicate run guidance."""
     if run.status == "succeeded":
@@ -2612,6 +2686,11 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="POST",
             path="/v2/projects/{project_id}/stories",
             purpose="Create durable story metadata inside a project.",
+        ),
+        ApiRouteCapability(
+            method="DELETE",
+            path="/v2/projects/{project_id}/stories/{story_id}",
+            purpose="Hard-delete a story and its scoped import/run/snapshot metadata.",
         ),
         ApiRouteCapability(
             method="GET",

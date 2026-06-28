@@ -131,6 +131,58 @@ class InMemoryProjectRepository:
             )
         )
 
+    def delete_story(self, user_id: str, story_id: str) -> tuple[ImportRecord, ...]:
+        """Hard-delete a story and all metadata scoped to it."""
+        story = self.get_story(user_id=user_id, story_id=story_id)
+        deleted_imports = tuple(
+            sorted(
+                (
+                    import_record
+                    for import_record in self._imports.values()
+                    if import_record.story_id == story.story_id
+                ),
+                key=lambda import_record: import_record.import_id,
+            )
+        )
+        import_ids = {import_record.import_id for import_record in deleted_imports}
+        run_ids = {
+            run.run_id
+            for run in self._runs.values()
+            if run.story_id == story.story_id or run.import_id in import_ids
+        }
+        snapshot_ids = {
+            snapshot.snapshot_id
+            for snapshot in self._snapshots.values()
+            if snapshot.story_id == story.story_id or snapshot.run_id in run_ids
+        }
+        export_ids = {
+            export.export_id
+            for export in self._exports.values()
+            if export.snapshot_id in snapshot_ids
+        }
+
+        for export_id in export_ids:
+            del self._exports[export_id]
+        for snapshot_id in snapshot_ids:
+            del self._snapshots[snapshot_id]
+        for run_id in run_ids:
+            del self._runs[run_id]
+        for import_id in import_ids:
+            del self._imports[import_id]
+        del self._stories[story.story_id]
+        logger.debug(
+            "story_record_deleted",
+            extra={
+                "story_id": story.story_id,
+                "project_id": story.project_id,
+                "import_count": len(deleted_imports),
+                "run_count": len(run_ids),
+                "snapshot_count": len(snapshot_ids),
+                "export_count": len(export_ids),
+            },
+        )
+        return deleted_imports
+
     def record_import(self, import_record: ImportRecord) -> None:
         """Persist source import metadata."""
         self._get_required(self._stories, import_record.story_id, "story")

@@ -53,6 +53,20 @@ class JsonProjectRepository(InMemoryProjectRepository):
         """Persist a story record and flush the local store."""
         self._commit(lambda: super(JsonProjectRepository, self).create_story(story))
 
+    def delete_story(self, user_id: str, story_id: str) -> tuple[ImportRecord, ...]:
+        """Hard-delete a story and flush the local store."""
+        deleted_imports: tuple[ImportRecord, ...] = ()
+
+        def delete() -> None:
+            nonlocal deleted_imports
+            deleted_imports = super(JsonProjectRepository, self).delete_story(
+                user_id=user_id,
+                story_id=story_id,
+            )
+
+        self._commit(delete)
+        return deleted_imports
+
     def record_import(self, import_record: ImportRecord) -> None:
         """Persist import metadata and flush the local store."""
         self._commit(lambda: super(JsonProjectRepository, self).record_import(import_record))

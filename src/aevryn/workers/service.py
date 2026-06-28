@@ -173,6 +173,21 @@ class BackgroundWorker:
 
         perf_started_at = time.perf_counter()
         run = self._repository.get_engine_run_for_worker(job.run_id)
+        if run.status in {"succeeded", "failed"}:
+            summary = "Background job was ignored because its run is already terminal."
+            failed_job = self._queue.fail(
+                job_id=job.job_id,
+                failed_at=finished_at,
+                error_summary=summary,
+            )
+            _log_worker_job_event(
+                job=failed_job,
+                status="failed",
+                duration_ms=_elapsed_ms(perf_started_at),
+                error_summary=summary,
+                snapshot_count=0,
+            )
+            return failed_job
         scope_error = _job_scope_error(job=job, run=run)
         if scope_error:
             self._repository.update_engine_run(

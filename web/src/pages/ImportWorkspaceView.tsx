@@ -22,13 +22,14 @@ import {
 import type { EngineRun, ImportInspect, ImportRecord, Snapshot, Story } from "../api/schemas";
 import type { SourceFormats } from "../api/schemas";
 import type { ProjectSummary } from "../projects/projectStore";
+import { readActiveStoryId, saveActiveStoryId } from "../stories/activeStory";
 
 const DEFAULT_IMPORT_TEXT = "";
 
 export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const { session } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedStoryId, setSelectedStoryId] = useState("");
+  const [selectedStoryId, setSelectedStoryId] = useState(() => readActiveStoryId(project.id));
   const [importId, setImportId] = useState(project.id.replace(/^project_/, "import_"));
   const [sourceId, setSourceId] = useState(project.id.replace(/^project_/, "source_"));
   const [filename, setFilename] = useState("chapter_001.txt");
@@ -53,7 +54,10 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       apiClient.listStories(project.id, requireSessionToken(session), new Date().toISOString()),
     enabled: session !== null,
   });
-  const activeStoryId = selectedStoryId || storiesQuery.data?.stories[0]?.story_id || "";
+  const storyOptions = storiesQuery.data?.stories ?? [];
+  const activeStoryId = storyOptions.some((story) => story.story_id === selectedStoryId)
+    ? selectedStoryId
+    : storyOptions[0]?.story_id ?? "";
   const importsQuery = useQuery({
     queryKey: importQueryKey(project.id, activeStoryId, session?.session_token),
     queryFn: () =>
@@ -162,6 +166,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     },
     onSuccess(story) {
       setSelectedStoryId(story.story_id);
+      saveActiveStoryId(project.id, story.story_id);
       setFormError(null);
       updateStoriesCache(
         queryClient,
@@ -195,7 +200,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     (snapshotsQuery.data?.snapshots ?? []).map((snapshot) => [snapshot.run_id, snapshot]),
   );
   const latestRunByImportId = new Map<string, EngineRun>();
-  for (const run of runsQuery.data?.runs ?? []) {
+  for (const run of (runsQuery.data?.runs ?? []).filter((run) => run.story_id === activeStoryId)) {
     const existingRun = latestRunByImportId.get(run.import_id);
     if (!existingRun || runSortTimestamp(run) > runSortTimestamp(existingRun)) {
       latestRunByImportId.set(run.import_id, run);
@@ -260,7 +265,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
 
   function submitImportProcessing(importRecord: ImportRecord) {
     const existingRun = latestRunByImportId.get(importRecord.import_id);
-    if (existingRun && existingRun.status !== "failed") {
+    if (existingRun && existingRun.status !== "failed" && !isStaleActiveRun(existingRun)) {
       setSubmittedRun(existingRun);
       return;
     }
@@ -361,7 +366,11 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               Story
               <select
                 value={activeStoryId}
-                onChange={(event) => setSelectedStoryId(event.target.value)}
+                onChange={(event) => {
+                  const storyId = event.target.value;
+                  setSelectedStoryId(storyId);
+                  saveActiveStoryId(project.id, storyId);
+                }}
                 disabled={storiesQuery.isLoading}
               >
                 {(storiesQuery.data?.stories ?? []).map((story) => (
@@ -577,7 +586,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         ) : null}
         {(runsQuery.data?.runs ?? []).length > 0 ? (
           <div className="compact-list">
-            {(runsQuery.data?.runs ?? []).map((run) => {
+            {(runsQuery.data?.runs ?? []).filter((run) => run.story_id === activeStoryId).map((run) => {
               const errorLabel = runErrorLabel(run);
               return (
                 <div key={run.run_id} className="compact-row">
@@ -816,6 +825,9 @@ function importProcessingAction(
   if (!run) {
     return { label: "Submit processing", disabled: false };
   }
+  if (isStaleActiveRun(run)) {
+    return { label: "Retry processing", disabled: false };
+  }
   if (run.status === "failed") {
     return { label: "Retry processing", disabled: false };
   }
@@ -836,7 +848,7 @@ function submittedRunMessage(run: EngineRun): string {
 }
 
 function isActiveRun(run: EngineRun): boolean {
-  return run.status !== "failed" && run.status !== "succeeded";
+  return run.status !== "failed" && run.status !== "succeeded" && !isStaleActiveRun(run);
 }
 
 function runSortTimestamp(run: EngineRun): string {
@@ -847,10 +859,24 @@ function runErrorLabel(run: EngineRun): string {
   if (run.error_summary) {
     return `Run error: ${run.error_summary}`;
   }
+  if (isStaleActiveRun(run)) {
+    return "Run error: Processing timed out before completion.";
+  }
   if (run.status === "failed") {
     return "Run error: No error summary provided.";
   }
   return "";
+}
+
+function isStaleActiveRun(run: EngineRun): boolean {
+  if (run.status !== "pending" && run.status !== "running") {
+    return false;
+  }
+  const updatedAt = Date.parse(run.status_updated_at ?? run.started_at);
+  if (!Number.isFinite(updatedAt)) {
+    return false;
+  }
+  return Date.now() - updatedAt > 30 * 60 * 1000;
 }
 
 function createRunId(importId: string, now: string): string {

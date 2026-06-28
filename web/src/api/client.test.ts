@@ -657,7 +657,8 @@ describe("AevrynApiClient", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ stories: [storyPayload] })))
-      .mockResolvedValueOnce(new Response(JSON.stringify(storyPayload)));
+      .mockResolvedValueOnce(new Response(JSON.stringify(storyPayload)))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new AevrynApiClient("https://api.aevryn.ai");
@@ -672,14 +673,26 @@ describe("AevrynApiClient", () => {
         "2026-06-27T00:00:00.000Z",
       ),
     ).resolves.toEqual(storyPayload);
+    await expect(
+      client.deleteStory(
+        "project_alpha",
+        "story_alpha",
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toBeUndefined();
 
-    for (const [input, init] of fetchMock.mock.calls) {
+    for (const [input, init] of fetchMock.mock.calls.slice(0, 2)) {
       expect(input).toBe(`https://api.aevryn.ai${API_PATHS.projects}/project_alpha/stories`);
       const headers = init.headers as Headers;
       expect(headers.get("Authorization")).toBe("Bearer session-token");
       expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
     }
     expect(fetchMock.mock.calls[1][1].method).toBe("POST");
+    expect(fetchMock.mock.calls[2][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/stories/story_alpha`,
+    );
+    expect(fetchMock.mock.calls[2][1].method).toBe("DELETE");
   });
 
   it("sends authenticated requests for story imports", async () => {

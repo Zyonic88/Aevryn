@@ -5,11 +5,13 @@ import { apiClient } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
 import type { ProjectSummary } from "../projects/projectStore";
+import { readActiveStoryId, saveActiveStoryId } from "../stories/activeStory";
 
 export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(defaultStoryTitle(project.name));
+  const [selectedStoryId, setSelectedStoryId] = useState(() => readActiveStoryId(project.id));
   const [formError, setFormError] = useState<string | null>(null);
 
   const storiesQuery = useQuery({
@@ -43,6 +45,31 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
       setFormError(null);
     },
   });
+  const deleteStory = useMutation({
+    mutationFn: (storyId: string) =>
+      apiClient.deleteStory(
+        project.id,
+        storyId,
+        requireSessionToken(session),
+        new Date().toISOString(),
+      ),
+    onSuccess(_result, storyId) {
+      const remainingStories = (storiesQuery.data?.stories ?? []).filter(
+        (story) => story.story_id !== storyId,
+      );
+      const nextStoryId = remainingStories[0]?.story_id ?? "";
+      setSelectedStoryId(nextStoryId);
+      saveActiveStoryId(project.id, nextStoryId);
+      queryClient.setQueryData(storyQueryKey(project.id, session?.session_token), {
+        stories: remainingStories,
+      });
+      void queryClient.invalidateQueries({ queryKey: ["story-imports", project.id] });
+      void queryClient.invalidateQueries({ queryKey: ["story-snapshots", project.id] });
+      void queryClient.invalidateQueries({ queryKey: ["project-runs", project.id] });
+      void queryClient.invalidateQueries({ queryKey: ["project-status", project.id] });
+      void queryClient.invalidateQueries({ queryKey: ["project-outputs", project.id] });
+    },
+  });
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,6 +83,24 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
   }
 
   const stories = storiesQuery.data?.stories ?? [];
+  const activeStoryId = stories.some((story) => story.story_id === selectedStoryId)
+    ? selectedStoryId
+    : stories[0]?.story_id ?? "";
+
+  function selectStory(storyId: string) {
+    setSelectedStoryId(storyId);
+    saveActiveStoryId(project.id, storyId);
+  }
+
+  function requestStoryDeletion(storyId: string, storyTitle: string) {
+    if (!window.confirm(`Delete project ${storyTitle}?`)) {
+      return;
+    }
+    if (!window.confirm("Story data will be lost forever, are you sure?")) {
+      return;
+    }
+    deleteStory.mutate(storyId);
+  }
 
   return (
     <div className="workspace-view-stack">
@@ -77,6 +122,7 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
         </form>
         {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
         {createStory.error ? <ErrorMessage>{createStory.error.message}</ErrorMessage> : null}
+        {deleteStory.error ? <ErrorMessage>{deleteStory.error.message}</ErrorMessage> : null}
         {storiesQuery.isLoading ? <LoadingMessage>Loading stories.</LoadingMessage> : null}
         {storiesQuery.error ? <ErrorMessage>{storiesQuery.error.message}</ErrorMessage> : null}
         {!storiesQuery.isLoading && !storiesQuery.error && stories.length === 0 ? (
@@ -87,9 +133,26 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
         {stories.length > 0 ? (
           <div className="project-list">
             {stories.map((story) => (
-              <div key={story.story_id} className="project-row">
-                <strong>{story.title}</strong>
+              <div key={story.story_id} className="project-row project-row-action">
+                <button
+                  type="button"
+                  className="text-button story-select-button"
+                  aria-pressed={activeStoryId === story.story_id}
+                  onClick={() => selectStory(story.story_id)}
+                >
+                  <strong>{story.title}</strong>
+                  <span>{activeStoryId === story.story_id ? "Selected story" : "Select story"}</span>
+                </button>
                 <span>{story.updated_at}</span>
+                <button
+                  type="button"
+                  className="icon-button danger-button"
+                  aria-label={`Delete ${story.title}`}
+                  disabled={deleteStory.isPending}
+                  onClick={() => requestStoryDeletion(story.story_id, story.title)}
+                >
+                  x
+                </button>
               </div>
             ))}
           </div>

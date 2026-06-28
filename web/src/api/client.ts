@@ -332,6 +332,18 @@ export class AevrynApiClient {
     });
   }
 
+  async deleteStory(
+    projectId: string,
+    storyId: string,
+    sessionToken: string,
+    now: string,
+  ): Promise<void> {
+    await this.requestNoContent(projectStoryPath(projectId, storyId), {
+      method: "DELETE",
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
   listStoryImports(
     projectId: string,
     storyId: string,
@@ -456,6 +468,34 @@ export class AevrynApiClient {
     }
     return parsed.data;
   }
+
+  private async requestNoContent(path: string, init: RequestInit = {}): Promise<void> {
+    const headers = new Headers(init.headers);
+    headers.set("Accept", "application/json");
+
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
+    } catch (error) {
+      throw new ApiError(
+        friendlyNetworkMessage(error),
+        0,
+        "network_error",
+      );
+    }
+
+    if (!response.ok) {
+      const payload = await readJsonPayload(response);
+      const errorPayload = z
+        .object({ error: z.string().optional(), detail: z.string().optional() })
+        .safeParse(payload);
+      throw new ApiError(
+        errorPayload.data?.detail ?? "Aevryn API request failed.",
+        response.status,
+        errorPayload.data?.error ?? "request_failed",
+      );
+    }
+  }
 }
 
 function authHeaders(sessionToken: string, now: string): HeadersInit {
@@ -473,8 +513,12 @@ function projectStoriesPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/stories`;
 }
 
+function projectStoryPath(projectId: string, storyId: string): string {
+  return `${projectStoriesPath(projectId)}/${encodeURIComponent(storyId)}`;
+}
+
 function projectStoryImportsPath(projectId: string, storyId: string): string {
-  return `${projectStoriesPath(projectId)}/${encodeURIComponent(storyId)}/imports`;
+  return `${projectStoryPath(projectId, storyId)}/imports`;
 }
 
 function projectRunsPath(projectId: string): string {
@@ -498,7 +542,7 @@ function storySnapshotsPath(
   storyId: string,
   snapshotKind?: string,
 ): string {
-  const path = `${projectStoriesPath(projectId)}/${encodeURIComponent(storyId)}/snapshots`;
+  const path = `${projectStoryPath(projectId, storyId)}/snapshots`;
   if (!snapshotKind) {
     return path;
   }
