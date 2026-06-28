@@ -10,6 +10,7 @@ import {
   buildImportInspectPayload,
   canBuildImportInspectPayload,
   encodeBytesBase64,
+  encodeUtf8Base64,
   importSourceCharacterCountLabel,
   sourceIdFromFilename,
 } from "../importing/importPayload";
@@ -22,7 +23,7 @@ import type { EngineRun, ImportInspect, ImportRecord, Snapshot, Story } from "..
 import type { SourceFormats } from "../api/schemas";
 import type { ProjectSummary } from "../projects/projectStore";
 
-const DEFAULT_IMPORT_TEXT = "Chapter 1\n";
+const DEFAULT_IMPORT_TEXT = "";
 
 export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const { session } = useAuth();
@@ -36,6 +37,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [fileContentBase64, setFileContentBase64] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("");
   const [selectedFileSize, setSelectedFileSize] = useState(0);
+  const [isReadingSourceFile, setIsReadingSourceFile] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
   const [savedImport, setSavedImport] = useState<ImportRecord | null>(null);
@@ -182,9 +184,13 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const sourceFileAccept = sourceFormats.data
     ? sourceFormatAcceptValue(sourceFormats.data.supported)
     : undefined;
-  const sourceCountLabel = fileContentBase64
-    ? `${selectedFileName} / ${selectedFileSize.toLocaleString()} bytes selected`
-    : importSourceCharacterCountLabel(sourceText);
+  const sourceCountLabel = sourceFileStatusLabel({
+    isReading: isReadingSourceFile,
+    fileContentBase64,
+    selectedFileName,
+    selectedFileSize,
+    sourceText,
+  });
   const snapshotsByRun = new Map(
     (snapshotsQuery.data?.snapshots ?? []).map((snapshot) => [snapshot.run_id, snapshot]),
   );
@@ -263,27 +269,48 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     submitRun.mutate(importRecord);
   }
 
-  async function selectSourceFile(file: File | null) {
-    if (!file) {
+  async function selectSourceFiles(fileList: FileList | null) {
+    const files = Array.from(fileList ?? []);
+    if (files.length === 0) {
       clearSelectedFile();
       return;
     }
-    setFilename(file.name);
-    const generatedSourceId = sourceIdFromFilename(file.name);
-    if (generatedSourceId) {
-      setSourceId(generatedSourceId);
-    }
-    setSelectedFileName(file.name);
-    setSelectedFileSize(file.size);
+    resetImportWorkflowState();
+    setFileContentBase64("");
     setFormError(null);
+    setIsReadingSourceFile(true);
     try {
-      const bytes = await readFileBytes(file);
-      setFileContentBase64(encodeBytesBase64(bytes));
+      if (files.length === 1) {
+        const [file] = files;
+        setFilename(file.name);
+        const generatedSourceId = sourceIdFromFilename(file.name);
+        if (generatedSourceId) {
+          setSourceId(generatedSourceId);
+          setImportId(createImportId(generatedSourceId));
+        }
+        setSelectedFileName(file.name);
+        setSelectedFileSize(file.size);
+        setSourceText("");
+        const bytes = await readFileBytes(file);
+        setFileContentBase64(encodeBytesBase64(bytes));
+      } else {
+        const bundle = await readBundledSourceFiles(files);
+        setFilename(bundle.filename);
+        setSourceId(bundle.sourceId);
+        setImportId(createImportId(bundle.sourceId));
+        setTitle(title.trim() || "Chapter import");
+        setSelectedFileName(`${files.length} files`);
+        setSelectedFileSize(bundle.byteCount);
+        setSourceText("");
+        setFileContentBase64(encodeUtf8Base64(bundle.text));
+      }
     } catch {
       setFileContentBase64("");
       setSelectedFileName("");
       setSelectedFileSize(0);
-      setFormError("Aevryn could not read that file. Try a supported TXT, Markdown, HTML, FB2, DOCX, ODT, or EPUB file.");
+      setFormError("Aevryn could not read that selection. Choose one native file, or multiple TXT, Markdown, HTML, or FB2 files.");
+    } finally {
+      setIsReadingSourceFile(false);
     }
   }
 
@@ -291,6 +318,15 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     setFileContentBase64("");
     setSelectedFileName("");
     setSelectedFileSize(0);
+  }
+
+  function resetImportWorkflowState() {
+    inspectImport.reset();
+    createImport.reset();
+    submitRun.reset();
+    setInspectionResult(null);
+    setSavedImport(null);
+    setSubmittedRun(null);
   }
 
   return (
@@ -365,9 +401,10 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             Source file
             <input
               type="file"
+              multiple
               accept={sourceFileAccept}
               onChange={(event) => {
-                void selectSourceFile(event.target.files?.[0] ?? null);
+                void selectSourceFiles(event.target.files);
               }}
             />
           </label>
@@ -402,9 +439,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           <button
             type="submit"
             className="primary-button"
-            disabled={!canSubmit || inspectImport.isPending}
+            disabled={!canSubmit || isReadingSourceFile || inspectImport.isPending}
           >
-            {inspectImport.isPending ? "Inspecting" : "Inspect import"}
+            {importInspectButtonLabel({ isReading: isReadingSourceFile, isInspecting: inspectImport.isPending })}
           </button>
         </form>
       </section>
@@ -454,17 +491,14 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             </div>
           </dl>
           {inspectionResult.scene_map.length > 0 ? (
-            <>
-              <p className="field-note">{sceneMapReadyLabel(inspectionResult)}</p>
-              <div className="compact-list" aria-label="Scene map">
-                {importScenePreviewRows(inspectionResult).map((scene) => (
-                  <div key={scene.scene_id} className="compact-row">
-                    <strong>{scene.title}</strong>
-                    <span>Chapter {scene.chapter_index}</span>
-                  </div>
-                ))}
-              </div>
-            </>
+            <div className="compact-list" aria-label="Scene map">
+              {importScenePreviewRows(inspectionResult).map((scene) => (
+                <div key={scene.scene_id} className="compact-row">
+                  <strong>{scene.title}</strong>
+                  <span>Chapter {scene.chapter_index}</span>
+                </div>
+              ))}
+            </div>
           ) : (
             <EmptyState title="No scenes found">
               The import returned no scene map entries.
@@ -612,6 +646,80 @@ function readFileBytesWithFileReader(file: File): Promise<Uint8Array> {
   });
 }
 
+type BundledSourceFiles = {
+  filename: string;
+  sourceId: string;
+  text: string;
+  byteCount: number;
+};
+
+async function readBundledSourceFiles(files: File[]): Promise<BundledSourceFiles> {
+  if (files.some((file) => !canBundleSourceFile(file.name))) {
+    throw new Error("Only text-like files can be bundled.");
+  }
+  const chapters = await Promise.all(
+    files.map(async (file) => {
+      const text = await readFileText(file);
+      return `File: ${file.name}\n\n${text.trimEnd()}`;
+    }),
+  );
+  return {
+    filename: "aevryn_import_bundle.txt",
+    sourceId: "aevryn_import_bundle",
+    text: chapters.join("\n\n---\n\n"),
+    byteCount: files.reduce((total, file) => total + file.size, 0),
+  };
+}
+
+async function readFileText(file: File): Promise<string> {
+  if (typeof file.text === "function") {
+    return file.text();
+  }
+  return new TextDecoder().decode(await readFileBytes(file));
+}
+
+function canBundleSourceFile(filename: string): boolean {
+  const normalized = filename.trim().toLowerCase();
+  return [".txt", ".md", ".markdown", ".html", ".htm", ".xhtml", ".fb2"].some((extension) =>
+    normalized.endsWith(extension),
+  );
+}
+
+function sourceFileStatusLabel({
+  isReading,
+  fileContentBase64,
+  selectedFileName,
+  selectedFileSize,
+  sourceText,
+}: {
+  isReading: boolean;
+  fileContentBase64: string;
+  selectedFileName: string;
+  selectedFileSize: number;
+  sourceText: string;
+}): string {
+  if (isReading) {
+    return "Reading selected file.";
+  }
+  if (fileContentBase64) {
+    return `${selectedFileName} / ${selectedFileSize.toLocaleString()} bytes selected`;
+  }
+  return importSourceCharacterCountLabel(sourceText);
+}
+
+function importInspectButtonLabel({
+  isReading,
+  isInspecting,
+}: {
+  isReading: boolean;
+  isInspecting: boolean;
+}): string {
+  if (isReading) {
+    return "Reading file";
+  }
+  return isInspecting ? "Inspecting" : "Inspect import";
+}
+
 function deferredFormatMessage(filename: string, formats: SourceFormats | undefined): string {
   const normalizedFilename = filename.trim().toLowerCase();
   const match = formats?.deferred.find((format) =>
@@ -673,6 +781,10 @@ function createStoryId(title: string): string {
   return `story_${slug || "untitled"}`;
 }
 
+function createImportId(sourceId: string): string {
+  return `import_${machineSuffix(sourceId)}_${machineSuffix(new Date().toISOString())}`;
+}
+
 function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): string {
   if (run.status === "failed") {
     return "No snapshot: run failed";
@@ -692,12 +804,6 @@ function importCardTitle(index: number): string {
 
 function sceneCountLabel(count: number): string {
   return count === 1 ? "1 scene" : `${count.toLocaleString()} scenes`;
-}
-
-function sceneMapReadyLabel(result: ImportInspect): string {
-  return result.scene_map.length === 1
-    ? "Scene map ready."
-    : `${result.scene_map.length.toLocaleString()} scenes ready for review.`;
 }
 
 function importProcessingAction(

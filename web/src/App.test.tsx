@@ -1418,7 +1418,7 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
     expect(screen.getByText("Evidence anchors")).toBeInTheDocument();
     expect(screen.getByText("1 chapter, 8 scenes, 1 evidence anchor.")).toBeInTheDocument();
-    expect(screen.getByText("8 scenes ready for review.")).toBeInTheDocument();
+    expect(screen.queryByText("8 scenes ready for review.")).not.toBeInTheDocument();
     expect(screen.getByText("Chapter 1")).toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_007_scene_001")).not.toBeInTheDocument();
   });
@@ -1493,10 +1493,12 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
     expect(await screen.findByText(".md/.markdown")).toBeInTheDocument();
+    expect(screen.getByLabelText("Source text")).toHaveValue("");
     expect(screen.getByLabelText("Source file")).toHaveAttribute(
       "accept",
       ".txt,.md,.markdown,.html,.htm,.xhtml,.fb2,.docx,.odt,.epub",
     );
+    expect(screen.getByLabelText("Source file")).toHaveAttribute("multiple");
 
     const supportedUploads = [
       { filename: "chapter_upload.txt", sourceId: "chapter_upload" },
@@ -1526,14 +1528,125 @@ describe("App shell routing", () => {
         filename: upload.filename,
         source_id: upload.sourceId,
       });
+      expect((screen.getByLabelText("Import reference") as HTMLInputElement).value).toMatch(
+        /^import_chapter_upload_/u,
+      );
       expect(atob(inspectBodies[index].content_base64)).toBe(content);
     }
+
+    await user.upload(screen.getByLabelText("Source file"), [
+      new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
+      new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
+    ]);
+    await waitFor(() => expect(screen.getByText(/2 files \//u)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await waitFor(() => expect(inspectBodies).toHaveLength(supportedUploads.length + 1));
+    const bundledBody = inspectBodies[supportedUploads.length];
+    expect(bundledBody).toMatchObject({
+      filename: "aevryn_import_bundle.txt",
+      source_id: "aevryn_import_bundle",
+    });
+    expect((screen.getByLabelText("Import reference") as HTMLInputElement).value).toMatch(
+      /^import_aevryn_import_bundle_/u,
+    );
+    expect(atob(bundledBody.content_base64)).toContain("File: chapter_001.txt");
+    expect(atob(bundledBody.content_base64)).toContain("Chapter 2\nLena answered.");
 
     expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(API_PATHS.importsInspect),
       expect.anything(),
     );
+  });
+
+  it("saves multi-file imports with a fresh import reference", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let savedImportId = "";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          if (init?.method === "POST") {
+            const body = JSON.parse(String(init.body));
+            savedImportId = body.import_id;
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  ...importRecordPayload,
+                  import_id: body.import_id,
+                  source_id: body.source_id,
+                  filename: body.filename,
+                  chapter_count: 10,
+                  scene_count: 19,
+                  evidence_anchor_count: 513,
+                  created_at: body.now,
+                }),
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.importsInspect)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...importInspectPayload,
+                chapters: 10,
+                scenes: 19,
+                evidence_anchors: 513,
+              }),
+            ),
+          );
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText(".txt");
+    await user.upload(screen.getByLabelText("Source file"), [
+      new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
+      new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
+    ]);
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    expect(await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors.")).toBeInTheDocument();
+    expect(screen.queryByText("19 scenes ready for review.")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save import" }));
+
+    expect(await screen.findByText("Import saved.")).toBeInTheDocument();
+    expect(savedImportId).toMatch(/^import_aevryn_import_bundle_/u);
+    expect(savedImportId).not.toBe("import_alpha");
   });
 
   it("saves import metadata from the import workspace tab", async () => {
@@ -2939,6 +3052,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByText(".txt");
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
     expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
 
@@ -2961,8 +3075,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("10 / 500,000 characters")).toBeInTheDocument();
-    await user.clear(screen.getByLabelText("Source text"));
+    expect(await screen.findByText("0 / 500,000 characters")).toBeInTheDocument();
     await user.click(screen.getByLabelText("Source text"));
     await user.paste("a".repeat(MAX_IMPORT_SOURCE_CHARACTERS + 1));
 
@@ -3034,6 +3147,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByText(".pdf")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     const deferredInputs = [
       {
         filename: "chapter.pdf",
