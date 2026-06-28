@@ -1,0 +1,125 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FormEvent, useState } from "react";
+
+import { apiClient } from "../api/client";
+import { useAuth } from "../auth/useAuth";
+import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
+import type { ProjectSummary } from "../projects/projectStore";
+
+export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const [title, setTitle] = useState(defaultStoryTitle(project.name));
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const storiesQuery = useQuery({
+    queryKey: storyQueryKey(project.id, session?.session_token),
+    queryFn: () =>
+      apiClient.listStories(project.id, requireSessionToken(session), new Date().toISOString()),
+    enabled: session !== null,
+  });
+  const createStory = useMutation({
+    mutationFn: (storyTitle: string) => {
+      const now = new Date().toISOString();
+      return apiClient.createStory(
+        project.id,
+        { story_id: createStoryId(storyTitle), title: storyTitle.trim(), now },
+        requireSessionToken(session),
+        now,
+      );
+    },
+    onSuccess(story) {
+      setTitle(defaultStoryTitle(project.name));
+      setFormError(null);
+      const existingStories = storiesQuery.data?.stories ?? [];
+      queryClient.setQueryData(storyQueryKey(project.id, session?.session_token), {
+        stories: [
+          story,
+          ...existingStories.filter((candidate) => candidate.story_id !== story.story_id),
+        ],
+      });
+    },
+    onError() {
+      setFormError(null);
+    },
+  });
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalizedTitle = title.trim().replace(/\s+/g, " ");
+    if (!normalizedTitle) {
+      setFormError("Story title is required.");
+      return;
+    }
+    setFormError(null);
+    createStory.mutate(normalizedTitle);
+  }
+
+  const stories = storiesQuery.data?.stories ?? [];
+
+  return (
+    <div className="workspace-view-stack">
+      <div>
+        <p className="eyebrow">Story</p>
+        <h2>Story</h2>
+      </div>
+
+      <section className="project-panel">
+        <h2>Stories</h2>
+        <form className="inline-form" onSubmit={submit}>
+          <label>
+            Story title
+            <input value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <button type="submit" className="primary-button" disabled={createStory.isPending}>
+            {createStory.isPending ? "Creating story" : "Create story"}
+          </button>
+        </form>
+        {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+        {createStory.error ? <ErrorMessage>{createStory.error.message}</ErrorMessage> : null}
+        {storiesQuery.isLoading ? <LoadingMessage>Loading stories.</LoadingMessage> : null}
+        {storiesQuery.error ? <ErrorMessage>{storiesQuery.error.message}</ErrorMessage> : null}
+        {!storiesQuery.isLoading && !storiesQuery.error && stories.length === 0 ? (
+          <EmptyState title="No stories yet">
+            Create story metadata before importing chapters.
+          </EmptyState>
+        ) : null}
+        {stories.length > 0 ? (
+          <div className="project-list">
+            {stories.map((story) => (
+              <div key={story.story_id} className="project-row">
+                <strong>{story.title}</strong>
+                <span>{story.updated_at}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </section>
+    </div>
+  );
+}
+
+function storyQueryKey(projectId: string, sessionToken: string | undefined) {
+  return ["project-stories", projectId, sessionToken] as const;
+}
+
+function defaultStoryTitle(projectName: string): string {
+  return `${projectName} Story`;
+}
+
+function createStoryId(title: string): string {
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+  return `story_${slug || "untitled"}`;
+}
+
+function requireSessionToken(session: { session_token: string } | null): string {
+  if (!session) {
+    throw new Error("Aevryn session is required.");
+  }
+  return session.session_token;
+}

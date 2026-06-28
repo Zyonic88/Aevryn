@@ -9,6 +9,8 @@ import {
   exportPreviewSchema,
   promptPreviewSchema,
   scenePreviewSchema,
+  storyListSchema,
+  storySchema,
   timelinePreviewSchema,
   worldPreviewSchema,
   healthSchema,
@@ -32,6 +34,8 @@ import {
   type Project,
   type ProjectList,
   type ProjectSettings,
+  type Story,
+  type StoryList,
   type SourceFormats,
 } from "./schemas";
 
@@ -85,6 +89,12 @@ export type ProjectCreateRequest = {
 export type ProjectSettingsRequest = {
   default_export_format: string;
   locale: string;
+};
+
+export type StoryCreateRequest = {
+  story_id: string;
+  title: string;
+  now: string;
 };
 
 export type ImportInspectRequest = {
@@ -278,6 +288,25 @@ export class AevrynApiClient {
     });
   }
 
+  listStories(projectId: string, sessionToken: string, now: string): Promise<StoryList> {
+    return this.request(projectStoriesPath(projectId), storyListSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  createStory(
+    projectId: string,
+    payload: StoryCreateRequest,
+    sessionToken: string,
+    now: string,
+  ): Promise<Story> {
+    return this.request(projectStoriesPath(projectId), storySchema, {
+      method: "POST",
+      headers: authHeaders(sessionToken, now),
+      body: JSON.stringify(payload),
+    });
+  }
+
   private async request<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
@@ -329,6 +358,10 @@ function authHeaders(sessionToken: string, now: string): HeadersInit {
 
 function projectSettingsPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/settings`;
+}
+
+function projectStoriesPath(projectId: string): string {
+  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/stories`;
 }
 
 async function readJsonPayload(response: Response): Promise<unknown> {

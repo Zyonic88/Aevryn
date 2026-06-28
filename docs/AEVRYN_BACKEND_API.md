@@ -467,6 +467,32 @@ Invalid settings fail clearly.
 
 Missing projects and cross-user project writes return a stable project-not-found response.
 
+## `GET /v2/projects/{project_id}/stories`
+
+Returns durable story metadata inside the authenticated user's project boundary.
+
+The route returns story IDs, titles, and timestamps only.
+
+It does not import source files or run the engine.
+
+Missing projects and cross-user project reads return a stable project-not-found response.
+
+## `POST /v2/projects/{project_id}/stories`
+
+Creates durable story metadata inside the authenticated user's project boundary.
+
+The request includes:
+
+* `story_id`
+* `title`
+* `now`
+
+Story titles are normalized before storage.
+
+Duplicate story IDs fail clearly.
+
+Missing projects and cross-user project writes return a stable project-not-found response.
+
 ## `POST /v2/projects/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns stateless project-level metadata.

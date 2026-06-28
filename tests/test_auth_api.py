@@ -336,6 +336,88 @@ def test_project_settings_api_rejects_invalid_and_cross_user_updates() -> None:
     assert invalid.json()["error"] == "project_settings_failed"
 
 
+def test_project_stories_api_creates_and_lists_stories() -> None:
+    """Project stories API should persist story metadata behind auth."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    created_project = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created_project.status_code == 200
+
+    empty = client.get("/v2/projects/project_alpha/stories", headers=auth_headers("token_001"))
+    assert empty.status_code == 200
+    assert empty.json() == {"stories": []}
+
+    created = client.post(
+        "/v2/projects/project_alpha/stories",
+        headers=auth_headers("token_001"),
+        json={"story_id": "story_alpha", "title": "  Alpha   Story  ", "now": NOW},
+    )
+    assert created.status_code == 200
+    assert created.json() == {
+        "story_id": "story_alpha",
+        "project_id": "project_alpha",
+        "title": "Alpha Story",
+        "created_at": NOW,
+        "updated_at": NOW,
+    }
+
+    listed = client.get("/v2/projects/project_alpha/stories", headers=auth_headers("token_001"))
+    assert listed.status_code == 200
+    assert listed.json()["stories"] == [created.json()]
+
+
+def test_project_stories_api_rejects_duplicate_and_cross_user_writes() -> None:
+    """Project stories API should enforce identity and project ownership."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    project = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert project.status_code == 200
+    payload = {"story_id": "story_alpha", "title": "Alpha", "now": NOW}
+    created = client.post(
+        "/v2/projects/project_alpha/stories",
+        headers=auth_headers("token_001"),
+        json=payload,
+    )
+    assert created.status_code == 200
+
+    duplicate = client.post(
+        "/v2/projects/project_alpha/stories",
+        headers=auth_headers("token_001"),
+        json=payload,
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"] == "story_exists"
+
+    cross_user = client.post(
+        "/v2/projects/project_alpha/stories",
+        headers=auth_headers("token_002"),
+        json={"story_id": "story_other", "title": "Other", "now": NOW},
+    )
+    assert cross_user.status_code == 404
+    assert cross_user.json()["error"] == "project_not_found"
+
+
 def test_project_storage_api_requires_configured_storage() -> None:
     """Project routes should fail clearly when no repository is configured."""
     client = TestClient(create_app(authentication_service=auth_service()))
@@ -427,6 +509,7 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert "/v2/projects" in route_paths
     assert "/v2/projects/{project_id}" in route_paths
     assert "/v2/projects/{project_id}/settings" in route_paths
+    assert "/v2/projects/{project_id}/stories" in route_paths
 
     paths = client.get("/openapi.json").json()["paths"]
     assert paths["/v2/projects"]["get"]["operationId"] == "getV2Projects"
@@ -437,6 +520,12 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     )
     assert paths["/v2/projects/{project_id}/settings"]["put"]["operationId"] == (
         "putV2ProjectSettings"
+    )
+    assert paths["/v2/projects/{project_id}/stories"]["get"]["operationId"] == (
+        "getV2ProjectStories"
+    )
+    assert paths["/v2/projects/{project_id}/stories"]["post"]["operationId"] == (
+        "postV2ProjectStories"
     )
 
 

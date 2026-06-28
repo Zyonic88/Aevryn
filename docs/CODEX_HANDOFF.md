@@ -83,6 +83,7 @@ Phase 6 first project-storage slice implemented:
 - Dashboard list/create now uses the project storage API instead of browser project shells as source of truth
 - Direct workspace project routes load project detail through the API, with legacy local shell fallback only for compatibility
 - Project Settings API routes added for read/update and the workspace Settings tab now saves through the API
+- Project Story API routes added for list/create and the workspace Story tab now creates story metadata through the API
 
 Phase 6 storage limitation:
 

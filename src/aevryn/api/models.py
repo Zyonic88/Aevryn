@@ -223,6 +223,36 @@ class ProjectSettingsResponse(BaseModel):
     locale: str
 
 
+class StoryCreateRequest(BaseModel):
+    """Request to create durable story metadata inside a project."""
+
+    model_config = ConfigDict(frozen=True)
+
+    story_id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    now: str = Field(min_length=1)
+
+
+class StoryOutput(BaseModel):
+    """Ownership-safe story metadata returned by the API."""
+
+    model_config = ConfigDict(frozen=True)
+
+    story_id: str
+    project_id: str
+    title: str
+    created_at: str
+    updated_at: str
+
+
+class StoryListResponse(BaseModel):
+    """Stories inside an authenticated project."""
+
+    model_config = ConfigDict(frozen=True)
+
+    stories: tuple[StoryOutput, ...]
+
+
 class ImportInspectRequest(BaseModel):
     """Request to inspect imported source structure without storing a project."""
 

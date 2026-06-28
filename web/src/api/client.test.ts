@@ -26,6 +26,13 @@ const projectSettingsPayload = {
   default_export_format: "markdown",
   locale: "en-US",
 };
+const storyPayload = {
+  story_id: "story_alpha",
+  project_id: "project_alpha",
+  title: "Alpha",
+  created_at: "2026-06-27T00:00:00.000Z",
+  updated_at: "2026-06-27T00:00:00.000Z",
+};
 const sourceFormatsPayload = {
   supported: [
     {
@@ -544,6 +551,35 @@ describe("AevrynApiClient", () => {
       expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
     }
     expect(fetchMock.mock.calls[1][1].method).toBe("PUT");
+  });
+
+  it("sends authenticated requests for project stories", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ stories: [storyPayload] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify(storyPayload)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.listStories("project_alpha", "session-token", "2026-06-27T00:00:00.000Z"),
+    ).resolves.toEqual({ stories: [storyPayload] });
+    await expect(
+      client.createStory(
+        "project_alpha",
+        { story_id: "story_alpha", title: "Alpha", now: "2026-06-27T00:00:00.000Z" },
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toEqual(storyPayload);
+
+    for (const [input, init] of fetchMock.mock.calls) {
+      expect(input).toBe(`https://api.aevryn.ai${API_PATHS.projects}/project_alpha/stories`);
+      const headers = init.headers as Headers;
+      expect(headers.get("Authorization")).toBe("Bearer session-token");
+      expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
+    }
+    expect(fetchMock.mock.calls[1][1].method).toBe("POST");
   });
 
   it("normalizes API errors", async () => {

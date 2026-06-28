@@ -332,6 +332,23 @@ describe("App shell routing", () => {
           }
           return Promise.resolve(new Response(JSON.stringify(projectSettingsPayload)));
         }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          if (init?.method === "POST") {
+            const body = JSON.parse(String(init.body));
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  story_id: body.story_id,
+                  project_id: projectAlphaPayload.project_id,
+                  title: body.title,
+                  created_at: body.now,
+                  updated_at: body.now,
+                }),
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify({ stories: [] })));
+        }
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
         }
@@ -1978,5 +1995,24 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Settings saved for project_alpha.",
     );
+  });
+
+  it("loads and creates stories from the story workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/story"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Story" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "No stories yet" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Story title"));
+    await user.type(screen.getByLabelText("Story title"), " Alpha   Story ");
+    await user.click(screen.getByRole("button", { name: "Create story" }));
+
+    expect(await screen.findByText("Alpha Story")).toBeInTheDocument();
   });
 });

@@ -13,11 +13,13 @@ import { ImportWorkspaceView } from "./ImportWorkspaceView";
 import { PromptWorkspaceView } from "./PromptWorkspaceView";
 import { SceneWorkspaceView } from "./SceneWorkspaceView";
 import { SettingsWorkspaceView } from "./SettingsWorkspaceView";
+import { StoryWorkspaceView } from "./StoryWorkspaceView";
 import { TimelineWorkspaceView } from "./TimelineWorkspaceView";
 import { WorldWorkspaceView } from "./WorldWorkspaceView";
 
 const workspaceTabs = [
   { id: "overview", label: "Overview" },
+  { id: "story", label: "Story" },
   { id: "import", label: "Import" },
   { id: "characters", label: "Characters" },
   { id: "world", label: "World" },
@@ -107,6 +109,9 @@ function WorkspaceTabContent({
 }) {
   if (tabId === "import") {
     return <ImportWorkspaceView project={project} />;
+  }
+  if (tabId === "story") {
+    return <StoryWorkspaceView project={project} />;
   }
   if (tabId === "characters") {
     return <CharacterWorkspaceView project={project} />;

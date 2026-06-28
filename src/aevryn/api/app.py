@@ -73,6 +73,9 @@ from aevryn.api.models import (
     SceneSheetOutput,
     SourceFormat,
     SourceFormatsResponse,
+    StoryCreateRequest,
+    StoryListResponse,
+    StoryOutput,
     TimelinePreviewRequest,
     TimelinePreviewResponse,
     WorldPreviewRequest,
@@ -100,6 +103,7 @@ from aevryn.persistence import (
     ProjectRepository,
     ProjectSettingsRecord,
     RecordNotFoundError,
+    StoryRecord,
     UserRecord,
 )
 from aevryn.presentation import (
@@ -590,6 +594,79 @@ def create_app(
         except PersistenceError as error:
             raise _project_storage_error(error) from error
         return _project_settings_output(settings)
+
+    @app.get(
+        "/v2/projects/{project_id}/stories",
+        response_model=StoryListResponse,
+        tags=["Projects"],
+        operation_id="getV2ProjectStories",
+    )
+    def list_project_stories(project_id: str, request: Request) -> StoryListResponse:
+        """Return durable story metadata inside the authenticated project boundary."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            stories = repository.list_stories_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return StoryListResponse(stories=tuple(_story_output(story) for story in stories))
+
+    @app.post(
+        "/v2/projects/{project_id}/stories",
+        response_model=StoryOutput,
+        tags=["Projects"],
+        operation_id="postV2ProjectStories",
+    )
+    def create_project_story(
+        project_id: str,
+        request_body: StoryCreateRequest,
+        request: Request,
+    ) -> StoryOutput:
+        """Create durable story metadata inside the authenticated project boundary."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            repository.get_project(user_id=user.user_id, project_id=project_id)
+            story = StoryRecord(
+                story_id=request_body.story_id,
+                project_id=project_id,
+                title=_normalized_story_title(request_body.title),
+                created_at=request_body.now,
+                updated_at=request_body.now,
+            )
+            repository.create_story(story)
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except DuplicateRecordError as error:
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "story_exists", "detail": str(error)},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "story_create_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _story_output(story)
 
     @app.post(
         "/v2/imports/inspect",
@@ -1129,8 +1206,24 @@ def _project_settings_output(settings: ProjectSettingsRecord) -> ProjectSettings
     )
 
 
+def _story_output(story: StoryRecord) -> StoryOutput:
+    """Convert persisted story metadata to the API contract."""
+    return StoryOutput(
+        story_id=story.story_id,
+        project_id=story.project_id,
+        title=story.title,
+        created_at=story.created_at,
+        updated_at=story.updated_at,
+    )
+
+
 def _normalized_project_name(value: str) -> str:
     """Return normalized project display text."""
+    return " ".join(value.split())
+
+
+def _normalized_story_title(value: str) -> str:
+    """Return normalized story title text."""
     return " ".join(value.split())
 
 
@@ -1265,6 +1358,16 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="PUT",
             path="/v2/projects/{project_id}/settings",
             purpose="Update durable project settings for the authenticated user.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}/stories",
+            purpose="List durable story metadata inside a project.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/projects/{project_id}/stories",
+            purpose="Create durable story metadata inside a project.",
         ),
         ApiRouteCapability(
             method="POST",
