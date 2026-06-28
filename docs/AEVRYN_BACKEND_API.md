@@ -546,7 +546,7 @@ Missing projects and cross-user project reads return a stable project-not-found 
 
 Returns metadata-only project status inside the authenticated user's project boundary.
 
-The route reports project status, latest import, latest engine run, worker/job state, snapshot availability, latest failure summary, and recent workflow events.
+The route reports project status, latest import, latest engine run, worker/job state, snapshot availability, export availability, latest failure summary, and recent workflow events.
 
 It does not inspect source, execute workers, create snapshots, or return source prose.
 

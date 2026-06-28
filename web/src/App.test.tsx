@@ -409,8 +409,26 @@ const projectStatusPayload = {
     latest_snapshot_id: snapshotPayload.snapshot_id,
     latest_snapshot_kind: snapshotPayload.snapshot_kind,
   },
+  exports: {
+    available: true,
+    count: 1,
+    latest_export_id: "export_alpha",
+    latest_export_kind: "canon",
+    latest_export_format: "markdown",
+  },
   latest_failure_summary: "",
   recent_workflow_events: [
+    {
+      event_type: "export_created",
+      status: "succeeded",
+      occurred_at: projectAlpha.updatedAt,
+      story_id: "",
+      import_id: "",
+      run_id: "",
+      snapshot_id: snapshotPayload.snapshot_id,
+      export_id: "export_alpha",
+      summary: "Created markdown canon export.",
+    },
     {
       event_type: "snapshot_created",
       status: "succeeded",
@@ -419,6 +437,7 @@ const projectStatusPayload = {
       import_id: "",
       run_id: engineRunPayload.run_id,
       snapshot_id: snapshotPayload.snapshot_id,
+      export_id: "",
       summary: "Created canon snapshot.",
     },
   ],
@@ -833,8 +852,11 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Snapshot availability" })).toHaveTextContent(
       "snapshot_run_alpha_canon",
     );
+    expect(screen.getByRole("region", { name: "Export availability" })).toHaveTextContent(
+      "export_alpha",
+    );
     expect(screen.getByRole("region", { name: "Recent workflow events" })).toHaveTextContent(
-      "Created canon snapshot.",
+      "Created markdown canon export.",
     );
   });
 

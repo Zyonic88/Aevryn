@@ -367,6 +367,18 @@ class ProjectStatusSnapshots(BaseModel):
     latest_snapshot_kind: str | None = None
 
 
+class ProjectStatusExports(BaseModel):
+    """Export availability visible to project monitoring."""
+
+    model_config = ConfigDict(frozen=True)
+
+    available: bool
+    count: int
+    latest_export_id: str | None = None
+    latest_export_kind: str | None = None
+    latest_export_format: str | None = None
+
+
 class ProjectWorkflowEvent(BaseModel):
     """Recent metadata-only workflow event for monitoring surfaces."""
 
@@ -379,6 +391,7 @@ class ProjectWorkflowEvent(BaseModel):
     import_id: str = ""
     run_id: str = ""
     snapshot_id: str = ""
+    export_id: str = ""
     summary: str = ""
 
 
@@ -396,6 +409,7 @@ class ProjectStatusResponse(BaseModel):
     latest_engine_run: ProjectStatusRun | None = None
     worker: ProjectStatusWorker
     snapshots: ProjectStatusSnapshots
+    exports: ProjectStatusExports
     latest_failure_summary: str = ""
     recent_workflow_events: tuple[ProjectWorkflowEvent, ...]
 

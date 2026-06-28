@@ -107,6 +107,13 @@ const projectStatusPayload = {
     latest_snapshot_id: "snapshot_run_alpha_canon",
     latest_snapshot_kind: "canon",
   },
+  exports: {
+    available: true,
+    count: 1,
+    latest_export_id: "export_alpha",
+    latest_export_kind: "canon",
+    latest_export_format: "markdown",
+  },
   latest_failure_summary: "",
   recent_workflow_events: [
     {
@@ -117,6 +124,7 @@ const projectStatusPayload = {
       import_id: "",
       run_id: "run_alpha",
       snapshot_id: "snapshot_run_alpha_canon",
+      export_id: "",
       summary: "Created canon snapshot.",
     },
   ],

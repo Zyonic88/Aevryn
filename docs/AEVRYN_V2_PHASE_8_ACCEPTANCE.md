@@ -29,6 +29,7 @@ It must answer, using metadata only:
 * latest engine run
 * worker/job state
 * snapshot availability
+* export availability
 * latest failure summary
 * recent workflow events
 

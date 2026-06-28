@@ -94,6 +94,29 @@ export function MonitoringWorkspaceView({ project }: { project: ProjectSummary }
             ) : null}
           </section>
 
+          <section className="project-panel" aria-label="Export availability">
+            <h2>Export Availability</h2>
+            <dl className="metric-grid">
+              <div>
+                <dt>Available</dt>
+                <dd>{status.exports.available ? "yes" : "no"}</dd>
+              </div>
+              <div>
+                <dt>Count</dt>
+                <dd>{status.exports.count}</dd>
+              </div>
+              <div>
+                <dt>Latest</dt>
+                <dd>{status.exports.latest_export_format ?? "none"}</dd>
+              </div>
+            </dl>
+            {status.exports.latest_export_id ? (
+              <p className="field-note">
+                {status.exports.latest_export_id} / {status.exports.latest_export_kind}
+              </p>
+            ) : null}
+          </section>
+
           <section className="project-panel" aria-label="Recent workflow events">
             <h2>Recent Workflow Events</h2>
             {status.recent_workflow_events.length === 0 ? (

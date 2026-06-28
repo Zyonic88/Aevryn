@@ -71,6 +71,7 @@ from aevryn.api.models import (
     ProjectPreviewResponse,
     ProjectSettingsRequest,
     ProjectSettingsResponse,
+    ProjectStatusExports,
     ProjectStatusImport,
     ProjectStatusResponse,
     ProjectStatusRun,
@@ -116,6 +117,7 @@ from aevryn.persistence import (
     AccessDeniedError,
     DuplicateRecordError,
     EngineRunRecord,
+    ExportRecord,
     ImportRecord,
     JsonProjectRepository,
     PersistenceError,
@@ -944,6 +946,10 @@ def create_app(
                 user_id=user.user_id,
                 project_id=project_id,
             )
+            exports = repository.list_exports_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
         except (AccessDeniedError, RecordNotFoundError) as error:
             raise HTTPException(
                 status_code=404,
@@ -957,6 +963,7 @@ def create_app(
             imports=imports,
             runs=runs,
             snapshots=snapshots,
+            exports=exports,
             background_job_queue=background_job_queue,
         )
 
@@ -1740,12 +1747,14 @@ def _project_status_output(
     imports: Sequence[ImportRecord],
     runs: Sequence[EngineRunRecord],
     snapshots: Sequence[SnapshotRecord],
+    exports: Sequence[ExportRecord],
     background_job_queue: BackgroundJobQueue | None,
 ) -> ProjectStatusResponse:
     """Build metadata-only project status without executing workflows."""
     latest_import = _latest_import(imports)
     latest_run = _latest_run(runs)
     latest_snapshot = _latest_snapshot(snapshots)
+    latest_export = _latest_export(exports)
     latest_failure_summary = _latest_failure_summary(runs)
     return ProjectStatusResponse(
         project_id=project_id,
@@ -1762,11 +1771,19 @@ def _project_status_output(
             latest_snapshot_id=latest_snapshot.snapshot_id if latest_snapshot else None,
             latest_snapshot_kind=latest_snapshot.snapshot_kind if latest_snapshot else None,
         ),
+        exports=ProjectStatusExports(
+            available=bool(exports),
+            count=len(exports),
+            latest_export_id=latest_export.export_id if latest_export else None,
+            latest_export_kind=latest_export.export_kind if latest_export else None,
+            latest_export_format=latest_export.export_format if latest_export else None,
+        ),
         latest_failure_summary=latest_failure_summary,
         recent_workflow_events=_recent_workflow_events(
             imports=imports,
             runs=runs,
             snapshots=snapshots,
+            exports=exports,
         ),
     )
 
@@ -1854,12 +1871,14 @@ def _recent_workflow_events(
     imports: Sequence[ImportRecord],
     runs: Sequence[EngineRunRecord],
     snapshots: Sequence[SnapshotRecord],
+    exports: Sequence[ExportRecord],
 ) -> tuple[ProjectWorkflowEvent, ...]:
     """Return recent metadata-only workflow events."""
     events = [
         *(_import_event(import_record) for import_record in imports),
         *(_run_event(run) for run in runs),
         *(_snapshot_event(snapshot) for snapshot in snapshots),
+        *(_export_event(export) for export in exports),
     ]
     return tuple(
         sorted(
@@ -1908,6 +1927,18 @@ def _snapshot_event(snapshot: SnapshotRecord) -> ProjectWorkflowEvent:
     )
 
 
+def _export_event(export: ExportRecord) -> ProjectWorkflowEvent:
+    """Return one metadata-only export workflow event."""
+    return ProjectWorkflowEvent(
+        event_type="export_created",
+        status="succeeded",
+        occurred_at=export.created_at,
+        snapshot_id=export.snapshot_id,
+        export_id=export.export_id,
+        summary=f"Created {export.export_format} {export.export_kind} export.",
+    )
+
+
 def _latest_import(imports: Sequence[ImportRecord]) -> ImportRecord | None:
     """Return latest import by timestamp and ID."""
     if not imports:
@@ -1930,6 +1961,13 @@ def _latest_snapshot(snapshots: Sequence[SnapshotRecord]) -> SnapshotRecord | No
     if not snapshots:
         return None
     return max(snapshots, key=lambda item: (item.created_at, item.snapshot_id))
+
+
+def _latest_export(exports: Sequence[ExportRecord]) -> ExportRecord | None:
+    """Return latest export by timestamp and ID."""
+    if not exports:
+        return None
+    return max(exports, key=lambda item: (item.created_at, item.export_id))
 
 
 def _latest_failure_summary(runs: Sequence[EngineRunRecord]) -> str:

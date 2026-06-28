@@ -15,7 +15,7 @@ from aevryn.auth import (
     PasswordHasher,
 )
 from aevryn.import_storage import InMemoryImportContentStore
-from aevryn.persistence import InMemoryProjectRepository
+from aevryn.persistence import ExportRecord, InMemoryProjectRepository
 from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
 from aevryn.workers.models import BackgroundJob
 
@@ -763,6 +763,19 @@ def test_project_status_reports_metadata_only_monitoring_summary() -> None:
         json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
     )
     assert processed.status_code == 200
+    repository.record_export(
+        ExportRecord(
+            export_id="export_alpha",
+            project_id="project_alpha",
+            snapshot_id="snapshot_run_alpha_canon",
+            export_kind="canon",
+            export_format="markdown",
+            filename="canon.md",
+            content_type="text/markdown; charset=utf-8",
+            storage_ref="storage://exports/canon.md",
+            created_at="2026-06-27T00:45:00Z",
+        )
+    )
 
     response = client.get(
         "/v2/projects/project_alpha/status",
@@ -810,8 +823,26 @@ def test_project_status_reports_metadata_only_monitoring_summary() -> None:
             "latest_snapshot_id": "snapshot_run_alpha_canon",
             "latest_snapshot_kind": "canon",
         },
+        "exports": {
+            "available": True,
+            "count": 1,
+            "latest_export_id": "export_alpha",
+            "latest_export_kind": "canon",
+            "latest_export_format": "markdown",
+        },
         "latest_failure_summary": "",
         "recent_workflow_events": [
+            {
+                "event_type": "export_created",
+                "status": "succeeded",
+                "occurred_at": "2026-06-27T00:45:00Z",
+                "story_id": "",
+                "import_id": "",
+                "run_id": "",
+                "snapshot_id": "snapshot_run_alpha_canon",
+                "export_id": "export_alpha",
+                "summary": "Created markdown canon export.",
+            },
             {
                 "event_type": "snapshot_created",
                 "status": "succeeded",
@@ -820,6 +851,7 @@ def test_project_status_reports_metadata_only_monitoring_summary() -> None:
                 "import_id": "",
                 "run_id": "run_alpha",
                 "snapshot_id": "snapshot_run_alpha_canon",
+                "export_id": "",
                 "summary": "Created canon snapshot.",
             },
             {
@@ -830,6 +862,7 @@ def test_project_status_reports_metadata_only_monitoring_summary() -> None:
                 "import_id": "import_alpha",
                 "run_id": "run_alpha",
                 "snapshot_id": "",
+                "export_id": "",
                 "summary": "Run is succeeded.",
             },
             {
@@ -840,11 +873,13 @@ def test_project_status_reports_metadata_only_monitoring_summary() -> None:
                 "import_id": "import_alpha",
                 "run_id": "",
                 "snapshot_id": "",
+                "export_id": "",
                 "summary": "Saved txt import metadata.",
             },
         ],
     }
     assert "Mark carried a rusty dagger" not in response.text
+    assert "storage://exports/canon.md" not in response.text
 
 
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:

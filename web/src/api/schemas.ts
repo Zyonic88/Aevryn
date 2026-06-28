@@ -155,6 +155,14 @@ export const projectStatusSnapshotsSchema = z.object({
   latest_snapshot_kind: z.string().nullable(),
 });
 
+export const projectStatusExportsSchema = z.object({
+  available: z.boolean(),
+  count: z.number(),
+  latest_export_id: z.string().nullable(),
+  latest_export_kind: z.string().nullable(),
+  latest_export_format: z.string().nullable(),
+});
+
 export const projectWorkflowEventSchema = z.object({
   event_type: z.string(),
   status: z.string(),
@@ -163,6 +171,7 @@ export const projectWorkflowEventSchema = z.object({
   import_id: z.string(),
   run_id: z.string(),
   snapshot_id: z.string(),
+  export_id: z.string(),
   summary: z.string(),
 });
 
@@ -176,6 +185,7 @@ export const projectStatusSchema = z.object({
   latest_engine_run: projectStatusRunSchema.nullable(),
   worker: projectStatusWorkerSchema,
   snapshots: projectStatusSnapshotsSchema,
+  exports: projectStatusExportsSchema,
   latest_failure_summary: z.string(),
   recent_workflow_events: z.array(projectWorkflowEventSchema),
 });
