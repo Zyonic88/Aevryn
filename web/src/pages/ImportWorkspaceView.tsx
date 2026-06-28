@@ -468,16 +468,19 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         ) : null}
         {(runsQuery.data?.runs ?? []).length > 0 ? (
           <div className="compact-list">
-            {(runsQuery.data?.runs ?? []).map((run) => (
-              <div key={run.run_id} className="compact-row">
-                <strong>{run.run_id}</strong>
-                <span>
-                  {run.status} / {run.import_id}
-                </span>
-                <span>{runSnapshotLabel(run, snapshotsByRun.get(run.run_id))}</span>
-                {run.error_summary ? <span>{run.error_summary}</span> : null}
-              </div>
-            ))}
+            {(runsQuery.data?.runs ?? []).map((run) => {
+              const errorLabel = runErrorLabel(run);
+              return (
+                <div key={run.run_id} className="compact-row">
+                  <strong>{run.run_id}</strong>
+                  <span>
+                    {run.status} / {run.import_id}
+                  </span>
+                  <span>{runSnapshotLabel(run, snapshotsByRun.get(run.run_id))}</span>
+                  {errorLabel ? <span>{errorLabel}</span> : null}
+                </div>
+              );
+            })}
           </div>
         ) : null}
         </section>
@@ -562,16 +565,26 @@ function snapshotQueryKey(
 }
 
 function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): string {
-  if (snapshot) {
-    return `Canon snapshot: ${snapshot.snapshot_id}`;
-  }
   if (run.status === "failed") {
     return "No snapshot: run failed";
+  }
+  if (snapshot) {
+    return `Canon snapshot: ${snapshot.snapshot_id}`;
   }
   if (run.status === "succeeded") {
     return "Snapshot pending";
   }
   return "Snapshot waiting";
+}
+
+function runErrorLabel(run: EngineRun): string {
+  if (run.error_summary) {
+    return `Run error: ${run.error_summary}`;
+  }
+  if (run.status === "failed") {
+    return "Run error: No error summary provided.";
+  }
+  return "";
 }
 
 function createRunId(importId: string, now: string): string {
