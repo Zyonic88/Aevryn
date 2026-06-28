@@ -14,7 +14,25 @@ If a feature is not required for the current version, it must wait.
 
 ---
 
-# Version 1 - Story Continuity Engine (Current)
+# Current Position
+
+Current active target:
+
+```text
+V2 Phase 7
+-> Import UI hardening
+-> Supported-format workflow completion
+```
+
+Phase 6 Project Storage is accepted.
+
+The product path now has durable project identity, storage-backed workspace access, saved imports, queued runs, import source-byte storage, and deterministic `canon` snapshots from successful import runs.
+
+Phase 7 should make the import workflow feel complete and trustworthy before Aevryn moves into monitoring, performance, and internal alpha work.
+
+---
+
+# Version 1 - Story Continuity Engine (Complete)
 
 ## Goal
 
@@ -26,7 +44,7 @@ It does **not** generate media.
 
 ## Feature Freeze
 
-Version 1 is under feature freeze.
+Version 1 is complete and under feature freeze.
 
 Until Version 1 is released, Aevryn must not add:
 
@@ -141,7 +159,27 @@ Everything the CLI can do, the API must be able to do.
 
 ---
 
+## V2 Phase Status
+
+| Phase | Name | Status | Notes |
+| --- | --- | --- | --- |
+| 1 | Backend API | Accepted | API contract over engine workflows is in place. |
+| 2 | Project Database | Accepted | Persistence boundary, JSON adapter, ownership rules, and records exist. |
+| 3 | Background Workers | Accepted | Durable run lifecycle and worker queue boundary exist. |
+| 4 | Authentication | Accepted | Register, login, session, and password reset flows exist. |
+| 5A | Web Alpha Shell | Accepted | Login, dashboard, routing, shell, and base states exist. |
+| 5B | Engine Output Views | Accepted | Workspace output views and API-backed previews exist. |
+| 6 | Project Storage | Accepted | Durable project workflows, saved imports, runs, import content storage, and snapshots exist. |
+| 7 | Import UI | Next | Harden supported import formats and storage-backed import workflow. |
+| 8 | Monitoring | Planned | Observability after product path is measurable. |
+| 9 | Performance | Planned | Optimize after monitoring gives real workflow data. |
+| 10 | Internal Alpha | Planned | Private alpha after import, monitoring, and performance are stable. |
+
+---
+
 ## Phase 1 - Backend API
+
+Status: **Accepted**
 
 Everything goes through the API.
 
@@ -173,6 +211,8 @@ Everything the CLI can do
 
 ## Phase 2 - Project Database
 
+Status: **Accepted**
+
 The database boundary is defined in `docs/AEVRYN_PROJECT_DATABASE.md`.
 
 Phase 2 completion is governed by `docs/AEVRYN_V2_PHASE_2_ACCEPTANCE.md`.
@@ -201,6 +241,8 @@ Recommended database:
 
 ## Phase 3 - Background Workers
 
+Status: **Accepted**
+
 Never process imports in the browser.
 
 Workflow:
@@ -224,6 +266,8 @@ Possible worker systems:
 
 ## Phase 4 - Authentication
 
+Status: **Accepted**
+
 System authority is defined in `docs/AEVRYN_AUTHENTICATION.md`.
 
 Acceptance criteria are defined in `docs/AEVRYN_V2_PHASE_4_ACCEPTANCE.md`.
@@ -244,6 +288,8 @@ Not required:
 ---
 
 ## Phase 5 - Website
+
+Status: **Accepted**
 
 The website boundary is defined in `docs/AEVRYN_WEBSITE.md`.
 
@@ -355,10 +401,22 @@ Projects contain:
 
 Status: **Next**
 
-Phase 7 should harden the storage-backed import workflow already started in
-Phase 5B and Phase 6.
+Phase 7 should harden the storage-backed import workflow already started in Phase 5B and Phase 6.
 
 It should not rebuild the import UI from scratch.
+
+Phase 7 owns the creator-facing intake path:
+
+```text
+Choose source
+-> Inspect source
+-> Save import
+-> Submit processing
+-> See run status
+-> See generated snapshot availability
+```
+
+The goal is confidence that every supported source type travels through the same API-backed storage workflow without losing evidence anchors or confusing the creator.
 
 Supported import paths:
 
@@ -370,9 +428,24 @@ Supported import paths:
 * ODT
 * EPUB
 * Paste Text
-* Web Import
+
+Phase 7 UI acceptance:
+
+* The import workspace clearly distinguishes paste input, file upload, supported formats, deferred formats, and experimental web import.
+* TXT, Markdown, HTML, FB2, DOCX, ODT, and EPUB can be exercised through the UI/API path or have an explicit tested reason they are not exposed yet.
+* Deferred PDF, MOBI, and AZW3 inputs fail clearly before users think they are supported.
+* Saved imports remain visible after refresh.
+* Submitted runs remain visible after refresh.
+* Successful runs expose generated snapshot availability.
+* Failed runs show stable, non-crashing error states.
+* The UI never implies imported source text is generated output.
+* React still does not import engine code or bypass the API client.
+
+Web Import:
 
 Web Import remains experimental until permission checks, rate limits, and source attribution are production-safe.
+
+Phase 7 may include a URL intake placeholder, metadata preview, or permission-checking design, but it must not add unrestricted fetching.
 
 Parser-backed future import paths:
 
@@ -383,6 +456,8 @@ Parser-backed future import paths:
 ---
 
 ## Phase 8 - Monitoring
+
+Status: **Planned**
 
 Every meaningful workflow must be observable.
 
@@ -396,6 +471,8 @@ Log:
 ---
 
 ## Phase 9 - Performance
+
+Status: **Planned**
 
 Optimize after the product path is measurable.
 
@@ -411,6 +488,8 @@ Measure:
 ---
 
 ## Phase 10 - Internal Alpha
+
+Status: **Planned**
 
 Version 2 ends with a private alpha, not a public launch.
 
