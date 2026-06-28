@@ -244,6 +244,7 @@ def test_run_performance_baseline_measures_real_v2_boundaries() -> None:
                     headers=_auth_headers(),
                 )
             ),
+            "workspace_load": lambda: _load_workspace_shell(client),
             "export_preview": lambda: _assert_ok(
                 client.post("/v2/exports/preview", json=_export_preview_payload())
             ),
@@ -260,6 +261,7 @@ def test_run_performance_baseline_measures_real_v2_boundaries() -> None:
             {"benchmark": "project_status", "elapsed_ms": 10.0, "status": "target"},
             {"benchmark": "snapshot_creation", "elapsed_ms": 10.0, "status": "measured"},
             {"benchmark": "worker_processing", "elapsed_ms": 10.0, "status": "measured"},
+            {"benchmark": "workspace_load", "elapsed_ms": 10.0, "status": "target"},
         ],
     }
     assert "Mark carried a rusty dagger" not in str(snapshot)
@@ -379,6 +381,18 @@ def _process_worker_job(client: TestClient) -> object:
             json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
         )
     )
+
+
+def _load_workspace_shell(client: TestClient) -> object:
+    """Load project shell metadata and backend-provided status."""
+    return {
+        "project": _assert_ok(
+            client.get("/v2/projects/project_alpha", headers=_auth_headers())
+        ),
+        "status": _assert_ok(
+            client.get("/v2/projects/project_alpha/status", headers=_auth_headers())
+        ),
+    }
 
 
 def _assert_ok(response: Any) -> object:

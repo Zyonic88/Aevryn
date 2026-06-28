@@ -69,6 +69,7 @@ def run_local_v2_performance_baseline() -> PerformanceSnapshotPayload:
                     headers=_auth_headers(),
                 )
             ),
+            "workspace_load": lambda: _load_workspace_shell(client),
             "export_preview": lambda: _assert_ok(
                 client.post("/v2/exports/preview", json=_export_preview_payload())
             ),
@@ -158,6 +159,18 @@ def _process_worker_job(client: TestClient) -> object:
             json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
         )
     )
+
+
+def _load_workspace_shell(client: TestClient) -> object:
+    """Load read-only metadata needed by the project workspace shell."""
+    return {
+        "project": _assert_ok(
+            client.get("/v2/projects/project_alpha", headers=_auth_headers())
+        ),
+        "status": _assert_ok(
+            client.get("/v2/projects/project_alpha/status", headers=_auth_headers())
+        ),
+    }
 
 
 def _inspect_payload() -> dict[str, str]:

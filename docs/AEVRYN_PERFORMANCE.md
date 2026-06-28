@@ -65,6 +65,8 @@ Phase 9 should measure:
 * validation suite duration
 * memory-sensitive paths where practical
 
+The local `workspace_load` baseline measures the read-only project workspace metadata path: project shell metadata plus the backend-provided project status summary. Browser rendering and visual polish remain outside this backend baseline.
+
 Measurements are metadata.
 
 They may include:

@@ -272,6 +272,7 @@ def test_performance_baseline_command_writes_metadata_only_artifact(
         "project_status",
         "snapshot_creation",
         "worker_processing",
+        "workspace_load",
     }
     assert "Mark carried a rusty dagger" not in artifact_text
     assert "serialized_output" not in artifact_text
