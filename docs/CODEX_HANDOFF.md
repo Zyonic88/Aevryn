@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 6 implementation - Project Storage**
+Current phase: **Phase 7 planning - Import UI hardening**
 
 Recent completed V2 work:
 
@@ -55,7 +55,8 @@ Recent completed V2 work:
 - Phase 3: Background Workers
 - Phase 4: Authentication
 - Phase 5A: Web Alpha Shell
-- Phase 5B started
+- Phase 5B: Engine Output Views
+- Phase 6: Project Storage
 - Import workspace view completed
 - Character workspace view completed
 - World workspace view completed
@@ -65,15 +66,15 @@ Recent completed V2 work:
 - Prompt Pack workspace view completed
 - Export request UI completed
 
-Phase 5B engine output views are implemented. Harden before moving to the next phase.
+Phase 5B engine output views are implemented.
 
 Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 has working API-backed views, but the next frontend experience pass should start with workspace architecture and low-fidelity wireframes, not colors, icons, gradients, or animation.
 
 Next expected V2 target:
 
-- Phase 6 Project Storage, governed by `docs/AEVRYN_V2_PHASE_6_ACCEPTANCE.md`
+- Phase 7 Import UI hardening, governed by `docs/AEVRYN_ROADMAP.md`, `docs/AEVRYN_IMPORT_FORMAT_MATRIX.md`, and `docs/AEVRYN_WEB_IMPORT_SYSTEM.md`
 
-Phase 6 first project-storage slice implemented:
+Phase 6 Project Storage accepted:
 
 - Durable project storage API routes added for list/create/detail
 - Routes use bearer-session authentication plus the Project Repository boundary
@@ -91,12 +92,20 @@ Phase 6 first project-storage slice implemented:
 - Snapshot API storage boundary added: authenticated project/story snapshot read routes plus an internal worker route for persisting worker-produced snapshots against succeeded runs
 - Import snapshot worker handler added for reading saved import bytes and automatically producing deterministic `canon` snapshots from successful import runs
 - Frontend API client now understands project/story snapshot list responses
+- Phase 6 exit verification passed: Ruff, mypy, pytest, frontend lint/type/test/build, and Aevryn validation corpus
 
 Phase 6 storage limitation:
 
 - JSON project and auth stores are local deterministic adapters, not final production database or identity-provider choices
 - Story import storage now has a local source-byte adapter, but this is not the final production object-storage choice
 - Worker execution now produces one deterministic `canon` snapshot from saved import content; richer snapshot families remain later integration slices
+
+Phase 7 starting point:
+
+- Treat Phase 7 as Import UI hardening and supported-format workflow completion, not a from-scratch import UI build
+- Verify TXT, Markdown, HTML, FB2, DOCX, ODT, EPUB, Paste Text, and deferred format behavior through the UI/API path
+- Keep Web Import experimental and permission-aware until explicitly scoped
+- Improve saved import, run, and snapshot visibility in the workspace only where it supports the storage-backed workflow
 
 ---
 

@@ -337,6 +337,8 @@ Continuity view:
 
 Phase 6 completion is governed by `docs/AEVRYN_V2_PHASE_6_ACCEPTANCE.md`.
 
+Status: **Accepted**
+
 Users should never lose work.
 
 Projects contain:
@@ -350,6 +352,13 @@ Projects contain:
 ---
 
 ## Phase 7 - Import UI
+
+Status: **Next**
+
+Phase 7 should harden the storage-backed import workflow already started in
+Phase 5B and Phase 6.
+
+It should not rebuild the import UI from scratch.
 
 Supported import paths:
 
