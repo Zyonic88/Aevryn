@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
+from _pytest.logging import LogCaptureFixture
 from fastapi.testclient import TestClient
 
 from aevryn.api import (
@@ -696,6 +698,34 @@ def test_extractions_apply_endpoint_accepts_single_scene_payload() -> None:
     assert payload["rejected_candidate_ids"] == []
 
 
+def test_extraction_apply_logs_metadata_only_workflow_event(
+    caplog: LogCaptureFixture,
+) -> None:
+    """Extraction apply should be observable without logging source or AI payloads."""
+    client = TestClient(create_app())
+    anchor_id = "api_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+
+    with caplog.at_level(logging.INFO, logger="aevryn.api.app"):
+        response = client.post(
+            "/v2/extractions/apply",
+            json={
+                "source_id": "api_demo",
+                "filename": "chapter.txt",
+                "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
+                "ai_response": weapon_payload(anchor_id=anchor_id, weapon="Rusty Dagger"),
+            },
+        )
+
+    assert response.status_code == 200
+    record = _workflow_log_record(caplog, "extraction_apply", "succeeded")
+    assert getattr(record, "source_id", "") == "api_demo"
+    assert getattr(record, "source_format", "") == "txt"
+    assert getattr(record, "scene_count", 0) == 1
+    assert getattr(record, "extraction_result_count", 0) == 1
+    assert "Mark carried a rusty dagger" not in _caplog_record_text(caplog)
+    assert "Rusty Dagger" not in _caplog_record_text(caplog)
+
+
 def test_extractions_apply_endpoint_accepts_multi_scene_envelope() -> None:
     """Extraction apply API should support the CLI's multi-scene envelope shape."""
     client = TestClient(create_app())
@@ -788,6 +818,34 @@ def test_canon_preview_returns_accepted_canon_metadata() -> None:
     ]
     assert payload["rejected_candidate_ids"] == []
     assert "Mark carried a rusty dagger." not in response.text
+
+
+def test_preview_success_logs_metadata_only_workflow_event(
+    caplog: LogCaptureFixture,
+) -> None:
+    """Preview routes should emit metadata-only success observability."""
+    client = TestClient(create_app())
+    anchor_id = "api_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+
+    with caplog.at_level(logging.INFO, logger="aevryn.api.app"):
+        response = client.post(
+            "/v2/canon/preview",
+            json={
+                "source_id": "api_demo",
+                "filename": "chapter.txt",
+                "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
+                "ai_response": weapon_payload(anchor_id=anchor_id, weapon="Rusty Dagger"),
+            },
+        )
+
+    assert response.status_code == 200
+    record = _workflow_log_record(caplog, "canon_preview", "succeeded")
+    assert getattr(record, "source_id", "") == "api_demo"
+    assert getattr(record, "source_format", "") == "txt"
+    assert getattr(record, "scene_count", 0) == 1
+    assert getattr(record, "extraction_result_count", 0) == 1
+    assert "Mark carried a rusty dagger" not in _caplog_record_text(caplog)
+    assert "Rusty Dagger" not in _caplog_record_text(caplog)
 
 
 def test_timeline_preview_returns_scene_order_and_state_changes() -> None:
@@ -934,6 +992,31 @@ def test_projects_preview_rejects_invalid_payload() -> None:
     assert response.status_code == 400
     assert response.json()["error"] == "project_preview_failed"
     assert "missing required keys" in response.json()["detail"]
+
+
+def test_preview_failure_logs_stable_machine_code_without_payload(
+    caplog: LogCaptureFixture,
+) -> None:
+    """Preview failures should be observable by machine code without source prose."""
+    client = TestClient(create_app())
+
+    with caplog.at_level(logging.WARNING, logger="aevryn.api.app"):
+        response = client.post(
+            "/v2/projects/preview",
+            json={
+                "source_id": "api_demo",
+                "filename": "chapter.txt",
+                "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
+                "ai_response": {"entities": []},
+            },
+        )
+
+    assert response.status_code == 400
+    record = _workflow_log_record(caplog, "project_preview", "failed")
+    assert getattr(record, "error_code", "") == "project_preview_failed"
+    assert "missing required keys" in str(getattr(record, "error_summary", ""))
+    assert "Mark carried a rusty dagger" not in _caplog_record_text(caplog)
+    assert "entities" not in _caplog_record_text(caplog)
 
 
 def test_preview_routes_return_route_specific_engine_errors() -> None:
@@ -1314,6 +1397,26 @@ def test_export_preview_rejects_unsupported_export_combination() -> None:
     assert response.status_code == 400
     assert response.json()["error"] == "export_preview_failed"
     assert "Unsupported export preview" in response.json()["detail"]
+
+
+def _workflow_log_record(
+    caplog: LogCaptureFixture,
+    workflow_kind: str,
+    workflow_status: str,
+) -> logging.LogRecord:
+    """Return one captured API workflow log record."""
+    for record in caplog.records:
+        if (
+            getattr(record, "workflow_kind", "") == workflow_kind
+            and getattr(record, "workflow_status", "") == workflow_status
+        ):
+            return record
+    raise AssertionError(f"Missing workflow log: {workflow_kind}/{workflow_status}")
+
+
+def _caplog_record_text(caplog: LogCaptureFixture) -> str:
+    """Return captured log messages and extras as searchable text."""
+    return "\n".join(str(record.__dict__) for record in caplog.records)
 
 
 def _b64(value: str) -> str:

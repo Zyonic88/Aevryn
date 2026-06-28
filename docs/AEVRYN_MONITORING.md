@@ -73,10 +73,14 @@ Structured monitoring data may identify:
 * import IDs
 * run IDs
 * snapshot IDs
+* preview workflow kinds
+* extraction workflow kinds
 * status values
 * stable error summaries
 
 It must not include the source payload or generated prose that caused the status.
+
+Preview and extraction workflows emit metadata-only API logs for success and failure. These logs may include source IDs, safe filenames, source formats, scene IDs, scene counts, workflow kinds, status values, and stable error codes. They must not include full chapter text or raw AI responses.
 
 ---
 

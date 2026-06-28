@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import logging
 import os
 import tempfile
 import uuid
@@ -154,6 +155,7 @@ from aevryn.workers import (
 )
 
 API_VERSION = "v2"
+logger = logging.getLogger(__name__)
 ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
 API_KEYS_ENV = "AEVRYN_API_KEYS"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
@@ -1134,6 +1136,12 @@ def create_app(
                 scene_id=request.scene_id,
             )
         except ValueError as error:
+            _log_workflow_failed(
+                kind="extraction_prompt",
+                request=request,
+                error_code="extraction_prompt_failed",
+                error=error,
+            )
             raise HTTPException(
                 status_code=400,
                 detail={"error": "extraction_prompt_failed", "detail": str(error)},
@@ -1142,6 +1150,19 @@ def create_app(
         prompt = EvidenceBoundedAIExtractor(
             client=StaticAIExtractionClient("{}")
         ).build_prompt(extraction_input)
+        logger.info(
+            "api_workflow_succeeded",
+            extra={
+                **_workflow_request_extra(
+                    kind="extraction_prompt",
+                    request=request,
+                    status="succeeded",
+                    source_format=source_format,
+                ),
+                "evidence_anchor_count": len(extraction_input.evidence_anchor_ids),
+                "scene_id": extraction_input.scene_id,
+            },
+        )
         return ExtractionPromptResponse(
             source_id=imported_source.source_id,
             source_format=source_format,
@@ -1161,7 +1182,11 @@ def create_app(
     ) -> ExtractionApplyResponse:
         """Apply evidence-bounded AI candidates through Canon Updating."""
         try:
-            result, _source_format = _run_project_result(request)
+            result, _source_format = _run_logged_project_result(
+                kind="extraction_apply",
+                request=request,
+                error_code="extraction_apply_failed",
+            )
         except ValueError as error:
             raise HTTPException(
                 status_code=400,
@@ -1179,7 +1204,11 @@ def create_app(
     def preview_canon(request: CanonPreviewRequest) -> CanonPreviewResponse:
         """Preview accepted Canon metadata through the Canon API."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="canon_preview",
+                request=request,
+                error_code="canon_preview_failed",
+            )
             return _canon_preview_response(result=result, source_format=source_format)
         except ValueError as error:
             raise HTTPException(
@@ -1196,7 +1225,11 @@ def create_app(
     def preview_timeline(request: TimelinePreviewRequest) -> TimelinePreviewResponse:
         """Preview Timeline metadata through the Timeline API."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="timeline_preview",
+                request=request,
+                error_code="timeline_preview_failed",
+            )
             return _timeline_preview_response(result=result, source_format=source_format)
         except ValueError as error:
             raise HTTPException(
@@ -1213,7 +1246,11 @@ def create_app(
     def preview_project(request: ProjectPreviewRequest) -> ProjectPreviewResponse:
         """Preview stateless project metadata through Project Manager."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="project_preview",
+                request=request,
+                error_code="project_preview_failed",
+            )
             return _project_preview_response(
                 result=result,
                 source_format=source_format,
@@ -1233,7 +1270,11 @@ def create_app(
     def preview_characters(request: CharacterPreviewRequest) -> CharacterPreviewResponse:
         """Preview character profiles through the Character API."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="character_preview",
+                request=request,
+                error_code="character_preview_failed",
+            )
             return _character_preview_response(
                 request=request,
                 result=result,
@@ -1254,7 +1295,11 @@ def create_app(
     def preview_scene(request: ScenePreviewRequest) -> ScenePreviewResponse:
         """Preview a scene sheet through the Scene API."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="scene_preview",
+                request=request,
+                error_code="scene_preview_failed",
+            )
             return _scene_preview_response(
                 request=request,
                 result=result,
@@ -1275,7 +1320,11 @@ def create_app(
     def preview_prompt(request: PromptPreviewRequest) -> PromptPreviewResponse:
         """Preview a production pack through the Prompt API."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="prompt_preview",
+                request=request,
+                error_code="prompt_preview_failed",
+            )
             return _prompt_preview_response(
                 request=request,
                 result=result,
@@ -1296,7 +1345,11 @@ def create_app(
     def preview_world(request: WorldPreviewRequest) -> WorldPreviewResponse:
         """Preview world state through the World API."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="world_preview",
+                request=request,
+                error_code="world_preview_failed",
+            )
             return _world_preview_response(
                 request=request,
                 result=result,
@@ -1319,7 +1372,11 @@ def create_app(
     ) -> ContinuityPreviewResponse:
         """Preview continuity changes through the Continuity API."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="continuity_preview",
+                request=request,
+                error_code="continuity_preview_failed",
+            )
             return _continuity_preview_response(
                 result=result,
                 source_format=source_format,
@@ -1341,7 +1398,11 @@ def create_app(
     ) -> ProjectOutputsPreviewResponse:
         """Preview platform-ready outputs through the Aevryn Engine."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="project_outputs_preview",
+                request=request,
+                error_code="project_output_preview_failed",
+            )
             runner = AevrynProjectRunner()
             scene_id = request.scene_id or runner.latest_scene_id(result)
             character_ids = request.character_ids or _accepted_character_ids(result)
@@ -1400,7 +1461,11 @@ def create_app(
     def preview_export(request: ExportPreviewRequest) -> ExportPreviewResponse:
         """Preview one serialized export through the Export Engine."""
         try:
-            result, source_format = _run_project_result(request)
+            result, source_format = _run_logged_project_result(
+                kind="export_preview",
+                request=request,
+                error_code="export_preview_failed",
+            )
             return _export_preview_response(
                 request=request,
                 result=result,
@@ -2517,6 +2582,86 @@ def _run_project_result(
         ),
         source_format,
     )
+
+
+def _run_logged_project_result(
+    *,
+    kind: str,
+    request: ExtractionApplyRequest,
+    error_code: str,
+) -> tuple[ProjectRunResult, str]:
+    """Run a stateless workflow and emit metadata-only monitoring logs."""
+    try:
+        result, source_format = _run_project_result(request)
+    except ValueError as error:
+        _log_workflow_failed(
+            kind=kind,
+            request=request,
+            error_code=error_code,
+            error=error,
+        )
+        raise
+    logger.info(
+        "api_workflow_succeeded",
+        extra={
+            **_workflow_request_extra(
+                kind=kind,
+                request=request,
+                status="succeeded",
+                source_format=source_format,
+            ),
+            "scene_count": _project_result_scene_count(result),
+            "extraction_result_count": len(result.extraction_results),
+        },
+    )
+    return result, source_format
+
+
+def _workflow_request_extra(
+    *,
+    kind: str,
+    request: ImportInspectRequest,
+    status: str,
+    source_format: str = "",
+    error_code: str = "",
+) -> dict[str, object]:
+    """Return safe workflow metadata for structured API logs."""
+    return {
+        "workflow_kind": kind,
+        "workflow_status": status,
+        "error_code": error_code,
+        "source_id": request.source_id,
+        "source_format": source_format,
+        "source_filename": Path(request.filename).name,
+        "scene_id": getattr(request, "scene_id", "") or "",
+    }
+
+
+def _log_workflow_failed(
+    *,
+    kind: str,
+    request: ImportInspectRequest,
+    error_code: str,
+    error: ValueError,
+) -> None:
+    """Emit a metadata-only API workflow failure log."""
+    logger.warning(
+        "api_workflow_failed",
+        extra={
+            **_workflow_request_extra(
+                kind=kind,
+                request=request,
+                status="failed",
+                error_code=error_code,
+            ),
+            "error_summary": str(error),
+        },
+    )
+
+
+def _project_result_scene_count(result: ProjectRunResult) -> int:
+    """Return imported scene count without touching source prose."""
+    return sum(len(chapter.scenes) for chapter in result.imported_source.story.chapters)
 
 
 def _import_response(
