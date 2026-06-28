@@ -1,14 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { apiClient, type LoginRequest } from "../api/client";
 import { buildLoginPayload } from "../auth/formValidation";
+import { recoveryPath } from "../auth/recoveryPath";
 import { useAuth } from "../auth/useAuth";
 import { ErrorMessage } from "../components/Feedback";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setSession } = useAuth();
   const [email, setEmail] = useState("demo@example.com");
   const [password, setPassword] = useState("");
@@ -18,7 +20,7 @@ export function LoginPage() {
     mutationFn: (payload: LoginRequest) => apiClient.login(payload),
     onSuccess(session) {
       setSession(session);
-      navigate("/dashboard");
+      navigate(recoveryPath(location.state));
     },
   });
 
