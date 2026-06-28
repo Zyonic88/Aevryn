@@ -314,23 +314,90 @@ class EngineRunListResponse(BaseModel):
     runs: tuple[EngineRunOutput, ...]
 
 
-class WorkflowStatusResponse(BaseModel):
-    """Metadata-only project workflow status for monitoring surfaces."""
+class ProjectStatusImport(BaseModel):
+    """Metadata-only latest import summary for project monitoring."""
+
+    model_config = ConfigDict(frozen=True)
+
+    import_id: str
+    story_id: str
+    filename: str
+    source_format: str
+    created_at: str
+
+
+class ProjectStatusRun(BaseModel):
+    """Metadata-only latest engine run summary for project monitoring."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str
+    story_id: str
+    import_id: str
+    status: str
+    started_at: str
+    status_updated_at: str | None = None
+    finished_at: str | None = None
+    error_summary: str = ""
+    job_ref: str = ""
+
+
+class ProjectStatusWorker(BaseModel):
+    """Queue and worker state visible to project monitoring."""
+
+    model_config = ConfigDict(frozen=True)
+
+    state: str
+    total_jobs: int = 0
+    queued_jobs: int = 0
+    running_jobs: int = 0
+    succeeded_jobs: int = 0
+    failed_jobs: int = 0
+    next_job_id: str = ""
+
+
+class ProjectStatusSnapshots(BaseModel):
+    """Snapshot availability visible to project monitoring."""
+
+    model_config = ConfigDict(frozen=True)
+
+    available: bool
+    count: int
+    latest_snapshot_id: str | None = None
+    latest_snapshot_kind: str | None = None
+
+
+class ProjectWorkflowEvent(BaseModel):
+    """Recent metadata-only workflow event for monitoring surfaces."""
+
+    model_config = ConfigDict(frozen=True)
+
+    event_type: str
+    status: str
+    occurred_at: str
+    story_id: str = ""
+    import_id: str = ""
+    run_id: str = ""
+    snapshot_id: str = ""
+    summary: str = ""
+
+
+class ProjectStatusResponse(BaseModel):
+    """Metadata-only project status for monitoring surfaces."""
 
     model_config = ConfigDict(frozen=True)
 
     project_id: str
+    status: str
     story_count: int
     import_count: int
     run_count: int
-    pending_runs: int
-    running_runs: int
-    succeeded_runs: int
-    failed_runs: int
-    snapshot_count: int
-    latest_run_id: str | None = None
-    latest_run_status: str | None = None
-    latest_error_summary: str = ""
+    latest_import: ProjectStatusImport | None = None
+    latest_engine_run: ProjectStatusRun | None = None
+    worker: ProjectStatusWorker
+    snapshots: ProjectStatusSnapshots
+    latest_failure_summary: str = ""
+    recent_workflow_events: tuple[ProjectWorkflowEvent, ...]
 
 
 class SnapshotStoreRequest(BaseModel):

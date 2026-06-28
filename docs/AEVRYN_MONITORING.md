@@ -41,22 +41,21 @@ It must not log or expose:
 
 # First Contract
 
-The first Phase 8 contract is project workflow status:
+The first Phase 8 contract is project status:
 
 ```text
-GET /v2/projects/{project_id}/workflow-status
+GET /v2/projects/{project_id}/status
 ```
 
-The route reports durable workflow counters inside the authenticated project boundary:
+The route reports durable workflow metadata inside the authenticated project boundary:
 
-* story count
-* saved import count
-* total run count
-* pending, running, succeeded, and failed run counts
-* snapshot count
-* latest run ID
-* latest run status
-* latest run error summary
+* project status
+* latest import
+* latest engine run
+* worker/job state
+* snapshot availability
+* latest failure summary
+* recent workflow events
 
 The route does not execute workers, inspect source, generate snapshots, or return source text.
 
@@ -86,7 +85,7 @@ Phase 8 is ready when:
 
 * meaningful import, run, worker, snapshot, preview, and export workflows are observable
 * failures have stable codes or summaries suitable for UI display
-* project workflow status can explain durable workflow state after refresh
+* project status can explain durable workflow state after refresh
 * monitoring responses remain authenticated and ownership-scoped
 * monitoring tests prove source prose is not exposed
 * frontend monitoring uses API data and does not bypass the API client

@@ -121,7 +121,7 @@ Phase 8 starting point:
 
 - Monitoring is metadata-only observability, not Phase 9 performance optimization
 - `docs/AEVRYN_MONITORING.md` defines the first monitoring contract and privacy boundary
-- Project workflow status starts with authenticated counts for stories, imports, run statuses, snapshots, and latest run state
+- Project status starts with authenticated metadata for latest import, latest engine run, worker/job state, snapshot availability, latest failure summary, and recent workflow events
 
 ---
 

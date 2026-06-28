@@ -727,8 +727,8 @@ def test_worker_process_api_generates_snapshot_from_stored_import_content() -> N
     assert '"source_id":"source_alpha"' in snapshots.json()["snapshots"][0]["serialized_output"]
 
 
-def test_project_workflow_status_reports_metadata_only_monitoring_summary() -> None:
-    """Project workflow status should summarize durable workflow state without source prose."""
+def test_project_status_reports_metadata_only_monitoring_summary() -> None:
+    """Project status should summarize durable workflow state without source prose."""
     repository = InMemoryProjectRepository()
     queue = InMemoryJobQueue()
     import_content_store = InMemoryImportContentStore()
@@ -765,24 +765,84 @@ def test_project_workflow_status_reports_metadata_only_monitoring_summary() -> N
     assert processed.status_code == 200
 
     response = client.get(
-        "/v2/projects/project_alpha/workflow-status",
+        "/v2/projects/project_alpha/status",
         headers=auth_headers("token_001"),
     )
 
     assert response.status_code == 200
-    assert response.json() == {
+    payload = response.json()
+    assert payload == {
         "project_id": "project_alpha",
+        "status": "succeeded",
         "story_count": 1,
         "import_count": 1,
         "run_count": 1,
-        "pending_runs": 0,
-        "running_runs": 0,
-        "succeeded_runs": 1,
-        "failed_runs": 0,
-        "snapshot_count": 1,
-        "latest_run_id": "run_alpha",
-        "latest_run_status": "succeeded",
-        "latest_error_summary": "",
+        "latest_import": {
+            "import_id": "import_alpha",
+            "story_id": "story_alpha",
+            "filename": "chapter_001.txt",
+            "source_format": "txt",
+            "created_at": NOW,
+        },
+        "latest_engine_run": {
+            "run_id": "run_alpha",
+            "story_id": "story_alpha",
+            "import_id": "import_alpha",
+            "status": "succeeded",
+            "started_at": NOW,
+            "status_updated_at": SOON,
+            "finished_at": SOON,
+            "error_summary": "",
+            "job_ref": "queue://job_alpha",
+        },
+        "worker": {
+            "state": "idle",
+            "total_jobs": 1,
+            "queued_jobs": 0,
+            "running_jobs": 0,
+            "succeeded_jobs": 1,
+            "failed_jobs": 0,
+            "next_job_id": "",
+        },
+        "snapshots": {
+            "available": True,
+            "count": 1,
+            "latest_snapshot_id": "snapshot_run_alpha_canon",
+            "latest_snapshot_kind": "canon",
+        },
+        "latest_failure_summary": "",
+        "recent_workflow_events": [
+            {
+                "event_type": "snapshot_created",
+                "status": "succeeded",
+                "occurred_at": SOON,
+                "story_id": "story_alpha",
+                "import_id": "",
+                "run_id": "run_alpha",
+                "snapshot_id": "snapshot_run_alpha_canon",
+                "summary": "Created canon snapshot.",
+            },
+            {
+                "event_type": "engine_run",
+                "status": "succeeded",
+                "occurred_at": SOON,
+                "story_id": "story_alpha",
+                "import_id": "import_alpha",
+                "run_id": "run_alpha",
+                "snapshot_id": "",
+                "summary": "Run is succeeded.",
+            },
+            {
+                "event_type": "import_saved",
+                "status": "succeeded",
+                "occurred_at": NOW,
+                "story_id": "story_alpha",
+                "import_id": "import_alpha",
+                "run_id": "",
+                "snapshot_id": "",
+                "summary": "Saved txt import metadata.",
+            },
+        ],
     }
     assert "Mark carried a rusty dagger" not in response.text
 

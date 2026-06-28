@@ -171,7 +171,7 @@ Everything the CLI can do, the API must be able to do.
 | 5B | Engine Output Views | Accepted | Workspace output views and API-backed previews exist. |
 | 6 | Project Storage | Accepted | Durable project workflows, saved imports, runs, import content storage, and snapshots exist. |
 | 7 | Import UI | Accepted | Supported import formats, deferred-format failures, refresh visibility, snapshots, failed runs, and Web Import boundary are hardened. |
-| 8 | Monitoring | In Progress | Metadata-only workflow status and observability contracts are being added. |
+| 8 | Monitoring | In Progress | Metadata-only project status and observability contracts are being added. |
 | 9 | Performance | Planned | Optimize after monitoring gives real workflow data. |
 | 10 | Internal Alpha | Planned | Private alpha after import, monitoring, and performance are stable. |
 

@@ -71,6 +71,12 @@ from aevryn.api.models import (
     ProjectPreviewResponse,
     ProjectSettingsRequest,
     ProjectSettingsResponse,
+    ProjectStatusImport,
+    ProjectStatusResponse,
+    ProjectStatusRun,
+    ProjectStatusSnapshots,
+    ProjectStatusWorker,
+    ProjectWorkflowEvent,
     PromptPreviewRequest,
     PromptPreviewResponse,
     SceneMapEntry,
@@ -89,7 +95,6 @@ from aevryn.api.models import (
     TimelinePreviewResponse,
     WorkerProcessRequest,
     WorkerProcessResponse,
-    WorkflowStatusResponse,
     WorldPreviewRequest,
     WorldPreviewResponse,
     WorldSheetOutput,
@@ -906,13 +911,13 @@ def create_app(
         return EngineRunListResponse(runs=tuple(_engine_run_output(run) for run in runs))
 
     @app.get(
-        "/v2/projects/{project_id}/workflow-status",
-        response_model=WorkflowStatusResponse,
+        "/v2/projects/{project_id}/status",
+        response_model=ProjectStatusResponse,
         tags=["Projects"],
-        operation_id="getV2ProjectWorkflowStatus",
+        operation_id="getV2ProjectStatus",
     )
-    def project_workflow_status(project_id: str, request: Request) -> WorkflowStatusResponse:
-        """Return metadata-only project workflow status for monitoring surfaces."""
+    def project_status(project_id: str, request: Request) -> ProjectStatusResponse:
+        """Return metadata-only project status for monitoring surfaces."""
         repository = _require_project_repository(project_repository)
         user = _authenticated_user(
             request=request,
@@ -946,12 +951,13 @@ def create_app(
             ) from error
         except PersistenceError as error:
             raise _project_storage_error(error) from error
-        return _workflow_status_output(
+        return _project_status_output(
             project_id=project_id,
             story_count=len(stories),
-            import_count=len(imports),
+            imports=imports,
             runs=runs,
-            snapshot_count=len(snapshots),
+            snapshots=snapshots,
+            background_job_queue=background_job_queue,
         )
 
     @app.post(
@@ -1727,39 +1733,211 @@ def _engine_run_output(run: EngineRunRecord) -> EngineRunOutput:
     )
 
 
-def _workflow_status_output(
+def _project_status_output(
     *,
     project_id: str,
     story_count: int,
-    import_count: int,
+    imports: Sequence[ImportRecord],
     runs: Sequence[EngineRunRecord],
-    snapshot_count: int,
-) -> WorkflowStatusResponse:
-    """Build metadata-only workflow status without exposing source content."""
-    latest_run = max(
-        runs,
-        key=lambda run: run.status_updated_at or run.started_at,
-        default=None,
-    )
-    return WorkflowStatusResponse(
+    snapshots: Sequence[SnapshotRecord],
+    background_job_queue: BackgroundJobQueue | None,
+) -> ProjectStatusResponse:
+    """Build metadata-only project status without executing workflows."""
+    latest_import = _latest_import(imports)
+    latest_run = _latest_run(runs)
+    latest_snapshot = _latest_snapshot(snapshots)
+    latest_failure_summary = _latest_failure_summary(runs)
+    return ProjectStatusResponse(
         project_id=project_id,
+        status=_project_workflow_state(runs=runs, imports=imports, snapshots=snapshots),
         story_count=story_count,
-        import_count=import_count,
+        import_count=len(imports),
         run_count=len(runs),
-        pending_runs=_run_status_count(runs, "pending"),
-        running_runs=_run_status_count(runs, "running"),
-        succeeded_runs=_run_status_count(runs, "succeeded"),
-        failed_runs=_run_status_count(runs, "failed"),
-        snapshot_count=snapshot_count,
-        latest_run_id=latest_run.run_id if latest_run else None,
-        latest_run_status=latest_run.status if latest_run else None,
-        latest_error_summary=latest_run.error_summary if latest_run else "",
+        latest_import=_project_status_import(latest_import) if latest_import else None,
+        latest_engine_run=_project_status_run(latest_run) if latest_run else None,
+        worker=_project_status_worker(background_job_queue),
+        snapshots=ProjectStatusSnapshots(
+            available=bool(snapshots),
+            count=len(snapshots),
+            latest_snapshot_id=latest_snapshot.snapshot_id if latest_snapshot else None,
+            latest_snapshot_kind=latest_snapshot.snapshot_kind if latest_snapshot else None,
+        ),
+        latest_failure_summary=latest_failure_summary,
+        recent_workflow_events=_recent_workflow_events(
+            imports=imports,
+            runs=runs,
+            snapshots=snapshots,
+        ),
     )
 
 
 def _run_status_count(runs: Sequence[EngineRunRecord], status: str) -> int:
     """Return count of runs in one lifecycle status."""
     return sum(1 for run in runs if run.status == status)
+
+
+def _project_workflow_state(
+    *,
+    runs: Sequence[EngineRunRecord],
+    imports: Sequence[ImportRecord],
+    snapshots: Sequence[SnapshotRecord],
+) -> str:
+    """Return a compact project workflow state for monitoring surfaces."""
+    if _run_status_count(runs, "running") > 0:
+        return "running"
+    if _run_status_count(runs, "pending") > 0:
+        return "pending"
+    latest_run = _latest_run(runs)
+    if latest_run is not None:
+        return latest_run.status
+    if snapshots:
+        return "snapshotted"
+    if imports:
+        return "imported"
+    return "empty"
+
+
+def _project_status_import(import_record: ImportRecord) -> ProjectStatusImport:
+    """Return metadata-only latest import status."""
+    return ProjectStatusImport(
+        import_id=import_record.import_id,
+        story_id=import_record.story_id,
+        filename=import_record.filename,
+        source_format=import_record.source_format,
+        created_at=import_record.created_at,
+    )
+
+
+def _project_status_run(run: EngineRunRecord) -> ProjectStatusRun:
+    """Return metadata-only latest engine run status."""
+    return ProjectStatusRun(
+        run_id=run.run_id,
+        story_id=run.story_id,
+        import_id=run.import_id,
+        status=run.status,
+        started_at=run.started_at,
+        status_updated_at=run.status_updated_at,
+        finished_at=run.finished_at,
+        error_summary=run.error_summary,
+        job_ref=run.job_ref,
+    )
+
+
+def _project_status_worker(
+    background_job_queue: BackgroundJobQueue | None,
+) -> ProjectStatusWorker:
+    """Return metadata-only worker and job queue state."""
+    if background_job_queue is None:
+        return ProjectStatusWorker(state="unconfigured")
+    snapshot = background_job_queue.snapshot()
+    if snapshot.running_jobs > 0:
+        state = "running"
+    elif snapshot.queued_jobs > 0:
+        state = "queued"
+    elif snapshot.failed_jobs > 0:
+        state = "failed"
+    else:
+        state = "idle"
+    return ProjectStatusWorker(
+        state=state,
+        total_jobs=snapshot.total_jobs,
+        queued_jobs=snapshot.queued_jobs,
+        running_jobs=snapshot.running_jobs,
+        succeeded_jobs=snapshot.succeeded_jobs,
+        failed_jobs=snapshot.failed_jobs,
+        next_job_id=snapshot.next_job_id,
+    )
+
+
+def _recent_workflow_events(
+    *,
+    imports: Sequence[ImportRecord],
+    runs: Sequence[EngineRunRecord],
+    snapshots: Sequence[SnapshotRecord],
+) -> tuple[ProjectWorkflowEvent, ...]:
+    """Return recent metadata-only workflow events."""
+    events = [
+        *(_import_event(import_record) for import_record in imports),
+        *(_run_event(run) for run in runs),
+        *(_snapshot_event(snapshot) for snapshot in snapshots),
+    ]
+    return tuple(
+        sorted(
+            events,
+            key=lambda event: (event.occurred_at, event.event_type, event.summary),
+            reverse=True,
+        )[:10]
+    )
+
+
+def _import_event(import_record: ImportRecord) -> ProjectWorkflowEvent:
+    """Return one metadata-only import workflow event."""
+    return ProjectWorkflowEvent(
+        event_type="import_saved",
+        status="succeeded",
+        occurred_at=import_record.created_at,
+        story_id=import_record.story_id,
+        import_id=import_record.import_id,
+        summary=f"Saved {import_record.source_format} import metadata.",
+    )
+
+
+def _run_event(run: EngineRunRecord) -> ProjectWorkflowEvent:
+    """Return one metadata-only engine run workflow event."""
+    return ProjectWorkflowEvent(
+        event_type="engine_run",
+        status=run.status,
+        occurred_at=run.status_updated_at or run.started_at,
+        story_id=run.story_id,
+        import_id=run.import_id,
+        run_id=run.run_id,
+        summary=run.error_summary if run.status == "failed" else f"Run is {run.status}.",
+    )
+
+
+def _snapshot_event(snapshot: SnapshotRecord) -> ProjectWorkflowEvent:
+    """Return one metadata-only snapshot workflow event."""
+    return ProjectWorkflowEvent(
+        event_type="snapshot_created",
+        status="succeeded",
+        occurred_at=snapshot.created_at,
+        story_id=snapshot.story_id,
+        run_id=snapshot.run_id,
+        snapshot_id=snapshot.snapshot_id,
+        summary=f"Created {snapshot.snapshot_kind} snapshot.",
+    )
+
+
+def _latest_import(imports: Sequence[ImportRecord]) -> ImportRecord | None:
+    """Return latest import by timestamp and ID."""
+    if not imports:
+        return None
+    return max(imports, key=lambda item: (item.created_at, item.import_id))
+
+
+def _latest_run(runs: Sequence[EngineRunRecord]) -> EngineRunRecord | None:
+    """Return latest run by lifecycle timestamp and ID."""
+    if not runs:
+        return None
+    return max(
+        runs,
+        key=lambda run: (run.status_updated_at or run.started_at, run.run_id),
+    )
+
+
+def _latest_snapshot(snapshots: Sequence[SnapshotRecord]) -> SnapshotRecord | None:
+    """Return latest snapshot by timestamp and ID."""
+    if not snapshots:
+        return None
+    return max(snapshots, key=lambda item: (item.created_at, item.snapshot_id))
+
+
+def _latest_failure_summary(runs: Sequence[EngineRunRecord]) -> str:
+    """Return the latest run failure summary without source content."""
+    failed_run = _latest_run(tuple(run for run in runs if run.status == "failed"))
+    if failed_run is None:
+        return ""
+    return failed_run.error_summary
 
 
 def _snapshot_output(snapshot: SnapshotRecord) -> SnapshotOutput:
@@ -2069,8 +2247,8 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
         ),
         ApiRouteCapability(
             method="GET",
-            path="/v2/projects/{project_id}/workflow-status",
-            purpose="Report metadata-only project workflow status for monitoring.",
+            path="/v2/projects/{project_id}/status",
+            purpose="Report metadata-only project status for monitoring.",
         ),
         ApiRouteCapability(
             method="POST",
