@@ -2421,14 +2421,29 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByText(".pdf")).toBeInTheDocument();
-    await user.clear(screen.getByLabelText("Filename"));
-    await user.type(screen.getByLabelText("Filename"), "chapter.pdf");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    const deferredInputs = [
+      {
+        filename: "chapter.pdf",
+        message: ".pdf import is deferred. Requires deterministic PDF reading-order parser support.",
+      },
+      {
+        filename: "chapter.mobi",
+        message: ".mobi import is deferred. Requires dedicated Kindle parser support.",
+      },
+      {
+        filename: "chapter.azw3",
+        message: ".azw3 import is deferred. Requires dedicated Kindle parser support.",
+      },
+    ];
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      ".pdf import is deferred. Requires deterministic PDF reading-order parser support.",
-    );
-    expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();
+    for (const deferredInput of deferredInputs) {
+      await user.clear(screen.getByLabelText("Filename"));
+      await user.type(screen.getByLabelText("Filename"), deferredInput.filename);
+      await user.click(screen.getByRole("button", { name: "Inspect import" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(deferredInput.message);
+      expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();
+    }
     expect(fetchMock).not.toHaveBeenCalledWith(
       expect.stringContaining(API_PATHS.importsInspect),
       expect.anything(),

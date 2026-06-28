@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 7 in progress - Import UI hardening**
+Current phase: **Phase 7 accepted - Import UI hardening**
 
 Recent completed V2 work:
 
@@ -115,6 +115,7 @@ Phase 7 progress:
 - Import workspace now reads story-scoped canon snapshots and labels project runs with snapshot availability after refresh
 - Failed import runs now render stable no-snapshot and run-error labels after refresh
 - Web Import is visible as an unavailable, permission-check-gated placeholder; no URL fetching is enabled
+- Deferred PDF, MOBI, and AZW3 formats are all covered by UI preflight tests that block inspection before the API import endpoint is called
 
 ---
 

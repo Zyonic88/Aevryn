@@ -170,7 +170,7 @@ Everything the CLI can do, the API must be able to do.
 | 5A | Web Alpha Shell | Accepted | Login, dashboard, routing, shell, and base states exist. |
 | 5B | Engine Output Views | Accepted | Workspace output views and API-backed previews exist. |
 | 6 | Project Storage | Accepted | Durable project workflows, saved imports, runs, import content storage, and snapshots exist. |
-| 7 | Import UI | In Progress | Harden supported import formats and storage-backed import workflow. |
+| 7 | Import UI | Accepted | Supported import formats, deferred-format failures, refresh visibility, snapshots, failed runs, and Web Import boundary are hardened. |
 | 8 | Monitoring | Planned | Observability after product path is measurable. |
 | 9 | Performance | Planned | Optimize after monitoring gives real workflow data. |
 | 10 | Internal Alpha | Planned | Private alpha after import, monitoring, and performance are stable. |
@@ -399,7 +399,7 @@ Projects contain:
 
 ## Phase 7 - Import UI
 
-Status: **In Progress**
+Status: **Accepted**
 
 Phase 7 should harden the storage-backed import workflow already started in Phase 5B and Phase 6.
 
