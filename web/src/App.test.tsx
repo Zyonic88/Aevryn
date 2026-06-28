@@ -360,6 +360,16 @@ const engineRunPayload = {
   error_summary: "",
   job_ref: "queue://job_alpha",
 };
+const snapshotPayload = {
+  snapshot_id: "snapshot_run_alpha_canon",
+  project_id: projectAlpha.id,
+  story_id: storyAlphaPayload.story_id,
+  run_id: engineRunPayload.run_id,
+  snapshot_kind: "canon",
+  content_type: "application/json",
+  serialized_output: "{\"source_id\":\"source_alpha\"}",
+  created_at: projectAlpha.updatedAt,
+};
 
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
@@ -453,6 +463,13 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
           return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
         }
         if (
           url.endsWith(
@@ -966,6 +983,13 @@ describe("App shell routing", () => {
       if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
         return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
       }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+        )
+      ) {
+        return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+      }
       if (url.endsWith(API_PATHS.sourceFormats)) {
         return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
       }
@@ -1061,6 +1085,13 @@ describe("App shell routing", () => {
         }
         if (
           url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+        }
+        if (
+          url.endsWith(
             `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
           )
         ) {
@@ -1111,6 +1142,73 @@ describe("App shell routing", () => {
 
     expect(await screen.findByText(/Submitted import_alpha_run_/u)).toBeInTheDocument();
     expect(await screen.findByText(/pending \/ import_alpha/u)).toBeInTheDocument();
+  });
+
+  it("shows persisted imports runs and snapshot availability after refresh", async () => {
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ imports: [importRecordPayload] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                runs: [
+                  {
+                    ...engineRunPayload,
+                    status: "succeeded",
+                    finished_at: projectAlpha.updatedAt,
+                  },
+                ],
+              }),
+            ),
+          );
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [snapshotPayload] })));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
+    expect(await screen.findByText("chapter_001.txt")).toBeInTheDocument();
+    expect(screen.getByText("import_alpha / 8 scenes")).toBeInTheDocument();
+    expect(await screen.findByText("succeeded / import_alpha")).toBeInTheDocument();
+    expect(screen.getByText("Canon snapshot: snapshot_run_alpha_canon")).toBeInTheDocument();
   });
 
   it("previews character profiles from the characters workspace tab", async () => {

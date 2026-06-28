@@ -17,7 +17,7 @@ import {
   importScenePreviewRows,
   importScenePreviewSummary,
 } from "../importing/importResult";
-import type { EngineRun, ImportInspect, ImportRecord } from "../api/schemas";
+import type { EngineRun, ImportInspect, ImportRecord, Snapshot } from "../api/schemas";
 import type { SourceFormats } from "../api/schemas";
 import type { ProjectSummary } from "../projects/projectStore";
 
@@ -66,6 +66,18 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     queryKey: runQueryKey(project.id, session?.session_token),
     queryFn: () =>
       apiClient.listProjectRuns(project.id, requireSessionToken(session), new Date().toISOString()),
+    enabled: session !== null && activeStoryId !== "",
+  });
+  const snapshotsQuery = useQuery({
+    queryKey: snapshotQueryKey(project.id, activeStoryId, session?.session_token),
+    queryFn: () =>
+      apiClient.listStorySnapshots(
+        project.id,
+        activeStoryId,
+        requireSessionToken(session),
+        new Date().toISOString(),
+        "canon",
+      ),
     enabled: session !== null && activeStoryId !== "",
   });
   const inspectImport = useMutation({
@@ -140,6 +152,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const sourceCountLabel = fileContentBase64
     ? `${selectedFileName} / ${selectedFileSize.toLocaleString()} bytes selected`
     : importSourceCharacterCountLabel(sourceText);
+  const snapshotsByRun = new Map(
+    (snapshotsQuery.data?.snapshots ?? []).map((snapshot) => [snapshot.run_id, snapshot]),
+  );
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -445,6 +460,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         <h2>Project Runs</h2>
         {runsQuery.isLoading ? <LoadingMessage>Loading project runs.</LoadingMessage> : null}
         {runsQuery.error ? <ErrorMessage>{runsQuery.error.message}</ErrorMessage> : null}
+        {snapshotsQuery.error ? <ErrorMessage>{snapshotsQuery.error.message}</ErrorMessage> : null}
         {!runsQuery.isLoading && !runsQuery.error && (runsQuery.data?.runs.length ?? 0) === 0 ? (
           <EmptyState title="No project runs">
             Submit a saved import for background processing.
@@ -458,6 +474,8 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
                 <span>
                   {run.status} / {run.import_id}
                 </span>
+                <span>{runSnapshotLabel(run, snapshotsByRun.get(run.run_id))}</span>
+                {run.error_summary ? <span>{run.error_summary}</span> : null}
               </div>
             ))}
           </div>
@@ -533,6 +551,27 @@ function importQueryKey(projectId: string, storyId: string, sessionToken: string
 
 function runQueryKey(projectId: string, sessionToken: string | undefined) {
   return ["project-runs", projectId, sessionToken] as const;
+}
+
+function snapshotQueryKey(
+  projectId: string,
+  storyId: string,
+  sessionToken: string | undefined,
+) {
+  return ["story-snapshots", projectId, storyId, "canon", sessionToken] as const;
+}
+
+function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (snapshot) {
+    return `Canon snapshot: ${snapshot.snapshot_id}`;
+  }
+  if (run.status === "failed") {
+    return "No snapshot: run failed";
+  }
+  if (run.status === "succeeded") {
+    return "Snapshot pending";
+  }
+  return "Snapshot waiting";
 }
 
 function createRunId(importId: string, now: string): string {
