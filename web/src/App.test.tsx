@@ -1526,8 +1526,8 @@ describe("App shell routing", () => {
     expect(await screen.findByText(/pending \/ import_alpha/u)).toBeInTheDocument();
   });
 
-  it("shows persisted imports runs and snapshot availability after refresh", async () => {
-    storeAuthenticatedProject();
+  it("restores persisted imports runs and snapshot availability after refresh", async () => {
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
@@ -1586,6 +1586,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    expect(window.localStorage.getItem("aevryn.projects")).toBeNull();
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
     expect(await screen.findByText("chapter_001.txt")).toBeInTheDocument();
     expect(screen.getByText("import_alpha / 8 scenes")).toBeInTheDocument();
