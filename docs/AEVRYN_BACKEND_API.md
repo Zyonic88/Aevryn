@@ -127,15 +127,23 @@ For local durable project metadata, set:
 AEVRYN_PROJECT_DATABASE_PATH=C:\Users\enigm\Documents\Aevryn\.local\project_database.json
 ```
 
+Optional explicit authentication store path:
+
+```text
+AEVRYN_AUTH_STORE_PATH=C:\Users\enigm\Documents\Aevryn\.local\auth_store.json
+```
+
+If `AEVRYN_AUTH_STORE_PATH` is omitted, Aevryn stores local auth records beside the project database using the project database filename plus `_auth.json`.
+
 When this value is present, `create_app_from_env` wires:
 
 * `JsonProjectRepository` for local Project Database records
 * `AuthenticationService` over the same repository for user ownership records
-* in-memory credential and session stores from the Phase 4 authentication foundation
+* `JsonAuthenticationStore` for credential hashes, session token hashes, and password reset token hashes
 
-This means project records are durable in the JSON repository.
+This means local project records, credential hashes, session token hashes, and password reset token hashes survive process restarts.
 
-Credential and session stores are still local in-memory foundations; production credential persistence belongs to a later platform hardening step.
+The JSON auth store is a deterministic local adapter, not the final production identity provider.
 
 If `AEVRYN_PROJECT_DATABASE_PATH` is absent, authenticated project routes fail clearly with `project_storage_unavailable` instead of silently creating stateless project shells.
 

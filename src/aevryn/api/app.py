@@ -80,11 +80,10 @@ from aevryn.api.models import (
 from aevryn.auth import (
     AuthenticationError,
     AuthenticationService,
-    InMemoryCredentialStore,
-    InMemorySessionStore,
     InvalidCredentialsError,
     InvalidResetTokenError,
     InvalidSessionError,
+    JsonAuthenticationStore,
     PasswordPolicyError,
 )
 from aevryn.export import ExportEngine
@@ -116,6 +115,7 @@ API_VERSION = "v2"
 ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
 API_KEYS_ENV = "AEVRYN_API_KEYS"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
+AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
 
 
 def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
@@ -892,13 +892,28 @@ def _platform_services_from_env(
     if not database_path:
         return None, None
 
-    repository = JsonProjectRepository(Path(database_path))
+    project_database_path = Path(database_path)
+    repository = JsonProjectRepository(project_database_path)
+    auth_store = JsonAuthenticationStore(
+        _auth_store_path_from_env(environ, project_database_path)
+    )
     authentication_service = AuthenticationService(
         repository=repository,
-        credential_store=InMemoryCredentialStore(),
-        session_store=InMemorySessionStore(),
+        credential_store=auth_store,
+        session_store=auth_store,
     )
     return authentication_service, repository
+
+
+def _auth_store_path_from_env(
+    environ: Mapping[str, str],
+    project_database_path: Path,
+) -> Path:
+    """Return the local authentication store path for environment app wiring."""
+    configured_path = environ.get(AUTH_STORE_PATH_ENV, "").strip()
+    if configured_path:
+        return Path(configured_path)
+    return project_database_path.with_name(f"{project_database_path.stem}_auth.json")
 
 
 def _normalize_api_keys(api_keys: Sequence[str]) -> tuple[str, ...]:
@@ -943,6 +958,10 @@ def _is_auth_protected_route(request: Request) -> bool:
     """Return whether a request touches a Phase 1 workflow route."""
     path = request.url.path
     if path.startswith("/v2/auth/"):
+        return False
+    if path == "/v2/projects" or (
+        path.startswith("/v2/projects/") and path != "/v2/projects/preview"
+    ):
         return False
     return request.method.upper() == "POST" and path.startswith("/v2/")
 

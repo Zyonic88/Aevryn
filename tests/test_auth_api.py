@@ -231,6 +231,28 @@ def test_project_storage_api_creates_lists_and_loads_projects() -> None:
     assert loaded.json() == created.json()
 
 
+def test_project_storage_api_does_not_require_deployment_api_key() -> None:
+    """Project storage routes should use bearer sessions, not workflow API keys."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            api_keys=("deployment-key",),
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+
+    assert created.status_code == 200
+    assert created.json()["project_id"] == "project_alpha"
+
+
 def test_project_storage_api_requires_configured_storage() -> None:
     """Project routes should fail clearly when no repository is configured."""
     client = TestClient(create_app(authentication_service=auth_service()))

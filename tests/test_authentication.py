@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from aevryn.auth import (
@@ -14,11 +16,17 @@ from aevryn.auth import (
     InvalidCredentialsError,
     InvalidResetTokenError,
     InvalidSessionError,
+    JsonAuthenticationStore,
     PasswordHasher,
     PasswordPolicyError,
 )
 from aevryn.auth.stores import CredentialRecord, PasswordResetRecord, SessionRecord, normalize_email
-from aevryn.persistence import InMemoryProjectRepository, ProjectRecord, RecordNotFoundError
+from aevryn.persistence import (
+    InMemoryProjectRepository,
+    PersistenceError,
+    ProjectRecord,
+    RecordNotFoundError,
+)
 
 NOW = "2026-06-27T00:00:00Z"
 SOON = "2026-06-27T00:30:00Z"
@@ -306,6 +314,69 @@ def test_authentication_password_reset_replaces_password_and_consumes_token() ->
         )
 
 
+def test_json_authentication_store_persists_records(tmp_path: Path) -> None:
+    """JSON auth store should reload credentials, sessions, and reset state."""
+    store_path = tmp_path / "auth_store.json"
+    repository = InMemoryProjectRepository()
+    store = JsonAuthenticationStore(store_path)
+    service = auth_service(
+        repository=repository,
+        credential_store=store,
+        session_store=store,
+    )
+    result = service.register(
+        user_id="user_demo",
+        email="demo@example.com",
+        display_name="Demo User",
+        password=PASSWORD,
+        now=NOW,
+    )
+    reset = service.request_password_reset(
+        email="demo@example.com",
+        reset_id="reset_demo",
+        now=NOW,
+    )
+    service.complete_password_reset(
+        reset_token=reset.reset_token,
+        new_password=NEW_PASSWORD,
+        now=SOON,
+    )
+
+    reloaded = JsonAuthenticationStore(store_path)
+    reloaded_service = AuthenticationService(
+        repository=repository,
+        credential_store=reloaded,
+        session_store=reloaded,
+        password_hasher=PasswordHasher(iterations=10),
+        token_factory=lambda: "token_after_reload",
+    )
+
+    assert reloaded_service.validate_session(
+        session_token=result.session.session_token,
+        now=SOON,
+    ).user_id == "user_demo"
+    assert reloaded_service.login(
+        email="demo@example.com",
+        password=NEW_PASSWORD,
+        now=SOON,
+    ).user.user_id == "user_demo"
+    with pytest.raises(InvalidResetTokenError, match="invalid"):
+        reloaded_service.complete_password_reset(
+            reset_token=reset.reset_token,
+            new_password="AnotherPass789",
+            now=SOON,
+        )
+
+
+def test_json_authentication_store_rejects_malformed_payload(tmp_path: Path) -> None:
+    """JSON auth store should fail clearly when persisted data is malformed."""
+    store_path = tmp_path / "auth_store.json"
+    store_path.write_text('{"schema_version":"wrong"}', encoding="utf-8")
+
+    with pytest.raises(PersistenceError, match="schema version"):
+        JsonAuthenticationStore(store_path)
+
+
 def test_authentication_rejects_expired_password_reset_token() -> None:
     """Expired reset tokens should not change credentials."""
     service = auth_service(
@@ -350,8 +421,8 @@ def test_authentication_public_exports_are_available() -> None:
 def auth_service(
     *,
     repository: InMemoryProjectRepository | None = None,
-    credential_store: InMemoryCredentialStore | None = None,
-    session_store: InMemorySessionStore | None = None,
+    credential_store: InMemoryCredentialStore | JsonAuthenticationStore | None = None,
+    session_store: InMemorySessionStore | JsonAuthenticationStore | None = None,
     config: AuthenticationConfig | None = None,
 ) -> AuthenticationService:
     """Return an authentication service with deterministic tokens."""

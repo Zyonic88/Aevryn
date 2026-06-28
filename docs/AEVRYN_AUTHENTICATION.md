@@ -90,6 +90,7 @@ Phase 4 starts with a deterministic local authentication foundation:
 * `PasswordHasher`
 * `InMemoryCredentialStore`
 * `InMemorySessionStore`
+* `JsonAuthenticationStore`
 * `AuthenticationService`
 * `/v2/auth/register`
 * `/v2/auth/login`
@@ -98,6 +99,14 @@ Phase 4 starts with a deterministic local authentication foundation:
 * `/v2/auth/password-reset/complete`
 
 This proves the contract without choosing the final production identity provider or database adapter.
+
+Phase 6 adds `JsonAuthenticationStore` for local durable platform runs.
+
+The JSON adapter persists credential hashes, session token hashes, and password reset token hashes.
+
+It does not persist plaintext passwords, plaintext session tokens, or plaintext reset tokens.
+
+Production deployments may still replace this local adapter with a managed identity provider or production database store.
 
 ---
 

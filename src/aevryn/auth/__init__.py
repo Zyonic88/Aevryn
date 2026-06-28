@@ -9,6 +9,7 @@ from aevryn.auth.errors import (
     InvalidSessionError,
     PasswordPolicyError,
 )
+from aevryn.auth.json_store import JsonAuthenticationStore
 from aevryn.auth.models import (
     AuthenticatedSession,
     PasswordResetToken,
@@ -37,6 +38,7 @@ __all__ = [
     "InvalidCredentialsError",
     "InvalidResetTokenError",
     "InvalidSessionError",
+    "JsonAuthenticationStore",
     "PasswordHasher",
     "PasswordPolicyError",
     "PasswordResetRecord",

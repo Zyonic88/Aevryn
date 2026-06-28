@@ -9,7 +9,12 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from aevryn.api import PROJECT_DATABASE_PATH_ENV, create_app, create_app_from_env
+from aevryn.api import (
+    AUTH_STORE_PATH_ENV,
+    PROJECT_DATABASE_PATH_ENV,
+    create_app,
+    create_app_from_env,
+)
 
 
 def test_health_endpoint_reports_api_status() -> None:
@@ -136,9 +141,12 @@ def test_create_app_from_env_configures_project_storage(
 ) -> None:
     """Environment app factory should wire durable local project storage."""
     database_path = tmp_path / "project_database.json"
-    client = TestClient(
-        create_app_from_env({PROJECT_DATABASE_PATH_ENV: str(database_path)})
-    )
+    auth_store_path = tmp_path / "auth_store.json"
+    environ = {
+        PROJECT_DATABASE_PATH_ENV: str(database_path),
+        AUTH_STORE_PATH_ENV: str(auth_store_path),
+    }
+    client = TestClient(create_app_from_env(environ))
     now = "2026-06-27T00:00:00Z"
 
     register = client.post(
@@ -175,6 +183,38 @@ def test_create_app_from_env_configures_project_storage(
     assert listed.status_code == 200
     assert listed.json()["projects"] == [created.json()]
     assert database_path.exists()
+    assert auth_store_path.exists()
+
+    reloaded_client = TestClient(create_app_from_env(environ))
+    login = reloaded_client.post(
+        "/v2/auth/login",
+        json={"email": "demo@example.com", "password": "StrongPass123", "now": now},
+    )
+    assert login.status_code == 200
+    reloaded_headers = {
+        "Authorization": f"Bearer {login.json()['session_token']}",
+        "X-Aevryn-Now": now,
+    }
+    reloaded_listed = reloaded_client.get("/v2/projects", headers=reloaded_headers)
+    assert reloaded_listed.status_code == 200
+    assert reloaded_listed.json()["projects"] == [created.json()]
+
+    default_database_path = tmp_path / "default_project_database.json"
+    default_client = TestClient(
+        create_app_from_env({PROJECT_DATABASE_PATH_ENV: str(default_database_path)})
+    )
+    default_register = default_client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": "user_default",
+            "email": "default@example.com",
+            "display_name": "Default User",
+            "password": "StrongPass123",
+            "now": now,
+        },
+    )
+    assert default_register.status_code == 200
+    assert (tmp_path / "default_project_database_auth.json").exists()
 
 
 def test_create_app_from_env_rejects_wildcard_cors_origin() -> None:
