@@ -2,9 +2,28 @@
 
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
+from aevryn.api import create_app
+from aevryn.auth import (
+    AuthenticationConfig,
+    AuthenticationService,
+    InMemoryCredentialStore,
+    InMemorySessionStore,
+    PasswordHasher,
+)
+from aevryn.import_storage import InMemoryImportContentStore
+from aevryn.performance_runner import run_local_v2_performance_baseline
+from aevryn.persistence import InMemoryProjectRepository
+from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
+
 ROOT = Path(__file__).resolve().parents[1]
+NOW = "2026-06-27T00:00:00Z"
+SOON = "2026-06-27T00:30:00Z"
+PASSWORD = "StrongPass123"
 
 
 def test_phase10_internal_alpha_docs_define_private_readiness_boundary() -> None:
@@ -25,3 +44,153 @@ def test_phase10_internal_alpha_docs_define_private_readiness_boundary() -> None
     assert "Aevryn validation passes." in acceptance_doc
     assert "public launch" in acceptance_doc
 
+
+def test_internal_alpha_smoke_path_uses_v2_api_without_cli() -> None:
+    """Private alpha smoke path should exercise the V2 creator workflow API."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    import_content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=_auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=import_content_store,
+            ),
+            import_content_store=import_content_store,
+        )
+    )
+
+    registered = client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": "user_alpha",
+            "email": "alpha@example.com",
+            "display_name": "Alpha Tester",
+            "password": PASSWORD,
+            "now": NOW,
+        },
+    )
+    assert registered.status_code == 200
+    auth_headers = {
+        "Authorization": f"Bearer {registered.json()['session_token']}",
+        "X-Aevryn-Now": SOON,
+    }
+
+    created_project = client.post(
+        "/v2/projects",
+        headers=auth_headers,
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created_project.status_code == 200
+    created_story = client.post(
+        "/v2/projects/project_alpha/stories",
+        headers=auth_headers,
+        json={"story_id": "story_alpha", "title": "Alpha Story", "now": NOW},
+    )
+    assert created_story.status_code == 200
+
+    inspected = client.post("/v2/imports/inspect", json=_import_payload())
+    assert inspected.status_code == 200
+    assert inspected.json()["source_format"] == "txt"
+    saved_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers,
+        json={"import_id": "import_alpha", **_import_payload(), "now": NOW},
+    )
+    assert saved_import.status_code == 200
+    submitted_run = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers,
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted_run.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
+    assert processed.json()["succeeded_jobs"] == 1
+
+    status = client.get("/v2/projects/project_alpha/status", headers=auth_headers)
+    assert status.status_code == 200
+    assert status.json()["status"] == "succeeded"
+    assert status.json()["snapshots"]["available"] is True
+    assert "Mark carried a brass key" not in status.text
+    snapshots = client.get("/v2/projects/project_alpha/snapshots", headers=auth_headers)
+    assert snapshots.status_code == 200
+    assert snapshots.json()["snapshots"][0]["snapshot_kind"] == "canon"
+
+    export_preview = client.post(
+        "/v2/exports/preview",
+        json={
+            **_import_payload(),
+            "ai_response": _ai_response(),
+            "scene_id": "source_alpha_chapter_001_scene_001",
+            "character_ids": ["character_mark"],
+            "export_kind": "production_pack",
+            "export_format": "markdown",
+        },
+    )
+    assert export_preview.status_code == 200
+    assert export_preview.json()["export_format"] == "markdown"
+    assert "Mark carried a brass key" not in export_preview.json()["content"]
+
+    baseline = run_local_v2_performance_baseline()
+    benchmark_names = {item["benchmark"] for item in baseline["measurements"]}
+    assert "workspace_load" in benchmark_names
+    assert "validation_suite" in benchmark_names
+
+
+def _import_payload() -> dict[str, str]:
+    """Return deterministic source content for the alpha smoke path."""
+    return {
+        "source_id": "source_alpha",
+        "filename": "chapter_001.txt",
+        "content_base64": base64.b64encode(
+            b"Chapter 1\nMark carried a brass key."
+        ).decode("ascii"),
+        "title": "Alpha Source",
+    }
+
+
+def _ai_response() -> dict[str, object]:
+    """Return deterministic accepted-candidate payload for output previews."""
+    anchor_id = "source_alpha_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+    return {
+        "entities": [
+            {
+                "entity_id": "character_mark",
+                "entity_type": "character",
+                "display_name": "Mark",
+                "evidence_anchor_id": anchor_id,
+                "confidence": 0.95,
+            }
+        ],
+        "facts": [
+            {
+                "fact_id": "fact_character_mark_current_item_brass_key",
+                "entity_id": "character_mark",
+                "attribute": "current_item",
+                "value": "Brass Key",
+                "evidence_anchor_id": anchor_id,
+                "confidence": 0.9,
+            }
+        ],
+        "relationships": [],
+        "state_changes": [],
+    }
+
+
+def _auth_service(repository: InMemoryProjectRepository) -> AuthenticationService:
+    """Return deterministic auth for the alpha smoke path."""
+    return AuthenticationService(
+        repository=repository,
+        credential_store=InMemoryCredentialStore(),
+        session_store=InMemorySessionStore(),
+        password_hasher=PasswordHasher(iterations=10),
+        token_factory=lambda: "token_alpha",
+        config=AuthenticationConfig(session_duration_seconds=3600),
+    )
