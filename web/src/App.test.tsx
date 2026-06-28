@@ -817,7 +817,7 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
   });
 
-  it("redirects missing project shells to the dashboard", async () => {
+  it("redirects missing projects to the dashboard", async () => {
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
 
     render(
@@ -887,10 +887,10 @@ describe("App shell routing", () => {
       "No recent failure",
     );
     expect(screen.getByRole("region", { name: "Snapshot availability" })).toHaveTextContent(
-      "snapshot_run_alpha_canon",
+      "Canon snapshot ready",
     );
     expect(screen.getByRole("region", { name: "Export availability" })).toHaveTextContent(
-      "export_alpha",
+      "canon is available.",
     );
     expect(screen.getByRole("region", { name: "Recent workflow events" })).toHaveTextContent(
       "Created markdown canon export.",
@@ -1036,14 +1036,14 @@ describe("App shell routing", () => {
 
     await user.click(screen.getByRole("link", { name: "Import" }));
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
-    expect(await screen.findByText("Canon snapshot: snapshot_run_alpha_canon")).toBeInTheDocument();
+    expect(await screen.findByText("Canon snapshot ready")).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Monitoring" }));
     expect(await screen.findByRole("region", { name: "Current project run state" })).toHaveTextContent(
-      "succeeded",
+      "Succeeded",
     );
     expect(screen.getByRole("region", { name: "Snapshot availability" })).toHaveTextContent(
-      "snapshot_run_alpha_canon",
+      "Canon snapshot ready",
     );
 
     await user.click(screen.getByRole("link", { name: "Characters" }));
@@ -1240,13 +1240,13 @@ describe("App shell routing", () => {
     const input = await screen.findByLabelText("Project name");
     await user.clear(input);
     await user.type(input, "Temporary Project");
-    await user.click(screen.getByRole("button", { name: "Create shell" }));
+    await user.click(screen.getByRole("button", { name: "Create project" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Project storage failed.");
     expect(screen.queryByRole("link", { name: /Temporary Project/ })).not.toBeInTheDocument();
   });
 
-  it("creates and opens a project shell", async () => {
+  it("creates and opens a project", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
 
@@ -1259,8 +1259,7 @@ describe("App shell routing", () => {
     const input = await screen.findByLabelText("Project name");
     await user.clear(input);
     await user.type(input, "  Test   Novel  ");
-    await user.click(screen.getByRole("button", { name: "Create shell" }));
-    await user.click(await screen.findByRole("link", { name: /Test Novel/ }));
+    await user.click(screen.getByRole("button", { name: "Create project" }));
 
     expect(await screen.findByRole("heading", { name: "Test Novel" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Characters" })).toBeInTheDocument();
@@ -1280,7 +1279,7 @@ describe("App shell routing", () => {
     await user.clear(input);
     await user.type(input, "   ");
 
-    expect(screen.getByRole("button", { name: "Create shell" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Create project" })).toBeDisabled();
   });
 
   it("inspects pasted source from the import workspace tab", async () => {
@@ -1313,7 +1312,7 @@ describe("App shell routing", () => {
     expect(screen.getByText("Evidence anchors")).toBeInTheDocument();
     expect(screen.getByText("1 chapter, 8 scenes, 1 evidence anchor.")).toBeInTheDocument();
     expect(screen.getByText("Showing first 6 of 8 scenes.")).toBeInTheDocument();
-    expect(screen.getByText("source_alpha_chapter_001_scene_001")).toBeInTheDocument();
+    expect(screen.getByText("Chapter 1")).toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_007_scene_001")).not.toBeInTheDocument();
   });
 
@@ -1409,7 +1408,9 @@ describe("App shell routing", () => {
         new File([content], upload.filename),
       );
       await waitFor(() =>
-        expect(screen.getByText(new RegExp(upload.filename, "u"))).toBeInTheDocument(),
+        expect(screen.getAllByText(new RegExp(upload.filename, "u")).length).toBeGreaterThanOrEqual(
+          1,
+        ),
       );
       await user.click(screen.getByRole("button", { name: "Inspect import" }));
       await waitFor(() => expect(inspectBodies).toHaveLength(index + 1));
@@ -1508,22 +1509,22 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
     expect(await screen.findByText("No saved imports")).toBeInTheDocument();
-    await user.clear(screen.getByLabelText("Import ID"));
-    await user.type(screen.getByLabelText("Import ID"), "import_alpha");
+    await user.clear(screen.getByLabelText("Import reference"));
+    await user.type(screen.getByLabelText("Import reference"), "import_alpha");
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
     await user.click(await screen.findByRole("button", { name: "Save import metadata" }));
 
     expect(
-      await screen.findByText("Saved import_alpha for durable project storage."),
+      await screen.findByText("Saved chapter_001.txt for this story."),
     ).toBeInTheDocument();
-    expect(screen.getByText("chapter_001.txt")).toBeInTheDocument();
-    expect(screen.getByText("import_alpha / 8 scenes")).toBeInTheDocument();
+    expect(screen.getAllByText("chapter_001.txt").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("8 scenes").length).toBeGreaterThanOrEqual(1);
     await user.click(screen.getByRole("button", { name: "Submit processing" }));
 
-    expect(await screen.findByText(/Submitted import_alpha_run_/u)).toBeInTheDocument();
-    expect(await screen.findByText(/pending \/ import_alpha/u)).toBeInTheDocument();
+    expect(await screen.findByText("Submitted chapter_001.txt for processing.")).toBeInTheDocument();
+    expect(await screen.findByText("Pending run")).toBeInTheDocument();
   });
 
   it("restores persisted imports runs and snapshot availability after refresh", async () => {
@@ -1589,9 +1590,9 @@ describe("App shell routing", () => {
     expect(window.localStorage.getItem("aevryn.projects")).toBeNull();
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
     expect(await screen.findByText("chapter_001.txt")).toBeInTheDocument();
-    expect(screen.getByText("import_alpha / 8 scenes")).toBeInTheDocument();
-    expect(await screen.findByText("succeeded / import_alpha")).toBeInTheDocument();
-    expect(screen.getByText("Canon snapshot: snapshot_run_alpha_canon")).toBeInTheDocument();
+    expect(screen.getByText("8 scenes")).toBeInTheDocument();
+    expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
+    expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();
   });
 
   it("shows persisted failed import runs without crashing after refresh", async () => {
@@ -1655,12 +1656,12 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("failed / import_alpha")).toBeInTheDocument();
+    expect(await screen.findByText("Failed run")).toBeInTheDocument();
     expect(screen.getByText("No snapshot: run failed")).toBeInTheDocument();
     expect(
       screen.getByText("Run error: Parser could not read chapter content."),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Canon snapshot: snapshot_run_alpha_canon")).not.toBeInTheDocument();
+    expect(screen.queryByText("Canon snapshot ready")).not.toBeInTheDocument();
   });
 
   it("previews character profiles from the characters workspace tab", async () => {

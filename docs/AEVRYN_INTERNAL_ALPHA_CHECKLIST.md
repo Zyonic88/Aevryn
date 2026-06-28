@@ -163,8 +163,8 @@ Known Limitations:
 
 Manual browser pass findings:
 
-* Dashboard project creation succeeds but stays on Dashboard and uses "Create shell" / "placeholder shell" wording.
-* Project and Overview still use "Project shell" / "Workspace shell is connected" wording.
+* Follow-up alpha hardening moved project creation directly into the workspace and replaced shell-facing wording with creator-facing project/workspace language.
+* Follow-up alpha hardening reduced visible machine references in import, monitoring, and preview controls while preserving backend identifiers as API data.
 * Project and story lists show raw ISO timestamps.
 * Import inspection, save, run submission, worker processing, Monitoring, and refresh recovery are usable.
 * The initial Project Runs panel showed "Failed to fetch" before a run existed, then recovered after run submission.

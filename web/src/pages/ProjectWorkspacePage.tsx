@@ -75,7 +75,7 @@ export function ProjectWorkspacePage() {
     <div className="workspace-shell">
       <aside className="workspace-sidebar">
         <div className="workspace-project">
-          <p className="eyebrow">Project shell</p>
+          <p className="eyebrow">Project</p>
           <h1>{project.name}</h1>
         </div>
         <nav aria-label="Workspace sections" className="workspace-nav">
@@ -165,14 +165,14 @@ function findWorkspaceTab(tabId: string): (typeof workspaceTabs)[number] | null 
 
 function placeholderTitle(tabId: WorkspaceTabId): string {
   if (tabId === "overview") {
-    return "Workspace shell is connected.";
+    return "Project workspace is ready.";
   }
   return "Engine output view placeholder.";
 }
 
 function placeholderBody(tabId: WorkspaceTabId): string {
   if (tabId === "overview") {
-    return "This page proves routing, sidebar navigation, and project shell state without duplicating engine logic.";
+    return "Use the Story and Import sections to add chapters, then check Monitoring for processing status.";
   }
   return "This section will render API view models after the import workflow is hardened.";
 }

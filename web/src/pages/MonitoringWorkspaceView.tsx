@@ -4,6 +4,7 @@ import { apiClient } from "../api/client";
 import type { ProjectStatus } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
+import { formatDateTime, formatRunStatus } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
 
 export function MonitoringWorkspaceView({ project }: { project: ProjectSummary }) {
@@ -98,7 +99,7 @@ export function MonitoringWorkspaceView({ project }: { project: ProjectSummary }
               </div>
             </dl>
             {status.snapshots.latest_snapshot_id ? (
-              <p className="field-note">{status.snapshots.latest_snapshot_id}</p>
+              <p className="field-note">Canon snapshot ready for this project.</p>
             ) : null}
           </section>
 
@@ -120,7 +121,7 @@ export function MonitoringWorkspaceView({ project }: { project: ProjectSummary }
             </dl>
             {status.exports.latest_export_id ? (
               <p className="field-note">
-                {status.exports.latest_export_id} / {status.exports.latest_export_kind}
+                {status.exports.latest_export_kind ?? "Export"} is available.
               </p>
             ) : null}
           </section>
@@ -138,9 +139,9 @@ export function MonitoringWorkspaceView({ project }: { project: ProjectSummary }
                     key={`${event.event_type}-${event.occurred_at}-${event.summary}`}
                     className="monitoring-event-row"
                   >
-                    <strong>{event.event_type}</strong>
-                    <span>{event.status}</span>
-                    <span>{event.occurred_at}</span>
+                    <strong>{workflowEventLabel(event.event_type)}</strong>
+                    <span>{formatRunStatus(event.status)}</span>
+                    <span>{formatDateTime(event.occurred_at)}</span>
                     <span>{event.summary}</span>
                   </div>
                 ))}
@@ -178,11 +179,11 @@ function ProjectStatusSummary({ status }: { status: ProjectStatus }) {
         </div>
         <div>
           <dt>Latest run</dt>
-          <dd>{status.latest_engine_run?.run_id ?? "none"}</dd>
+          <dd>{status.latest_engine_run ? "Run recorded" : "none"}</dd>
         </div>
         <div>
           <dt>Run state</dt>
-          <dd>{status.latest_engine_run?.status ?? "none"}</dd>
+          <dd>{status.latest_engine_run ? formatRunStatus(status.latest_engine_run.status) : "none"}</dd>
         </div>
         <div>
           <dt>Worker</dt>
@@ -203,6 +204,14 @@ function ProjectStatusSummary({ status }: { status: ProjectStatus }) {
 
 function projectStatusQueryKey(projectId: string, sessionToken: string | undefined) {
   return ["project-status", projectId, sessionToken] as const;
+}
+
+function workflowEventLabel(eventType: string): string {
+  return eventType
+    .split("_")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }
 
 function requireSessionToken(session: { session_token: string } | null): string {

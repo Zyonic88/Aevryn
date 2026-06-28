@@ -79,7 +79,7 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
         <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
-              Source ID
+              Source reference
               <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
             </label>
             <label>

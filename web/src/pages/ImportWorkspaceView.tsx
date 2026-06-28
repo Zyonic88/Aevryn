@@ -12,6 +12,7 @@ import {
   importSourceCharacterCountLabel,
   sourceIdFromFilename,
 } from "../importing/importPayload";
+import { formatRunStatus } from "../formatting/display";
 import {
   importResultTotalsLabel,
   importScenePreviewRows,
@@ -193,7 +194,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       return;
     }
     if (!importId.trim()) {
-      setFormError("Import ID is required.");
+      setFormError("Import reference is required.");
       return;
     }
     try {
@@ -241,7 +242,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       setFileContentBase64("");
       setSelectedFileName("");
       setSelectedFileSize(0);
-      setFormError("Selected file could not be read.");
+      setFormError("Aevryn could not read that file. Try a supported TXT, Markdown, HTML, FB2, DOCX, ODT, or EPUB file.");
     }
   }
 
@@ -294,13 +295,13 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               </select>
             </label>
             <label>
-              Import ID
+              Import reference
               <input value={importId} onChange={(event) => setImportId(event.target.value)} />
             </label>
           </div>
           <div className="form-row-grid">
             <label>
-              Source ID
+              Source reference
               <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
             </label>
             <label>
@@ -398,7 +399,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             </div>
             <div>
               <dt>Source</dt>
-              <dd>{inspectionResult.source_id}</dd>
+              <dd>{filename}</dd>
             </div>
           </dl>
           {inspectionResult.scene_map.length > 0 ? (
@@ -408,7 +409,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
                 {importScenePreviewRows(inspectionResult).map((scene) => (
                   <div key={scene.scene_id} className="compact-row">
                     <strong>{scene.title}</strong>
-                    <span>{scene.scene_id}</span>
+                    <span>Chapter {scene.chapter_index}</span>
                   </div>
                 ))}
               </div>
@@ -427,7 +428,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             {createImport.isPending ? "Saving import" : "Save import metadata"}
           </button>
           {savedImport ? (
-            <p className="field-note">Saved {savedImport.import_id} for durable project storage.</p>
+            <p className="field-note">Saved {savedImport.filename} for this story.</p>
           ) : null}
       </section>
       ) : null}
@@ -449,9 +450,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               {(importsQuery.data?.imports ?? []).map((importRecord) => (
                 <div key={importRecord.import_id} className="compact-row">
                   <strong>{importRecord.filename}</strong>
-                  <span>
-                    {importRecord.import_id} / {importRecord.scene_count} scenes
-                  </span>
+                  <span>{importRecord.scene_count} scenes</span>
                   <button
                     type="button"
                     className="secondary-button"
@@ -465,7 +464,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             </div>
           ) : null}
           {submittedRun ? (
-            <p className="field-note">Submitted {submittedRun.run_id} for processing.</p>
+            <p className="field-note">Submitted {savedImport?.filename ?? "import"} for processing.</p>
           ) : null}
         </section>
       ) : null}
@@ -473,7 +472,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       <section className="project-panel" aria-label="Project runs">
         <h2>Project Runs</h2>
         {runsQuery.isLoading ? <LoadingMessage>Loading project runs.</LoadingMessage> : null}
-        {runsQuery.error ? <ErrorMessage>{runsQuery.error.message}</ErrorMessage> : null}
+        {runsQuery.error && !runsQuery.data ? <ErrorMessage>{runsQuery.error.message}</ErrorMessage> : null}
         {snapshotsQuery.error ? <ErrorMessage>{snapshotsQuery.error.message}</ErrorMessage> : null}
         {!runsQuery.isLoading && !runsQuery.error && (runsQuery.data?.runs.length ?? 0) === 0 ? (
           <EmptyState title="No project runs">
@@ -486,10 +485,8 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               const errorLabel = runErrorLabel(run);
               return (
                 <div key={run.run_id} className="compact-row">
-                  <strong>{run.run_id}</strong>
-                  <span>
-                    {run.status} / {run.import_id}
-                  </span>
+                  <strong>Processing run</strong>
+                  <span>{formatRunStatus(run.status)} run</span>
                   <span>{runSnapshotLabel(run, snapshotsByRun.get(run.run_id))}</span>
                   {errorLabel ? <span>{errorLabel}</span> : null}
                 </div>
@@ -583,7 +580,7 @@ function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): strin
     return "No snapshot: run failed";
   }
   if (snapshot) {
-    return `Canon snapshot: ${snapshot.snapshot_id}`;
+    return "Canon snapshot ready";
   }
   if (run.status === "succeeded") {
     return "Snapshot pending";

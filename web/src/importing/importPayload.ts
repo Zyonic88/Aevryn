@@ -18,7 +18,7 @@ export function buildImportInspectPayload(input: ImportPayloadInput): ImportInsp
   const title = input.title.trim();
 
   if (!sourceId || !filename || (!sourceText && !contentBase64)) {
-    throw new Error("Source ID, filename, and source content are required.");
+    throw new Error("Source reference, filename, and source content are required.");
   }
   if (!contentBase64 && (input.sourceText?.length ?? 0) > MAX_IMPORT_SOURCE_CHARACTERS) {
     throw new Error(

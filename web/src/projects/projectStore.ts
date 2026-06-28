@@ -86,7 +86,7 @@ function createUuid(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
   }
-  throw new Error("Browser crypto.randomUUID is required to create a project shell.");
+  throw new Error("Browser crypto.randomUUID is required to create a project.");
 }
 
 function isProjectSummary(value: unknown): value is ProjectSummary {

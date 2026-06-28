@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createProject, normalizeProjectName, readProjects, writeProjects } from "./projectStore";
 
-describe("project shell store", () => {
+describe("project store", () => {
   it("persists project summaries", () => {
     const projects = [
       {
@@ -67,7 +67,7 @@ describe("project shell store", () => {
     expect(() => createProject("   ", [])).toThrow("Project name is required.");
   });
 
-  it("creates newest-first project shells", () => {
+  it("creates newest-first projects", () => {
     const projects = createProject(
       "  New   Novel  ",
       [

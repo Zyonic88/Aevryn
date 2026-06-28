@@ -45,7 +45,7 @@ describe("import payload builder", () => {
         title: "Demo",
         sourceText: "Chapter 1",
       }),
-    ).toThrow("Source ID, filename, and source content are required.");
+    ).toThrow("Source reference, filename, and source content are required.");
   });
 
   it("builds payloads from selected file bytes", () => {

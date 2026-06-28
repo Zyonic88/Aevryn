@@ -420,7 +420,7 @@ export class AevrynApiClient {
       response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
     } catch (error) {
       throw new ApiError(
-        messageFromUnknown(error, "Aevryn API is unreachable."),
+        friendlyNetworkMessage(error),
         0,
         "network_error",
       );
@@ -510,6 +510,14 @@ async function readJsonPayload(response: Response): Promise<unknown> {
 
 function messageFromUnknown(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function friendlyNetworkMessage(error: unknown): string {
+  const message = messageFromUnknown(error, "Aevryn API is unreachable.");
+  if (message.toLowerCase() === "failed to fetch") {
+    return "Aevryn API is unreachable. Check that the local API server is running and try again.";
+  }
+  return message;
 }
 
 export const apiClient = new AevrynApiClient();

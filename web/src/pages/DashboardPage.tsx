@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { countAuthRoutes } from "../api/capabilitySelectors";
 import { apiClient } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage, StatusPanel } from "../components/Feedback";
+import { formatDateTime } from "../formatting/display";
 import { projectSummaryFromApiProject } from "../projects/projectMapping";
 import {
   createProjectShell,
@@ -16,6 +17,7 @@ import {
 export function DashboardPage() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [projectName, setProjectName] = useState(defaultProjectName());
   const [projectError, setProjectError] = useState<string | null>(null);
   const health = useQuery({ queryKey: ["api-health"], queryFn: () => apiClient.health() });
@@ -49,10 +51,11 @@ export function DashboardPage() {
         ],
       });
       queryClient.setQueryData(["project", project.project_id, session?.session_token], project);
+      void navigate(`/projects/${project.project_id}`);
     },
     onError(error) {
       setProjectError(
-        error instanceof Error ? error.message : "Project shell could not be created.",
+        error instanceof Error ? error.message : "Project could not be created.",
       );
     },
   });
@@ -73,7 +76,7 @@ export function DashboardPage() {
   return (
     <div className="dashboard-grid">
       <section className="page-heading">
-        <p className="eyebrow">App Shell</p>
+        <p className="eyebrow">Workspace</p>
         <h1>Dashboard</h1>
       </section>
 
@@ -141,7 +144,7 @@ export function DashboardPage() {
             className="primary-button"
             disabled={!normalizedProjectName || createProjectMutation.isPending}
           >
-            {createProjectMutation.isPending ? "Creating..." : "Create shell"}
+            {createProjectMutation.isPending ? "Creating..." : "Create project"}
           </button>
         </form>
         {projectError ? <ErrorMessage>{projectError}</ErrorMessage> : null}
@@ -149,7 +152,7 @@ export function DashboardPage() {
         {projectsQuery.error ? <ErrorMessage>{projectsQuery.error.message}</ErrorMessage> : null}
         {!projectsQuery.isLoading && !projectsQuery.error && projects.length === 0 ? (
           <EmptyState title="No projects yet">
-            Create a placeholder shell to test routing.
+            Create a project to start importing story chapters.
           </EmptyState>
         ) : null}
         {projects.length > 0 ? (
@@ -157,7 +160,7 @@ export function DashboardPage() {
             {projects.map((project) => (
               <Link key={project.id} to={`/projects/${project.id}`} className="project-row">
                 <strong>{project.name}</strong>
-                <span>{project.updatedAt}</span>
+                <span>Updated {formatDateTime(project.updatedAt)}</span>
               </Link>
             ))}
           </div>
