@@ -32,6 +32,8 @@ Phase 8 Monitoring is accepted.
 
 Phase 9 Performance is accepted.
 
+Phase 11 Security & Privacy Hardening is planned after private internal alpha and before any public beta.
+
 The product path now has durable project identity, storage-backed workspace access, saved imports, queued runs, import source-byte storage, deterministic `canon` snapshots from successful import runs, supported-format import UI hardening, metadata-only workflow observability, performance budgets, metadata-only baseline artifacts, regression comparison, and workspace-load request hardening.
 
 ---
@@ -543,6 +545,62 @@ Internal alpha readiness is defined in `docs/AEVRYN_INTERNAL_ALPHA.md`.
 Phase 10 includes recovery as a first-class readiness concern: after refresh, session expiry, worker interruption, failed runs, or network/API interruption, the question is whether the user can continue.
 
 Phase 10 readiness should be versioned through Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test gates.
+
+---
+
+## Phase 11 - Security & Privacy Hardening
+
+Status: **Planned**
+
+Security is architecture.
+
+Privacy is product integrity.
+
+Phase 11 happens after private internal alpha and before public beta.
+
+Phase 11 completion is governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`.
+
+Security architecture is defined in `docs/AEVRYN_SECURITY.md`.
+
+Privacy architecture is defined in `docs/AEVRYN_PRIVACY.md`.
+
+Phase 11 includes:
+
+* identity hardening
+* authorization boundary verification
+* story privacy
+* data protection
+* encryption decisions
+* API hardening
+* deletion verification
+* backup and recovery privacy
+* audit logging
+* security headers
+* rate limiting strategy
+* request and upload validation
+* secrets management
+* dependency auditing
+* repository secret scanning
+* static security scanning
+* production fail-closed configuration
+
+Core privacy rule:
+
+```text
+Your stories are yours.
+Aevryn is built to understand them, not to own them.
+```
+
+Phase 11 must make these statements technically true:
+
+* Uploaded stories belong to the creator.
+* Generated canon belongs to the creator.
+* Generated exports belong to the creator.
+* Aetherra Labs does not claim ownership of uploaded manuscripts.
+* Aetherra Labs does not train on user stories without explicit opt-in.
+* Deleted stories are removed from Aevryn-owned active storage.
+
+Phase 11 does not include new product features, public launch, payments, collaboration, publishing, image generation, video generation, chatbot behavior, or broad frontend redesign.
 
 ---
 

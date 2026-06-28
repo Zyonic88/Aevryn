@@ -76,6 +76,7 @@ Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 ha
 Next expected V2 target:
 
 - Phase 10 Internal Alpha planning and implementation, governed by `docs/AEVRYN_ROADMAP.md`
+- Phase 11 Security & Privacy Hardening is now planned after private internal alpha and before public beta, governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
 
 Phase 6 Project Storage accepted:
 
@@ -156,6 +157,19 @@ Phase 10 starting point:
 - Version readiness through Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test gates
 - Preserve all Phase 6-9 boundaries: durable storage, import workflow, monitoring observability, metadata-only performance measurement, and no frontend inference of backend workflow state
 - Do not add payments, public launch flows, broad redesign, image generation, video generation, or chatbot behavior in Phase 10 unless explicitly scoped later
+
+Phase 11 planned security/privacy gate:
+
+- Phase 11 acceptance is governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
+- Security architecture is documented in `docs/AEVRYN_SECURITY.md`
+- Privacy architecture is documented in `docs/AEVRYN_PRIVACY.md`
+- Treat Phase 11 as a trust gate before public beta, not as a product expansion phase
+- Core principle: security is architecture, not a feature
+- Core privacy principle: uploaded stories, generated canon, and generated exports belong to the creator
+- Aetherra Labs must not train on user stories without explicit opt-in
+- Deleted stories must be removed from Aevryn-owned active metadata/source storage, and deletion must not create hidden copies in logs, monitoring, audit records, or diagnostics
+- Audit ledger work should be metadata-only, tamper-evident, and free of source prose/full AI payloads
+- Do not add public launch, payments, collaboration, publishing, media generation, chatbot behavior, or broad redesign under Phase 11
 
 ---
 
