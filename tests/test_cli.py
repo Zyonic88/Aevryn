@@ -326,6 +326,35 @@ def test_performance_baseline_compare_fails_on_critical_regression(
     assert "critical import_inspect 145.0ms -> 920.0ms" in output
 
 
+def test_performance_baseline_compare_reports_warning_without_failure(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Performance baseline comparison should report warning regressions but pass."""
+    previous_path = Path("build") / "test_cli_performance" / "previous.json"
+
+    monkeypatch.setattr(
+        "aevryn.cli.compare_local_v2_performance_baseline",
+        lambda path: [
+            {
+                "benchmark": "project_status",
+                "previous_ms": 120.0,
+                "current_ms": 260.0,
+                "delta_ms": 140.0,
+                "ratio": 2.167,
+                "status": "warning",
+            }
+        ],
+    )
+
+    exit_code = main(["performance-baseline", "--compare-to", str(previous_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Performance regressions detected:" in output
+    assert "warning project_status 120.0ms -> 260.0ms" in output
+
+
 def test_api_command_runs_configured_server(monkeypatch: MonkeyPatch) -> None:
     """API command should create the app and pass server options to Uvicorn."""
     captured: dict[str, object] = {}

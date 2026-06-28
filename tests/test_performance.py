@@ -102,6 +102,21 @@ def test_performance_snapshot_is_stable_metadata_only() -> None:
     assert "path" not in snapshot
 
 
+def test_performance_snapshot_rejects_duplicate_benchmarks() -> None:
+    """Snapshot construction should reject ambiguous duplicate measurements."""
+    try:
+        build_performance_snapshot(
+            [
+                PerformanceMeasurement(benchmark="project_status", elapsed_ms=42.0),
+                PerformanceMeasurement(benchmark="project_status", elapsed_ms=43.0),
+            ]
+        )
+    except ValueError as error:
+        assert str(error) == "Performance measurement benchmarks must be unique."
+    else:
+        raise AssertionError("Expected duplicate performance measurements to fail.")
+
+
 def test_performance_baseline_json_is_stable_metadata_only() -> None:
     """Baseline artifacts should serialize stable metadata without local context."""
     snapshot = build_performance_snapshot(
@@ -283,6 +298,26 @@ def test_compare_performance_snapshots_flags_major_slowdowns() -> None:
             "status": "critical",
         }
     ]
+
+
+def test_compare_performance_snapshots_validates_inputs() -> None:
+    """Snapshot comparisons should reject malformed direct-call payloads."""
+    previous = build_performance_snapshot(
+        [PerformanceMeasurement(benchmark="project_status", elapsed_ms=42.0)]
+    )
+    current = {
+        "schema_version": 1,
+        "measurements": [
+            {"benchmark": "project_status", "elapsed_ms": 500.0, "status": "target"}
+        ],
+    }
+
+    try:
+        compare_performance_snapshots(previous=previous, current=current)  # type: ignore[arg-type]
+    except ValueError as error:
+        assert str(error) == "Performance measurement status does not match budget."
+    else:
+        raise AssertionError("Expected malformed performance snapshot to fail.")
 
 
 def _phase9_client() -> TestClient:

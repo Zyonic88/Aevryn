@@ -105,14 +105,6 @@ class PerformanceMeasurement:
     elapsed_ms: float
 
 
-@dataclass(frozen=True)
-class TimedResult:
-    """Result value and metadata-only performance measurement."""
-
-    value: object
-    measurement: PerformanceMeasurement
-
-
 PERFORMANCE_BUDGETS: dict[BenchmarkName, PerformanceBudget] = {
     "import_inspect": PerformanceBudget(
         benchmark="import_inspect",
@@ -201,7 +193,11 @@ def build_performance_snapshot(
 ) -> PerformanceSnapshotPayload:
     """Build a stable metadata-only performance snapshot payload."""
     payload_measurements: list[PerformanceMeasurementPayload] = []
+    seen: set[BenchmarkName] = set()
     for measurement in sorted(measurements, key=lambda item: item.benchmark):
+        if measurement.benchmark in seen:
+            raise ValueError("Performance measurement benchmarks must be unique.")
+        seen.add(measurement.benchmark)
         budget = PERFORMANCE_BUDGETS[measurement.benchmark]
         elapsed_ms = round(measurement.elapsed_ms, 3)
         payload_measurements.append(
@@ -254,6 +250,8 @@ def compare_performance_snapshots(
     current: PerformanceSnapshotPayload,
 ) -> list[PerformanceRegressionPayload]:
     """Return major latency regressions between two metadata-only snapshots."""
+    _validate_performance_snapshot(previous)
+    _validate_performance_snapshot(current)
     previous_measurements = {
         measurement["benchmark"]: measurement for measurement in previous["measurements"]
     }
