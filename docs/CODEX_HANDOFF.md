@@ -124,6 +124,7 @@ Phase 8 starting point:
 - Project status starts with authenticated metadata for latest import, latest engine run, worker/job state, snapshot/export availability, latest failure summary, and recent workflow events
 - Frontend API client now consumes the project status contract directly; monitoring UI must display API-provided status rather than infer workflow state
 - Project workspace now has a restrained Monitoring tab for API health, current project run state, latest failure, snapshot/export availability, and recent workflow events
+- Monitoring tab coverage now proves status API failures surface backend-provided errors without inventing workflow state
 
 ---
 

@@ -860,6 +860,45 @@ describe("App shell routing", () => {
     );
   });
 
+  it("renders monitoring status API failures without inferring workflow state", async () => {
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                error: "project_status_failed",
+                detail: "Project status unavailable.",
+              }),
+              { status: 503 },
+            ),
+          );
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/monitoring"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Project status unavailable.");
+    expect(screen.queryByRole("region", { name: "Export availability" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Recent workflow events" })).not.toBeInTheDocument();
+  });
+
   it("renders the dashboard shell for authenticated users", async () => {
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
 
