@@ -12,19 +12,35 @@ Internal alpha is private. This checklist does not approve public launch, billin
 
 Readiness Run ID:
 
+phase10-readiness-2026-06-28-001
+
 Date:
+
+2026-06-28
 
 Owner:
 
+Codex / Aetherra Labs
+
 Build or Commit:
+
+bc8224e
 
 Environment:
 
+Local Windows workspace at `C:\Users\enigm\Documents\Aevryn`; validation source root `C:\Users\enigm\Desktop\Aevryn test chapters`.
+
 Result:
+
+Automated readiness gates passed. Manual alpha UX checks are still pending.
 
 Known Limitations:
 
+Production database, identity provider, object storage, deployment, public launch, payments, collaboration, media generation, and broad visual redesign remain out of Phase 10 scope. Web Import remains unavailable. Worker interruption is observable through status, but durable retry/reclaim policy belongs to a later production worker phase.
+
 Can the tester continue?
+
+Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, and worker interruption observability. Manual tester experience review is still required before inviting trusted testers.
 
 ---
 
@@ -49,9 +65,15 @@ Required checks:
 
 Result:
 
+PASS. Backend alpha smoke coverage and frontend alpha route smoke coverage exercise the creator path through auth, project creation, import, processing, Monitoring, output views, and export preview.
+
 Known Limitations:
 
+Smoke coverage is automated against deterministic local services and mocked frontend API responses; it is not a hosted-browser exploratory session.
+
 Can the tester continue?
+
+Yes. The happy path is covered without CLI use at the product-contract level.
 
 ---
 
@@ -73,9 +95,15 @@ Required checks:
 
 Result:
 
+PASS. Backend tests, frontend tests, lint, type checks, production build, validation corpus, and local performance baseline generation passed.
+
 Known Limitations:
 
+Performance baseline was generated locally and intentionally left as an ignored machine-local artifact. It is evidence for this readiness run, not a committed release baseline.
+
 Can the tester continue?
+
+Yes. Auth, storage, imports, workers, snapshots, monitoring, exports, and performance baseline generation are cooperating in automated gates.
 
 ---
 
@@ -99,9 +127,15 @@ Required checks:
 
 Result:
 
+PASS for automated recovery checks. Manual interruption review remains pending.
+
 Known Limitations:
 
+Automated coverage proves refresh recovery, session-expiry return, failed-run visibility, status API failure handling, and running worker interruption observability. It does not yet prove production worker restart/reclaim semantics because production worker infrastructure is out of Phase 10 scope.
+
 Can the tester continue?
+
+Yes for tested recovery paths. For a claimed running job after interruption, the user can continue by observing the backend-provided running state in Monitoring; automatic reclaim/retry is a later production-readiness concern.
 
 ---
 
@@ -123,6 +157,12 @@ Required checks:
 
 Result:
 
+PENDING. Automated gates passed, but manual alpha checks still need to be performed before trusted tester invitation.
+
 Known Limitations:
 
+Manual checks still need to confirm that the creator path feels understandable, Monitoring explains recovery clearly, output views are useful enough for private testing, export preview shape is recognizable, and known limitations are visible before they confuse testers.
+
 Can the tester continue?
+
+Not yet for tester invitation. The codebase is automated-gate green, but Phase 10 release-candidate acceptance should wait for the manual alpha pass and closeout documentation.
