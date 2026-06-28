@@ -15,7 +15,7 @@ import {
   importScenePreviewRows,
   importScenePreviewSummary,
 } from "../importing/importResult";
-import type { ImportInspect, ImportRecord } from "../api/schemas";
+import type { EngineRun, ImportInspect, ImportRecord } from "../api/schemas";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_IMPORT_TEXT = "Chapter 1\n";
@@ -32,6 +32,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
   const [savedImport, setSavedImport] = useState<ImportRecord | null>(null);
+  const [submittedRun, setSubmittedRun] = useState<EngineRun | null>(null);
 
   const sourceFormats = useQuery({
     queryKey: ["source-formats"],
@@ -55,6 +56,12 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       ),
     enabled: session !== null && activeStoryId !== "",
   });
+  const runsQuery = useQuery({
+    queryKey: runQueryKey(project.id, session?.session_token),
+    queryFn: () =>
+      apiClient.listProjectRuns(project.id, requireSessionToken(session), new Date().toISOString()),
+    enabled: session !== null && activeStoryId !== "",
+  });
   const inspectImport = useMutation({
     mutationFn: (payload: ImportInspectRequest) => apiClient.inspectImport(payload),
     onSuccess(result) {
@@ -64,6 +71,29 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     onError() {
       setInspectionResult(null);
       setSavedImport(null);
+    },
+  });
+  const submitRun = useMutation({
+    mutationFn: (importRecord: ImportRecord) => {
+      const now = new Date().toISOString();
+      const runId = createRunId(importRecord.import_id, now);
+      return apiClient.submitImportRun(
+        project.id,
+        importRecord.story_id,
+        importRecord.import_id,
+        { run_id: runId, job_id: createJobId(runId), now },
+        requireSessionToken(session),
+        now,
+      );
+    },
+    onSuccess(run) {
+      setSubmittedRun(run);
+      queryClient.setQueryData(runQueryKey(project.id, session?.session_token), {
+        runs: [
+          run,
+          ...(runsQuery.data?.runs ?? []).filter((candidate) => candidate.run_id !== run.run_id),
+        ],
+      });
     },
   });
   const createImport = useMutation({
@@ -98,15 +128,18 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     event.preventDefault();
     inspectImport.reset();
     createImport.reset();
+    submitRun.reset();
     try {
       const payload = buildImportInspectPayload({ sourceId, filename, title, sourceText });
       setFormError(null);
       setInspectionResult(null);
       setSavedImport(null);
+      setSubmittedRun(null);
       inspectImport.mutate(payload);
     } catch (error) {
       setInspectionResult(null);
       setSavedImport(null);
+      setSubmittedRun(null);
       setFormError(error instanceof Error ? error.message : "Import form is invalid.");
     }
   }
@@ -128,6 +161,12 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Import form is invalid.");
     }
+  }
+
+  function submitImportProcessing(importRecord: ImportRecord) {
+    submitRun.reset();
+    setSubmittedRun(null);
+    submitRun.mutate(importRecord);
   }
 
   return (
@@ -209,6 +248,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
           {inspectImport.error ? <ErrorMessage>{inspectImport.error.message}</ErrorMessage> : null}
           {createImport.error ? <ErrorMessage>{createImport.error.message}</ErrorMessage> : null}
+          {submitRun.error ? <ErrorMessage>{submitRun.error.message}</ErrorMessage> : null}
           <button
             type="submit"
             className="primary-button"
@@ -277,7 +317,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           {savedImport ? (
             <p className="field-note">Saved {savedImport.import_id} for durable project storage.</p>
           ) : null}
-        </section>
+      </section>
       ) : null}
 
       {activeStoryId ? (
@@ -300,18 +340,68 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
                   <span>
                     {importRecord.import_id} / {importRecord.scene_count} scenes
                   </span>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={submitRun.isPending}
+                    onClick={() => submitImportProcessing(importRecord)}
+                  >
+                    {submitRun.isPending ? "Submitting" : "Submit processing"}
+                  </button>
                 </div>
               ))}
             </div>
           ) : null}
+          {submittedRun ? (
+            <p className="field-note">Submitted {submittedRun.run_id} for processing.</p>
+          ) : null}
         </section>
       ) : null}
+
+      <section className="project-panel" aria-label="Project runs">
+        <h2>Project Runs</h2>
+        {runsQuery.isLoading ? <LoadingMessage>Loading project runs.</LoadingMessage> : null}
+        {runsQuery.error ? <ErrorMessage>{runsQuery.error.message}</ErrorMessage> : null}
+        {!runsQuery.isLoading && !runsQuery.error && (runsQuery.data?.runs.length ?? 0) === 0 ? (
+          <EmptyState title="No project runs">
+            Submit a saved import for background processing.
+          </EmptyState>
+        ) : null}
+        {(runsQuery.data?.runs ?? []).length > 0 ? (
+          <div className="compact-list">
+            {(runsQuery.data?.runs ?? []).map((run) => (
+              <div key={run.run_id} className="compact-row">
+                <strong>{run.run_id}</strong>
+                <span>
+                  {run.status} / {run.import_id}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        </section>
     </div>
   );
 }
 
 function importQueryKey(projectId: string, storyId: string, sessionToken: string | undefined) {
   return ["story-imports", projectId, storyId, sessionToken] as const;
+}
+
+function runQueryKey(projectId: string, sessionToken: string | undefined) {
+  return ["project-runs", projectId, sessionToken] as const;
+}
+
+function createRunId(importId: string, now: string): string {
+  return `${importId}_run_${machineSuffix(now)}`;
+}
+
+function createJobId(runId: string): string {
+  return `${runId}_job`;
+}
+
+function machineSuffix(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
 function requireSessionToken(session: { session_token: string } | null): string {

@@ -85,11 +85,13 @@ Phase 6 first project-storage slice implemented:
 - Project Settings API routes added for read/update and the workspace Settings tab now saves through the API
 - Project Story API routes added for list/create and the workspace Story tab now creates story metadata through the API
 - Story Import API routes added for list/create metadata and the workspace Import tab now saves inspected import metadata under durable stories
+- Engine Run API routes added for list/submit and the workspace Import tab now submits saved imports to the background job boundary
 
 Phase 6 storage limitation:
 
 - JSON project and auth stores are local deterministic adapters, not final production database or identity-provider choices
-- Story import storage currently persists metadata and storage references only; uploaded source bytes and engine run jobs remain a later storage/job slice
+- Story import storage currently persists metadata and storage references only; uploaded source bytes remain a later storage slice
+- Engine run submission records pending runs and enqueues jobs, but worker execution and snapshot creation remain a later integration slice
 
 ---
 

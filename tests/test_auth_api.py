@@ -15,6 +15,7 @@ from aevryn.auth import (
     PasswordHasher,
 )
 from aevryn.persistence import InMemoryProjectRepository
+from aevryn.workers import InMemoryJobQueue
 
 NOW = "2026-06-27T00:00:00Z"
 SOON = "2026-06-27T00:30:00Z"
@@ -510,6 +511,126 @@ def test_story_imports_api_rejects_duplicate_and_cross_user_writes() -> None:
     assert wrong_project.json()["error"] == "story_not_found"
 
 
+def test_import_runs_api_submits_and_lists_pending_runs() -> None:
+    """Import run API should persist pending run metadata and enqueue jobs."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    assert submitted.json() == {
+        "run_id": "run_alpha",
+        "project_id": "project_alpha",
+        "story_id": "story_alpha",
+        "import_id": "import_alpha",
+        "status": "pending",
+        "engine_version": "aevryn_v1",
+        "started_at": NOW,
+        "status_updated_at": NOW,
+        "finished_at": None,
+        "error_summary": "",
+        "job_ref": "queue://job_alpha",
+    }
+    assert queue.get("job_alpha").run_id == "run_alpha"
+
+    listed = client.get("/v2/projects/project_alpha/runs", headers=auth_headers("token_001"))
+    assert listed.status_code == 200
+    assert listed.json()["runs"] == [submitted.json()]
+
+
+def test_import_runs_api_rejects_duplicate_and_cross_user_submissions() -> None:
+    """Import run API should preserve identity and project ownership boundaries."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    payload = {"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW}
+
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json=payload,
+    )
+    assert submitted.status_code == 200
+
+    duplicate = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json=payload,
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"] == "run_exists"
+
+    cross_user = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_002"),
+        json={"run_id": "run_other", "job_id": "job_other", "now": NOW},
+    )
+    assert cross_user.status_code == 404
+    assert cross_user.json()["error"] == "import_not_found"
+
+
+def test_import_runs_api_requires_configured_queue() -> None:
+    """Import run submission should fail clearly when no queue is configured."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+
+    response = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"] == "background_queue_unavailable"
+
+
 def test_project_storage_api_requires_configured_storage() -> None:
     """Project routes should fail clearly when no repository is configured."""
     client = TestClient(create_app(authentication_service=auth_service()))
@@ -603,6 +724,8 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert "/v2/projects/{project_id}/settings" in route_paths
     assert "/v2/projects/{project_id}/stories" in route_paths
     assert "/v2/projects/{project_id}/stories/{story_id}/imports" in route_paths
+    assert "/v2/projects/{project_id}/runs" in route_paths
+    assert "/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs" in route_paths
 
     paths = client.get("/openapi.json").json()["paths"]
     assert paths["/v2/projects"]["get"]["operationId"] == "getV2Projects"
@@ -626,6 +749,12 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert paths["/v2/projects/{project_id}/stories/{story_id}/imports"]["post"][
         "operationId"
     ] == "postV2StoryImports"
+    assert paths["/v2/projects/{project_id}/runs"]["get"]["operationId"] == (
+        "getV2ProjectRuns"
+    )
+    assert paths["/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs"]["post"][
+        "operationId"
+    ] == "postV2ImportRuns"
 
 
 def register_user(client: TestClient, *, user_id: str, email: str) -> None:

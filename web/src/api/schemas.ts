@@ -100,6 +100,24 @@ export const importListSchema = z.object({
   imports: z.array(importRecordSchema),
 });
 
+export const engineRunSchema = z.object({
+  run_id: z.string(),
+  project_id: z.string(),
+  story_id: z.string(),
+  import_id: z.string(),
+  status: z.string(),
+  engine_version: z.string(),
+  started_at: z.string(),
+  status_updated_at: z.string().nullable(),
+  finished_at: z.string().nullable(),
+  error_summary: z.string(),
+  job_ref: z.string(),
+});
+
+export const engineRunListSchema = z.object({
+  runs: z.array(engineRunSchema),
+});
+
 export const evidenceAnchorPreviewSchema = z.object({
   anchor_id: z.string(),
   chapter_id: z.string(),
@@ -284,3 +302,5 @@ export type Story = z.infer<typeof storySchema>;
 export type StoryList = z.infer<typeof storyListSchema>;
 export type ImportRecord = z.infer<typeof importRecordSchema>;
 export type ImportList = z.infer<typeof importListSchema>;
+export type EngineRun = z.infer<typeof engineRunSchema>;
+export type EngineRunList = z.infer<typeof engineRunListSchema>;

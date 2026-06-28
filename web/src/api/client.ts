@@ -6,6 +6,8 @@ import {
   capabilitiesSchema,
   characterPreviewSchema,
   continuityPreviewSchema,
+  engineRunListSchema,
+  engineRunSchema,
   exportPreviewSchema,
   promptPreviewSchema,
   scenePreviewSchema,
@@ -27,6 +29,8 @@ import {
   type AuthUser,
   type CharacterPreview,
   type ContinuityPreview,
+  type EngineRun,
+  type EngineRunList,
   type ExportPreview,
   type PromptPreview,
   type ScenePreview,
@@ -110,6 +114,12 @@ export type ImportInspectRequest = {
 
 export type ImportCreateRequest = ImportInspectRequest & {
   import_id: string;
+  now: string;
+};
+
+export type EngineRunCreateRequest = {
+  run_id: string;
+  job_id: string;
   now: string;
 };
 
@@ -341,6 +351,27 @@ export class AevrynApiClient {
     });
   }
 
+  listProjectRuns(projectId: string, sessionToken: string, now: string): Promise<EngineRunList> {
+    return this.request(projectRunsPath(projectId), engineRunListSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  submitImportRun(
+    projectId: string,
+    storyId: string,
+    importId: string,
+    payload: EngineRunCreateRequest,
+    sessionToken: string,
+    now: string,
+  ): Promise<EngineRun> {
+    return this.request(projectImportRunsPath(projectId, storyId, importId), engineRunSchema, {
+      method: "POST",
+      headers: authHeaders(sessionToken, now),
+      body: JSON.stringify(payload),
+    });
+  }
+
   private async request<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
@@ -400,6 +431,14 @@ function projectStoriesPath(projectId: string): string {
 
 function projectStoryImportsPath(projectId: string, storyId: string): string {
   return `${projectStoriesPath(projectId)}/${encodeURIComponent(storyId)}/imports`;
+}
+
+function projectRunsPath(projectId: string): string {
+  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/runs`;
+}
+
+function projectImportRunsPath(projectId: string, storyId: string, importId: string): string {
+  return `${projectStoryImportsPath(projectId, storyId)}/${encodeURIComponent(importId)}/runs`;
 }
 
 async function readJsonPayload(response: Response): Promise<unknown> {

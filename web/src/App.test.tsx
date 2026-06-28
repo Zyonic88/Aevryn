@@ -298,6 +298,19 @@ const importRecordPayload = {
   evidence_anchor_count: 1,
   created_at: projectAlpha.updatedAt,
 };
+const engineRunPayload = {
+  run_id: "run_alpha",
+  project_id: projectAlpha.id,
+  story_id: storyAlphaPayload.story_id,
+  import_id: importRecordPayload.import_id,
+  status: "pending",
+  engine_version: "aevryn_v1",
+  started_at: projectAlpha.updatedAt,
+  status_updated_at: projectAlpha.updatedAt,
+  finished_at: null,
+  error_summary: "",
+  job_ref: "queue://job_alpha",
+};
 
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
@@ -388,6 +401,27 @@ describe("App shell routing", () => {
             );
           }
           return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
+          )
+        ) {
+          const body = JSON.parse(String(init?.body));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...engineRunPayload,
+                run_id: body.run_id,
+                job_ref: `queue://${body.job_id}`,
+                started_at: body.now,
+                status_updated_at: body.now,
+              }),
+            ),
+          );
         }
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
@@ -885,6 +919,27 @@ describe("App shell routing", () => {
           }
           return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
         }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
+          )
+        ) {
+          const body = JSON.parse(String(init?.body));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...engineRunPayload,
+                run_id: body.run_id,
+                job_ref: `queue://${body.job_id}`,
+                started_at: body.now,
+                status_updated_at: body.now,
+              }),
+            ),
+          );
+        }
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
         }
@@ -915,6 +970,10 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("chapter_001.txt")).toBeInTheDocument();
     expect(screen.getByText("import_alpha / 8 scenes")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Submit processing" }));
+
+    expect(await screen.findByText(/Submitted import_alpha_run_/u)).toBeInTheDocument();
+    expect(await screen.findByText(/pending \/ import_alpha/u)).toBeInTheDocument();
   });
 
   it("previews character profiles from the characters workspace tab", async () => {

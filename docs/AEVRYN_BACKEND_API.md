@@ -522,6 +522,34 @@ Duplicate import IDs fail clearly.
 
 Missing stories, cross-project story writes, and cross-user story writes return a stable story-not-found response.
 
+## `GET /v2/projects/{project_id}/runs`
+
+Returns durable engine run metadata inside the authenticated user's project boundary.
+
+The route returns run IDs, story/import scope, status, engine version, timestamps, error summaries, and queue references.
+
+It does not execute queued work.
+
+Missing projects and cross-user project reads return a stable project-not-found response.
+
+## `POST /v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs`
+
+Submits a saved import for background engine processing.
+
+The request includes:
+
+* `run_id`
+* `job_id`
+* `now`
+
+The route records a pending engine run and enqueues a background job through the worker boundary.
+
+It does not run the engine inline and does not create snapshots.
+
+Duplicate run IDs or job IDs fail clearly.
+
+Missing imports, cross-story imports, cross-project imports, and cross-user imports return a stable import-not-found response.
+
 ## `POST /v2/projects/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns stateless project-level metadata.

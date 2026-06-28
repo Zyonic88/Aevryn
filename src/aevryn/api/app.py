@@ -41,6 +41,9 @@ from aevryn.api.models import (
     ContinuityRecordOutput,
     ContinuityReportOutput,
     ContinuitySceneOutput,
+    EngineRunCreateRequest,
+    EngineRunListResponse,
+    EngineRunOutput,
     ErrorResponse,
     EvidenceAnchorPreview,
     ExportCapability,
@@ -100,6 +103,7 @@ from aevryn.importing import ImportedSource, SourceFileTextExtractor
 from aevryn.persistence import (
     AccessDeniedError,
     DuplicateRecordError,
+    EngineRunRecord,
     ImportRecord,
     JsonProjectRepository,
     PersistenceError,
@@ -121,12 +125,19 @@ from aevryn.presentation import (
 from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.projects.runner import ContinuityRecord, ContinuityReport, ContinuitySceneReport
 from aevryn.prompts import CanonPromptBuilder, ProductionPack
+from aevryn.workers import (
+    BackgroundJobQueue,
+    BackgroundJobService,
+    DuplicateJobError,
+    InMemoryJobQueue,
+)
 
 API_VERSION = "v2"
 ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
 API_KEYS_ENV = "AEVRYN_API_KEYS"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
+PLATFORM_ENGINE_VERSION = "aevryn_v1"
 
 
 def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
@@ -142,7 +153,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         ValueError: If configured CORS origins are unsafe or invalid.
     """
     active_environ = environ or os.environ
-    authentication_service, project_repository = _platform_services_from_env(
+    authentication_service, project_repository, background_job_queue = _platform_services_from_env(
         active_environ
     )
     return create_app(
@@ -150,6 +161,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         api_keys=_api_keys_from_env(active_environ),
         authentication_service=authentication_service,
         project_repository=project_repository,
+        background_job_queue=background_job_queue,
     )
 
 
@@ -158,6 +170,7 @@ def create_app(
     api_keys: Sequence[str] = (),
     authentication_service: AuthenticationService | None = None,
     project_repository: ProjectRepository | None = None,
+    background_job_queue: BackgroundJobQueue | None = None,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
 
@@ -166,6 +179,7 @@ def create_app(
         api_keys: Optional deployment API keys that protect workflow routes.
         authentication_service: Optional Phase 4 authentication service.
         project_repository: Optional Phase 6 project storage repository.
+        background_job_queue: Optional Phase 3 queue for engine run submission.
 
     Returns:
         Configured FastAPI application.
@@ -764,6 +778,94 @@ def create_app(
             raise _project_storage_error(error) from error
         return _import_output(import_record)
 
+    @app.get(
+        "/v2/projects/{project_id}/runs",
+        response_model=EngineRunListResponse,
+        tags=["Projects"],
+        operation_id="getV2ProjectRuns",
+    )
+    def list_project_runs(project_id: str, request: Request) -> EngineRunListResponse:
+        """Return durable engine run metadata inside the authenticated project boundary."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            runs = repository.list_engine_runs_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return EngineRunListResponse(runs=tuple(_engine_run_output(run) for run in runs))
+
+    @app.post(
+        "/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs",
+        response_model=EngineRunOutput,
+        tags=["Projects"],
+        operation_id="postV2ImportRuns",
+    )
+    def submit_import_run(
+        project_id: str,
+        story_id: str,
+        import_id: str,
+        request_body: EngineRunCreateRequest,
+        request: Request,
+    ) -> EngineRunOutput:
+        """Submit a saved import for durable background engine processing."""
+        repository = _require_project_repository(project_repository)
+        queue = _require_background_job_queue(background_job_queue)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            _require_import_scope(
+                repository=repository,
+                user_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+                import_id=import_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError, ValueError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "import_not_found", "detail": "Import not found."},
+            ) from error
+        try:
+            BackgroundJobService(
+                repository=repository,
+                queue=queue,
+                engine_version=PLATFORM_ENGINE_VERSION,
+            ).submit_import_processing_job(
+                job_id=request_body.job_id,
+                run_id=request_body.run_id,
+                project_id=project_id,
+                story_id=story_id,
+                import_id=import_id,
+                queued_at=request_body.now,
+            )
+            run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
+        except (DuplicateRecordError, DuplicateJobError) as error:
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "run_exists", "detail": str(error)},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "run_create_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _engine_run_output(run)
+
     @app.post(
         "/v2/imports/inspect",
         response_model=ImportInspectResponse,
@@ -1129,11 +1231,11 @@ def _api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
 
 def _platform_services_from_env(
     environ: Mapping[str, str],
-) -> tuple[AuthenticationService | None, ProjectRepository | None]:
+) -> tuple[AuthenticationService | None, ProjectRepository | None, BackgroundJobQueue | None]:
     """Return configured platform services from deployment environment settings."""
     database_path = environ.get(PROJECT_DATABASE_PATH_ENV, "").strip()
     if not database_path:
-        return None, None
+        return None, None, None
 
     project_database_path = Path(database_path)
     repository = JsonProjectRepository(project_database_path)
@@ -1145,7 +1247,7 @@ def _platform_services_from_env(
         credential_store=auth_store,
         session_store=auth_store,
     )
-    return authentication_service, repository
+    return authentication_service, repository, InMemoryJobQueue()
 
 
 def _auth_store_path_from_env(
@@ -1253,6 +1355,21 @@ def _require_project_repository(
     return project_repository
 
 
+def _require_background_job_queue(
+    background_job_queue: BackgroundJobQueue | None,
+) -> BackgroundJobQueue:
+    """Return the configured background queue or fail clearly."""
+    if background_job_queue is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "background_queue_unavailable",
+                "detail": "Background job queue is not configured.",
+            },
+        )
+    return background_job_queue
+
+
 def _authenticated_user(
     request: Request,
     authentication_service: AuthenticationService | None,
@@ -1329,6 +1446,23 @@ def _import_output(import_record: ImportRecord) -> ImportOutput:
     )
 
 
+def _engine_run_output(run: EngineRunRecord) -> EngineRunOutput:
+    """Convert persisted engine run metadata to the API contract."""
+    return EngineRunOutput(
+        run_id=run.run_id,
+        project_id=run.project_id,
+        story_id=run.story_id,
+        import_id=run.import_id,
+        status=run.status,
+        engine_version=run.engine_version,
+        started_at=run.started_at,
+        status_updated_at=run.status_updated_at,
+        finished_at=run.finished_at,
+        error_summary=run.error_summary,
+        job_ref=run.job_ref,
+    )
+
+
 def _import_record(
     request: ImportCreateRequest,
     story_id: str,
@@ -1362,6 +1496,26 @@ def _require_story_scope(
     if story.project_id != project_id:
         raise ValueError("Story does not belong to project.")
     return story
+
+
+def _require_import_scope(
+    repository: ProjectRepository,
+    user_id: str,
+    project_id: str,
+    story_id: str,
+    import_id: str,
+) -> ImportRecord:
+    """Return an import only when it belongs to the requested story and project."""
+    _require_story_scope(
+        repository=repository,
+        user_id=user_id,
+        project_id=project_id,
+        story_id=story_id,
+    )
+    import_record = repository.get_import(user_id=user_id, import_id=import_id)
+    if import_record.story_id != story_id:
+        raise ValueError("Import does not belong to story.")
+    return import_record
 
 
 def _import_metadata_filename(value: str) -> str:
@@ -1530,6 +1684,16 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="POST",
             path="/v2/projects/{project_id}/stories/{story_id}/imports",
             purpose="Inspect and create durable import metadata inside a story.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}/runs",
+            purpose="List durable engine run metadata inside a project.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs",
+            purpose="Submit a saved import for background engine processing.",
         ),
         ApiRouteCapability(
             method="POST",

@@ -278,6 +278,42 @@ class ImportListResponse(BaseModel):
     imports: tuple[ImportOutput, ...]
 
 
+class EngineRunCreateRequest(BaseModel):
+    """Request to submit a saved import for background engine processing."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str = Field(min_length=1)
+    job_id: str = Field(min_length=1)
+    now: str = Field(min_length=1)
+
+
+class EngineRunOutput(BaseModel):
+    """Ownership-safe engine run metadata returned by the API."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str
+    project_id: str
+    story_id: str
+    import_id: str
+    status: str
+    engine_version: str
+    started_at: str
+    status_updated_at: str | None = None
+    finished_at: str | None = None
+    error_summary: str = ""
+    job_ref: str = ""
+
+
+class EngineRunListResponse(BaseModel):
+    """Engine runs inside an authenticated project."""
+
+    model_config = ConfigDict(frozen=True)
+
+    runs: tuple[EngineRunOutput, ...]
+
+
 class ImportInspectRequest(BaseModel):
     """Request to inspect imported source structure without storing a project."""
 
