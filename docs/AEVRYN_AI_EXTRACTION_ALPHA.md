@@ -115,4 +115,6 @@ Environment wiring supports:
 
 OpenAI mode requires `AEVRYN_OPENAI_API_KEY` and `AEVRYN_OPENAI_MODEL`.
 
+Provider-backed extraction requests schema-constrained JSON and then still passes the result through Aevryn's evidence-bounded validator before Canon Updating.
+
 The remaining alpha limitation is live provider validation. Broad story understanding should stay disabled for testers until provider behavior, cost, latency, privacy language, and failure states are verified.

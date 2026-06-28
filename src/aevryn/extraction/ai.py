@@ -133,6 +133,14 @@ class OpenAIResponsesAIExtractionClient:
             payload={
                 "model": self._model,
                 "input": prompt_text,
+                "text": {
+                    "format": {
+                        "type": "json_schema",
+                        "name": "aevryn_scene_extraction",
+                        "strict": True,
+                        "schema": _extraction_response_schema(),
+                    }
+                },
             },
             timeout_seconds=self._timeout_seconds,
             max_response_bytes=self._max_response_bytes,
@@ -541,3 +549,99 @@ def _required_text(value: str, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} cannot be blank.")
     return value.strip()
+
+
+def _extraction_response_schema() -> dict[str, object]:
+    """Return the provider schema for evidence-bounded extraction JSON."""
+    entity = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "entity_id": {"type": "string"},
+            "entity_type": {"type": "string"},
+            "display_name": {"type": "string"},
+            "evidence_anchor_id": {"type": "string"},
+            "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        },
+        "required": [
+            "entity_id",
+            "entity_type",
+            "display_name",
+            "evidence_anchor_id",
+            "confidence",
+        ],
+    }
+    fact = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "fact_id": {"type": "string"},
+            "entity_id": {"type": "string"},
+            "attribute": {"type": "string"},
+            "value": {"type": "string"},
+            "evidence_anchor_id": {"type": "string"},
+            "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        },
+        "required": [
+            "fact_id",
+            "entity_id",
+            "attribute",
+            "value",
+            "evidence_anchor_id",
+            "confidence",
+        ],
+    }
+    relationship = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "source_entity_id": {"type": "string"},
+            "relationship_type": {"type": "string"},
+            "target_entity_id": {"type": "string"},
+            "evidence_anchor_id": {"type": "string"},
+            "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        },
+        "required": [
+            "source_entity_id",
+            "relationship_type",
+            "target_entity_id",
+            "evidence_anchor_id",
+            "confidence",
+        ],
+    }
+    state_change = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "entity_id": {"type": "string"},
+            "attribute": {"type": "string"},
+            "value": {"type": "string"},
+            "valid_from_anchor_id": {"type": "string"},
+            "valid_until_anchor_id": {"type": ["string", "null"]},
+            "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        },
+        "required": [
+            "entity_id",
+            "attribute",
+            "value",
+            "valid_from_anchor_id",
+            "valid_until_anchor_id",
+            "confidence",
+        ],
+    }
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "entities": {"type": "array", "items": entity},
+            "facts": {"type": "array", "items": fact},
+            "relationships": {"type": "array", "items": relationship},
+            "state_changes": {"type": "array", "items": state_change},
+        },
+        "required": [
+            "entities",
+            "facts",
+            "relationships",
+            "state_changes",
+        ],
+    }

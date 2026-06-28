@@ -169,10 +169,11 @@ def test_openai_responses_client_returns_output_text_without_network() -> None:
     }
     assert transport.url == "https://api.openai.com/v1/responses"
     assert transport.headers["Authorization"] == "Bearer test-key"
-    assert transport.payload == {
-        "model": "test-model",
-        "input": "extract this scene",
-    }
+    assert transport.payload["model"] == "test-model"
+    assert transport.payload["input"] == "extract this scene"
+    assert transport.payload["text"]["format"]["type"] == "json_schema"
+    assert transport.payload["text"]["format"]["name"] == "aevryn_scene_extraction"
+    assert transport.payload["text"]["format"]["strict"] is True
     assert transport.timeout_seconds == 30.0
     assert transport.max_response_bytes == 1_048_576
 
