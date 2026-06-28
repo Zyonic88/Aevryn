@@ -198,13 +198,7 @@ class PresentationEngine:
         """
         return WorldSheetView(
             chapter_label=f"Chapter {state.chapter_index}",
-            entity_sections=tuple(
-                PresentationSection(
-                    title=f"{entity.display_name} ({entity.entity_type})",
-                    items=self._world_entity_items(entity),
-                )
-                for entity in state.entities
-            ),
+            entity_sections=self._world_entity_sections(state.entities),
             evidence_summary=self._world_evidence_summary(state),
         )
 
@@ -368,6 +362,26 @@ class PresentationEngine:
             for relationship in entity.relationships
         )
         return PresentationEngine._items_or_unknown(fact_items + relationship_items)
+
+    @staticmethod
+    def _world_entity_sections(
+        entities: tuple[WorldEntityState, ...],
+    ) -> tuple[PresentationSection, ...]:
+        """Return readable world sections with duplicate titles merged."""
+        section_items_by_title: dict[str, list[str]] = {}
+        for entity in entities:
+            title = f"{entity.display_name} ({entity.entity_type})"
+            section_items_by_title.setdefault(title, []).extend(
+                PresentationEngine._world_entity_items(entity)
+            )
+
+        return tuple(
+            PresentationSection(
+                title=title,
+                items=PresentationEngine._items_or_unknown(items),
+            )
+            for title, items in section_items_by_title.items()
+        )
 
     @staticmethod
     def _world_evidence_summary(state: WorldState) -> str:

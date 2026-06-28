@@ -66,6 +66,8 @@ class UrllibOpenAIResponsesTransport:
         try:
             with urlopen(request, timeout=timeout_seconds) as response:
                 raw_response = response.read(max_response_bytes + 1)
+        except TimeoutError as error:
+            raise ValueError("OpenAI extraction request timed out.") from error
         except HTTPError as error:
             raise ValueError(
                 f"OpenAI extraction request failed with HTTP {error.code}."
@@ -123,28 +125,31 @@ class OpenAIResponsesAIExtractionClient:
     def complete(self, prompt: str) -> str:
         """Return a JSON extraction response for the prompt."""
         prompt_text = _required_text(prompt, "OpenAI extraction prompt")
-        response_payload = self._transport.post_json(
-            url=self._endpoint,
-            headers={
-                "Authorization": f"Bearer {self._api_key}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-            payload={
-                "model": self._model,
-                "input": prompt_text,
-                "text": {
-                    "format": {
-                        "type": "json_schema",
-                        "name": "aevryn_scene_extraction",
-                        "strict": True,
-                        "schema": _extraction_response_schema(),
-                    }
+        try:
+            response_payload = self._transport.post_json(
+                url=self._endpoint,
+                headers={
+                    "Authorization": f"Bearer {self._api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
                 },
-            },
-            timeout_seconds=self._timeout_seconds,
-            max_response_bytes=self._max_response_bytes,
-        )
+                payload={
+                    "model": self._model,
+                    "input": prompt_text,
+                    "text": {
+                        "format": {
+                            "type": "json_schema",
+                            "name": "aevryn_scene_extraction",
+                            "strict": True,
+                            "schema": _extraction_response_schema(),
+                        }
+                    },
+                },
+                timeout_seconds=self._timeout_seconds,
+                max_response_bytes=self._max_response_bytes,
+            )
+        except TimeoutError as error:
+            raise ValueError("OpenAI extraction request timed out.") from error
         output_text = _responses_output_text(response_payload)
         logger.info(
             "openai_extraction_response_received",

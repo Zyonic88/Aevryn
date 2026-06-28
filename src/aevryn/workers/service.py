@@ -67,6 +67,7 @@ class ProjectImportSnapshotHandler:
                 result = runner.run_imported_source(
                     imported_source=imported_source,
                     extractor=self._extractor,
+                    reject_unknown_anchor_candidates=True,
                 )
         return (
             SnapshotRecord(
@@ -546,6 +547,28 @@ def _safe_display_text(value: str, source_quotes: tuple[str, ...]) -> str:
 def _error_summary(error: Exception) -> str:
     """Return a short stable worker error summary."""
     message = str(error).strip()
+    if message.startswith("Unknown evidence anchor:"):
+        return (
+            "Import evidence could not be matched during AI extraction. "
+            "Review the import structure, then retry processing. If it repeats, "
+            "split the import into smaller chapter batches."
+        )
+    if message.startswith("Conflicting fact:"):
+        return (
+            "AI extraction produced conflicting canon facts. Retry processing. "
+            "If it repeats, review the import structure or split the import into "
+            "smaller chapter batches."
+        )
+    if message == "World sheet section titles must be unique.":
+        return (
+            "World sheet output contained duplicate sections. Aevryn merged matching "
+            "sections; retry processing."
+        )
+    if message == "OpenAI extraction request timed out.":
+        return (
+            "AI extraction timed out while reading the provider response. Retry with "
+            "a smaller chapter batch or increase the provider timeout for large imports."
+        )
     if not message:
         return error.__class__.__name__
     return message[:500]

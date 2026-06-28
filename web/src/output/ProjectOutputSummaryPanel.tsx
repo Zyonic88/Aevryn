@@ -13,6 +13,7 @@ import { useAuth } from "../auth/useAuth";
 import { EmptyState, LoadingMessage } from "../components/Feedback";
 import { formatDateTime, formatRunStatus } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
+import { readableOutputItems } from "./readableOutput";
 
 type OutputSurface =
   | "characters"
@@ -136,9 +137,10 @@ function ReadableSurfacePanels({
   outputs: ProjectOutputs;
 }) {
   if (surface === "characters" && outputs.character_profiles.length > 0) {
+    const characterProfiles = mergeCharacterProfiles(outputs.character_profiles);
     return (
       <div className="profile-grid" aria-label="Character cards">
-        {outputs.character_profiles.map((profile) => (
+        {characterProfiles.map((profile) => (
           <CharacterPanel key={profile.character_id} profile={profile} />
         ))}
       </div>
@@ -154,15 +156,70 @@ function ReadableSurfacePanels({
   return null;
 }
 
+function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[] {
+  const profilesByName = new Map<string, CharacterProfile>();
+  for (const profile of profiles) {
+    const existingProfile = profilesByName.get(profile.display_name);
+    if (!existingProfile) {
+      profilesByName.set(profile.display_name, profile);
+      continue;
+    }
+    profilesByName.set(profile.display_name, {
+      ...existingProfile,
+      subtitle: bestSubtitle(existingProfile.subtitle, profile.subtitle),
+      status: mergeSection(existingProfile.status, profile.status),
+      current_goal: mergeSection(existingProfile.current_goal, profile.current_goal),
+      current_equipment: mergeSection(existingProfile.current_equipment, profile.current_equipment),
+      current_abilities: mergeSection(existingProfile.current_abilities, profile.current_abilities),
+      current_assets: mergeSection(existingProfile.current_assets, profile.current_assets),
+      territory: mergeSection(existingProfile.territory, profile.territory),
+      relationships: mergeSection(existingProfile.relationships, profile.relationships),
+      current_limitations: mergeSection(existingProfile.current_limitations, profile.current_limitations),
+      recent_changes: mergeSection(existingProfile.recent_changes, profile.recent_changes),
+      evidence_summary: mergedEvidenceSummary(existingProfile.evidence_summary, profile.evidence_summary),
+    });
+  }
+  return Array.from(profilesByName.values());
+}
+
+function bestSubtitle(left: string, right: string): string {
+  if (left && left !== "Unknown") {
+    return left;
+  }
+  return right || left;
+}
+
+function mergeSection(left: OutputSection, right: OutputSection): OutputSection {
+  return {
+    title: left.title,
+    items: readableOutputItems([...left.items, ...right.items]),
+  };
+}
+
+function mergedEvidenceSummary(left: string, right: string): string {
+  const factCount = evidenceFactCount(left) + evidenceFactCount(right);
+  if (factCount > 0) {
+    return `${factCount.toLocaleString()} verified facts`;
+  }
+  if (left === right) {
+    return left;
+  }
+  return Array.from(new Set([left, right])).join("; ");
+}
+
 function CharacterPanel({ profile }: { profile: CharacterProfile }) {
+  const identitySections = characterIdentitySections(profile);
+  const recentChanges = characterRecentChanges(profile);
   return (
     <article className="profile-card">
       <header>
-        <p className="eyebrow">{profile.character_id}</p>
         <h3>{profile.display_name}</h3>
         <p>{profile.subtitle}</p>
       </header>
       <div className="profile-section-grid">
+        {identitySections.map((section) => (
+          <PanelSection key={section.title} section={section} />
+        ))}
         <PanelSection section={profile.status} />
         <PanelSection section={profile.current_goal} />
         <PanelSection section={profile.current_equipment} />
@@ -171,24 +228,56 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
         <PanelSection section={profile.territory} />
         <PanelSection section={profile.relationships} />
         <PanelSection section={profile.current_limitations} />
-        <PanelSection section={profile.recent_changes} />
+        <PanelSection section={recentChanges} />
       </div>
       <p className="evidence-note">{profile.evidence_summary}</p>
     </article>
   );
 }
 
+function evidenceFactCount(summary: string): number {
+  const match = summary.match(/(\d[\d,]*)\s+verified facts?/i);
+  return match ? Number(match[1].replace(/,/g, "")) : 0;
+}
+
+function characterIdentitySections(profile: CharacterProfile): OutputSection[] {
+  const readableRecentChanges = readableOutputItems(profile.recent_changes.items);
+  return ["Race", "Gender"].map((title) => {
+    const values = valuesForLabel(readableRecentChanges, title);
+    return {
+      title,
+      items: values.length > 0 ? values : ["Unknown"],
+    };
+  });
+}
+
+function characterRecentChanges(profile: CharacterProfile): OutputSection {
+  return {
+    title: profile.recent_changes.title,
+    items: readableOutputItems(profile.recent_changes.items).filter(
+      (item) => !item.startsWith("Name: ") && !item.startsWith("Race: ") && !item.startsWith("Gender: "),
+    ),
+  };
+}
+
+function valuesForLabel(items: string[], label: string): string[] {
+  const prefix = `${label}: `;
+  return items
+    .filter((item) => item.startsWith(prefix))
+    .map((item) => item.slice(prefix.length))
+    .filter((item, index, allItems) => allItems.indexOf(item) === index);
+}
+
 function WorldPanel({ world }: { world: WorldSheet }) {
   return (
     <div>
-      <p className="result-summary">{world.chapter_label}</p>
       <div className="profile-grid" aria-label="World sheets">
         {world.entity_sections.map((section) => (
           <article className="profile-card" key={section.title}>
             <header>
               <h3>{section.title}</h3>
             </header>
-            <PanelSection section={section} />
+            <WorldSection section={section} />
           </article>
         ))}
       </div>
@@ -198,15 +287,27 @@ function WorldPanel({ world }: { world: WorldSheet }) {
 }
 
 function PanelSection({ section }: { section: OutputSection }) {
+  const items = readableOutputItems(section.items);
   return (
     <section className="profile-section">
       <h4>{section.title}</h4>
       <ul>
-        {section.items.map((item) => (
+        {items.map((item) => (
           <li key={item}>{item}</li>
         ))}
       </ul>
     </section>
+  );
+}
+
+function WorldSection({ section }: { section: OutputSection }) {
+  const items = readableOutputItems(section.items);
+  return (
+    <ul className="world-item-list">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
   );
 }
 

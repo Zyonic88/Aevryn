@@ -200,19 +200,26 @@ class AevrynProjectRunner:
         self,
         imported_source: ImportedSource,
         extractor: SceneExtractor,
+        reject_unknown_anchor_candidates: bool = False,
     ) -> ProjectRunResult:
         """Run extraction and canon updating over imported source.
 
         Parameters:
             imported_source: Story Import output.
             extractor: Evidence-bounded extractor that proposes candidates.
+            reject_unknown_anchor_candidates: When true, candidates that cite
+                anchors outside their scene are discarded instead of failing the
+                whole run.
 
         Returns:
             Project run result containing imported source, candidates, and Canon.
         """
         self._require_imported_scenes(imported_source)
         extraction_results = EntityExtractionEngine(
-            extractor=extractor
+            extractor=extractor,
+            unknown_anchor_policy=(
+                "reject_candidate" if reject_unknown_anchor_candidates else "raise"
+            ),
         ).extract_imported_source(imported_source)
         database = CanonDatabase()
         updater = CanonUpdater(database=database)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Protocol
+from typing import Literal, Protocol
 
 from aevryn.extraction.models import (
     ExtractedEntity,
@@ -18,6 +18,8 @@ from aevryn.importing import EvidenceAnchor, ImportedSource
 
 logger = logging.getLogger(__name__)
 
+UnknownAnchorPolicy = Literal["raise", "reject_candidate"]
+
 
 class SceneExtractor(Protocol):
     """Protocol for AI or test extractors."""
@@ -29,13 +31,22 @@ class SceneExtractor(Protocol):
 class EntityExtractionEngine:
     """Coordinate entity extraction without updating Canon."""
 
-    def __init__(self, extractor: SceneExtractor) -> None:
+    def __init__(
+        self,
+        extractor: SceneExtractor,
+        unknown_anchor_policy: UnknownAnchorPolicy = "raise",
+    ) -> None:
         """Create an Entity Extraction Engine.
 
         Parameters:
             extractor: AI-backed or test extractor that proposes candidates.
+            unknown_anchor_policy: How to handle candidates referencing anchors
+                outside the scene evidence set.
         """
+        if unknown_anchor_policy not in {"raise", "reject_candidate"}:
+            raise ValueError("Unknown anchor policy is invalid.")
         self._extractor = extractor
+        self._unknown_anchor_policy = unknown_anchor_policy
 
     def extract_imported_source(
         self,
@@ -59,6 +70,7 @@ class EntityExtractionEngine:
             for chapter in imported_source.story.chapters
             for scene in chapter.scenes
         )
+        results = self._without_cross_scene_fact_id_collisions(results)
         logger.info(
             "entity_extraction_completed",
             extra={
@@ -67,6 +79,85 @@ class EntityExtractionEngine:
             },
         )
         return results
+
+    @staticmethod
+    def _without_cross_scene_fact_id_collisions(
+        results: tuple[ExtractionResult, ...],
+    ) -> tuple[ExtractionResult, ...]:
+        """Return results with conflicting cross-scene fact IDs rewritten."""
+        fact_signatures_by_id: dict[str, set[tuple[str, str, str, str]]] = {}
+        for result in results:
+            for fact in result.facts:
+                fact_signatures_by_id.setdefault(fact.fact_id, set()).add(
+                    EntityExtractionEngine._fact_signature(fact)
+                )
+
+        colliding_fact_ids = {
+            fact_id
+            for fact_id, signatures in fact_signatures_by_id.items()
+            if len(signatures) > 1
+        }
+        if not colliding_fact_ids:
+            return results
+
+        rewritten_results = tuple(
+            ExtractionResult(
+                scene_id=result.scene_id,
+                entities=result.entities,
+                facts=tuple(
+                    EntityExtractionEngine._fact_with_collision_safe_id(fact)
+                    if fact.fact_id in colliding_fact_ids
+                    else fact
+                    for fact in result.facts
+                ),
+                relationships=result.relationships,
+                state_changes=result.state_changes,
+            )
+            for result in results
+        )
+        logger.warning(
+            "extraction_fact_ids_rewritten_for_cross_scene_collisions",
+            extra={"rewritten_fact_ids": len(colliding_fact_ids)},
+        )
+        return rewritten_results
+
+    @staticmethod
+    def _fact_signature(fact: ExtractedFact) -> tuple[str, str, str, str]:
+        """Return the semantic identity of an extracted fact candidate."""
+        return (
+            fact.entity_id,
+            fact.attribute,
+            fact.value,
+            fact.evidence_anchor_id,
+        )
+
+    @staticmethod
+    def _fact_with_collision_safe_id(fact: ExtractedFact) -> ExtractedFact:
+        """Return a fact with a deterministic source-grounded ID."""
+        return ExtractedFact(
+            fact_id=(
+                "fact_"
+                f"{fact.entity_id}_"
+                f"{fact.attribute}_"
+                f"{EntityExtractionEngine._machine_suffix(fact.value)}_"
+                f"{fact.evidence_anchor_id}"
+            ),
+            entity_id=fact.entity_id,
+            attribute=fact.attribute,
+            value=fact.value,
+            evidence_anchor_id=fact.evidence_anchor_id,
+            confidence=fact.confidence,
+        )
+
+    @staticmethod
+    def _machine_suffix(value: str) -> str:
+        """Return a stable machine-token suffix from human text."""
+        normalized = "".join(
+            character.lower() if character.isalnum() else "_"
+            for character in value
+        )
+        collapsed = "_".join(part for part in normalized.split("_") if part)
+        return collapsed[:80] or "value"
 
     def extract_scene(
         self,
@@ -102,7 +193,7 @@ class EntityExtractionEngine:
                 ),
             )
         )
-        self._validate_result(result=result, allowed_anchor_ids=anchor_ids)
+        result = self._validate_result(result=result, allowed_anchor_ids=anchor_ids)
         if result.scene_id != scene_id:
             raise ValueError(
                 "Extraction result has wrong scene_id for requested scene: "
@@ -124,10 +215,15 @@ class EntityExtractionEngine:
         self,
         result: ExtractionResult,
         allowed_anchor_ids: tuple[str, ...],
-    ) -> None:
+    ) -> ExtractionResult:
         """Validate extractor candidates against Story Import anchors."""
         allowed = set(allowed_anchor_ids)
         self._validate_unique_result_candidates(result)
+        if self._unknown_anchor_policy == "reject_candidate":
+            result = self._without_unknown_anchor_candidates(
+                result=result,
+                allowed_anchor_ids=allowed,
+            )
         for entity in result.entities:
             self._validate_entity(entity=entity, allowed_anchor_ids=allowed)
         for fact in result.facts:
@@ -142,6 +238,60 @@ class EntityExtractionEngine:
                 state_change=state_change,
                 allowed_anchor_ids=allowed,
             )
+        return result
+
+    @staticmethod
+    def _without_unknown_anchor_candidates(
+        result: ExtractionResult,
+        allowed_anchor_ids: set[str],
+    ) -> ExtractionResult:
+        """Return a copy with ungrounded candidates removed."""
+        filtered = ExtractionResult(
+            scene_id=result.scene_id,
+            entities=tuple(
+                entity
+                for entity in result.entities
+                if entity.evidence_anchor_id in allowed_anchor_ids
+            ),
+            facts=tuple(
+                fact
+                for fact in result.facts
+                if fact.evidence_anchor_id in allowed_anchor_ids
+            ),
+            relationships=tuple(
+                relationship
+                for relationship in result.relationships
+                if relationship.evidence_anchor_id in allowed_anchor_ids
+            ),
+            state_changes=tuple(
+                state_change
+                for state_change in result.state_changes
+                if state_change.valid_from_anchor_id in allowed_anchor_ids
+                and (
+                    state_change.valid_until_anchor_id is None
+                    or state_change.valid_until_anchor_id in allowed_anchor_ids
+                )
+            ),
+        )
+        rejected_count = (
+            len(result.entities)
+            + len(result.facts)
+            + len(result.relationships)
+            + len(result.state_changes)
+            - len(filtered.entities)
+            - len(filtered.facts)
+            - len(filtered.relationships)
+            - len(filtered.state_changes)
+        )
+        if rejected_count:
+            logger.warning(
+                "extraction_candidates_rejected_unknown_anchors",
+                extra={
+                    "scene_id": result.scene_id,
+                    "rejected_candidates": rejected_count,
+                },
+            )
+        return filtered
 
     @staticmethod
     def _validate_entity(

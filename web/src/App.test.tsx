@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -153,7 +153,7 @@ const worldPreviewPayload = {
     entity_sections: [
       {
         title: "Hangar (location)",
-        items: ["condition: Alarm active", "ownership: Academy"],
+        items: ["condition: Alarm active", "ownership: Academy", "owner: Zhao Chen's starship"],
       },
     ],
     evidence_summary: "2 verified world facts",
@@ -310,7 +310,10 @@ const characterPreviewPayload = {
       territory: { title: "Territory", items: [] },
       relationships: { title: "Relationships", items: ["Luna - Ally"] },
       current_limitations: { title: "Current Limitations", items: ["Injured arm"] },
-      recent_changes: { title: "Recent Changes", items: ["Equipped Rusty Dagger"] },
+      recent_changes: {
+        title: "Recent Changes",
+        items: ["display_name -> Mark", "race -> Human", "gender -> Male", "Equipped Rusty Dagger"],
+      },
       evidence_summary: "3 verified facts",
     },
   ],
@@ -524,7 +527,18 @@ const projectOutputsPayload = {
       item_count: 8,
     },
   ],
-  character_profiles: characterPreviewPayload.character_profiles,
+  character_profiles: [
+    ...characterPreviewPayload.character_profiles,
+    {
+      ...characterPreviewPayload.character_profiles[0],
+      character_id: "character_mark_duplicate",
+      recent_changes: {
+        title: "Recent Changes",
+        items: ["display_name -> Mark", "gender -> Male", "current_weapon -> Rusty Dagger"],
+      },
+      evidence_summary: "8 verified facts",
+    },
+  ],
   world_sheet: worldPreviewPayload.world_sheet,
 };
 
@@ -1878,7 +1892,7 @@ describe("App shell routing", () => {
       screen.getByLabelText("Source file"),
       new File(["Chapter 2\nA new import can begin."], "chapter_002.txt"),
     );
-    expect(screen.getByRole("button", { name: "Inspect import" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Inspect import" })).toBeEnabled();
   });
 
   it("creates default story metadata while saving the first import from a fresh project", async () => {
@@ -2018,8 +2032,18 @@ describe("App shell routing", () => {
                 runs: [
                   {
                     ...engineRunPayload,
+                    run_id: "run_old_succeeded",
                     status: "succeeded",
+                    status_updated_at: "2026-06-26T00:00:00.000Z",
+                    finished_at: "2026-06-26T00:00:00.000Z",
+                  },
+                  {
+                    ...engineRunPayload,
+                    run_id: "run_new_failed",
+                    status: "failed",
+                    status_updated_at: projectAlpha.updatedAt,
                     finished_at: projectAlpha.updatedAt,
+                    error_summary: "Parser could not read chapter content.",
                   },
                 ],
               }),
@@ -2031,7 +2055,13 @@ describe("App shell routing", () => {
             `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
           )
         ) {
-          return Promise.resolve(new Response(JSON.stringify({ snapshots: [snapshotPayload] })));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                snapshots: [{ ...snapshotPayload, run_id: "run_old_succeeded" }],
+              }),
+            ),
+          );
         }
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
@@ -2056,7 +2086,15 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
     expect(await screen.findByText("Chapter import")).toBeInTheDocument();
     expect(screen.getByText("8 scenes")).toBeInTheDocument();
-    expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
+    expect(await screen.findByText("Failed run")).toBeInTheDocument();
+    expect(screen.getByText("Succeeded run")).toBeInTheDocument();
+    const projectRunsSection = screen.getByRole("region", { name: "Project runs" });
+    const runStatuses = within(projectRunsSection).getAllByText(/^(Failed|Succeeded) run$/);
+    expect(runStatuses.map((status) => status.textContent)).toEqual([
+      "Failed run",
+      "Succeeded run",
+    ]);
+    expect(screen.getByText("No snapshot: run failed")).toBeInTheDocument();
     expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();
   });
 
@@ -2129,6 +2167,118 @@ describe("App shell routing", () => {
     expect(screen.queryByText("Canon snapshot ready")).not.toBeInTheDocument();
   });
 
+  it("shows import evidence failures without internal anchor IDs", async () => {
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ imports: [importRecordPayload] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                runs: [
+                  {
+                    ...engineRunPayload,
+                    status: "failed",
+                    finished_at: projectAlpha.updatedAt,
+                    error_summary:
+                      "Unknown evidence anchor: aevryn_import_bundle_chapter_010_scene_001_paragraph_023_sentence_002_anchor",
+                  },
+                  {
+                    ...engineRunPayload,
+                    run_id: "run_conflicting_fact",
+                    status: "failed",
+                    finished_at: projectAlpha.updatedAt,
+                    error_summary: "Conflicting fact: fact_1",
+                  },
+                  {
+                    ...engineRunPayload,
+                    run_id: "run_duplicate_world_section",
+                    status: "failed",
+                    finished_at: projectAlpha.updatedAt,
+                    error_summary: "World sheet section titles must be unique.",
+                  },
+                  {
+                    ...engineRunPayload,
+                    run_id: "run_provider_timeout",
+                    status: "failed",
+                    finished_at: projectAlpha.updatedAt,
+                    error_summary: "OpenAI extraction request timed out.",
+                  },
+                ],
+              }),
+            ),
+          );
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findAllByText("Failed run")).toHaveLength(4);
+    expect(
+      screen.getByText(
+        "Run error: Import evidence could not be matched during AI extraction. Review the import structure, then retry processing. If it repeats, split the import into smaller chapter batches.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Run error: AI extraction produced conflicting canon facts. Retry processing. If it repeats, review the import structure or split the import into smaller chapter batches.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Run error: World sheet output contained duplicate sections. Aevryn merged matching sections; retry processing.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Run error: AI extraction timed out while reading the provider response. Retry with a smaller chapter batch or increase the provider timeout for large imports.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Unknown evidence anchor/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/aevryn_import_bundle/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Conflicting fact/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/fact_1/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/World sheet section titles must be unique/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/OpenAI extraction request timed out/)).not.toBeInTheDocument();
+  });
+
   it("previews character profiles from the characters workspace tab", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
@@ -2164,8 +2314,14 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Mark" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Mark" })).toHaveLength(1);
+    expect(screen.getByRole("heading", { name: "Race" })).toBeInTheDocument();
+    expect(screen.getByText("Human")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Gender" })).toBeInTheDocument();
+    expect(screen.getByText("Male")).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
-    expect(screen.getByText("3 verified facts")).toBeInTheDocument();
+    expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
+    expect(screen.getByText("11 verified facts")).toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {
@@ -2309,8 +2465,10 @@ describe("App shell routing", () => {
     expect(
       screen.getAllByRole("heading", { name: "Hangar (location)" }).length,
     ).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("condition: Alarm active").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("ownership: Academy").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Condition: Alarm Active").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Ownership: Academy").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Owner: Zhao Chen's Starship").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Chen'S/)).not.toBeInTheDocument();
     expect(screen.getAllByText("2 verified world facts").length).toBeGreaterThanOrEqual(1);
   });
 

@@ -66,8 +66,8 @@ Final V1 acceptance validation:
 
 * V1 Engine Complete
 * Final V1 acceptance sweep passed
-* 742 automated tests passing
-* 140 frontend tests passing
+* 752 automated tests passing
+* 145 frontend tests passing
 * Deterministic rebuild validation
 * Cross-genre validation
 * 8-genre validation corpus

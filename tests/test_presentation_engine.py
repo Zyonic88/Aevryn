@@ -21,9 +21,13 @@ from aevryn import (
     SceneAnalyzer,
     SceneContextBuilder,
     SceneSheetView,
+    WorldEntityFact,
+    WorldEntityState,
     WorldSheetView,
+    WorldState,
     WorldStateBuilder,
 )
+from aevryn.core import Evidence
 from tests.test_scene_context_builder import build_database, build_imported_source
 from tests.test_world_engine import build_database as build_world_database
 
@@ -292,6 +296,73 @@ def test_presentation_engine_builds_world_sheet() -> None:
     assert "# World Sheet" in markdown
     assert "Northern Fortress (location)" in markdown
     assert "damage: Walls damaged" in markdown
+
+
+def test_presentation_engine_merges_duplicate_world_section_titles() -> None:
+    """World sheet rendering tolerates duplicate AI-created world labels."""
+    world_state = WorldState(
+        chapter_index=4,
+        entities=(
+            WorldEntityState(
+                entity_id="location_raven_hall",
+                entity_type="location",
+                display_name="Raven Hall",
+                chapter_index=4,
+                facts=(
+                    WorldEntityFact(
+                        attribute="condition",
+                        value="Under curfew",
+                        evidence=Evidence(
+                            evidence_id="evidence_raven_hall_condition",
+                            source_id="source_demo",
+                            chapter_id="chapter_004",
+                            scene_id="scene_001",
+                            paragraph_index=1,
+                            sentence_index=1,
+                            quote="Raven Hall was under curfew.",
+                            confidence=1.0,
+                        ),
+                        valid_from_chapter_id="chapter_004",
+                        valid_from_scene_id="scene_001",
+                    ),
+                ),
+            ),
+            WorldEntityState(
+                entity_id="location_raven_hall_alias",
+                entity_type="location",
+                display_name="Raven Hall",
+                chapter_index=4,
+                facts=(
+                    WorldEntityFact(
+                        attribute="security",
+                        value="Guarded gates",
+                        evidence=Evidence(
+                            evidence_id="evidence_raven_hall_security",
+                            source_id="source_demo",
+                            chapter_id="chapter_004",
+                            scene_id="scene_002",
+                            paragraph_index=1,
+                            sentence_index=1,
+                            quote="The gates were guarded.",
+                            confidence=1.0,
+                        ),
+                        valid_from_chapter_id="chapter_004",
+                        valid_from_scene_id="scene_002",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    state = PresentationEngine().world_sheet(state=world_state)
+
+    assert tuple(section.title for section in state.entity_sections) == (
+        "Raven Hall (location)",
+    )
+    assert state.entity_sections[0].items == (
+        "condition: Under curfew",
+        "security: Guarded gates",
+    )
 
 
 def test_export_engine_writes_world_state_json() -> None:

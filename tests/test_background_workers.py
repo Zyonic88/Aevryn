@@ -505,6 +505,122 @@ def test_background_worker_marks_run_failed_after_handler_error() -> None:
     assert run.finished_at == FINISHED
 
 
+def test_background_worker_sanitizes_unknown_anchor_failures() -> None:
+    """Worker failures should not expose internal evidence anchor IDs."""
+    repository = seeded_repository()
+    queue = InMemoryJobQueue()
+    BackgroundJobService(repository, queue, "0.1.0").submit_import_processing_job(
+        job_id="job_demo",
+        run_id="run_demo",
+        project_id="project_demo",
+        story_id="story_demo",
+        import_id="import_demo",
+        queued_at=NOW,
+    )
+
+    final_job = BackgroundWorker(
+        repository,
+        queue,
+        UnknownAnchorFailingHandler(),
+    ).process_next(started_at=STARTED, finished_at=FINISHED)
+
+    assert final_job is not None
+    assert final_job.status == "failed"
+    assert "Unknown evidence anchor" not in final_job.error_summary
+    assert "missing_anchor" not in final_job.error_summary
+    assert "Import evidence could not be matched" in final_job.error_summary
+    run = repository.get_engine_run_for_worker("run_demo")
+    assert "Unknown evidence anchor" not in run.error_summary
+    assert "missing_anchor" not in run.error_summary
+    assert "split the import into smaller chapter batches" in run.error_summary
+
+
+def test_background_worker_sanitizes_conflicting_fact_failures() -> None:
+    """Worker failures should not expose internal fact IDs."""
+    repository = seeded_repository()
+    queue = InMemoryJobQueue()
+    BackgroundJobService(repository, queue, "0.1.0").submit_import_processing_job(
+        job_id="job_demo",
+        run_id="run_demo",
+        project_id="project_demo",
+        story_id="story_demo",
+        import_id="import_demo",
+        queued_at=NOW,
+    )
+
+    final_job = BackgroundWorker(
+        repository,
+        queue,
+        ConflictingFactFailingHandler(),
+    ).process_next(started_at=STARTED, finished_at=FINISHED)
+
+    assert final_job is not None
+    assert final_job.status == "failed"
+    assert "Conflicting fact" not in final_job.error_summary
+    assert "fact_1" not in final_job.error_summary
+    assert "AI extraction produced conflicting canon facts" in final_job.error_summary
+    run = repository.get_engine_run_for_worker("run_demo")
+    assert "Conflicting fact" not in run.error_summary
+    assert "fact_1" not in run.error_summary
+    assert "review the import structure" in run.error_summary
+
+
+def test_background_worker_sanitizes_duplicate_world_section_failures() -> None:
+    """Worker failures should describe recoverable world-sheet presentation issues."""
+    repository = seeded_repository()
+    queue = InMemoryJobQueue()
+    BackgroundJobService(repository, queue, "0.1.0").submit_import_processing_job(
+        job_id="job_demo",
+        run_id="run_demo",
+        project_id="project_demo",
+        story_id="story_demo",
+        import_id="import_demo",
+        queued_at=NOW,
+    )
+
+    final_job = BackgroundWorker(
+        repository,
+        queue,
+        DuplicateWorldSectionFailingHandler(),
+    ).process_next(started_at=STARTED, finished_at=FINISHED)
+
+    assert final_job is not None
+    assert final_job.status == "failed"
+    assert "World sheet section titles must be unique" not in final_job.error_summary
+    assert "duplicate sections" in final_job.error_summary
+    run = repository.get_engine_run_for_worker("run_demo")
+    assert "World sheet section titles must be unique" not in run.error_summary
+    assert "retry processing" in run.error_summary
+
+
+def test_background_worker_sanitizes_provider_timeout_failures() -> None:
+    """Worker failures should give actionable guidance for provider timeouts."""
+    repository = seeded_repository()
+    queue = InMemoryJobQueue()
+    BackgroundJobService(repository, queue, "0.1.0").submit_import_processing_job(
+        job_id="job_demo",
+        run_id="run_demo",
+        project_id="project_demo",
+        story_id="story_demo",
+        import_id="import_demo",
+        queued_at=NOW,
+    )
+
+    final_job = BackgroundWorker(
+        repository,
+        queue,
+        ProviderTimeoutFailingHandler(),
+    ).process_next(started_at=STARTED, finished_at=FINISHED)
+
+    assert final_job is not None
+    assert final_job.status == "failed"
+    assert "read operation timed out" not in final_job.error_summary
+    assert "AI extraction timed out" in final_job.error_summary
+    run = repository.get_engine_run_for_worker("run_demo")
+    assert "read operation timed out" not in run.error_summary
+    assert "smaller chapter batch" in run.error_summary
+
+
 def test_background_worker_logs_failure_duration_without_payload(
     caplog: LogCaptureFixture,
 ) -> None:
@@ -692,6 +808,28 @@ def test_project_import_snapshot_handler_uses_injected_extractor() -> None:
     assert "Lyra opened the sky gate" not in snapshots[0].serialized_output
 
 
+def test_project_import_snapshot_handler_filters_unknown_provider_anchors() -> None:
+    """Provider anchor drift should not fail the whole import processing run."""
+    repository = seeded_repository()
+    import_content_store: ImportContentStore = StaticImportContentStore(
+        b"Chapter 1\n\nLyra opened the sky gate."
+    )
+    handler = ProjectImportSnapshotHandler(
+        repository=repository,
+        import_content_store=import_content_store,
+        extractor=MixedAnchorSceneExtractor(),
+    )
+
+    snapshots = handler.process(background_job())
+
+    assert len(snapshots) == 1
+    snapshot_payload = json.loads(snapshots[0].serialized_output)
+    assert snapshot_payload["accepted_entity_count"] == 1
+    assert snapshot_payload["accepted_fact_count"] == 2
+    assert "character_ghost" not in snapshots[0].serialized_output
+    assert "missing_anchor" not in snapshots[0].serialized_output
+
+
 @dataclass
 class RecordingHandler:
     """Test handler that records processed jobs."""
@@ -728,6 +866,38 @@ class FailingHandler:
     def process(self, _job: BackgroundJob) -> None:
         """Raise a deterministic worker failure."""
         raise RuntimeError("Worker failure.")
+
+
+class UnknownAnchorFailingHandler:
+    """Test handler that raises an internal anchor mismatch."""
+
+    def process(self, _job: BackgroundJob) -> None:
+        """Raise a deterministic unknown-anchor failure."""
+        raise ValueError("Unknown evidence anchor: missing_anchor")
+
+
+class ConflictingFactFailingHandler:
+    """Test handler that raises an internal canon conflict."""
+
+    def process(self, _job: BackgroundJob) -> None:
+        """Raise a deterministic conflicting-fact failure."""
+        raise ValueError("Conflicting fact: fact_1")
+
+
+class DuplicateWorldSectionFailingHandler:
+    """Test handler that raises an internal presentation duplicate."""
+
+    def process(self, _job: BackgroundJob) -> None:
+        """Raise a deterministic duplicate world-section failure."""
+        raise ValueError("World sheet section titles must be unique.")
+
+
+class ProviderTimeoutFailingHandler:
+    """Test handler that raises a normalized provider timeout."""
+
+    def process(self, _job: BackgroundJob) -> None:
+        """Raise a deterministic provider timeout failure."""
+        raise ValueError("OpenAI extraction request timed out.")
 
 
 class FailingEnqueueQueue(InMemoryJobQueue):
@@ -786,6 +956,51 @@ class RecordingSceneExtractor:
                     attribute="role",
                     value="Sky Gate Keeper",
                     evidence_anchor_id=anchor_id,
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
+class MixedAnchorSceneExtractor:
+    """Test extractor that emits one grounded and one ungrounded candidate."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return provider-like candidates with one anchor mismatch."""
+        anchor_id = scene.evidence_anchor_ids[0]
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_lyra",
+                    entity_type="character",
+                    display_name="Lyra",
+                    evidence_anchor_id=anchor_id,
+                    confidence=0.95,
+                ),
+                ExtractedEntity(
+                    entity_id="character_ghost",
+                    entity_type="character",
+                    display_name="Ghost",
+                    evidence_anchor_id="missing_anchor",
+                    confidence=0.95,
+                ),
+            ),
+            facts=(
+                ExtractedFact(
+                    fact_id="fact_character_lyra_role",
+                    entity_id="character_lyra",
+                    attribute="role",
+                    value="Sky Gate Keeper",
+                    evidence_anchor_id=anchor_id,
+                    confidence=0.91,
+                ),
+                ExtractedFact(
+                    fact_id="fact_character_ghost_role",
+                    entity_id="character_ghost",
+                    attribute="role",
+                    value="Unseen Passenger",
+                    evidence_anchor_id="missing_anchor",
                     confidence=0.91,
                 ),
             ),

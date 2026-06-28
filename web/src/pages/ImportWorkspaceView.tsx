@@ -216,6 +216,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       latestRunByImportId.set(run.import_id, run);
     }
   }
+  const projectRunsForActiveStory = [
+    ...(runsQuery.data?.runs ?? []).filter((run) => run.story_id === activeStoryId),
+  ].sort((left, right) => runSortTimestamp(right).localeCompare(runSortTimestamp(left)));
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -583,9 +586,6 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               })}
             </div>
           ) : null}
-          {drainLocalWorker.isPending ? (
-            <p className="field-note">Processing queued import.</p>
-          ) : null}
         </section>
       ) : null}
 
@@ -602,9 +602,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             Submit a saved import for background processing.
           </EmptyState>
         ) : null}
-        {(runsQuery.data?.runs ?? []).length > 0 ? (
+        {projectRunsForActiveStory.length > 0 ? (
           <div className="compact-list">
-            {(runsQuery.data?.runs ?? []).filter((run) => run.story_id === activeStoryId).map((run) => {
+            {projectRunsForActiveStory.map((run) => {
               const errorLabel = runErrorLabel(run);
               return (
                 <div key={run.run_id} className="compact-row">
@@ -865,7 +865,7 @@ function runSortTimestamp(run: EngineRun): string {
 
 function runErrorLabel(run: EngineRun): string {
   if (run.error_summary) {
-    return `Run error: ${run.error_summary}`;
+    return `Run error: ${runErrorSummary(run.error_summary)}`;
   }
   if (isStaleActiveRun(run)) {
     return "Run error: Processing timed out before completion.";
@@ -874,6 +874,36 @@ function runErrorLabel(run: EngineRun): string {
     return "Run error: No error summary provided.";
   }
   return "";
+}
+
+function runErrorSummary(summary: string): string {
+  if (summary.startsWith("Unknown evidence anchor:")) {
+    return (
+      "Import evidence could not be matched during AI extraction. " +
+      "Review the import structure, then retry processing. If it repeats, " +
+      "split the import into smaller chapter batches."
+    );
+  }
+  if (summary.startsWith("Conflicting fact:")) {
+    return (
+      "AI extraction produced conflicting canon facts. Retry processing. " +
+      "If it repeats, review the import structure or split the import into " +
+      "smaller chapter batches."
+    );
+  }
+  if (summary === "World sheet section titles must be unique.") {
+    return (
+      "World sheet output contained duplicate sections. Aevryn merged matching " +
+      "sections; retry processing."
+    );
+  }
+  if (summary === "OpenAI extraction request timed out.") {
+    return (
+      "AI extraction timed out while reading the provider response. Retry with " +
+      "a smaller chapter batch or increase the provider timeout for large imports."
+    );
+  }
+  return summary;
 }
 
 function isStaleActiveRun(run: EngineRun): boolean {

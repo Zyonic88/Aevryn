@@ -187,6 +187,8 @@ If `AEVRYN_EXTRACTION_MODE` is absent or `demo`, no external model receives stor
 
 If `AEVRYN_EXTRACTION_MODE=openai`, `AEVRYN_OPENAI_API_KEY` and `AEVRYN_OPENAI_MODEL` are required before the app starts.
 
+Provider-backed extraction runs one evidence-bounded scene request at a time. Very large imports can exceed the default per-request timeout if a provider response stalls. For internal alpha testing, prefer smaller chapter batches first; raise `AEVRYN_OPENAI_TIMEOUT_SECONDS` only when validating large imports and track the latency separately from correctness.
+
 Invalid modes, non-positive timeouts, and non-positive response byte limits fail at app creation time.
 
 ## Authentication Middleware

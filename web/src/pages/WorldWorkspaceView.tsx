@@ -8,6 +8,7 @@ import {
   DeveloperPreviewToggle,
   ProjectOutputSummaryPanel,
 } from "../output/ProjectOutputSummaryPanel";
+import { readableOutputItems } from "../output/readableOutput";
 import { buildWorldPreviewPayload, canSubmitWorldPreviewInput } from "../previewing/previewPayload";
 import type { ProjectSummary } from "../projects/projectStore";
 
@@ -152,9 +153,6 @@ function WorldPreviewResult({ result }: { result: WorldPreview }) {
   return (
     <section className="project-panel" aria-label="World preview result">
       <h2>World Sheet</h2>
-      <p className="result-summary">
-        {world.chapter_label} for {result.scene_id}.
-      </p>
       {world.entity_sections.length > 0 ? (
         <div className="profile-grid">
           {world.entity_sections.map((section) => (
@@ -172,14 +170,15 @@ function WorldPreviewResult({ result }: { result: WorldPreview }) {
 }
 
 function WorldEntitySection({ section }: { section: OutputSection }) {
+  const items = readableOutputItems(section.items);
   return (
     <article className="profile-card">
       <header>
         <h3>{section.title}</h3>
       </header>
-      {section.items.length > 0 ? (
+      {items.length > 0 ? (
         <ul className="world-item-list">
-          {section.items.map((item, index) => (
+          {items.map((item, index) => (
             <li key={`${index}-${item}`}>{item}</li>
           ))}
         </ul>

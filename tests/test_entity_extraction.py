@@ -72,6 +72,115 @@ class BadAnchorExtractor:
         )
 
 
+class MixedAnchorExtractor:
+    """Extractor that returns grounded and ungrounded candidates."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return mixed candidates for tolerant provider workflow tests."""
+        first_anchor = scene.evidence_anchor_ids[0]
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_mark",
+                    entity_type="character",
+                    display_name="Mark",
+                    evidence_anchor_id=first_anchor,
+                    confidence=0.95,
+                ),
+                ExtractedEntity(
+                    entity_id="character_ghost",
+                    entity_type="character",
+                    display_name="Ghost",
+                    evidence_anchor_id="missing_anchor",
+                    confidence=0.95,
+                ),
+            ),
+            facts=(
+                ExtractedFact(
+                    fact_id="fact_mark_weapon",
+                    entity_id="character_mark",
+                    attribute="current_weapon",
+                    value="Iron Sword",
+                    evidence_anchor_id=first_anchor,
+                    confidence=0.9,
+                ),
+                ExtractedFact(
+                    fact_id="fact_ghost_weapon",
+                    entity_id="character_ghost",
+                    attribute="current_weapon",
+                    value="Shadow Blade",
+                    evidence_anchor_id="missing_anchor",
+                    confidence=0.9,
+                ),
+            ),
+            relationships=(
+                ExtractedRelationship(
+                    source_entity_id="character_mark",
+                    relationship_type="owns",
+                    target_entity_id="item_iron_sword",
+                    evidence_anchor_id=first_anchor,
+                    confidence=0.85,
+                ),
+                ExtractedRelationship(
+                    source_entity_id="character_ghost",
+                    relationship_type="owns",
+                    target_entity_id="item_shadow_blade",
+                    evidence_anchor_id="missing_anchor",
+                    confidence=0.85,
+                ),
+            ),
+            state_changes=(
+                ExtractedStateChange(
+                    entity_id="character_mark",
+                    attribute="current_weapon",
+                    value="Iron Sword",
+                    valid_from_anchor_id=first_anchor,
+                    confidence=0.9,
+                ),
+                ExtractedStateChange(
+                    entity_id="character_ghost",
+                    attribute="current_weapon",
+                    value="Shadow Blade",
+                    valid_from_anchor_id="missing_anchor",
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
+class ReusedFactIdExtractor:
+    """Extractor that reuses one generic fact ID across scenes."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a scene-specific fact with a generic reused ID."""
+        first_anchor = scene.evidence_anchor_ids[0]
+        scene_suffix = scene.scene_id.rsplit("_", maxsplit=1)[-1]
+        entity_id = f"character_mark_{scene_suffix}"
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id=entity_id,
+                    entity_type="character",
+                    display_name=f"Mark {scene_suffix}",
+                    evidence_anchor_id=first_anchor,
+                    confidence=0.95,
+                ),
+            ),
+            facts=(
+                ExtractedFact(
+                    fact_id="fact_1",
+                    entity_id=entity_id,
+                    attribute="current_weapon",
+                    value=f"Iron Sword {scene_suffix}",
+                    evidence_anchor_id=first_anchor,
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
 class BadConfidenceExtractor:
     """Extractor that returns an invalid confidence score."""
 
@@ -206,6 +315,66 @@ def test_extraction_rejects_candidates_without_known_anchor() -> None:
 
     with pytest.raises(ValueError, match="Unknown evidence anchor"):
         engine.extract_imported_source(imported)
+
+
+def test_extraction_can_filter_candidates_without_known_anchor() -> None:
+    """Provider workflow can quarantine ungrounded candidates."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(
+        extractor=MixedAnchorExtractor(),
+        unknown_anchor_policy="reject_candidate",
+    )
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert tuple(entity.entity_id for entity in result.entities) == ("character_mark",)
+    assert tuple(fact.fact_id for fact in result.facts) == ("fact_mark_weapon",)
+    assert tuple(
+        relationship.source_entity_id for relationship in result.relationships
+    ) == ("character_mark",)
+    assert tuple(
+        state_change.entity_id for state_change in result.state_changes
+    ) == ("character_mark",)
+
+
+def test_extraction_rewrites_cross_scene_fact_id_collisions() -> None:
+    """Generic AI fact IDs are made unique before Canon sees them."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=(
+            "Chapter 1\n"
+            "Mark lifted the iron sword.\n\n"
+            "Chapter 2\n"
+            "Mark lowered the iron sword."
+        ),
+    )
+    engine = EntityExtractionEngine(extractor=ReusedFactIdExtractor())
+
+    results = engine.extract_imported_source(imported)
+
+    fact_ids = tuple(
+        fact.fact_id
+        for result in results
+        for fact in result.facts
+    )
+    assert len(fact_ids) == 2
+    assert len(set(fact_ids)) == 2
+    assert "fact_1" not in fact_ids
+    assert all(fact_id.startswith("fact_character_mark_") for fact_id in fact_ids)
+
+
+def test_extraction_rejects_invalid_unknown_anchor_policy() -> None:
+    """Unknown anchor policy names are explicit configuration errors."""
+    with pytest.raises(ValueError, match="Unknown anchor policy"):
+        EntityExtractionEngine(
+            extractor=FakeExtractor(),
+            unknown_anchor_policy=cast(Any, "ignore"),
+        )
 
 
 def test_extraction_rejects_invalid_confidence() -> None:

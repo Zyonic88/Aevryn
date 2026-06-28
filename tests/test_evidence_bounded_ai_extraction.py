@@ -59,6 +59,22 @@ class RecordingOpenAITransport:
         return self.response_payload
 
 
+class TimeoutOpenAITransport:
+    """Transport test double that simulates a provider read timeout."""
+
+    def post_json(
+        self,
+        *,
+        url: str,
+        headers: Mapping[str, str],
+        payload: Mapping[str, object],
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> dict[str, object]:
+        """Raise a deterministic timeout."""
+        raise TimeoutError("The read operation timed out")
+
+
 def imported_source_text() -> str:
     """Return source text for AI extraction tests."""
     return """Chapter 1
@@ -196,6 +212,18 @@ def test_openai_responses_client_rejects_missing_output_text() -> None:
     )
 
     with pytest.raises(ValueError, match="did not include output text"):
+        client.complete("extract this scene")
+
+
+def test_openai_responses_client_reports_timeouts_without_transport_details() -> None:
+    """OpenAI client should normalize provider read timeouts."""
+    client = OpenAIResponsesAIExtractionClient(
+        api_key="test-key",
+        model="test-model",
+        transport=TimeoutOpenAITransport(),
+    )
+
+    with pytest.raises(ValueError, match="OpenAI extraction request timed out"):
         client.complete("extract this scene")
 
 

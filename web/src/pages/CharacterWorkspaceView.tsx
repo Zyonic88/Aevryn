@@ -12,6 +12,7 @@ import {
   buildCharacterPreviewPayload,
   canSubmitCharacterPreviewInput,
 } from "../previewing/previewPayload";
+import { readableOutputItems } from "../output/readableOutput";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
@@ -179,7 +180,6 @@ function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
   return (
     <article className="profile-card">
       <header>
-        <p className="eyebrow">{profile.character_id}</p>
         <h3>{profile.display_name}</h3>
         <p>{profile.subtitle}</p>
       </header>
@@ -200,12 +200,13 @@ function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
 }
 
 function ProfileSection({ section }: { section: OutputSection }) {
+  const items = readableOutputItems(section.items);
   return (
     <section className="profile-section">
       <h4>{section.title}</h4>
-      {section.items.length > 0 ? (
+      {items.length > 0 ? (
         <ul>
-          {section.items.map((item) => (
+          {items.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>

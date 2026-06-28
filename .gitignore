@@ -30,6 +30,7 @@ web/.vite/
 
 # Local environment
 .codex/
+.local/
 .env
 .env.*
 
