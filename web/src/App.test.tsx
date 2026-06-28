@@ -1622,12 +1622,12 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
     expect(await screen.findByText("No saved imports")).toBeInTheDocument();
-    await user.clear(screen.getByLabelText("Import reference"));
-    await user.type(screen.getByLabelText("Import reference"), "import_alpha");
+    expect(screen.getByText("Advanced import references")).toBeVisible();
+    expect(screen.getByLabelText("Import reference")).not.toBeVisible();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import metadata" }));
+    await user.click(await screen.findByRole("button", { name: "Save import" }));
 
     expect(
       await screen.findByText("Saved chapter_001.txt for this story."),
@@ -1638,6 +1638,117 @@ describe("App shell routing", () => {
 
     expect(await screen.findByText("Submitted chapter_001.txt for processing.")).toBeInTheDocument();
     expect(await screen.findByText("Pending run")).toBeInTheDocument();
+  });
+
+  it("creates default story metadata while saving the first import from a fresh project", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    let createdStoryId = "";
+    let createdStoryTitle = "";
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+        if (init?.method === "POST") {
+          const body = JSON.parse(String(init.body));
+          createdStoryId = body.story_id;
+          createdStoryTitle = body.title;
+          return Promise.resolve(new Response(JSON.stringify({
+            story_id: body.story_id,
+            project_id: projectAlphaPayload.project_id,
+            title: body.title,
+            created_at: body.now,
+            updated_at: body.now,
+          })));
+        }
+        if (createdStoryId) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                stories: [
+                  {
+                    story_id: createdStoryId,
+                    project_id: projectAlphaPayload.project_id,
+                    title: createdStoryTitle,
+                    created_at: projectAlpha.updatedAt,
+                    updated_at: projectAlpha.updatedAt,
+                  },
+                ],
+              }),
+            ),
+          );
+        }
+        return Promise.resolve(new Response(JSON.stringify({ stories: [] })));
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/story_alpha_story/imports`,
+        )
+      ) {
+        if (init?.method === "POST") {
+          const body = JSON.parse(String(init.body));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...importRecordPayload,
+                story_id: "story_alpha_story",
+                import_id: body.import_id,
+                source_id: body.source_id,
+                filename: body.filename,
+                created_at: body.now,
+              }),
+            ),
+          );
+        }
+        return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+        return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/story_alpha_story/snapshots?snapshot_kind=canon`,
+        )
+      ) {
+        return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+      }
+      if (url.endsWith(API_PATHS.sourceFormats)) {
+        return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+      }
+      if (url.endsWith(API_PATHS.importsInspect)) {
+        return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
+      }
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Aevryn will create a story record when you save this import.")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(await screen.findByRole("button", { name: "Save import" }));
+
+    expect(await screen.findByText("Saved chapter_001.txt for this story.")).toBeInTheDocument();
+    expect(createdStoryTitle).toBe("Alpha Story");
+    expect(createdStoryId).toBe("story_alpha_story");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`),
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("restores persisted imports runs and snapshot availability after refresh", async () => {
