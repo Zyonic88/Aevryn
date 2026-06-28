@@ -370,6 +370,59 @@ const snapshotPayload = {
   serialized_output: "{\"source_id\":\"source_alpha\"}",
   created_at: projectAlpha.updatedAt,
 };
+const projectStatusPayload = {
+  project_id: projectAlpha.id,
+  status: "succeeded",
+  story_count: 1,
+  import_count: 1,
+  run_count: 1,
+  latest_import: {
+    import_id: importRecordPayload.import_id,
+    story_id: storyAlphaPayload.story_id,
+    filename: importRecordPayload.filename,
+    source_format: importRecordPayload.source_format,
+    created_at: importRecordPayload.created_at,
+  },
+  latest_engine_run: {
+    run_id: engineRunPayload.run_id,
+    story_id: storyAlphaPayload.story_id,
+    import_id: importRecordPayload.import_id,
+    status: "succeeded",
+    started_at: engineRunPayload.started_at,
+    status_updated_at: projectAlpha.updatedAt,
+    finished_at: projectAlpha.updatedAt,
+    error_summary: "",
+    job_ref: engineRunPayload.job_ref,
+  },
+  worker: {
+    state: "idle",
+    total_jobs: 1,
+    queued_jobs: 0,
+    running_jobs: 0,
+    succeeded_jobs: 1,
+    failed_jobs: 0,
+    next_job_id: "",
+  },
+  snapshots: {
+    available: true,
+    count: 1,
+    latest_snapshot_id: snapshotPayload.snapshot_id,
+    latest_snapshot_kind: snapshotPayload.snapshot_kind,
+  },
+  latest_failure_summary: "",
+  recent_workflow_events: [
+    {
+      event_type: "snapshot_created",
+      status: "succeeded",
+      occurred_at: projectAlpha.updatedAt,
+      story_id: storyAlphaPayload.story_id,
+      import_id: "",
+      run_id: engineRunPayload.run_id,
+      snapshot_id: snapshotPayload.snapshot_id,
+      summary: "Created canon snapshot.",
+    },
+  ],
+};
 
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
@@ -463,6 +516,9 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
           return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
         }
         if (
           url.endsWith(
@@ -747,6 +803,38 @@ describe("App shell routing", () => {
     expect(screen.getByRole("link", { name: "Characters" })).toHaveAttribute(
       "aria-current",
       "page",
+    );
+  });
+
+  it("renders project monitoring from API-provided status", async () => {
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/monitoring"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Monitoring" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(await screen.findByRole("region", { name: "API health" })).toHaveTextContent("ok");
+    expect(screen.getByRole("region", { name: "Current project run state" })).toHaveTextContent(
+      "succeeded",
+    );
+    expect(screen.getByRole("region", { name: "Current project run state" })).toHaveTextContent(
+      "idle",
+    );
+    expect(screen.getByRole("region", { name: "Latest failure" })).toHaveTextContent(
+      "No recent failure",
+    );
+    expect(screen.getByRole("region", { name: "Snapshot availability" })).toHaveTextContent(
+      "snapshot_run_alpha_canon",
+    );
+    expect(screen.getByRole("region", { name: "Recent workflow events" })).toHaveTextContent(
+      "Created canon snapshot.",
     );
   });
 

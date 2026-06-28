@@ -10,6 +10,7 @@ import { CharacterWorkspaceView } from "./CharacterWorkspaceView";
 import { ContinuityWorkspaceView } from "./ContinuityWorkspaceView";
 import { ExportWorkspaceView } from "./ExportWorkspaceView";
 import { ImportWorkspaceView } from "./ImportWorkspaceView";
+import { MonitoringWorkspaceView } from "./MonitoringWorkspaceView";
 import { PromptWorkspaceView } from "./PromptWorkspaceView";
 import { SceneWorkspaceView } from "./SceneWorkspaceView";
 import { SettingsWorkspaceView } from "./SettingsWorkspaceView";
@@ -19,6 +20,7 @@ import { WorldWorkspaceView } from "./WorldWorkspaceView";
 
 const workspaceTabs = [
   { id: "overview", label: "Overview" },
+  { id: "monitoring", label: "Monitoring" },
   { id: "story", label: "Story" },
   { id: "import", label: "Import" },
   { id: "characters", label: "Characters" },
@@ -109,6 +111,9 @@ function WorkspaceTabContent({
 }) {
   if (tabId === "import") {
     return <ImportWorkspaceView project={project} />;
+  }
+  if (tabId === "monitoring") {
+    return <MonitoringWorkspaceView project={project} />;
   }
   if (tabId === "story") {
     return <StoryWorkspaceView project={project} />;

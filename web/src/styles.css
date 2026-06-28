@@ -374,6 +374,8 @@ input:focus {
 
   .dashboard-grid,
   .metric-grid,
+  .monitoring-detail-grid,
+  .monitoring-event-row,
   .inline-form,
   .workspace-shell {
     grid-template-columns: 1fr;
@@ -480,6 +482,60 @@ select:focus {
   overflow-wrap: anywhere;
   color: #667386;
   font-size: 13px;
+}
+
+.monitoring-stack,
+.monitoring-event-list {
+  display: grid;
+  gap: 12px;
+}
+
+.monitoring-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.monitoring-detail-grid div,
+.monitoring-event-row {
+  padding: 12px;
+  border: 1px solid #e1e7ef;
+  border-radius: 6px;
+  background: #fbfcfe;
+}
+
+.monitoring-detail-grid dt {
+  color: #667386;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.monitoring-detail-grid dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: #111722;
+  font-weight: 700;
+}
+
+.monitoring-event-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(80px, 0.5fr) minmax(180px, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.monitoring-event-row span {
+  overflow-wrap: anywhere;
+  color: #667386;
+  font-size: 13px;
+}
+
+.monitoring-note {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #536174;
+  font-weight: 700;
 }
 
 .field-note {
