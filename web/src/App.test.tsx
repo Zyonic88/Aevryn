@@ -951,6 +951,22 @@ describe("App shell routing", () => {
     expect(screen.queryByText("source_alpha_chapter_007_scene_001")).not.toBeInTheDocument();
   });
 
+  it("shows web import as unavailable until permission checks exist", async () => {
+    storeAuthenticatedProject();
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Web Import" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Source URL")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Check permissions" })).toBeDisabled();
+    expect(
+      screen.getByText("Unavailable: permission checks are required before web intake."),
+    ).toBeInTheDocument();
+  });
+
   it("inspects selected source files from the import workspace tab", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();

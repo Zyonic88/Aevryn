@@ -357,6 +357,20 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         </form>
       </section>
 
+      <section className="project-panel" aria-label="Web import">
+        <h2>Web Import</h2>
+        <div className="import-form">
+          <label>
+            Source URL
+            <input value="" placeholder="https://example.com/story" disabled readOnly />
+          </label>
+          <p className="field-note">Unavailable: permission checks are required before web intake.</p>
+          <button type="button" className="secondary-button" disabled>
+            Check permissions
+          </button>
+        </div>
+      </section>
+
       {inspectionResult ? (
         <section className="project-panel" aria-label="Import inspection result">
           <h2>Import Structure</h2>

@@ -114,6 +114,7 @@ Phase 7 progress:
 - Supported upload extensions from the API now populate the browser file picker accept list, and app coverage exercises TXT, Markdown, HTML, FB2, DOCX, ODT, and EPUB through the upload-to-inspect path
 - Import workspace now reads story-scoped canon snapshots and labels project runs with snapshot availability after refresh
 - Failed import runs now render stable no-snapshot and run-error labels after refresh
+- Web Import is visible as an unavailable, permission-check-gated placeholder; no URL fetching is enabled
 
 ---
 
