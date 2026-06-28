@@ -122,6 +122,12 @@ export const engineRunListSchema = z.object({
   runs: z.array(engineRunSchema),
 });
 
+export const workerProcessSchema = z.object({
+  claimed_jobs: z.number(),
+  succeeded_jobs: z.number(),
+  failed_jobs: z.number(),
+});
+
 export const projectStatusImportSchema = z.object({
   import_id: z.string(),
   story_id: z.string(),
@@ -209,6 +215,10 @@ export const projectOutputCanonSummarySchema = z.object({
   accepted_relationship_count: z.number(),
   accepted_state_change_count: z.number(),
   rejected_candidate_count: z.number(),
+  chapter_scene_counts: z.array(z.object({
+    chapter_index: z.number(),
+    scene_count: z.number(),
+  })),
 });
 
 export const projectOutputSurfaceSchema = z.object({
@@ -429,6 +439,7 @@ export type ImportRecord = z.infer<typeof importRecordSchema>;
 export type ImportList = z.infer<typeof importListSchema>;
 export type EngineRun = z.infer<typeof engineRunSchema>;
 export type EngineRunList = z.infer<typeof engineRunListSchema>;
+export type WorkerProcess = z.infer<typeof workerProcessSchema>;
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 export type ProjectOutputCanonSummary = z.infer<typeof projectOutputCanonSummarySchema>;
 export type ProjectOutputSurface = z.infer<typeof projectOutputSurfaceSchema>;

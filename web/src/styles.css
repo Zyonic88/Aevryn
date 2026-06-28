@@ -115,8 +115,12 @@ input:focus {
 }
 
 .primary-button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   background: #7d91a8;
+}
+
+.primary-button[aria-busy="true"]:disabled {
+  cursor: wait;
 }
 
 .ghost-button {

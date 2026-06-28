@@ -466,54 +466,60 @@ const projectOutputsPayload = {
     accepted_relationship_count: 1,
     accepted_state_change_count: 2,
     rejected_candidate_count: 0,
+    chapter_scene_counts: [
+      { chapter_index: 1, scene_count: 2 },
+      { chapter_index: 2, scene_count: 2 },
+      { chapter_index: 3, scene_count: 2 },
+      { chapter_index: 4, scene_count: 2 },
+    ],
   },
   surfaces: [
     {
       surface: "characters",
       title: "Characters",
-      status: "succeeded",
+      status: "ready",
       summary: "2 accepted character or entity records are available from the latest canon snapshot.",
       item_count: 2,
     },
     {
       surface: "world",
       title: "World",
-      status: "succeeded",
+      status: "ready",
       summary: "1 accepted world relationship is available from the latest canon snapshot.",
       item_count: 1,
     },
     {
       surface: "timeline",
       title: "Timeline",
-      status: "succeeded",
+      status: "ready",
       summary: "2 accepted state changes are available from the latest canon snapshot.",
       item_count: 2,
     },
     {
       surface: "scenes",
       title: "Scenes",
-      status: "succeeded",
+      status: "ready",
       summary: "8 processed scenes are available from the latest canon snapshot.",
       item_count: 8,
     },
     {
       surface: "continuity",
       title: "Continuity",
-      status: "succeeded",
+      status: "ready",
       summary: "4 accepted facts are available for continuity review.",
       item_count: 4,
     },
     {
       surface: "prompts",
       title: "Prompt Packs",
-      status: "succeeded",
+      status: "ready",
       summary: "1 extraction result is available for prompt pack generation.",
       item_count: 1,
     },
     {
       surface: "exports",
       title: "Exports",
-      status: "succeeded",
+      status: "ready",
       summary: "8 processed scenes are available for export.",
       item_count: 8,
     },
@@ -644,6 +650,39 @@ describe("App shell routing", () => {
                 job_ref: `queue://${body.job_id}`,
                 started_at: body.now,
                 status_updated_at: body.now,
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.workerProcess)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                claimed_jobs: 1,
+                succeeded_jobs: 1,
+                failed_jobs: 0,
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.workerProcess)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                claimed_jobs: 1,
+                succeeded_jobs: 1,
+                failed_jobs: 0,
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(API_PATHS.workerProcess)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                claimed_jobs: 1,
+                succeeded_jobs: 1,
+                failed_jobs: 0,
               }),
             ),
           );
@@ -1644,14 +1683,79 @@ describe("App shell routing", () => {
 
     await user.click(screen.getByRole("button", { name: "Save import" }));
 
-    expect(await screen.findByText("Import saved.")).toBeInTheDocument();
-    expect(savedImportId).toMatch(/^import_aevryn_import_bundle_/u);
+    await waitFor(() => expect(savedImportId).toMatch(/^import_aevryn_import_bundle_/u));
+    expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
     expect(savedImportId).not.toBe("import_alpha");
+  });
+
+  it("asks before adding another import to an already populated story", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    let createImportCalls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          if (init?.method === "POST") {
+            createImportCalls += 1;
+            return Promise.resolve(new Response(JSON.stringify(importRecordPayload)));
+          }
+          return Promise.resolve(new Response(JSON.stringify({ imports: [importRecordPayload] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.importsInspect)) {
+          return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Chapter import")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 2{enter}Different opening.");
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(await screen.findByRole("button", { name: "Save import" }));
+
+    expect(confirm).toHaveBeenCalledWith(
+      "Alpha Story already has imported source. Only continue if this source belongs to the same story. Add it anyway?",
+    );
+    expect(createImportCalls).toBe(0);
   });
 
   it("saves import metadata from the import workspace tab", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
+    let projectRuns: Record<string, unknown>[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -1684,7 +1788,7 @@ describe("App shell routing", () => {
           return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
         }
         if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
-          return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+          return Promise.resolve(new Response(JSON.stringify({ runs: projectRuns })));
         }
         if (
           url.endsWith(
@@ -1699,15 +1803,23 @@ describe("App shell routing", () => {
           )
         ) {
           const body = JSON.parse(String(init?.body));
+          const run = {
+            ...engineRunPayload,
+            run_id: body.run_id,
+            job_ref: `queue://${body.job_id}`,
+            started_at: body.now,
+            status_updated_at: body.now,
+          };
+          projectRuns = [
+            {
+              ...run,
+              status: "succeeded",
+              finished_at: body.now,
+            },
+          ];
           return Promise.resolve(
             new Response(
-              JSON.stringify({
-                ...engineRunPayload,
-                run_id: body.run_id,
-                job_ref: `queue://${body.job_id}`,
-                started_at: body.now,
-                status_updated_at: body.now,
-              }),
+              JSON.stringify(run),
             ),
           );
         }
@@ -1716,6 +1828,17 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(API_PATHS.importsInspect)) {
           return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
+        }
+        if (url.endsWith(API_PATHS.workerProcess)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                claimed_jobs: 1,
+                succeeded_jobs: 1,
+                failed_jobs: 0,
+              }),
+            ),
+          );
         }
         return Promise.resolve(new Response("{}", { status: 404 }));
       }),
@@ -1736,14 +1859,24 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
     await user.click(await screen.findByRole("button", { name: "Save import" }));
 
-    expect(await screen.findByText("Import saved.")).toBeInTheDocument();
+    await screen.findByText("Chapter import");
+    expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
     expect(screen.queryByText("chapter_001.txt")).not.toBeInTheDocument();
     expect(screen.getAllByText("8 scenes").length).toBeGreaterThanOrEqual(1);
     await user.click(screen.getByRole("button", { name: "Submit processing" }));
 
-    expect(await screen.findByText("Processing started.")).toBeInTheDocument();
-    expect(await screen.findByText("Pending run")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Processing" })).toBeDisabled();
+    expect(screen.queryByText("Processing started.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Processing completed.")).not.toBeInTheDocument();
+    expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled();
+
+    await user.clear(screen.getByLabelText("Source text"));
+    expect(screen.getByRole("button", { name: "Inspect import" })).toBeDisabled();
+    await user.upload(
+      screen.getByLabelText("Source file"),
+      new File(["Chapter 2\nA new import can begin."], "chapter_002.txt"),
+    );
+    expect(screen.getByRole("button", { name: "Inspect import" })).toBeEnabled();
   });
 
   it("creates default story metadata while saving the first import from a fresh project", async () => {
@@ -1848,9 +1981,9 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
     await user.click(await screen.findByRole("button", { name: "Save import" }));
 
-    expect(await screen.findByText("Import saved.")).toBeInTheDocument();
+    await waitFor(() => expect(createdStoryId).toBe("story_alpha_story"));
+    expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
     expect(createdStoryTitle).toBe("Alpha Story");
-    expect(createdStoryId).toBe("story_alpha_story");
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`),
       expect.objectContaining({ method: "POST" }),

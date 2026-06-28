@@ -443,6 +443,16 @@ class ProjectOutputCanonSummary(BaseModel):
     accepted_relationship_count: int = 0
     accepted_state_change_count: int = 0
     rejected_candidate_count: int = 0
+    chapter_scene_counts: tuple["ProjectOutputChapterSummary", ...] = ()
+
+
+class ProjectOutputChapterSummary(BaseModel):
+    """Metadata-only scene count for one imported chapter."""
+
+    model_config = ConfigDict(frozen=True)
+
+    chapter_index: int
+    scene_count: int
 
 
 class ProjectOutputSurface(BaseModel):

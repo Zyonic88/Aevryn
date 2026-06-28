@@ -111,6 +111,12 @@ function ProjectOutputSummary({
         <Metric label="Snapshot" value={formatDateTime(outputs.canon.created_at)} />
       </dl>
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
+      {surfaceSummary.status === "waiting" ? (
+        <EmptyState title="No extracted canon content yet">
+          This project has imported chapter and scene structure, but this output needs accepted
+          extraction data before it can show creator-facing content.
+        </EmptyState>
+      ) : null}
     </section>
   );
 }
@@ -143,6 +149,7 @@ function detailItems(
 ): Array<{ label: string; value: string }> {
   const canon = outputs.canon;
   const common = [
+    { label: "Chapter spread", value: chapterSpreadLabel(canon.chapter_scene_counts) },
     { label: "Accepted facts", value: canon.accepted_fact_count.toLocaleString() },
     {
       label: "State changes",
@@ -172,6 +179,23 @@ function detailItems(
     ];
   }
   return common;
+}
+
+function chapterSpreadLabel(
+  counts: ProjectOutputs["canon"]["chapter_scene_counts"],
+): string {
+  if (counts.length === 0) {
+    return "No chapter scene metadata";
+  }
+  const visibleCounts = counts.slice(0, 6);
+  const label = visibleCounts
+    .map((item) => `Chapter ${item.chapter_index}: ${sceneCountLabel(item.scene_count)}`)
+    .join("; ");
+  return counts.length > visibleCounts.length ? `${label}; ...` : label;
+}
+
+function sceneCountLabel(count: number): string {
+  return count === 1 ? "1 scene" : `${count.toLocaleString()} scenes`;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

@@ -15,6 +15,7 @@ import {
   storyListSchema,
   storySchema,
   timelinePreviewSchema,
+  workerProcessSchema,
   worldPreviewSchema,
   healthSchema,
   importInspectSchema,
@@ -39,6 +40,7 @@ import {
   type ScenePreview,
   type SnapshotList,
   type TimelinePreview,
+  type WorkerProcess,
   type WorldPreview,
   type ImportInspect,
   type ImportList,
@@ -69,6 +71,7 @@ export const API_PATHS = {
   authLogin: "/v2/auth/login",
   authMe: "/v2/auth/me",
   projects: "/v2/projects",
+  workerProcess: "/v2/workers/process",
 } as const;
 
 export class ApiError extends Error {
@@ -127,6 +130,12 @@ export type EngineRunCreateRequest = {
   run_id: string;
   job_id: string;
   now: string;
+};
+
+export type WorkerProcessRequest = {
+  started_at: string;
+  finished_at: string;
+  max_jobs: number;
 };
 
 export type CharacterPreviewRequest = ImportInspectRequest & {
@@ -424,6 +433,13 @@ export class AevrynApiClient {
     return this.request(projectImportRunsPath(projectId, storyId, importId), engineRunSchema, {
       method: "POST",
       headers: authHeaders(sessionToken, now),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  processWorkerJobs(payload: WorkerProcessRequest): Promise<WorkerProcess> {
+    return this.request(API_PATHS.workerProcess, workerProcessSchema, {
+      method: "POST",
       body: JSON.stringify(payload),
     });
   }

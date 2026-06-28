@@ -135,6 +135,18 @@ def test_create_app_can_enable_configured_cors_origin() -> None:
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
     assert "GET" in response.headers["access-control-allow-methods"]
 
+    delete_response = client.options(
+        "/v2/projects/project_alpha/stories/story_alpha",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "DELETE",
+        },
+    )
+
+    assert delete_response.status_code == 200
+    assert delete_response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert "DELETE" in delete_response.headers["access-control-allow-methods"]
+
 
 def test_create_app_from_env_configures_cors_origins() -> None:
     """Environment app factory should configure explicit browser origins."""

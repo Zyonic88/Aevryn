@@ -12,7 +12,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import replace
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -69,6 +69,7 @@ from aevryn.api.models import (
     ProjectCreateRequest,
     ProjectListResponse,
     ProjectOutput,
+    ProjectOutputChapterSummary,
     ProjectOutputCanonSummary,
     ProjectOutputSurface,
     ProjectOutputsResponse,
@@ -244,7 +245,7 @@ def create_app(
             CORSMiddleware,
             allow_origins=list(allowed_origins),
             allow_credentials=True,
-            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
             allow_headers=["*"],
         )
 
@@ -994,6 +995,12 @@ def create_app(
             authentication_service=authentication_service,
         )
         try:
+            _reconcile_orphaned_project_runs(
+                repository=repository,
+                background_job_queue=background_job_queue,
+                user_id=user.user_id,
+                project_id=project_id,
+            )
             runs = repository.list_engine_runs_for_project(
                 user_id=user.user_id,
                 project_id=project_id,
@@ -1022,6 +1029,12 @@ def create_app(
             authentication_service=authentication_service,
         )
         try:
+            _reconcile_orphaned_project_runs(
+                repository=repository,
+                background_job_queue=background_job_queue,
+                user_id=user.user_id,
+                project_id=project_id,
+            )
             stories = repository.list_stories_for_project(
                 user_id=user.user_id,
                 project_id=project_id,
@@ -2057,6 +2070,7 @@ def _project_output_canon_summary(
         accepted_relationship_count=_int_payload_value(payload, "accepted_relationship_count"),
         accepted_state_change_count=_int_payload_value(payload, "accepted_state_change_count"),
         rejected_candidate_count=_int_payload_value(payload, "rejected_candidate_count"),
+        chapter_scene_counts=_chapter_scene_counts(payload),
     )
 
 
@@ -2074,27 +2088,43 @@ def _project_output_surfaces(
             )
             for surface, title in _output_surface_titles()
         )
+    character_status = "ready" if canon.accepted_entity_count > 0 else "waiting"
+    world_status = "ready" if canon.accepted_relationship_count > 0 else "waiting"
+    timeline_status = "ready" if canon.accepted_state_change_count > 0 else "waiting"
+    continuity_status = "ready" if canon.accepted_fact_count > 0 else "waiting"
     return (
         ProjectOutputSurface(
             surface="characters",
             title="Character Cards",
-            status="ready",
+            status=character_status,
             item_count=canon.accepted_entity_count,
-            summary="Character output is backed by accepted canon entity metadata.",
+            summary=(
+                "Character output is backed by accepted canon entity metadata."
+                if character_status == "ready"
+                else "No accepted character entities have been extracted yet."
+            ),
         ),
         ProjectOutputSurface(
             surface="world",
             title="World",
-            status="ready",
+            status=world_status,
             item_count=canon.accepted_relationship_count,
-            summary="World output is backed by accepted canon relationship metadata.",
+            summary=(
+                "World output is backed by accepted canon relationship metadata."
+                if world_status == "ready"
+                else "No accepted world relationships have been extracted yet."
+            ),
         ),
         ProjectOutputSurface(
             surface="timeline",
             title="Timeline",
-            status="ready",
+            status=timeline_status,
             item_count=canon.accepted_state_change_count,
-            summary="Timeline output is backed by accepted state-change metadata.",
+            summary=(
+                "Timeline output is backed by accepted state-change metadata."
+                if timeline_status == "ready"
+                else "No accepted timeline state changes have been extracted yet."
+            ),
         ),
         ProjectOutputSurface(
             surface="scenes",
@@ -2106,9 +2136,13 @@ def _project_output_surfaces(
         ProjectOutputSurface(
             surface="continuity",
             title="Continuity",
-            status="ready",
+            status=continuity_status,
             item_count=canon.accepted_fact_count,
-            summary="Continuity output is backed by accepted canon fact metadata.",
+            summary=(
+                "Continuity output is backed by accepted canon fact metadata."
+                if continuity_status == "ready"
+                else "No accepted continuity facts have been extracted yet."
+            ),
         ),
         ProjectOutputSurface(
             surface="prompts",
@@ -2157,6 +2191,44 @@ def _canon_snapshot_metadata(snapshot: SnapshotRecord) -> Mapping[str, object]:
     if not isinstance(payload, dict):
         return {}
     return cast(Mapping[str, object], payload)
+
+
+def _chapter_scene_counts(
+    payload: Mapping[str, object],
+) -> tuple[ProjectOutputChapterSummary, ...]:
+    """Return per-chapter scene counts from metadata-only snapshot scene IDs."""
+    counts: dict[int, int] = {}
+    for scene_id in _string_sequence_payload_value(payload, "scene_ids"):
+        chapter_index = _chapter_index_from_scene_id(scene_id)
+        if chapter_index is None:
+            continue
+        counts[chapter_index] = counts.get(chapter_index, 0) + 1
+    return tuple(
+        ProjectOutputChapterSummary(chapter_index=chapter_index, scene_count=scene_count)
+        for chapter_index, scene_count in sorted(counts.items())
+    )
+
+
+def _chapter_index_from_scene_id(scene_id: str) -> int | None:
+    """Parse a chapter index from normalized imported scene IDs."""
+    marker = "_chapter_"
+    marker_index = scene_id.find(marker)
+    if marker_index < 0:
+        return None
+    remainder = scene_id[marker_index + len(marker) :]
+    value = remainder.split("_", maxsplit=1)[0]
+    if not value.isdigit():
+        return None
+    chapter_index = int(value)
+    return chapter_index if chapter_index > 0 else None
+
+
+def _string_sequence_payload_value(payload: Mapping[str, object], key: str) -> tuple[str, ...]:
+    """Return a tuple of string payload values when present."""
+    value = payload.get(key)
+    if not isinstance(value, list):
+        return ()
+    return tuple(item for item in value if isinstance(item, str))
 
 
 def _string_payload_value(payload: Mapping[str, object], key: str) -> str:
@@ -2477,6 +2549,43 @@ def _require_import_scope(
     if import_record.story_id != story_id:
         raise ValueError("Import does not belong to story.")
     return import_record
+
+
+def _reconcile_orphaned_project_runs(
+    *,
+    repository: ProjectRepository,
+    background_job_queue: BackgroundJobQueue | None,
+    user_id: str,
+    project_id: str,
+) -> None:
+    """Fail active project runs whose in-memory queue jobs disappeared."""
+    if background_job_queue is None:
+        return
+    now = datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    runs = repository.list_engine_runs_for_project(user_id=user_id, project_id=project_id)
+    for run in runs:
+        if run.status not in {"pending", "running"}:
+            continue
+        job_id = _job_id_from_ref(run.job_ref)
+        if not job_id or background_job_queue.has_job(job_id):
+            continue
+        repository.update_engine_run(
+            replace(
+                run,
+                status="failed",
+                status_updated_at=now,
+                finished_at=now,
+                error_summary="Processing stopped before completion. Retry is available.",
+            )
+        )
+
+
+def _job_id_from_ref(job_ref: str) -> str:
+    """Return the queue job ID from a run job_ref."""
+    prefix = "queue://"
+    if not job_ref.startswith(prefix):
+        return ""
+    return job_ref[len(prefix):]
 
 
 def _active_or_completed_import_run(

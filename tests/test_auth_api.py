@@ -713,6 +713,55 @@ def test_import_runs_api_allows_retry_after_stale_active_run() -> None:
     assert runs[1]["status"] == "pending"
 
 
+def test_project_runs_api_marks_missing_queue_jobs_failed_after_restart() -> None:
+    """Local in-memory queue loss should not leave durable runs pending forever."""
+    repository = InMemoryProjectRepository()
+    authentication_service = auth_service(repository=repository)
+    first_queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=authentication_service,
+            project_repository=repository,
+            background_job_queue=first_queue,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    assert repository.get_engine_run("user_owner", "run_alpha").status == "pending"
+
+    restarted_client = TestClient(
+        create_app(
+            authentication_service=authentication_service,
+            project_repository=repository,
+            background_job_queue=InMemoryJobQueue(),
+        )
+    )
+    listed = restarted_client.get(
+        "/v2/projects/project_alpha/runs",
+        headers=auth_headers("token_001"),
+    )
+
+    assert listed.status_code == 200
+    runs = listed.json()["runs"]
+    assert runs[0]["run_id"] == "run_alpha"
+    assert runs[0]["status"] == "failed"
+    assert runs[0]["error_summary"] == (
+        "Processing stopped before completion. Retry is available."
+    )
+
+
 def test_import_runs_api_requires_configured_queue() -> None:
     """Import run submission should fail clearly when no queue is configured."""
     repository = InMemoryProjectRepository()
@@ -1098,6 +1147,7 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
         "accepted_relationship_count": 0,
         "accepted_state_change_count": 1,
         "rejected_candidate_count": 0,
+        "chapter_scene_counts": [{"chapter_index": 1, "scene_count": 1}],
     }
     assert [surface["surface"] for surface in payload["surfaces"]] == [
         "characters",
@@ -1109,6 +1159,10 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
         "exports",
     ]
     assert payload["surfaces"][0]["status"] == "ready"
+    assert payload["surfaces"][1]["status"] == "waiting"
+    assert payload["surfaces"][1]["summary"] == (
+        "No accepted world relationships have been extracted yet."
+    )
     assert payload["surfaces"][3]["item_count"] == 1
     assert "Mark carried a rusty dagger" not in response.text
     assert "serialized_output" not in response.text

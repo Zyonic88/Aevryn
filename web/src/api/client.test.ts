@@ -743,7 +743,12 @@ describe("AevrynApiClient", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ runs: [engineRunPayload] })))
-      .mockResolvedValueOnce(new Response(JSON.stringify(engineRunPayload)));
+      .mockResolvedValueOnce(new Response(JSON.stringify(engineRunPayload)))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        claimed_jobs: 1,
+        succeeded_jobs: 1,
+        failed_jobs: 0,
+      })));
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new AevrynApiClient("https://api.aevryn.ai");
@@ -760,6 +765,13 @@ describe("AevrynApiClient", () => {
         "2026-06-27T00:00:00.000Z",
       ),
     ).resolves.toEqual(engineRunPayload);
+    await expect(
+      client.processWorkerJobs({
+        started_at: "2026-06-27T00:00:01.000Z",
+        finished_at: "2026-06-27T00:00:02.000Z",
+        max_jobs: 10,
+      }),
+    ).resolves.toEqual({ claimed_jobs: 1, succeeded_jobs: 1, failed_jobs: 0 });
 
     expect(fetchMock.mock.calls[0][0]).toBe(
       `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/runs`,
@@ -767,12 +779,16 @@ describe("AevrynApiClient", () => {
     expect(fetchMock.mock.calls[1][0]).toBe(
       `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/stories/story_alpha/imports/import_alpha/runs`,
     );
-    for (const [, init] of fetchMock.mock.calls) {
+    expect(fetchMock.mock.calls[2][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.workerProcess}`,
+    );
+    for (const [, init] of fetchMock.mock.calls.slice(0, 2)) {
       const headers = init.headers as Headers;
       expect(headers.get("Authorization")).toBe("Bearer session-token");
       expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
     }
     expect(fetchMock.mock.calls[1][1].method).toBe("POST");
+    expect(fetchMock.mock.calls[2][1].method).toBe("POST");
   });
 
   it("sends authenticated requests for project status", async () => {

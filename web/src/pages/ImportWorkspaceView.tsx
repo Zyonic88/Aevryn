@@ -41,8 +41,6 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [isReadingSourceFile, setIsReadingSourceFile] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
-  const [savedImport, setSavedImport] = useState<ImportRecord | null>(null);
-  const [submittedRun, setSubmittedRun] = useState<EngineRun | null>(null);
 
   const sourceFormats = useQuery({
     queryKey: ["source-formats"],
@@ -91,11 +89,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     mutationFn: (payload: ImportInspectRequest) => apiClient.inspectImport(payload),
     onSuccess(result) {
       setInspectionResult(result);
-      setSavedImport(null);
     },
     onError() {
       setInspectionResult(null);
-      setSavedImport(null);
     },
   });
   const submitRun = useMutation({
@@ -112,13 +108,27 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       );
     },
     onSuccess(run) {
-      setSubmittedRun(run);
       queryClient.setQueryData(runQueryKey(project.id, session?.session_token), {
         runs: [
           run,
           ...(runsQuery.data?.runs ?? []).filter((candidate) => candidate.run_id !== run.run_id),
         ],
       });
+      drainLocalWorker.mutate();
+    },
+  });
+  const drainLocalWorker = useMutation({
+    mutationFn: () => {
+      const now = new Date().toISOString();
+      return apiClient.processWorkerJobs({ started_at: now, finished_at: now, max_jobs: 10 });
+    },
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: runQueryKey(project.id, session?.session_token) });
+      void queryClient.invalidateQueries({
+        queryKey: snapshotQueryKey(project.id, activeStoryId, session?.session_token),
+      });
+      void queryClient.invalidateQueries({ queryKey: ["project-status", project.id] });
+      void queryClient.invalidateQueries({ queryKey: ["project-outputs", project.id] });
     },
   });
   const createImport = useMutation({
@@ -139,7 +149,6 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       );
     },
     onSuccess(importRecord) {
-      setSavedImport(importRecord);
       queryClient.setQueryData(
         importQueryKey(project.id, importRecord.story_id, session?.session_token),
         {
@@ -185,6 +194,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     sourceText,
     contentBase64: fileContentBase64,
   });
+  const isInspectingImport = isReadingSourceFile || inspectImport.isPending;
   const isSourceTextOversized = sourceText.length > MAX_IMPORT_SOURCE_CHARACTERS;
   const sourceFileAccept = sourceFormats.data
     ? sourceFormatAcceptValue(sourceFormats.data.supported)
@@ -212,6 +222,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     inspectImport.reset();
     createImport.reset();
     submitRun.reset();
+    drainLocalWorker.reset();
     try {
       const deferredFormatError = deferredFormatMessage(filename, sourceFormats.data);
       if (deferredFormatError) {
@@ -226,13 +237,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       });
       setFormError(null);
       setInspectionResult(null);
-      setSavedImport(null);
-      setSubmittedRun(null);
       inspectImport.mutate(payload);
     } catch (error) {
       setInspectionResult(null);
-      setSavedImport(null);
-      setSubmittedRun(null);
       setFormError(error instanceof Error ? error.message : "Import form is invalid.");
     }
   }
@@ -257,20 +264,33 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       });
       setFormError(null);
       const storyId = activeStoryId || (await createDefaultStory.mutateAsync()).story_id;
+      if (!confirmAdditionalStoryImport({ storyId })) {
+        return;
+      }
       createImport.mutate({ payload, storyId });
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Import form is invalid.");
     }
   }
 
+  function confirmAdditionalStoryImport({ storyId }: { storyId: string }): boolean {
+    const existingImports = storyId === activeStoryId ? importsQuery.data?.imports ?? [] : [];
+    if (existingImports.length === 0) {
+      return true;
+    }
+    const storyTitle = storyOptions.find((story) => story.story_id === storyId)?.title ?? "this story";
+    return window.confirm(
+      `${storyTitle} already has imported source. Only continue if this source belongs to the same story. Add it anyway?`,
+    );
+  }
+
   function submitImportProcessing(importRecord: ImportRecord) {
     const existingRun = latestRunByImportId.get(importRecord.import_id);
     if (existingRun && existingRun.status !== "failed" && !isStaleActiveRun(existingRun)) {
-      setSubmittedRun(existingRun);
       return;
     }
     submitRun.reset();
-    setSubmittedRun(null);
+    drainLocalWorker.reset();
     submitRun.mutate(importRecord);
   }
 
@@ -329,9 +349,8 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     inspectImport.reset();
     createImport.reset();
     submitRun.reset();
+    drainLocalWorker.reset();
     setInspectionResult(null);
-    setSavedImport(null);
-    setSubmittedRun(null);
   }
 
   return (
@@ -445,10 +464,12 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             <ErrorMessage>{createDefaultStory.error.message}</ErrorMessage>
           ) : null}
           {submitRun.error ? <ErrorMessage>{submitRun.error.message}</ErrorMessage> : null}
+          {drainLocalWorker.error ? <ErrorMessage>{drainLocalWorker.error.message}</ErrorMessage> : null}
           <button
             type="submit"
             className="primary-button"
-            disabled={!canSubmit || isReadingSourceFile || inspectImport.isPending}
+            aria-busy={isInspectingImport}
+            disabled={!canSubmit || isInspectingImport}
           >
             {importInspectButtonLabel({ isReading: isReadingSourceFile, isInspecting: inspectImport.isPending })}
           </button>
@@ -525,9 +546,6 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               ? "Saving import"
               : "Save import"}
           </button>
-          {savedImport ? (
-            <p className="field-note">Import saved.</p>
-          ) : null}
       </section>
       ) : null}
 
@@ -565,8 +583,8 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               })}
             </div>
           ) : null}
-          {submittedRun ? (
-            <p className="field-note">{submittedRunMessage(submittedRun)}</p>
+          {drainLocalWorker.isPending ? (
+            <p className="field-note">Processing queued import.</p>
           ) : null}
         </section>
       ) : null}
@@ -835,16 +853,6 @@ function importProcessingAction(
     return { label: "Processed", disabled: true };
   }
   return { label: "Processing", disabled: true };
-}
-
-function submittedRunMessage(run: EngineRun): string {
-  if (run.status === "failed") {
-    return "Processing failed. Retry is available.";
-  }
-  if (run.status === "succeeded") {
-    return "Processing already completed.";
-  }
-  return "Processing started.";
 }
 
 function isActiveRun(run: EngineRun): boolean {
