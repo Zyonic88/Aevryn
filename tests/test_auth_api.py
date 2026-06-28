@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import base64
+import logging
 
+from _pytest.logging import LogCaptureFixture
 from fastapi.testclient import TestClient
 
 from aevryn.api import create_app
@@ -727,7 +729,9 @@ def test_worker_process_api_generates_snapshot_from_stored_import_content() -> N
     assert '"source_id":"source_alpha"' in snapshots.json()["snapshots"][0]["serialized_output"]
 
 
-def test_project_status_reports_metadata_only_monitoring_summary() -> None:
+def test_project_status_reports_metadata_only_monitoring_summary(
+    caplog: LogCaptureFixture,
+) -> None:
     """Project status should summarize durable workflow state without source prose."""
     repository = InMemoryProjectRepository()
     queue = InMemoryJobQueue()
@@ -777,10 +781,11 @@ def test_project_status_reports_metadata_only_monitoring_summary() -> None:
         )
     )
 
-    response = client.get(
-        "/v2/projects/project_alpha/status",
-        headers=auth_headers("token_001"),
-    )
+    with caplog.at_level(logging.INFO, logger="aevryn.api.app"):
+        response = client.get(
+            "/v2/projects/project_alpha/status",
+            headers=auth_headers("token_001"),
+        )
 
     assert response.status_code == 200
     payload = response.json()
@@ -880,6 +885,18 @@ def test_project_status_reports_metadata_only_monitoring_summary() -> None:
     }
     assert "Mark carried a rusty dagger" not in response.text
     assert "storage://exports/canon.md" not in response.text
+    record = workflow_log_record(caplog, "project_status", "succeeded")
+    assert_duration_log(record)
+    assert getattr(record, "project_id", "") == "project_alpha"
+    assert getattr(record, "project_status", "") == "succeeded"
+    assert getattr(record, "story_count", 0) == 1
+    assert getattr(record, "import_count", 0) == 1
+    assert getattr(record, "run_count", 0) == 1
+    assert getattr(record, "snapshot_count", 0) == 1
+    assert getattr(record, "export_count", 0) == 1
+    assert getattr(record, "worker_state", "") == "idle"
+    assert "Mark carried a rusty dagger" not in caplog_record_text(caplog)
+    assert "storage://exports/canon.md" not in caplog_record_text(caplog)
 
 
 def test_project_status_responses_include_request_ids() -> None:
@@ -1445,3 +1462,30 @@ class TokenFactory:
         """Return the next stable token."""
         self._index += 1
         return f"token_{self._index:03d}"
+
+
+def workflow_log_record(
+    caplog: LogCaptureFixture,
+    workflow_kind: str,
+    workflow_status: str,
+) -> logging.LogRecord:
+    """Return one captured API workflow log record."""
+    for record in caplog.records:
+        if (
+            getattr(record, "workflow_kind", "") == workflow_kind
+            and getattr(record, "workflow_status", "") == workflow_status
+        ):
+            return record
+    raise AssertionError(f"Missing workflow log: {workflow_kind}/{workflow_status}")
+
+
+def assert_duration_log(record: logging.LogRecord) -> None:
+    """Assert a workflow log record has metadata-only duration."""
+    duration_ms = getattr(record, "duration_ms", None)
+    assert isinstance(duration_ms, float)
+    assert duration_ms >= 0.0
+
+
+def caplog_record_text(caplog: LogCaptureFixture) -> str:
+    """Return captured log metadata as searchable text."""
+    return "\n".join(str(record.__dict__) for record in caplog.records)

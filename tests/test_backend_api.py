@@ -567,6 +567,30 @@ def test_import_inspect_endpoint_uses_engine_import_without_source_text_leak() -
     assert "quote" not in payload["first_evidence_anchors"][0]
 
 
+def test_import_inspect_logs_duration_without_source_payload(
+    caplog: LogCaptureFixture,
+) -> None:
+    """Import inspect timing logs should stay metadata-only."""
+    client = TestClient(create_app())
+
+    with caplog.at_level(logging.INFO, logger="aevryn.api.app"):
+        response = client.post(
+            "/v2/imports/inspect",
+            json={
+                "source_id": "api_demo",
+                "filename": "chapter.txt",
+                "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
+            },
+        )
+
+    assert response.status_code == 200
+    record = _workflow_log_record(caplog, "import_inspect", "succeeded")
+    _assert_duration_log(record)
+    assert getattr(record, "scene_count", 0) == 1
+    assert getattr(record, "evidence_anchor_count", 0) == 1
+    assert "Mark carried a rusty dagger" not in _caplog_record_text(caplog)
+
+
 def test_import_inspect_endpoint_rejects_invalid_base64() -> None:
     """Import API should fail clearly for malformed content payloads."""
     client = TestClient(create_app())
@@ -742,6 +766,7 @@ def test_extraction_apply_logs_metadata_only_workflow_event(
 
     assert response.status_code == 200
     record = _workflow_log_record(caplog, "extraction_apply", "succeeded")
+    _assert_duration_log(record)
     assert getattr(record, "source_id", "") == "api_demo"
     assert getattr(record, "source_format", "") == "txt"
     assert getattr(record, "scene_count", 0) == 1
@@ -864,6 +889,7 @@ def test_preview_success_logs_metadata_only_workflow_event(
 
     assert response.status_code == 200
     record = _workflow_log_record(caplog, "canon_preview", "succeeded")
+    _assert_duration_log(record)
     assert getattr(record, "source_id", "") == "api_demo"
     assert getattr(record, "source_format", "") == "txt"
     assert getattr(record, "scene_count", 0) == 1
@@ -1037,6 +1063,7 @@ def test_preview_failure_logs_stable_machine_code_without_payload(
 
     assert response.status_code == 400
     record = _workflow_log_record(caplog, "project_preview", "failed")
+    _assert_duration_log(record)
     assert getattr(record, "error_code", "") == "project_preview_failed"
     assert "missing required keys" in str(getattr(record, "error_summary", ""))
     assert "Mark carried a rusty dagger" not in _caplog_record_text(caplog)
@@ -1436,6 +1463,13 @@ def _workflow_log_record(
         ):
             return record
     raise AssertionError(f"Missing workflow log: {workflow_kind}/{workflow_status}")
+
+
+def _assert_duration_log(record: logging.LogRecord) -> None:
+    """Assert a workflow log record has metadata-only duration."""
+    duration_ms = getattr(record, "duration_ms", None)
+    assert isinstance(duration_ms, float)
+    assert duration_ms >= 0.0
 
 
 def _caplog_record_text(caplog: LogCaptureFixture) -> str:

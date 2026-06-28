@@ -17,6 +17,11 @@ from aevryn.export import ExportEngine
 from aevryn.extraction import EvidenceBoundedAIExtractor, StaticAIExtractionClient
 from aevryn.importing import SourceFileTextExtractor
 from aevryn.json_utils import loads_json_without_duplicate_keys
+from aevryn.performance import PerformanceRegressionPayload
+from aevryn.performance_runner import (
+    compare_local_v2_performance_baseline,
+    write_local_v2_performance_baseline,
+)
 from aevryn.presentation import PresentationEngine
 from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.prompts import CanonPromptBuilder
@@ -83,6 +88,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "validate":
             _handle_validate(args)
             return 0
+        if command == "performance-baseline":
+            return _handle_performance_baseline(args)
         if command == "api":
             _handle_api(args)
             return 0
@@ -160,6 +167,8 @@ def _build_parser() -> argparse.ArgumentParser:
             "  aevryn validate --summary-only\n"
             "  aevryn validate --list-cases\n"
             "  aevryn validate --summary-only --snapshot-dir snapshots/run_name\n\n"
+            "Performance:\n"
+            "  aevryn performance-baseline\n\n"
             "V2 Backend API:\n"
             "  aevryn api --host 127.0.0.1 --port 8000 "
             "--allowed-origin http://localhost:5173"
@@ -408,6 +417,23 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=("text", "json"),
         default="text",
         help="Output format. Text is scan-friendly; JSON preserves machine detail.",
+    )
+
+    performance_parser = subcommands.add_parser(
+        "performance-baseline",
+        help="Write a local metadata-only Phase 9 performance baseline.",
+        description="Write a local metadata-only Phase 9 performance baseline.",
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    performance_parser.add_argument(
+        "--output",
+        default="performance-baselines/latest.json",
+        help="Output JSON path for the ignored local baseline artifact.",
+    )
+    performance_parser.add_argument(
+        "--compare-to",
+        default=None,
+        help="Previous baseline JSON artifact to compare against a new local run.",
     )
 
     api_parser = subcommands.add_parser(
@@ -811,6 +837,38 @@ def _handle_validate(args: argparse.Namespace) -> None:
     print(f"{result.score}%")
     if not result.passed:
         raise ValueError("Validation suite failed.")
+
+
+def _handle_performance_baseline(args: argparse.Namespace) -> int:
+    """Handle the performance-baseline command."""
+    compare_to = cast(str | None, args.compare_to)
+    if compare_to is not None:
+        regressions = compare_local_v2_performance_baseline(Path(compare_to))
+        _print_performance_regressions(regressions)
+        return 1 if any(item["status"] == "critical" for item in regressions) else 0
+
+    output_path = write_local_v2_performance_baseline(Path(cast(str, args.output)))
+    print(f"Performance baseline written: {output_path}")
+    return 0
+
+
+def _print_performance_regressions(
+    regressions: list[PerformanceRegressionPayload],
+) -> None:
+    """Print stable performance regression summary lines."""
+    if not regressions:
+        print("Performance baseline comparison passed.")
+        return
+
+    print("Performance regressions detected:")
+    for regression in regressions:
+        print(
+            "  "
+            f"{regression['status']} "
+            f"{regression['benchmark']} "
+            f"{regression['previous_ms']}ms -> {regression['current_ms']}ms "
+            f"(+{regression['delta_ms']}ms, x{regression['ratio']})"
+        )
 
 
 def _handle_api(args: argparse.Namespace) -> None:

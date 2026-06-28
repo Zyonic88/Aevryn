@@ -233,6 +233,99 @@ def test_api_help_describes_server_options(capsys: CaptureFixture[str]) -> None:
     assert "--reload" in output
 
 
+def test_performance_baseline_help_describes_local_artifact(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Performance baseline help should describe the local ignored artifact."""
+    with pytest.raises(SystemExit) as error:
+        main(["performance-baseline", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "metadata-only Phase 9 performance baseline" in output
+    assert "performance-baselines/latest.json" in output
+
+
+def test_performance_baseline_command_writes_metadata_only_artifact(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Performance baseline command should write ignored metadata-only JSON."""
+    output_path = Path("build") / "test_cli_performance" / "baseline.json"
+    shutil.rmtree(output_path.parent, ignore_errors=True)
+
+    exit_code = main(["performance-baseline", "--output", str(output_path)])
+    captured = capsys.readouterr()
+    artifact = json.loads(output_path.read_text(encoding="utf-8"))
+    artifact_text = json.dumps(artifact, sort_keys=True)
+    benchmark_names = {
+        measurement["benchmark"]
+        for measurement in artifact["snapshot"]["measurements"]
+    }
+
+    assert exit_code == 0
+    assert f"Performance baseline written: {output_path}" in captured.out
+    assert artifact["artifact_kind"] == "aevryn_phase9_performance_baseline"
+    assert benchmark_names == {
+        "export_preview",
+        "import_inspect",
+        "import_save",
+        "project_status",
+        "snapshot_creation",
+        "worker_processing",
+    }
+    assert "Mark carried a rusty dagger" not in artifact_text
+    assert "serialized_output" not in artifact_text
+    assert "session_token" not in artifact_text
+
+
+def test_performance_baseline_compare_passes_without_regressions(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Performance baseline comparison should pass when no regressions are found."""
+    previous_path = Path("build") / "test_cli_performance" / "previous.json"
+
+    monkeypatch.setattr(
+        "aevryn.cli.compare_local_v2_performance_baseline",
+        lambda path: [],
+    )
+
+    exit_code = main(["performance-baseline", "--compare-to", str(previous_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Performance baseline comparison passed." in output
+
+
+def test_performance_baseline_compare_fails_on_critical_regression(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Performance baseline comparison should fail only for critical regressions."""
+    previous_path = Path("build") / "test_cli_performance" / "previous.json"
+
+    monkeypatch.setattr(
+        "aevryn.cli.compare_local_v2_performance_baseline",
+        lambda path: [
+            {
+                "benchmark": "import_inspect",
+                "previous_ms": 145.0,
+                "current_ms": 920.0,
+                "delta_ms": 775.0,
+                "ratio": 6.345,
+                "status": "critical",
+            }
+        ],
+    )
+
+    exit_code = main(["performance-baseline", "--compare-to", str(previous_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 1
+    assert "Performance regressions detected:" in output
+    assert "critical import_inspect 145.0ms -> 920.0ms" in output
+
+
 def test_api_command_runs_configured_server(monkeypatch: MonkeyPatch) -> None:
     """API command should create the app and pass server options to Uvicorn."""
     captured: dict[str, object] = {}

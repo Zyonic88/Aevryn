@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from pathlib import Path
@@ -927,6 +928,7 @@ def create_app(
     )
     def project_status(project_id: str, request: Request) -> ProjectStatusResponse:
         """Return metadata-only project status for monitoring surfaces."""
+        started_at = time.perf_counter()
         repository = _require_project_repository(project_repository)
         user = _authenticated_user(
             request=request,
@@ -964,7 +966,7 @@ def create_app(
             ) from error
         except PersistenceError as error:
             raise _project_storage_error(error) from error
-        return _project_status_output(
+        response = _project_status_output(
             project_id=project_id,
             story_count=len(stories),
             imports=imports,
@@ -973,6 +975,23 @@ def create_app(
             exports=exports,
             background_job_queue=background_job_queue,
         )
+        logger.info(
+            "api_workflow_succeeded",
+            extra={
+                "workflow_kind": "project_status",
+                "workflow_status": "succeeded",
+                "duration_ms": _elapsed_ms(started_at),
+                "project_id": project_id,
+                "project_status": response.status,
+                "story_count": response.story_count,
+                "import_count": response.import_count,
+                "run_count": response.run_count,
+                "snapshot_count": response.snapshots.count,
+                "export_count": response.exports.count,
+                "worker_state": response.worker.state,
+            },
+        )
+        return response
 
     @app.post(
         "/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs",
@@ -1117,12 +1136,27 @@ def create_app(
     )
     def inspect_import(request: ImportInspectRequest) -> ImportInspectResponse:
         """Inspect source structure through Project Manager and Story Import."""
+        started_at = time.perf_counter()
         imported_source, source_format = _import_request_source(request)
-
-        return _import_response(
+        response = _import_response(
             source_format=source_format,
             imported_source=imported_source,
         )
+        logger.info(
+            "api_workflow_succeeded",
+            extra={
+                **_workflow_request_extra(
+                    kind="import_inspect",
+                    request=request,
+                    status="succeeded",
+                    source_format=source_format,
+                ),
+                "duration_ms": _elapsed_ms(started_at),
+                "scene_count": response.scenes,
+                "evidence_anchor_count": response.evidence_anchors,
+            },
+        )
+        return response
 
     @app.post(
         "/v2/extraction-prompts",
@@ -2601,6 +2635,7 @@ def _run_logged_project_result(
     error_code: str,
 ) -> tuple[ProjectRunResult, str]:
     """Run a stateless workflow and emit metadata-only monitoring logs."""
+    started_at = time.perf_counter()
     try:
         result, source_format = _run_project_result(request)
     except ValueError as error:
@@ -2609,6 +2644,7 @@ def _run_logged_project_result(
             request=request,
             error_code=error_code,
             error=error,
+            duration_ms=_elapsed_ms(started_at),
         )
         raise
     logger.info(
@@ -2620,6 +2656,7 @@ def _run_logged_project_result(
                 status="succeeded",
                 source_format=source_format,
             ),
+            "duration_ms": _elapsed_ms(started_at),
             "scene_count": _project_result_scene_count(result),
             "extraction_result_count": len(result.extraction_results),
         },
@@ -2653,20 +2690,29 @@ def _log_workflow_failed(
     request: ImportInspectRequest,
     error_code: str,
     error: ValueError,
+    duration_ms: float | None = None,
 ) -> None:
     """Emit a metadata-only API workflow failure log."""
+    extra = {
+        **_workflow_request_extra(
+            kind=kind,
+            request=request,
+            status="failed",
+            error_code=error_code,
+        ),
+        "error_summary": str(error),
+    }
+    if duration_ms is not None:
+        extra["duration_ms"] = duration_ms
     logger.warning(
         "api_workflow_failed",
-        extra={
-            **_workflow_request_extra(
-                kind=kind,
-                request=request,
-                status="failed",
-                error_code=error_code,
-            ),
-            "error_summary": str(error),
-        },
+        extra=extra,
     )
+
+
+def _elapsed_ms(started_at: float) -> float:
+    """Return rounded elapsed milliseconds for metadata-only performance logs."""
+    return round((time.perf_counter() - started_at) * 1000, 3)
 
 
 def _project_result_scene_count(result: ProjectRunResult) -> int:

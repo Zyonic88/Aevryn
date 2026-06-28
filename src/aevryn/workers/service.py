@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import tempfile
+import time
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -170,6 +171,7 @@ class BackgroundWorker:
             logger.debug("background_worker_idle")
             return None
 
+        perf_started_at = time.perf_counter()
         run = self._repository.get_engine_run_for_worker(job.run_id)
         scope_error = _job_scope_error(job=job, run=run)
         if scope_error:
@@ -182,11 +184,19 @@ class BackgroundWorker:
                     error_summary=scope_error,
                 )
             )
-            return self._queue.fail(
+            failed_job = self._queue.fail(
                 job_id=job.job_id,
                 failed_at=finished_at,
                 error_summary=scope_error,
             )
+            _log_worker_job_event(
+                job=failed_job,
+                status="failed",
+                duration_ms=_elapsed_ms(perf_started_at),
+                error_summary=scope_error,
+                snapshot_count=0,
+            )
+            return failed_job
         self._repository.update_engine_run(
             replace(run, status="running", status_updated_at=started_at)
         )
@@ -204,11 +214,19 @@ class BackgroundWorker:
                     error_summary=summary,
                 )
             )
-            return self._queue.fail(
+            failed_job = self._queue.fail(
                 job_id=job.job_id,
                 failed_at=finished_at,
                 error_summary=summary,
             )
+            _log_worker_job_event(
+                job=failed_job,
+                status="failed",
+                duration_ms=_elapsed_ms(perf_started_at),
+                error_summary=summary,
+                snapshot_count=0,
+            )
+            return failed_job
 
         latest_run = self._repository.get_engine_run_for_worker(job.run_id)
         self._repository.update_engine_run(
@@ -220,8 +238,21 @@ class BackgroundWorker:
             )
         )
         for snapshot in snapshots:
+            snapshot_started_at = time.perf_counter()
             self._repository.store_snapshot(snapshot)
-        return self._queue.complete(job_id=job.job_id, completed_at=finished_at)
+            _log_snapshot_event(
+                snapshot=snapshot,
+                duration_ms=_elapsed_ms(snapshot_started_at),
+            )
+        completed_job = self._queue.complete(job_id=job.job_id, completed_at=finished_at)
+        _log_worker_job_event(
+            job=completed_job,
+            status="succeeded",
+            duration_ms=_elapsed_ms(perf_started_at),
+            error_summary="",
+            snapshot_count=len(snapshots),
+        )
+        return completed_job
 
     def process_available(
         self,
@@ -349,3 +380,51 @@ def _error_summary(error: Exception) -> str:
     if not message:
         return error.__class__.__name__
     return message[:500]
+
+
+def _elapsed_ms(started_at: float) -> float:
+    """Return rounded elapsed milliseconds for metadata-only worker logs."""
+    return round((time.perf_counter() - started_at) * 1000, 3)
+
+
+def _log_worker_job_event(
+    *,
+    job: BackgroundJob,
+    status: str,
+    duration_ms: float,
+    error_summary: str,
+    snapshot_count: int,
+) -> None:
+    """Emit metadata-only worker job timing."""
+    extra: dict[str, object] = {
+        "workflow_kind": "worker_processing",
+        "workflow_status": status,
+        "duration_ms": duration_ms,
+        "job_id": job.job_id,
+        "run_id": job.run_id,
+        "project_id": job.project_id,
+        "story_id": job.story_id,
+        "import_id": job.import_id,
+        "snapshot_count": snapshot_count,
+    }
+    if error_summary:
+        extra["error_summary"] = error_summary
+    logger.info("background_worker_job_completed", extra=extra)
+
+
+def _log_snapshot_event(*, snapshot: SnapshotRecord, duration_ms: float) -> None:
+    """Emit metadata-only snapshot creation timing."""
+    logger.info(
+        "background_snapshot_stored",
+        extra={
+            "workflow_kind": "snapshot_creation",
+            "workflow_status": "succeeded",
+            "duration_ms": duration_ms,
+            "snapshot_id": snapshot.snapshot_id,
+            "snapshot_kind": snapshot.snapshot_kind,
+            "project_id": snapshot.project_id,
+            "story_id": snapshot.story_id,
+            "run_id": snapshot.run_id,
+            "content_type": snapshot.content_type,
+        },
+    )

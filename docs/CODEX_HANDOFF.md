@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 9 planned - Performance**
+Current phase: **Phase 9 in progress - Performance**
 
 Recent completed V2 work:
 
@@ -136,6 +136,13 @@ Phase 9 starting point:
 - Optimize after monitoring gives real workflow data
 - Keep performance work bounded to measured bottlenecks
 - Do not add new product surfaces before the monitored V2 path is stable
+- Performance architecture is defined in `docs/AEVRYN_PERFORMANCE.md`
+- Phase 9 acceptance is governed by `docs/AEVRYN_V2_PHASE_9_ACCEPTANCE.md`
+- Phase 9 optimizes latency for the single-user V2 product path; throughput and scalability belong later
+- Initial budgets, deterministic timing helpers, metadata-only performance snapshots, baseline JSON artifacts, and regression comparison helpers live in `src/aevryn/performance.py`
+- Local V2 baseline generation lives in `src/aevryn/performance_runner.py` and is exposed by `aevryn performance-baseline`
+- Baseline comparison is exposed by `aevryn performance-baseline --compare-to <baseline.json>` and exits nonzero only for critical regressions
+- Generated local performance baselines belong under ignored `performance-baselines/`
 
 ---
 

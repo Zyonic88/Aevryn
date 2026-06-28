@@ -176,7 +176,7 @@ Everything the CLI can do, the API must be able to do.
 | 6 | Project Storage | Accepted | Durable project workflows, saved imports, runs, import content storage, and snapshots exist. |
 | 7 | Import UI | Accepted | Supported import formats, deferred-format failures, refresh visibility, snapshots, failed runs, and Web Import boundary are hardened. |
 | 8 | Monitoring | Accepted | Metadata-only project status, workflow observability, health/storage status, and restrained monitoring UI exist. |
-| 9 | Performance | Planned | Optimize after monitoring gives real workflow data. |
+| 9 | Performance | In Progress | Define budgets, baseline measurements, regression checks, and measured optimizations. |
 | 10 | Internal Alpha | Planned | Private alpha after import, monitoring, and performance are stable. |
 
 ---
@@ -487,7 +487,7 @@ Accepted monitoring scope:
 
 ## Phase 9 - Performance
 
-Status: **Planned**
+Status: **In Progress**
 
 Optimize after the product path is measurable.
 
@@ -499,6 +499,19 @@ Measure:
 * Prompt Time
 * Export Time
 * Memory
+
+Phase 9 completion is governed by `docs/AEVRYN_V2_PHASE_9_ACCEPTANCE.md`.
+
+Core rule:
+
+```text
+Measure.
+Budget.
+Detect regressions.
+Optimize only where measured.
+```
+
+Phase 9 optimizes latency for the single-user V2 product path. Throughput, horizontal scaling, distributed workers, production database tuning, cache infrastructure, and cloud autoscaling belong later.
 
 ---
 

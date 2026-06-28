@@ -38,6 +38,7 @@ runtime/
 output/
 exports/
 generated/
+performance-baselines/
 snapshots/*
 !snapshots/README.md
 

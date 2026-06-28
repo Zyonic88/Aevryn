@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 from aevryn.persistence import (
     DuplicateRecordError,
@@ -14,6 +16,7 @@ from aevryn.persistence import (
     InMemoryProjectRepository,
     JsonProjectRepository,
     ProjectRecord,
+    SnapshotRecord,
     StoryRecord,
     UserRecord,
 )
@@ -428,6 +431,44 @@ def test_background_worker_marks_run_succeeded_after_handler_completes() -> None
     assert run.finished_at == FINISHED
 
 
+def test_background_worker_logs_success_duration_without_payload(
+    caplog: LogCaptureFixture,
+) -> None:
+    """Worker success timing logs should stay metadata-only."""
+    repository = seeded_repository()
+    queue = InMemoryJobQueue()
+    BackgroundJobService(repository, queue, "0.1.0").submit_import_processing_job(
+        job_id="job_demo",
+        run_id="run_demo",
+        project_id="project_demo",
+        story_id="story_demo",
+        import_id="import_demo",
+        queued_at=NOW,
+    )
+
+    with caplog.at_level(logging.INFO, logger="aevryn.workers.service"):
+        final_job = BackgroundWorker(
+            repository, queue, SnapshotReturningHandler()
+        ).process_next(
+            started_at=STARTED,
+            finished_at=FINISHED,
+        )
+
+    assert final_job is not None
+    assert final_job.status == "succeeded"
+    worker_record = worker_log_record(caplog, "worker_processing", "succeeded")
+    snapshot_record = worker_log_record(caplog, "snapshot_creation", "succeeded")
+    assert_duration_log(worker_record)
+    assert_duration_log(snapshot_record)
+    assert getattr(worker_record, "job_id", "") == "job_demo"
+    assert getattr(worker_record, "run_id", "") == "run_demo"
+    assert getattr(worker_record, "snapshot_count", 0) == 1
+    assert getattr(snapshot_record, "snapshot_id", "") == "snapshot_demo"
+    assert getattr(snapshot_record, "snapshot_kind", "") == "canon"
+    assert "Mark carried a rusty dagger" not in caplog_record_text(caplog)
+    assert "serialized_output" not in caplog_record_text(caplog)
+
+
 def test_background_worker_marks_run_failed_after_handler_error() -> None:
     """Worker failures should be visible in queue and run records."""
     repository = seeded_repository()
@@ -453,6 +494,35 @@ def test_background_worker_marks_run_failed_after_handler_error() -> None:
     assert run.status == "failed"
     assert run.error_summary == "Worker failure."
     assert run.finished_at == FINISHED
+
+
+def test_background_worker_logs_failure_duration_without_payload(
+    caplog: LogCaptureFixture,
+) -> None:
+    """Worker failure timing logs should expose summaries without source payloads."""
+    repository = seeded_repository()
+    queue = InMemoryJobQueue()
+    BackgroundJobService(repository, queue, "0.1.0").submit_import_processing_job(
+        job_id="job_demo",
+        run_id="run_demo",
+        project_id="project_demo",
+        story_id="story_demo",
+        import_id="import_demo",
+        queued_at=NOW,
+    )
+
+    with caplog.at_level(logging.INFO, logger="aevryn.workers.service"):
+        final_job = BackgroundWorker(repository, queue, FailingHandler()).process_next(
+            started_at=STARTED,
+            finished_at=FINISHED,
+        )
+
+    assert final_job is not None
+    assert final_job.status == "failed"
+    record = worker_log_record(caplog, "worker_processing", "failed")
+    assert_duration_log(record)
+    assert getattr(record, "error_summary", "") == "Worker failure."
+    assert "Mark carried a rusty dagger" not in caplog_record_text(caplog)
 
 
 def test_background_worker_rejects_impossible_timestamp_order_before_claim() -> None:
@@ -600,6 +670,25 @@ class RecordingHandler:
         self.processed_job_ids = (*self.processed_job_ids, job.job_id)
 
 
+class SnapshotReturningHandler:
+    """Test handler that returns one metadata-rich snapshot."""
+
+    def process(self, job: BackgroundJob) -> tuple[SnapshotRecord, ...]:
+        """Return one snapshot with content that must stay out of logs."""
+        return (
+            SnapshotRecord(
+                snapshot_id="snapshot_demo",
+                project_id=job.project_id,
+                story_id=job.story_id,
+                run_id=job.run_id,
+                snapshot_kind="canon",
+                content_type="application/json",
+                serialized_output='{"source_text":"Mark carried a rusty dagger."}',
+                created_at=FINISHED,
+            ),
+        )
+
+
 class FailingHandler:
     """Test handler that raises a stable failure."""
 
@@ -708,3 +797,30 @@ def background_job_with(
         max_attempts=1,
         error_summary=error_summary,
     )
+
+
+def worker_log_record(
+    caplog: LogCaptureFixture,
+    workflow_kind: str,
+    workflow_status: str,
+) -> logging.LogRecord:
+    """Return one captured worker workflow log record."""
+    for record in caplog.records:
+        if (
+            getattr(record, "workflow_kind", "") == workflow_kind
+            and getattr(record, "workflow_status", "") == workflow_status
+        ):
+            return record
+    raise AssertionError(f"Missing worker log: {workflow_kind}/{workflow_status}")
+
+
+def assert_duration_log(record: logging.LogRecord) -> None:
+    """Assert a worker log record has metadata-only duration."""
+    duration_ms = getattr(record, "duration_ms", None)
+    assert isinstance(duration_ms, float)
+    assert duration_ms >= 0.0
+
+
+def caplog_record_text(caplog: LogCaptureFixture) -> str:
+    """Return captured worker log metadata as searchable text."""
+    return "\n".join(str(record.__dict__) for record in caplog.records)
