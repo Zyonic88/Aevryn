@@ -870,6 +870,50 @@ describe("App shell routing", () => {
     );
   });
 
+  it("reuses dashboard health data when navigating to monitoring inside the freshness window", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      if (url.endsWith(API_PATHS.projects)) {
+        return Promise.resolve(new Response(JSON.stringify({ projects: [projectAlphaPayload] })));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    const dashboardHealth = await screen.findByRole("region", { name: "API Health" });
+    await waitFor(() => expect(dashboardHealth).toHaveTextContent("ok"));
+    await user.click(await screen.findByRole("link", { name: /Alpha/ }));
+    await user.click(await screen.findByRole("link", { name: "Monitoring" }));
+    expect(await screen.findByRole("region", { name: "Current project run state" })).toHaveTextContent(
+      "succeeded",
+    );
+
+    const healthCalls = fetchMock.mock.calls.filter(([input]) =>
+      String(input).endsWith(API_PATHS.health),
+    );
+    expect(healthCalls).toHaveLength(1);
+  });
+
   it("renders monitoring status API failures without inferring workflow state", async () => {
     storeAuthenticatedProject();
     vi.stubGlobal(

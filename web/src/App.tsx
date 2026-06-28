@@ -41,7 +41,9 @@ function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
+        refetchOnWindowFocus: false,
         retry: false,
+        staleTime: 10_000,
       },
     },
   });
