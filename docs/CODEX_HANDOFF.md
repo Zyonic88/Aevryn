@@ -147,6 +147,8 @@ Phase 9 accepted:
 
 Phase 10 starting point:
 
+- Phase 10 acceptance is governed by `docs/AEVRYN_V2_PHASE_10_ACCEPTANCE.md`
+- Internal alpha readiness is defined in `docs/AEVRYN_INTERNAL_ALPHA.md`
 - Treat Phase 10 as private internal alpha readiness, not public launch
 - Verify the complete creator path: register, create project, upload story, wait for processing, view engine outputs, and export
 - Preserve all Phase 6-9 boundaries: durable storage, import workflow, monitoring observability, metadata-only performance measurement, and no frontend inference of backend workflow state

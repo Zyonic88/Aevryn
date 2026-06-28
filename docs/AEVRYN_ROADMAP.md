@@ -536,6 +536,10 @@ Break it.
 
 Fix it.
 
+Phase 10 completion is governed by `docs/AEVRYN_V2_PHASE_10_ACCEPTANCE.md`.
+
+Internal alpha readiness is defined in `docs/AEVRYN_INTERNAL_ALPHA.md`.
+
 ---
 
 ## Version 2 Success Criteria
