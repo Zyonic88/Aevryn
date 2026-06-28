@@ -73,11 +73,14 @@ function ProjectOutputSummary({
 }) {
   const surfaceSummary = outputs.surfaces.find((item) => item.surface === surface);
   if (!outputs.canon.available || !surfaceSummary) {
+    const processingActive = outputs.status === "pending" || outputs.status === "running";
     return (
       <section className="project-panel" aria-label="Processed project output">
         <h2>Processed Project Results</h2>
-        <EmptyState title="No processed output yet">
-          Save an import, submit processing, and wait for a canon snapshot.
+        <EmptyState title={processingActive ? "Processing project output" : "No processed output yet"}>
+          {processingActive
+            ? "Aevryn is processing this import. Results will appear here when the canon snapshot is ready."
+            : "Save an import, submit processing, and wait for a canon snapshot."}
         </EmptyState>
       </section>
     );
@@ -90,7 +93,7 @@ function ProjectOutputSummary({
       <dl className="metric-grid">
         <Metric label="State" value={formatRunStatus(surfaceSummary.status)} />
         <Metric label="Items" value={surfaceSummary.item_count.toLocaleString()} />
-        <Metric label="Source" value={outputs.latest_import?.filename ?? "Latest import"} />
+        <Metric label="Import" value={outputs.latest_import ? "Latest import" : "No import"} />
         <Metric
           label="Run"
           value={

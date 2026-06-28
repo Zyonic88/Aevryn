@@ -863,10 +863,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
     expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Monitoring" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument();
     expect(await screen.findByRole("region", { name: "Current project run state" })).toHaveTextContent(
       "succeeded",
     );
@@ -946,10 +943,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Monitoring" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument();
     expect(await screen.findByRole("region", { name: "API health" })).toHaveTextContent("ok");
     expect(screen.getByRole("region", { name: "API health" })).toHaveTextContent(
       "Project Storageconfigured",
@@ -1010,7 +1004,7 @@ describe("App shell routing", () => {
     const dashboardHealth = await screen.findByRole("region", { name: "API Health" });
     await waitFor(() => expect(dashboardHealth).toHaveTextContent("ok"));
     await user.click(await screen.findByRole("link", { name: /Alpha/ }));
-    await user.click(await screen.findByRole("link", { name: "Monitoring" }));
+    await user.click(await screen.findByRole("link", { name: "View monitoring" }));
     expect(await screen.findByRole("region", { name: "Current project run state" })).toHaveTextContent(
       "succeeded",
     );
@@ -1121,7 +1115,7 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
     expect(await screen.findByText("Canon snapshot ready")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("link", { name: "Monitoring" }));
+    await user.click(screen.getByRole("link", { name: "View monitoring" }));
     expect(await screen.findByRole("region", { name: "Current project run state" })).toHaveTextContent(
       "Succeeded",
     );
@@ -1424,7 +1418,7 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
     expect(screen.getByText("Evidence anchors")).toBeInTheDocument();
     expect(screen.getByText("1 chapter, 8 scenes, 1 evidence anchor.")).toBeInTheDocument();
-    expect(screen.getByText("Showing first 6 of 8 scenes.")).toBeInTheDocument();
+    expect(screen.getByText("8 scenes ready for review.")).toBeInTheDocument();
     expect(screen.getByText("Chapter 1")).toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_007_scene_001")).not.toBeInTheDocument();
   });
@@ -1629,15 +1623,14 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
     await user.click(await screen.findByRole("button", { name: "Save import" }));
 
-    expect(
-      await screen.findByText("Saved chapter_001.txt for this story."),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("chapter_001.txt").length).toBeGreaterThanOrEqual(1);
+    expect(await screen.findByText("Import saved.")).toBeInTheDocument();
+    expect(screen.queryByText("chapter_001.txt")).not.toBeInTheDocument();
     expect(screen.getAllByText("8 scenes").length).toBeGreaterThanOrEqual(1);
     await user.click(screen.getByRole("button", { name: "Submit processing" }));
 
-    expect(await screen.findByText("Submitted chapter_001.txt for processing.")).toBeInTheDocument();
+    expect(await screen.findByText("Processing started.")).toBeInTheDocument();
     expect(await screen.findByText("Pending run")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Processing" })).toBeDisabled();
   });
 
   it("creates default story metadata while saving the first import from a fresh project", async () => {
@@ -1742,7 +1735,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
     await user.click(await screen.findByRole("button", { name: "Save import" }));
 
-    expect(await screen.findByText("Saved chapter_001.txt for this story.")).toBeInTheDocument();
+    expect(await screen.findByText("Import saved.")).toBeInTheDocument();
     expect(createdStoryTitle).toBe("Alpha Story");
     expect(createdStoryId).toBe("story_alpha_story");
     expect(fetchMock).toHaveBeenCalledWith(
@@ -1813,7 +1806,7 @@ describe("App shell routing", () => {
 
     expect(window.localStorage.getItem("aevryn.projects")).toBeNull();
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
-    expect(await screen.findByText("chapter_001.txt")).toBeInTheDocument();
+    expect(await screen.findByText("Chapter import")).toBeInTheDocument();
     expect(screen.getByText("8 scenes")).toBeInTheDocument();
     expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
     expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();

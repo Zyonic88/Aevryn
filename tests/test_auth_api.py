@@ -596,7 +596,21 @@ def test_import_runs_api_rejects_duplicate_and_cross_user_submissions() -> None:
         json=payload,
     )
     assert duplicate.status_code == 409
-    assert duplicate.json()["error"] == "run_exists"
+    assert duplicate.json() == {
+        "error": "import_run_already_active",
+        "detail": "Import processing is already in progress.",
+    }
+
+    duplicate_import_run = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_second", "job_id": "job_second", "now": SOON},
+    )
+    assert duplicate_import_run.status_code == 409
+    assert duplicate_import_run.json() == {
+        "error": "import_run_already_active",
+        "detail": "Import processing is already in progress.",
+    }
 
     cross_user = client.post(
         "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",

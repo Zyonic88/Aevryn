@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
+import { NavLink } from "react-router-dom";
 
 import { apiClient, type ImportInspectRequest } from "../api/client";
 import { useAuth } from "../auth/useAuth";
@@ -16,7 +17,6 @@ import { formatRunStatus } from "../formatting/display";
 import {
   importResultTotalsLabel,
   importScenePreviewRows,
-  importScenePreviewSummary,
 } from "../importing/importResult";
 import type { EngineRun, ImportInspect, ImportRecord, Snapshot, Story } from "../api/schemas";
 import type { SourceFormats } from "../api/schemas";
@@ -188,6 +188,13 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const snapshotsByRun = new Map(
     (snapshotsQuery.data?.snapshots ?? []).map((snapshot) => [snapshot.run_id, snapshot]),
   );
+  const latestRunByImportId = new Map<string, EngineRun>();
+  for (const run of runsQuery.data?.runs ?? []) {
+    const existingRun = latestRunByImportId.get(run.import_id);
+    if (!existingRun || runSortTimestamp(run) > runSortTimestamp(existingRun)) {
+      latestRunByImportId.set(run.import_id, run);
+    }
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -246,6 +253,11 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   }
 
   function submitImportProcessing(importRecord: ImportRecord) {
+    const existingRun = latestRunByImportId.get(importRecord.import_id);
+    if (existingRun && existingRun.status !== "failed") {
+      setSubmittedRun(existingRun);
+      return;
+    }
     submitRun.reset();
     setSubmittedRun(null);
     submitRun.mutate(importRecord);
@@ -437,13 +449,13 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               <dd>{inspectionResult.evidence_anchors}</dd>
             </div>
             <div>
-              <dt>Source</dt>
-              <dd>{filename}</dd>
+              <dt>Input</dt>
+              <dd>{fileContentBase64 ? "Uploaded file" : "Pasted text"}</dd>
             </div>
           </dl>
           {inspectionResult.scene_map.length > 0 ? (
             <>
-              <p className="field-note">{importScenePreviewSummary(inspectionResult)}</p>
+              <p className="field-note">{sceneMapReadyLabel(inspectionResult)}</p>
               <div className="compact-list" aria-label="Scene map">
                 {importScenePreviewRows(inspectionResult).map((scene) => (
                   <div key={scene.scene_id} className="compact-row">
@@ -471,7 +483,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               : "Save import"}
           </button>
           {savedImport ? (
-            <p className="field-note">Saved {savedImport.filename} for this story.</p>
+            <p className="field-note">Import saved.</p>
           ) : null}
       </section>
       ) : null}
@@ -490,30 +502,37 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           ) : null}
           {(importsQuery.data?.imports ?? []).length > 0 ? (
             <div className="compact-list">
-              {(importsQuery.data?.imports ?? []).map((importRecord) => (
-                <div key={importRecord.import_id} className="compact-row">
-                  <strong>{importRecord.filename}</strong>
-                  <span>{importRecord.scene_count} scenes</span>
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    disabled={submitRun.isPending}
-                    onClick={() => submitImportProcessing(importRecord)}
-                  >
-                    {submitRun.isPending ? "Submitting" : "Submit processing"}
-                  </button>
-                </div>
-              ))}
+              {(importsQuery.data?.imports ?? []).map((importRecord, index) => {
+                const run = latestRunByImportId.get(importRecord.import_id);
+                const processingAction = importProcessingAction(run, submitRun.isPending);
+                return (
+                  <div key={importRecord.import_id} className="compact-row">
+                    <strong>{importCardTitle(index)}</strong>
+                    <span>{sceneCountLabel(importRecord.scene_count)}</span>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={processingAction.disabled}
+                      onClick={() => submitImportProcessing(importRecord)}
+                    >
+                      {processingAction.label}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           ) : null}
           {submittedRun ? (
-            <p className="field-note">Submitted {savedImport?.filename ?? "import"} for processing.</p>
+            <p className="field-note">{submittedRunMessage(submittedRun)}</p>
           ) : null}
         </section>
       ) : null}
 
       <section className="project-panel" aria-label="Project runs">
         <h2>Project Runs</h2>
+        <NavLink className="secondary-button" to={`/projects/${project.id}/monitoring`}>
+          View monitoring
+        </NavLink>
         {runsQuery.isLoading ? <LoadingMessage>Loading project runs.</LoadingMessage> : null}
         {runsQuery.error && !runsQuery.data ? <ErrorMessage>{runsQuery.error.message}</ErrorMessage> : null}
         {snapshotsQuery.error ? <ErrorMessage>{snapshotsQuery.error.message}</ErrorMessage> : null}
@@ -531,6 +550,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
                   <strong>Processing run</strong>
                   <span>{formatRunStatus(run.status)} run</span>
                   <span>{runSnapshotLabel(run, snapshotsByRun.get(run.run_id))}</span>
+                  {isActiveRun(run) ? (
+                    <span>Results will appear when the canon snapshot is ready.</span>
+                  ) : null}
                   {errorLabel ? <span>{errorLabel}</span> : null}
                 </div>
               );
@@ -662,6 +684,57 @@ function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): strin
     return "Snapshot pending";
   }
   return "Snapshot waiting";
+}
+
+function importCardTitle(index: number): string {
+  return index === 0 ? "Chapter import" : `Chapter import ${index + 1}`;
+}
+
+function sceneCountLabel(count: number): string {
+  return count === 1 ? "1 scene" : `${count.toLocaleString()} scenes`;
+}
+
+function sceneMapReadyLabel(result: ImportInspect): string {
+  return result.scene_map.length === 1
+    ? "Scene map ready."
+    : `${result.scene_map.length.toLocaleString()} scenes ready for review.`;
+}
+
+function importProcessingAction(
+  run: EngineRun | undefined,
+  isSubmitting: boolean,
+): { label: string; disabled: boolean } {
+  if (isSubmitting) {
+    return { label: "Submitting", disabled: true };
+  }
+  if (!run) {
+    return { label: "Submit processing", disabled: false };
+  }
+  if (run.status === "failed") {
+    return { label: "Retry processing", disabled: false };
+  }
+  if (run.status === "succeeded") {
+    return { label: "Processed", disabled: true };
+  }
+  return { label: "Processing", disabled: true };
+}
+
+function submittedRunMessage(run: EngineRun): string {
+  if (run.status === "failed") {
+    return "Processing failed. Retry is available.";
+  }
+  if (run.status === "succeeded") {
+    return "Processing already completed.";
+  }
+  return "Processing started.";
+}
+
+function isActiveRun(run: EngineRun): boolean {
+  return run.status !== "failed" && run.status !== "succeeded";
+}
+
+function runSortTimestamp(run: EngineRun): string {
+  return run.status_updated_at ?? run.finished_at ?? run.started_at;
 }
 
 function runErrorLabel(run: EngineRun): string {

@@ -35,6 +35,8 @@ const workspaceTabs = [
 
 type WorkspaceTabId = (typeof workspaceTabs)[number]["id"];
 
+const visibleWorkspaceTabs = workspaceTabs.filter((tab) => tab.id !== "monitoring");
+
 export function ProjectWorkspacePage() {
   const { session } = useAuth();
   const { projectId, tabId = "overview" } = useParams();
@@ -79,7 +81,7 @@ export function ProjectWorkspacePage() {
           <h1>{project.name}</h1>
         </div>
         <nav aria-label="Workspace sections" className="workspace-nav">
-          {workspaceTabs.map((tab) => (
+          {visibleWorkspaceTabs.map((tab) => (
             <NavLink key={tab.id} to={`/projects/${project.id}/${tab.id}`}>
               {tab.label}
             </NavLink>
@@ -154,6 +156,11 @@ function WorkspacePlaceholder({ tabId, label }: { tabId: WorkspaceTabId; label: 
       <div className="placeholder-panel">
         <h3>{placeholderTitle(tabId)}</h3>
         <p>{placeholderBody(tabId)}</p>
+        {tabId === "overview" ? (
+          <NavLink className="secondary-button" to="monitoring">
+            View monitoring
+          </NavLink>
+        ) : null}
       </div>
     </>
   );
@@ -172,7 +179,7 @@ function placeholderTitle(tabId: WorkspaceTabId): string {
 
 function placeholderBody(tabId: WorkspaceTabId): string {
   if (tabId === "overview") {
-    return "Use the Story and Import sections to add chapters, then check Monitoring for processing status.";
+    return "Use Story and Import to add chapters. Monitoring is available when you need workflow diagnostics.";
   }
   return "This section will render API view models after the import workflow is hardened.";
 }

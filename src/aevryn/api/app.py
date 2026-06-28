@@ -1078,6 +1078,22 @@ def create_app(
                 detail={"error": "import_not_found", "detail": "Import not found."},
             ) from error
         try:
+            existing_runs = repository.list_engine_runs_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+            existing_run = _active_or_completed_import_run(
+                runs=existing_runs,
+                import_id=import_id,
+            )
+            if existing_run is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "error": "import_run_already_active",
+                        "detail": _import_run_already_active_detail(existing_run),
+                    },
+                )
             BackgroundJobService(
                 repository=repository,
                 queue=queue,
@@ -2412,6 +2428,25 @@ def _require_import_scope(
     if import_record.story_id != story_id:
         raise ValueError("Import does not belong to story.")
     return import_record
+
+
+def _active_or_completed_import_run(
+    *,
+    runs: Sequence[EngineRunRecord],
+    import_id: str,
+) -> EngineRunRecord | None:
+    """Return the latest nonfailed run for an import, if one already exists."""
+    matching_runs = tuple(
+        run for run in runs if run.import_id == import_id and run.status != "failed"
+    )
+    return _latest_run(matching_runs)
+
+
+def _import_run_already_active_detail(run: EngineRunRecord) -> str:
+    """Return creator-facing duplicate run guidance."""
+    if run.status == "succeeded":
+        return "Import processing already completed."
+    return "Import processing is already in progress."
 
 
 def _import_metadata_filename(value: str) -> str:
