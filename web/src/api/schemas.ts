@@ -194,6 +194,40 @@ export const projectStatusSchema = z.object({
   recent_workflow_events: z.array(projectWorkflowEventSchema),
 });
 
+export const projectOutputCanonSummarySchema = z.object({
+  available: z.boolean(),
+  title: z.string(),
+  snapshot_kind: z.string(),
+  created_at: z.string(),
+  source_id: z.string(),
+  chapters: z.number(),
+  scenes: z.number(),
+  evidence_anchor_count: z.number(),
+  extraction_result_count: z.number(),
+  accepted_entity_count: z.number(),
+  accepted_fact_count: z.number(),
+  accepted_relationship_count: z.number(),
+  accepted_state_change_count: z.number(),
+  rejected_candidate_count: z.number(),
+});
+
+export const projectOutputSurfaceSchema = z.object({
+  surface: z.string(),
+  title: z.string(),
+  status: z.string(),
+  summary: z.string(),
+  item_count: z.number(),
+});
+
+export const projectOutputsSchema = z.object({
+  project_id: z.string(),
+  status: z.string(),
+  latest_import: projectStatusImportSchema.nullable(),
+  latest_engine_run: projectStatusRunSchema.nullable(),
+  canon: projectOutputCanonSummarySchema,
+  surfaces: z.array(projectOutputSurfaceSchema),
+});
+
 export const snapshotSchema = z.object({
   snapshot_id: z.string(),
   project_id: z.string(),
@@ -396,5 +430,8 @@ export type ImportList = z.infer<typeof importListSchema>;
 export type EngineRun = z.infer<typeof engineRunSchema>;
 export type EngineRunList = z.infer<typeof engineRunListSchema>;
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
+export type ProjectOutputCanonSummary = z.infer<typeof projectOutputCanonSummarySchema>;
+export type ProjectOutputSurface = z.infer<typeof projectOutputSurfaceSchema>;
+export type ProjectOutputs = z.infer<typeof projectOutputsSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type SnapshotList = z.infer<typeof snapshotListSchema>;

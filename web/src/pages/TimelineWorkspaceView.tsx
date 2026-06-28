@@ -5,6 +5,10 @@ import { apiClient, type TimelinePreviewRequest } from "../api/client";
 import type { SceneMapEntry, TimelinePreview } from "../api/schemas";
 import { EmptyState, ErrorMessage } from "../components/Feedback";
 import {
+  DeveloperPreviewToggle,
+  ProjectOutputSummaryPanel,
+} from "../output/ProjectOutputSummaryPanel";
+import {
   buildTimelinePreviewPayload,
   canSubmitTimelinePreviewInput,
 } from "../previewing/previewPayload";
@@ -71,9 +75,12 @@ export function TimelineWorkspaceView({ project }: { project: ProjectSummary }) 
         <h2>Timeline</h2>
       </div>
 
-      <section className="project-panel">
-        <h2>Timeline Preview</h2>
-        <form className="import-form" onSubmit={submit}>
+      <ProjectOutputSummaryPanel project={project} surface="timeline" />
+
+      <DeveloperPreviewToggle>
+        <section>
+          <h2>Timeline Preview</h2>
+          <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
               Source reference
@@ -121,8 +128,9 @@ export function TimelineWorkspaceView({ project }: { project: ProjectSummary }) 
           >
             {previewTimeline.isPending ? "Building preview" : "Preview timeline"}
           </button>
-        </form>
-      </section>
+          </form>
+        </section>
+      </DeveloperPreviewToggle>
 
       {previewResult ? <TimelinePreviewResult result={previewResult} /> : null}
     </div>

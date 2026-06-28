@@ -424,6 +424,52 @@ class ProjectStatusResponse(BaseModel):
     recent_workflow_events: tuple[ProjectWorkflowEvent, ...]
 
 
+class ProjectOutputCanonSummary(BaseModel):
+    """Metadata-only summary of the latest persisted canon snapshot."""
+
+    model_config = ConfigDict(frozen=True)
+
+    available: bool
+    title: str = ""
+    snapshot_kind: str = ""
+    created_at: str = ""
+    source_id: str = ""
+    chapters: int = 0
+    scenes: int = 0
+    evidence_anchor_count: int = 0
+    extraction_result_count: int = 0
+    accepted_entity_count: int = 0
+    accepted_fact_count: int = 0
+    accepted_relationship_count: int = 0
+    accepted_state_change_count: int = 0
+    rejected_candidate_count: int = 0
+
+
+class ProjectOutputSurface(BaseModel):
+    """Creator-facing availability summary for one project output surface."""
+
+    model_config = ConfigDict(frozen=True)
+
+    surface: str
+    title: str
+    status: str
+    summary: str
+    item_count: int = 0
+
+
+class ProjectOutputsResponse(BaseModel):
+    """API-owned project output summary for alpha workspace surfaces."""
+
+    model_config = ConfigDict(frozen=True)
+
+    project_id: str
+    status: str
+    latest_import: ProjectStatusImport | None = None
+    latest_engine_run: ProjectStatusRun | None = None
+    canon: ProjectOutputCanonSummary
+    surfaces: tuple[ProjectOutputSurface, ...]
+
+
 class SnapshotStoreRequest(BaseModel):
     """Trusted worker request to persist one engine output snapshot."""
 

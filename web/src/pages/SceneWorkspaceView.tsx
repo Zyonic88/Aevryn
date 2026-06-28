@@ -5,6 +5,10 @@ import { apiClient, type ScenePreviewRequest } from "../api/client";
 import type { OutputSection, ScenePreview } from "../api/schemas";
 import { ErrorMessage } from "../components/Feedback";
 import {
+  DeveloperPreviewToggle,
+  ProjectOutputSummaryPanel,
+} from "../output/ProjectOutputSummaryPanel";
+import {
   buildScenePreviewPayload,
   canSubmitScenePreviewInput,
 } from "../previewing/previewPayload";
@@ -74,9 +78,12 @@ export function SceneWorkspaceView({ project }: { project: ProjectSummary }) {
         <h2>Scenes</h2>
       </div>
 
-      <section className="project-panel">
-        <h2>Scene Preview</h2>
-        <form className="import-form" onSubmit={submit}>
+      <ProjectOutputSummaryPanel project={project} surface="scenes" />
+
+      <DeveloperPreviewToggle>
+        <section>
+          <h2>Scene Preview</h2>
+          <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
               Source reference
@@ -134,8 +141,9 @@ export function SceneWorkspaceView({ project }: { project: ProjectSummary }) {
           >
             {previewScene.isPending ? "Building preview" : "Preview scene"}
           </button>
-        </form>
-      </section>
+          </form>
+        </section>
+      </DeveloperPreviewToggle>
 
       {previewResult ? <ScenePreviewResult result={previewResult} /> : null}
     </div>

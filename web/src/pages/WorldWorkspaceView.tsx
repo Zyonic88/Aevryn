@@ -4,6 +4,10 @@ import { FormEvent, useState } from "react";
 import { apiClient, type WorldPreviewRequest } from "../api/client";
 import type { OutputSection, WorldPreview } from "../api/schemas";
 import { EmptyState, ErrorMessage } from "../components/Feedback";
+import {
+  DeveloperPreviewToggle,
+  ProjectOutputSummaryPanel,
+} from "../output/ProjectOutputSummaryPanel";
 import { buildWorldPreviewPayload, canSubmitWorldPreviewInput } from "../previewing/previewPayload";
 import type { ProjectSummary } from "../projects/projectStore";
 
@@ -71,9 +75,12 @@ export function WorldWorkspaceView({ project }: { project: ProjectSummary }) {
         <h2>World</h2>
       </div>
 
-      <section className="project-panel">
-        <h2>World Preview</h2>
-        <form className="import-form" onSubmit={submit}>
+      <ProjectOutputSummaryPanel project={project} surface="world" />
+
+      <DeveloperPreviewToggle>
+        <section>
+          <h2>World Preview</h2>
+          <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
               Source reference
@@ -131,8 +138,9 @@ export function WorldWorkspaceView({ project }: { project: ProjectSummary }) {
           >
             {previewWorld.isPending ? "Building preview" : "Preview world"}
           </button>
-        </form>
-      </section>
+          </form>
+        </section>
+      </DeveloperPreviewToggle>
 
       {previewResult ? <WorldPreviewResult result={previewResult} /> : null}
     </div>

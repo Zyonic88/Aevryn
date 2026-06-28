@@ -5,6 +5,10 @@ import { apiClient, type ContinuityPreviewRequest } from "../api/client";
 import type { ContinuityPreview, ContinuityRecord, ContinuityScene } from "../api/schemas";
 import { EmptyState, ErrorMessage } from "../components/Feedback";
 import {
+  DeveloperPreviewToggle,
+  ProjectOutputSummaryPanel,
+} from "../output/ProjectOutputSummaryPanel";
+import {
   buildContinuityPreviewPayload,
   canSubmitContinuityPreviewInput,
 } from "../previewing/previewPayload";
@@ -82,9 +86,12 @@ export function ContinuityWorkspaceView({ project }: { project: ProjectSummary }
         <h2>Continuity</h2>
       </div>
 
-      <section className="project-panel">
-        <h2>Continuity Preview</h2>
-        <form className="import-form" onSubmit={submit}>
+      <ProjectOutputSummaryPanel project={project} surface="continuity" />
+
+      <DeveloperPreviewToggle>
+        <section>
+          <h2>Continuity Preview</h2>
+          <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
               Source reference
@@ -134,8 +141,9 @@ export function ContinuityWorkspaceView({ project }: { project: ProjectSummary }
           >
             {previewContinuity.isPending ? "Building preview" : "Preview continuity"}
           </button>
-        </form>
-      </section>
+          </form>
+        </section>
+      </DeveloperPreviewToggle>
 
       {previewResult ? <ContinuityPreviewResult result={previewResult} /> : null}
     </div>

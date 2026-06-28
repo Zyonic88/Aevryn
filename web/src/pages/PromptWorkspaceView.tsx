@@ -5,6 +5,10 @@ import { apiClient, type PromptPreviewRequest } from "../api/client";
 import type { OutputSection, PromptPreview } from "../api/schemas";
 import { ErrorMessage } from "../components/Feedback";
 import {
+  DeveloperPreviewToggle,
+  ProjectOutputSummaryPanel,
+} from "../output/ProjectOutputSummaryPanel";
+import {
   buildPromptPreviewPayload,
   canSubmitPromptPreviewInput,
 } from "../previewing/previewPayload";
@@ -76,9 +80,12 @@ export function PromptWorkspaceView({ project }: { project: ProjectSummary }) {
         <h2>Prompt Packs</h2>
       </div>
 
-      <section className="project-panel">
-        <h2>Prompt Pack Preview</h2>
-        <form className="import-form" onSubmit={submit}>
+      <ProjectOutputSummaryPanel project={project} surface="prompts" />
+
+      <DeveloperPreviewToggle>
+        <section>
+          <h2>Prompt Pack Preview</h2>
+          <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
               Source reference
@@ -136,8 +143,9 @@ export function PromptWorkspaceView({ project }: { project: ProjectSummary }) {
           >
             {previewPrompts.isPending ? "Building preview" : "Preview prompt pack"}
           </button>
-        </form>
-      </section>
+          </form>
+        </section>
+      </DeveloperPreviewToggle>
 
       {previewResult ? <PromptPreviewResult result={previewResult} /> : null}
     </div>

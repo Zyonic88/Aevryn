@@ -933,6 +933,81 @@ def test_project_status_responses_include_request_ids() -> None:
     assert missing.json()["error"] == "project_not_found"
 
 
+def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() -> None:
+    """Project outputs should expose processed alpha results without raw source payloads."""
+    repository = InMemoryProjectRepository()
+    content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            import_content_store=content_store,
+            background_job_queue=InMemoryJobQueue(),
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=content_store,
+            ),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
+
+    response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["project_id"] == "project_alpha"
+    assert payload["status"] == "succeeded"
+    assert payload["latest_import"]["filename"] == "chapter_001.txt"
+    assert payload["latest_engine_run"]["status"] == "succeeded"
+    assert payload["canon"] == {
+        "available": True,
+        "title": "chapter_001",
+        "snapshot_kind": "canon",
+        "created_at": SOON,
+        "source_id": "source_alpha",
+        "chapters": 1,
+        "scenes": 1,
+        "evidence_anchor_count": 1,
+        "extraction_result_count": 1,
+        "accepted_entity_count": 1,
+        "accepted_fact_count": 1,
+        "accepted_relationship_count": 0,
+        "accepted_state_change_count": 1,
+        "rejected_candidate_count": 0,
+    }
+    assert [surface["surface"] for surface in payload["surfaces"]] == [
+        "characters",
+        "world",
+        "timeline",
+        "scenes",
+        "continuity",
+        "prompts",
+        "exports",
+    ]
+    assert payload["surfaces"][0]["status"] == "ready"
+    assert payload["surfaces"][3]["item_count"] == 1
+    assert "Mark carried a rusty dagger" not in response.text
+    assert "serialized_output" not in response.text
+
+
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:
     """Worker processing should not fabricate snapshots without source bytes."""
     repository = InMemoryProjectRepository()
@@ -1333,6 +1408,7 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert "/v2/projects/{project_id}/settings" in route_paths
     assert "/v2/projects/{project_id}/stories" in route_paths
     assert "/v2/projects/{project_id}/snapshots" in route_paths
+    assert "/v2/projects/{project_id}/outputs" in route_paths
     assert "/v2/projects/{project_id}/stories/{story_id}/snapshots" in route_paths
     assert "/v2/projects/{project_id}/stories/{story_id}/imports" in route_paths
     assert "/v2/projects/{project_id}/runs" in route_paths
@@ -1358,6 +1434,9 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     )
     assert paths["/v2/projects/{project_id}/snapshots"]["get"]["operationId"] == (
         "getV2ProjectSnapshots"
+    )
+    assert paths["/v2/projects/{project_id}/outputs"]["get"]["operationId"] == (
+        "getV2ProjectOutputs"
     )
     assert paths["/v2/projects/{project_id}/stories/{story_id}/snapshots"]["get"][
         "operationId"

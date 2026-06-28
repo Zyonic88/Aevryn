@@ -5,6 +5,10 @@ import { apiClient, type CharacterPreviewRequest } from "../api/client";
 import type { CharacterPreview, CharacterProfile, OutputSection } from "../api/schemas";
 import { EmptyState, ErrorMessage } from "../components/Feedback";
 import {
+  DeveloperPreviewToggle,
+  ProjectOutputSummaryPanel,
+} from "../output/ProjectOutputSummaryPanel";
+import {
   buildCharacterPreviewPayload,
   canSubmitCharacterPreviewInput,
 } from "../previewing/previewPayload";
@@ -74,9 +78,12 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
         <h2>Characters</h2>
       </div>
 
-      <section className="project-panel">
-        <h2>Character Preview</h2>
-        <form className="import-form" onSubmit={submit}>
+      <ProjectOutputSummaryPanel project={project} surface="characters" />
+
+      <DeveloperPreviewToggle>
+        <section>
+          <h2>Character Preview</h2>
+          <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
               Source reference
@@ -136,8 +143,9 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
           >
             {previewCharacters.isPending ? "Building preview" : "Preview characters"}
           </button>
-        </form>
-      </section>
+          </form>
+        </section>
+      </DeveloperPreviewToggle>
 
       {previewResult ? <CharacterPreviewResult result={previewResult} /> : null}
     </div>

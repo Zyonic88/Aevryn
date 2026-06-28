@@ -67,6 +67,9 @@ from aevryn.api.models import (
     ProjectCreateRequest,
     ProjectListResponse,
     ProjectOutput,
+    ProjectOutputCanonSummary,
+    ProjectOutputSurface,
+    ProjectOutputsResponse,
     ProjectOutputsPreviewRequest,
     ProjectOutputsPreviewResponse,
     ProjectPreviewRequest,
@@ -707,6 +710,54 @@ def create_app(
             raise _project_storage_error(error) from error
         return SnapshotListResponse(
             snapshots=tuple(_snapshot_output(snapshot) for snapshot in snapshots),
+        )
+
+    @app.get(
+        "/v2/projects/{project_id}/outputs",
+        response_model=ProjectOutputsResponse,
+        tags=["Projects"],
+        operation_id="getV2ProjectOutputs",
+    )
+    def project_outputs(project_id: str, request: Request) -> ProjectOutputsResponse:
+        """Return API-owned processed output summaries for alpha workspace surfaces."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            stories = repository.list_stories_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+            imports = tuple(
+                import_record
+                for story in stories
+                for import_record in repository.list_imports_for_story(
+                    user_id=user.user_id,
+                    story_id=story.story_id,
+                )
+            )
+            runs = repository.list_engine_runs_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+            snapshots = repository.list_snapshots_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _project_outputs_response(
+            project_id=project_id,
+            imports=imports,
+            runs=runs,
+            snapshots=snapshots,
         )
 
     @app.post(
@@ -1897,6 +1948,166 @@ def _project_status_output(
     )
 
 
+def _project_outputs_response(
+    *,
+    project_id: str,
+    imports: Sequence[ImportRecord],
+    runs: Sequence[EngineRunRecord],
+    snapshots: Sequence[SnapshotRecord],
+) -> ProjectOutputsResponse:
+    """Build project output summaries from persisted snapshots without executing workflows."""
+    latest_import = _latest_import(imports)
+    latest_run = _latest_run(runs)
+    latest_canon = _latest_canon_snapshot(snapshots)
+    canon_summary = _project_output_canon_summary(latest_canon)
+    return ProjectOutputsResponse(
+        project_id=project_id,
+        status=_project_workflow_state(runs=runs, imports=imports, snapshots=snapshots),
+        latest_import=_project_status_import(latest_import) if latest_import else None,
+        latest_engine_run=_project_status_run(latest_run) if latest_run else None,
+        canon=canon_summary,
+        surfaces=_project_output_surfaces(canon_summary),
+    )
+
+
+def _project_output_canon_summary(
+    snapshot: SnapshotRecord | None,
+) -> ProjectOutputCanonSummary:
+    """Return a safe canon summary from a persisted snapshot."""
+    if snapshot is None:
+        return ProjectOutputCanonSummary(available=False)
+    payload = _canon_snapshot_metadata(snapshot)
+    return ProjectOutputCanonSummary(
+        available=True,
+        title=_string_payload_value(payload, "title"),
+        snapshot_kind=snapshot.snapshot_kind,
+        created_at=snapshot.created_at,
+        source_id=_string_payload_value(payload, "source_id"),
+        chapters=_int_payload_value(payload, "chapters"),
+        scenes=_int_payload_value(payload, "scenes"),
+        evidence_anchor_count=_int_payload_value(payload, "evidence_anchor_count"),
+        extraction_result_count=_int_payload_value(payload, "extraction_result_count"),
+        accepted_entity_count=_int_payload_value(payload, "accepted_entity_count"),
+        accepted_fact_count=_int_payload_value(payload, "accepted_fact_count"),
+        accepted_relationship_count=_int_payload_value(payload, "accepted_relationship_count"),
+        accepted_state_change_count=_int_payload_value(payload, "accepted_state_change_count"),
+        rejected_candidate_count=_int_payload_value(payload, "rejected_candidate_count"),
+    )
+
+
+def _project_output_surfaces(
+    canon: ProjectOutputCanonSummary,
+) -> tuple[ProjectOutputSurface, ...]:
+    """Return alpha output surface availability from canon metadata."""
+    if not canon.available:
+        return tuple(
+            ProjectOutputSurface(
+                surface=surface,
+                title=title,
+                status="waiting",
+                summary="Run processing to create a canon snapshot for this project.",
+            )
+            for surface, title in _output_surface_titles()
+        )
+    return (
+        ProjectOutputSurface(
+            surface="characters",
+            title="Character Cards",
+            status="ready",
+            item_count=canon.accepted_entity_count,
+            summary="Character output is backed by accepted canon entity metadata.",
+        ),
+        ProjectOutputSurface(
+            surface="world",
+            title="World",
+            status="ready",
+            item_count=canon.accepted_relationship_count,
+            summary="World output is backed by accepted canon relationship metadata.",
+        ),
+        ProjectOutputSurface(
+            surface="timeline",
+            title="Timeline",
+            status="ready",
+            item_count=canon.accepted_state_change_count,
+            summary="Timeline output is backed by accepted state-change metadata.",
+        ),
+        ProjectOutputSurface(
+            surface="scenes",
+            title="Scene Sheets",
+            status="ready",
+            item_count=canon.scenes,
+            summary="Scene output is backed by imported scene structure and evidence anchors.",
+        ),
+        ProjectOutputSurface(
+            surface="continuity",
+            title="Continuity",
+            status="ready",
+            item_count=canon.accepted_fact_count,
+            summary="Continuity output is backed by accepted canon fact metadata.",
+        ),
+        ProjectOutputSurface(
+            surface="prompts",
+            title="Prompt Packs",
+            status="ready",
+            item_count=canon.extraction_result_count,
+            summary="Prompt-pack output is available from the latest processed scene set.",
+        ),
+        ProjectOutputSurface(
+            surface="exports",
+            title="Exports",
+            status="ready",
+            item_count=canon.scenes,
+            summary="Export output can be prepared from the latest canon snapshot.",
+        ),
+    )
+
+
+def _output_surface_titles() -> tuple[tuple[str, str], ...]:
+    """Return stable workspace output surface names."""
+    return (
+        ("characters", "Character Cards"),
+        ("world", "World"),
+        ("timeline", "Timeline"),
+        ("scenes", "Scene Sheets"),
+        ("continuity", "Continuity"),
+        ("prompts", "Prompt Packs"),
+        ("exports", "Exports"),
+    )
+
+
+def _latest_canon_snapshot(snapshots: Sequence[SnapshotRecord]) -> SnapshotRecord | None:
+    """Return the latest canon snapshot by timestamp and ID."""
+    canon_snapshots = tuple(snapshot for snapshot in snapshots if snapshot.snapshot_kind == "canon")
+    return _latest_snapshot(canon_snapshots)
+
+
+def _canon_snapshot_metadata(snapshot: SnapshotRecord) -> Mapping[str, object]:
+    """Parse worker canon snapshot metadata without exposing raw payloads to the frontend."""
+    if snapshot.content_type != "application/json":
+        return {}
+    try:
+        payload = json.loads(snapshot.serialized_output)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return cast(Mapping[str, object], payload)
+
+
+def _string_payload_value(payload: Mapping[str, object], key: str) -> str:
+    """Return a string payload value when present."""
+    value = payload.get(key)
+    return value if isinstance(value, str) else ""
+
+
+def _int_payload_value(payload: Mapping[str, object], key: str) -> int:
+    """Return a non-negative integer payload value when present."""
+    value = payload.get(key)
+    if isinstance(value, int) and value >= 0:
+        return value
+    return 0
+
+
 def _run_status_count(runs: Sequence[EngineRunRecord], status: str) -> int:
     """Return count of runs in one lifecycle status."""
     return sum(1 for run in runs if run.status == status)
@@ -2371,6 +2582,11 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="GET",
             path="/v2/projects/{project_id}/snapshots",
             purpose="List durable engine output snapshots inside a project.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}/outputs",
+            purpose="Return processed project output summaries from durable snapshots.",
         ),
         ApiRouteCapability(
             method="GET",

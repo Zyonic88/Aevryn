@@ -5,6 +5,10 @@ import { apiClient, type ExportPreviewRequest } from "../api/client";
 import type { ExportPreview } from "../api/schemas";
 import { ErrorMessage } from "../components/Feedback";
 import {
+  DeveloperPreviewToggle,
+  ProjectOutputSummaryPanel,
+} from "../output/ProjectOutputSummaryPanel";
+import {
   buildExportPreviewPayload,
   canSubmitExportPreviewInput,
 } from "../previewing/previewPayload";
@@ -95,9 +99,12 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
         <h2>Exports</h2>
       </div>
 
-      <section className="project-panel">
-        <h2>Export Preview</h2>
-        <form className="import-form" onSubmit={submit}>
+      <ProjectOutputSummaryPanel project={project} surface="exports" />
+
+      <DeveloperPreviewToggle>
+        <section>
+          <h2>Export Preview</h2>
+          <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
               Source reference
@@ -176,8 +183,9 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
           >
             {previewExport.isPending ? "Building preview" : "Preview export"}
           </button>
-        </form>
-      </section>
+          </form>
+        </section>
+      </DeveloperPreviewToggle>
 
       {previewResult ? <ExportPreviewResult result={previewResult} /> : null}
     </div>
