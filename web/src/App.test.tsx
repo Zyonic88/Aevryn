@@ -38,16 +38,51 @@ const sourceFormatsPayload = {
     {
       extension: ".txt",
       status: "supported",
-      adapter: "plain_text",
-      evidence_anchor_status: "preserved",
-      notes: "Plain text import.",
+      adapter: "SourceFileTextExtractor",
+      evidence_anchor_status: "supported",
+      notes: "Read as UTF-8 text and passed directly to Story Import.",
+    },
+    {
+      extension: ".md/.markdown",
+      status: "supported",
+      adapter: "SourceFileTextExtractor",
+      evidence_anchor_status: "supported",
+      notes: "Read as UTF-8 text; Markdown markers remain source text.",
+    },
+    {
+      extension: ".html/.htm/.xhtml",
+      status: "supported",
+      adapter: "SourceFileTextExtractor",
+      evidence_anchor_status: "supported",
+      notes: "Extracts visible text and skips script, style, and navigation.",
+    },
+    {
+      extension: ".fb2",
+      status: "supported",
+      adapter: "SourceFileTextExtractor",
+      evidence_anchor_status: "supported",
+      notes: "Extracts paragraph-like XML text.",
+    },
+    {
+      extension: ".docx",
+      status: "supported",
+      adapter: "SourceFileTextExtractor",
+      evidence_anchor_status: "supported",
+      notes: "Extracts paragraph text from word/document.xml.",
+    },
+    {
+      extension: ".odt",
+      status: "supported",
+      adapter: "SourceFileTextExtractor",
+      evidence_anchor_status: "supported",
+      notes: "Extracts heading and paragraph text from content.xml.",
     },
     {
       extension: ".epub",
       status: "supported",
-      adapter: "epub",
-      evidence_anchor_status: "preserved",
-      notes: "EPUB spine import.",
+      adapter: "EpubTextExtractor",
+      evidence_anchor_status: "supported",
+      notes: "Extracts readable spine content and skips navigation material.",
     },
   ],
   deferred: [
@@ -55,8 +90,22 @@ const sourceFormatsPayload = {
       extension: ".pdf",
       status: "deferred",
       adapter: "none",
-      evidence_anchor_status: "not_available",
-      notes: "Deferred for V1.1.",
+      evidence_anchor_status: "not_enabled",
+      notes: "Requires deterministic PDF reading-order parser support.",
+    },
+    {
+      extension: ".mobi",
+      status: "deferred",
+      adapter: "none",
+      evidence_anchor_status: "not_enabled",
+      notes: "Requires dedicated Kindle parser support.",
+    },
+    {
+      extension: ".azw3",
+      status: "deferred",
+      adapter: "none",
+      evidence_anchor_status: "not_enabled",
+      notes: "Requires dedicated Kindle parser support.",
     },
   ],
 };
@@ -888,13 +937,11 @@ describe("App shell routing", () => {
   it("inspects selected source files from the import workspace tab", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
+    const inspectBodies: Array<Record<string, string>> = [];
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith(API_PATHS.importsInspect)) {
-        const body = JSON.parse(String(init?.body));
-        expect(body.filename).toBe("chapter_upload.md");
-        expect(body.source_id).toBe("chapter_upload");
-        expect(atob(body.content_base64)).toBe("Chapter 1\nUploaded from disk.");
+        inspectBodies.push(JSON.parse(String(init?.body)));
         return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
       }
       if (url.endsWith(API_PATHS.health)) {
@@ -933,14 +980,40 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
-    await user.upload(
-      screen.getByLabelText("Source file"),
-      new File(["Chapter 1\nUploaded from disk."], "chapter_upload.md", {
-        type: "text/markdown",
-      }),
+    expect(await screen.findByText(".md/.markdown")).toBeInTheDocument();
+    expect(screen.getByLabelText("Source file")).toHaveAttribute(
+      "accept",
+      ".txt,.md,.markdown,.html,.htm,.xhtml,.fb2,.docx,.odt,.epub",
     );
-    await waitFor(() => expect(screen.getByText(/chapter_upload\.md/u)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+
+    const supportedUploads = [
+      { filename: "chapter_upload.txt", sourceId: "chapter_upload" },
+      { filename: "chapter_upload.md", sourceId: "chapter_upload" },
+      { filename: "chapter_upload.html", sourceId: "chapter_upload" },
+      { filename: "chapter_upload.fb2", sourceId: "chapter_upload" },
+      { filename: "chapter_upload.docx", sourceId: "chapter_upload" },
+      { filename: "chapter_upload.odt", sourceId: "chapter_upload" },
+      { filename: "chapter_upload.epub", sourceId: "chapter_upload" },
+    ];
+
+    for (const [index, upload] of supportedUploads.entries()) {
+      const content = `Chapter 1\nUploaded from ${upload.filename}.`;
+      await user.upload(
+        screen.getByLabelText("Source file"),
+        new File([content], upload.filename),
+      );
+      await waitFor(() =>
+        expect(screen.getByText(new RegExp(upload.filename, "u"))).toBeInTheDocument(),
+      );
+      await user.click(screen.getByRole("button", { name: "Inspect import" }));
+      await waitFor(() => expect(inspectBodies).toHaveLength(index + 1));
+
+      expect(inspectBodies[index]).toMatchObject({
+        filename: upload.filename,
+        source_id: upload.sourceId,
+      });
+      expect(atob(inspectBodies[index].content_base64)).toBe(content);
+    }
 
     expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
@@ -2170,7 +2243,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      ".pdf import is deferred. Deferred for V1.1.",
+      ".pdf import is deferred. Requires deterministic PDF reading-order parser support.",
     );
     expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalledWith(

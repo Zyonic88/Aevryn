@@ -111,6 +111,7 @@ Phase 7 progress:
 
 - Import workspace now has a source file input that reads selected bytes, derives source IDs from filenames, sends the same `content_base64` API payload as pasted text, and blocks deferred source formats before inspection/save
 - Frontend coverage now includes file-upload inspect payloads, byte base64 encoding, filename-derived source IDs, and deferred-format preflight behavior
+- Supported upload extensions from the API now populate the browser file picker accept list, and app coverage exercises TXT, Markdown, HTML, FB2, DOCX, ODT, and EPUB through the upload-to-inspect path
 
 ---
 

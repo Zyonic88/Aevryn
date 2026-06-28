@@ -134,6 +134,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     contentBase64: fileContentBase64,
   });
   const isSourceTextOversized = sourceText.length > MAX_IMPORT_SOURCE_CHARACTERS;
+  const sourceFileAccept = sourceFormats.data
+    ? sourceFormatAcceptValue(sourceFormats.data.supported)
+    : undefined;
   const sourceCountLabel = fileContentBase64
     ? `${selectedFileName} / ${selectedFileSize.toLocaleString()} bytes selected`
     : importSourceCharacterCountLabel(sourceText);
@@ -298,6 +301,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             Source file
             <input
               type="file"
+              accept={sourceFileAccept}
               onChange={(event) => {
                 void selectSourceFile(event.target.files?.[0] ?? null);
               }}
@@ -499,12 +503,28 @@ function readFileBytesWithFileReader(file: File): Promise<Uint8Array> {
 function deferredFormatMessage(filename: string, formats: SourceFormats | undefined): string {
   const normalizedFilename = filename.trim().toLowerCase();
   const match = formats?.deferred.find((format) =>
-    normalizedFilename.endsWith(format.extension.toLowerCase()),
+    sourceFormatExtensions(format.extension).some((extension) =>
+      normalizedFilename.endsWith(extension.toLowerCase()),
+    ),
   );
   if (!match) {
     return "";
   }
   return `${match.extension} import is deferred. ${match.notes}`;
+}
+
+function sourceFormatAcceptValue(formats: SourceFormats["supported"]): string {
+  return formats
+    .flatMap((format) => sourceFormatExtensions(format.extension))
+    .filter((extension, index, extensions) => extensions.indexOf(extension) === index)
+    .join(",");
+}
+
+function sourceFormatExtensions(value: string): string[] {
+  return value
+    .split("/")
+    .map((extension) => extension.trim())
+    .filter((extension) => extension.startsWith("."));
 }
 
 function importQueryKey(projectId: string, storyId: string, sessionToken: string | undefined) {
