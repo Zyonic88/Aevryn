@@ -12,6 +12,7 @@ import { ExportWorkspaceView } from "./ExportWorkspaceView";
 import { ImportWorkspaceView } from "./ImportWorkspaceView";
 import { PromptWorkspaceView } from "./PromptWorkspaceView";
 import { SceneWorkspaceView } from "./SceneWorkspaceView";
+import { SettingsWorkspaceView } from "./SettingsWorkspaceView";
 import { TimelineWorkspaceView } from "./TimelineWorkspaceView";
 import { WorldWorkspaceView } from "./WorldWorkspaceView";
 
@@ -25,6 +26,7 @@ const workspaceTabs = [
   { id: "continuity", label: "Continuity" },
   { id: "prompts", label: "Prompt Packs" },
   { id: "exports", label: "Exports" },
+  { id: "settings", label: "Settings" },
 ] as const;
 
 type WorkspaceTabId = (typeof workspaceTabs)[number]["id"];
@@ -126,6 +128,9 @@ function WorkspaceTabContent({
   }
   if (tabId === "exports") {
     return <ExportWorkspaceView project={project} />;
+  }
+  if (tabId === "settings") {
+    return <SettingsWorkspaceView project={project} />;
   }
 
   return <WorkspacePlaceholder tabId={tabId} label={label} />;

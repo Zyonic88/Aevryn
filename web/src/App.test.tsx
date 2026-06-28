@@ -274,6 +274,11 @@ const projectAlphaPayload = {
   created_at: projectAlpha.updatedAt,
   updated_at: projectAlpha.updatedAt,
 };
+const projectSettingsPayload = {
+  project_id: projectAlpha.id,
+  default_export_format: "markdown",
+  locale: "en-US",
+};
 
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
@@ -311,6 +316,21 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
           return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/settings`)) {
+          if (init?.method === "PUT") {
+            const body = JSON.parse(String(init.body));
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  project_id: projectAlphaPayload.project_id,
+                  default_export_format: body.default_export_format,
+                  locale: body.locale,
+                }),
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify(projectSettingsPayload)));
         }
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
@@ -1936,5 +1956,27 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByText("Unknown workspace section")).toBeInTheDocument();
+  });
+
+  it("loads and saves project settings from the settings workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/settings"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("en-US")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Default export format"), "json");
+    await user.clear(screen.getByLabelText("Locale"));
+    await user.type(screen.getByLabelText("Locale"), "en-GB");
+    await user.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Settings saved for project_alpha.",
+    );
   });
 });

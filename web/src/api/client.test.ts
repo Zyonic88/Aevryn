@@ -21,6 +21,11 @@ const projectPayload = {
   created_at: "2026-06-27T00:00:00.000Z",
   updated_at: "2026-06-27T00:00:00.000Z",
 };
+const projectSettingsPayload = {
+  project_id: "project_alpha",
+  default_export_format: "markdown",
+  locale: "en-US",
+};
 const sourceFormatsPayload = {
   supported: [
     {
@@ -501,6 +506,44 @@ describe("AevrynApiClient", () => {
       expect(headers.get("Authorization")).toBe("Bearer session-token");
       expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
     }
+  });
+
+  it("sends authenticated requests for project settings", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(projectSettingsPayload), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ ...projectSettingsPayload, default_export_format: "json" }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.getProjectSettings(
+        "project_alpha",
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toEqual(projectSettingsPayload);
+    await expect(
+      client.updateProjectSettings(
+        "project_alpha",
+        { default_export_format: "json", locale: "en-US" },
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toEqual({ ...projectSettingsPayload, default_export_format: "json" });
+
+    for (const [input, init] of fetchMock.mock.calls) {
+      expect(input).toBe(`https://api.aevryn.ai${API_PATHS.projects}/project_alpha/settings`);
+      const headers = init.headers as Headers;
+      expect(headers.get("Authorization")).toBe("Bearer session-token");
+      expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
+    }
+    expect(fetchMock.mock.calls[1][1].method).toBe("PUT");
   });
 
   it("normalizes API errors", async () => {

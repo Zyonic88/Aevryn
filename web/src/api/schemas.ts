@@ -65,6 +65,12 @@ export const projectListSchema = z.object({
   projects: z.array(projectSchema),
 });
 
+export const projectSettingsSchema = z.object({
+  project_id: z.string(),
+  default_export_format: z.string(),
+  locale: z.string(),
+});
+
 export const evidenceAnchorPreviewSchema = z.object({
   anchor_id: z.string(),
   chapter_id: z.string(),
@@ -244,3 +250,4 @@ export type AuthSession = z.infer<typeof authSessionSchema>;
 export type AuthUser = z.infer<typeof authMeSchema>;
 export type Project = z.infer<typeof projectSchema>;
 export type ProjectList = z.infer<typeof projectListSchema>;
+export type ProjectSettings = z.infer<typeof projectSettingsSchema>;

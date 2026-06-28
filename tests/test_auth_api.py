@@ -253,6 +253,89 @@ def test_project_storage_api_does_not_require_deployment_api_key() -> None:
     assert created.json()["project_id"] == "project_alpha"
 
 
+def test_project_settings_api_reads_and_updates_settings() -> None:
+    """Project settings API should default and persist project-level settings."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created.status_code == 200
+
+    default_settings = client.get(
+        "/v2/projects/project_alpha/settings",
+        headers=auth_headers("token_001"),
+    )
+    assert default_settings.status_code == 200
+    assert default_settings.json() == {
+        "project_id": "project_alpha",
+        "default_export_format": "markdown",
+        "locale": "en-US",
+    }
+
+    updated = client.put(
+        "/v2/projects/project_alpha/settings",
+        headers=auth_headers("token_001"),
+        json={"default_export_format": " JSON ", "locale": " en-GB "},
+    )
+    assert updated.status_code == 200
+    assert updated.json() == {
+        "project_id": "project_alpha",
+        "default_export_format": "json",
+        "locale": "en-GB",
+    }
+
+    reloaded = client.get(
+        "/v2/projects/project_alpha/settings",
+        headers=auth_headers("token_001"),
+    )
+    assert reloaded.status_code == 200
+    assert reloaded.json() == updated.json()
+
+
+def test_project_settings_api_rejects_invalid_and_cross_user_updates() -> None:
+    """Project settings writes should validate payloads and ownership."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created.status_code == 200
+
+    cross_user = client.put(
+        "/v2/projects/project_alpha/settings",
+        headers=auth_headers("token_002"),
+        json={"default_export_format": "json", "locale": "en-US"},
+    )
+    assert cross_user.status_code == 404
+    assert cross_user.json()["error"] == "project_not_found"
+
+    invalid = client.put(
+        "/v2/projects/project_alpha/settings",
+        headers=auth_headers("token_001"),
+        json={"default_export_format": "bad format", "locale": "en-US"},
+    )
+    assert invalid.status_code == 400
+    assert invalid.json()["error"] == "project_settings_failed"
+
+
 def test_project_storage_api_requires_configured_storage() -> None:
     """Project routes should fail clearly when no repository is configured."""
     client = TestClient(create_app(authentication_service=auth_service()))
@@ -343,11 +426,18 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     route_paths = {route["path"] for route in capabilities.json()["routes"]}
     assert "/v2/projects" in route_paths
     assert "/v2/projects/{project_id}" in route_paths
+    assert "/v2/projects/{project_id}/settings" in route_paths
 
     paths = client.get("/openapi.json").json()["paths"]
     assert paths["/v2/projects"]["get"]["operationId"] == "getV2Projects"
     assert paths["/v2/projects"]["post"]["operationId"] == "postV2Projects"
     assert paths["/v2/projects/{project_id}"]["get"]["operationId"] == "getV2Project"
+    assert paths["/v2/projects/{project_id}/settings"]["get"]["operationId"] == (
+        "getV2ProjectSettings"
+    )
+    assert paths["/v2/projects/{project_id}/settings"]["put"]["operationId"] == (
+        "putV2ProjectSettings"
+    )
 
 
 def register_user(client: TestClient, *, user_id: str, email: str) -> None:

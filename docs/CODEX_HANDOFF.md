@@ -82,6 +82,7 @@ Phase 6 first project-storage slice implemented:
 - CLI `aevryn api` now uses the environment-backed app factory in reload and non-reload modes
 - Dashboard list/create now uses the project storage API instead of browser project shells as source of truth
 - Direct workspace project routes load project detail through the API, with legacy local shell fallback only for compatibility
+- Project Settings API routes added for read/update and the workspace Settings tab now saves through the API
 
 Phase 6 storage limitation:
 

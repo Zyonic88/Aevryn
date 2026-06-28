@@ -441,6 +441,32 @@ Missing projects and cross-user project reads return a stable project-not-found 
 
 The route must not leak whether another user owns the requested project ID.
 
+## `GET /v2/projects/{project_id}/settings`
+
+Returns durable project settings inside the authenticated user's ownership boundary.
+
+If a project has no saved settings, the repository returns safe defaults:
+
+* `default_export_format`: `markdown`
+* `locale`: `en-US`
+
+Missing projects and cross-user project reads return a stable project-not-found response.
+
+## `PUT /v2/projects/{project_id}/settings`
+
+Updates durable project settings inside the authenticated user's ownership boundary.
+
+The request includes:
+
+* `default_export_format`
+* `locale`
+
+The API normalizes export format tokens and trims locale values before storage.
+
+Invalid settings fail clearly.
+
+Missing projects and cross-user project writes return a stable project-not-found response.
+
 ## `POST /v2/projects/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns stateless project-level metadata.

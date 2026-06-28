@@ -14,6 +14,7 @@ import {
   healthSchema,
   importInspectSchema,
   projectListSchema,
+  projectSettingsSchema,
   projectSchema,
   sourceFormatsSchema,
   type ApiCapabilities,
@@ -30,6 +31,7 @@ import {
   type ImportInspect,
   type Project,
   type ProjectList,
+  type ProjectSettings,
   type SourceFormats,
 } from "./schemas";
 
@@ -78,6 +80,11 @@ export type ProjectCreateRequest = {
   project_id: string;
   name: string;
   now: string;
+};
+
+export type ProjectSettingsRequest = {
+  default_export_format: string;
+  locale: string;
 };
 
 export type ImportInspectRequest = {
@@ -248,6 +255,29 @@ export class AevrynApiClient {
     });
   }
 
+  getProjectSettings(
+    projectId: string,
+    sessionToken: string,
+    now: string,
+  ): Promise<ProjectSettings> {
+    return this.request(projectSettingsPath(projectId), projectSettingsSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  updateProjectSettings(
+    projectId: string,
+    payload: ProjectSettingsRequest,
+    sessionToken: string,
+    now: string,
+  ): Promise<ProjectSettings> {
+    return this.request(projectSettingsPath(projectId), projectSettingsSchema, {
+      method: "PUT",
+      headers: authHeaders(sessionToken, now),
+      body: JSON.stringify(payload),
+    });
+  }
+
   private async request<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
@@ -295,6 +325,10 @@ function authHeaders(sessionToken: string, now: string): HeadersInit {
     Authorization: `Bearer ${sessionToken}`,
     "X-Aevryn-Now": now,
   };
+}
+
+function projectSettingsPath(projectId: string): string {
+  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/settings`;
 }
 
 async function readJsonPayload(response: Response): Promise<unknown> {

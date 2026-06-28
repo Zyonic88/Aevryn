@@ -63,6 +63,8 @@ from aevryn.api.models import (
     ProjectOutputsPreviewResponse,
     ProjectPreviewRequest,
     ProjectPreviewResponse,
+    ProjectSettingsRequest,
+    ProjectSettingsResponse,
     PromptPreviewRequest,
     PromptPreviewResponse,
     SceneMapEntry,
@@ -96,6 +98,7 @@ from aevryn.persistence import (
     PersistenceError,
     ProjectRecord,
     ProjectRepository,
+    ProjectSettingsRecord,
     RecordNotFoundError,
     UserRecord,
 )
@@ -520,6 +523,73 @@ def create_app(
             ) from error
         except PersistenceError as error:
             raise _project_storage_error(error) from error
+
+    @app.get(
+        "/v2/projects/{project_id}/settings",
+        response_model=ProjectSettingsResponse,
+        tags=["Projects"],
+        operation_id="getV2ProjectSettings",
+    )
+    def get_project_settings(project_id: str, request: Request) -> ProjectSettingsResponse:
+        """Return durable settings inside the authenticated user's project boundary."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            return _project_settings_output(
+                repository.get_project_settings(user_id=user.user_id, project_id=project_id)
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+
+    @app.put(
+        "/v2/projects/{project_id}/settings",
+        response_model=ProjectSettingsResponse,
+        tags=["Projects"],
+        operation_id="putV2ProjectSettings",
+    )
+    def update_project_settings(
+        project_id: str,
+        request_body: ProjectSettingsRequest,
+        request: Request,
+    ) -> ProjectSettingsResponse:
+        """Update durable settings inside the authenticated user's project boundary."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            repository.get_project(user_id=user.user_id, project_id=project_id)
+            settings = ProjectSettingsRecord(
+                project_id=project_id,
+                default_export_format=_normalized_machine_token(
+                    request_body.default_export_format,
+                    "Default export format",
+                ),
+                locale=_normalized_locale(request_body.locale),
+            )
+            repository.save_project_settings(settings)
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "project_settings_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _project_settings_output(settings)
 
     @app.post(
         "/v2/imports/inspect",
@@ -1050,9 +1120,38 @@ def _project_output(project: ProjectRecord) -> ProjectOutput:
     )
 
 
+def _project_settings_output(settings: ProjectSettingsRecord) -> ProjectSettingsResponse:
+    """Convert persisted project settings to the API contract."""
+    return ProjectSettingsResponse(
+        project_id=settings.project_id,
+        default_export_format=settings.default_export_format,
+        locale=settings.locale,
+    )
+
+
 def _normalized_project_name(value: str) -> str:
     """Return normalized project display text."""
     return " ".join(value.split())
+
+
+def _normalized_machine_token(value: str, label: str) -> str:
+    """Return normalized machine-token text or raise a clear validation error."""
+    normalized = value.strip().lower()
+    if not normalized:
+        raise ValueError(f"{label} cannot be blank.")
+    if any(character.isspace() for character in normalized):
+        raise ValueError(f"{label} cannot contain whitespace.")
+    return normalized
+
+
+def _normalized_locale(value: str) -> str:
+    """Return normalized locale text or raise a clear validation error."""
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("Settings locale cannot be blank.")
+    if any(character.isspace() for character in normalized):
+        raise ValueError("Settings locale cannot contain whitespace.")
+    return normalized
 
 
 def _project_storage_error(error: PersistenceError) -> HTTPException:
@@ -1156,6 +1255,16 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="GET",
             path="/v2/projects/{project_id}",
             purpose="Return durable project metadata for the authenticated user.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}/settings",
+            purpose="Return durable project settings for the authenticated user.",
+        ),
+        ApiRouteCapability(
+            method="PUT",
+            path="/v2/projects/{project_id}/settings",
+            purpose="Update durable project settings for the authenticated user.",
         ),
         ApiRouteCapability(
             method="POST",

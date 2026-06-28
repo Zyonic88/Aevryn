@@ -204,6 +204,25 @@ class ProjectListResponse(BaseModel):
     projects: tuple[ProjectOutput, ...]
 
 
+class ProjectSettingsRequest(BaseModel):
+    """Request to update durable project settings."""
+
+    model_config = ConfigDict(frozen=True)
+
+    default_export_format: str = Field(min_length=1)
+    locale: str = Field(min_length=1)
+
+
+class ProjectSettingsResponse(BaseModel):
+    """Durable project settings returned by the API."""
+
+    model_config = ConfigDict(frozen=True)
+
+    project_id: str
+    default_export_format: str
+    locale: str
+
+
 class ImportInspectRequest(BaseModel):
     """Request to inspect imported source structure without storing a project."""
 
