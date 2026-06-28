@@ -1,6 +1,7 @@
 """Tests for evidence-bounded AI extraction."""
 
 import json
+from collections.abc import Mapping
 
 import pytest
 
@@ -9,6 +10,7 @@ from aevryn import (
     EvidenceBoundedAIExtractor,
     ExtractedFact,
     ExtractedStateChange,
+    OpenAIResponsesAIExtractionClient,
     StoryImporter,
 )
 
@@ -25,6 +27,36 @@ class JsonClient:
         """Return the configured response and remember the prompt."""
         self.prompt = prompt
         return self.response
+
+
+class RecordingOpenAITransport:
+    """Transport test double for OpenAI Responses client tests."""
+
+    def __init__(self, response_payload: dict[str, object]) -> None:
+        """Create the transport."""
+        self.response_payload = response_payload
+        self.url = ""
+        self.headers: dict[str, str] = {}
+        self.payload: dict[str, object] = {}
+        self.timeout_seconds = 0.0
+        self.max_response_bytes = 0
+
+    def post_json(
+        self,
+        *,
+        url: str,
+        headers: Mapping[str, str],
+        payload: Mapping[str, object],
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> dict[str, object]:
+        """Record the request and return the configured payload."""
+        self.url = url
+        self.headers = dict(headers)
+        self.payload = dict(payload)
+        self.timeout_seconds = timeout_seconds
+        self.max_response_bytes = max_response_bytes
+        return self.response_payload
 
 
 def imported_source_text() -> str:
@@ -95,6 +127,66 @@ def test_ai_extractor_returns_evidence_bounded_candidates() -> None:
     assert isinstance(result.state_changes[0], ExtractedStateChange)
     assert "Unknown stays unknown." in client.prompt
     assert anchor_id in client.prompt
+
+
+def test_openai_responses_client_returns_output_text_without_network() -> None:
+    """OpenAI client should adapt Responses payloads into extraction JSON text."""
+    transport = RecordingOpenAITransport(
+        {
+            "output": [
+                {
+                    "type": "message",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": json.dumps(
+                                {
+                                    "entities": [],
+                                    "facts": [],
+                                    "relationships": [],
+                                    "state_changes": [],
+                                }
+                            ),
+                        }
+                    ],
+                }
+            ]
+        }
+    )
+    client = OpenAIResponsesAIExtractionClient(
+        api_key="test-key",
+        model="test-model",
+        transport=transport,
+    )
+
+    output = client.complete("extract this scene")
+
+    assert json.loads(output) == {
+        "entities": [],
+        "facts": [],
+        "relationships": [],
+        "state_changes": [],
+    }
+    assert transport.url == "https://api.openai.com/v1/responses"
+    assert transport.headers["Authorization"] == "Bearer test-key"
+    assert transport.payload == {
+        "model": "test-model",
+        "input": "extract this scene",
+    }
+    assert transport.timeout_seconds == 30.0
+    assert transport.max_response_bytes == 1_048_576
+
+
+def test_openai_responses_client_rejects_missing_output_text() -> None:
+    """OpenAI client should fail cleanly when the response lacks text."""
+    client = OpenAIResponsesAIExtractionClient(
+        api_key="test-key",
+        model="test-model",
+        transport=RecordingOpenAITransport({"output": []}),
+    )
+
+    with pytest.raises(ValueError, match="did not include output text"):
+        client.complete("extract this scene")
 
 
 def test_ai_extractor_rejects_unknown_evidence_anchor() -> None:

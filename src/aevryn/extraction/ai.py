@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 from typing import Any, Protocol
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from aevryn.extraction.models import (
     ExtractedEntity,
@@ -24,6 +27,122 @@ class AIExtractionClient(Protocol):
 
     def complete(self, prompt: str) -> str:
         """Return a JSON extraction response for the prompt."""
+
+
+class OpenAIResponsesTransport(Protocol):
+    """Transport boundary for OpenAI Responses API calls."""
+
+    def post_json(
+        self,
+        *,
+        url: str,
+        headers: Mapping[str, str],
+        payload: Mapping[str, object],
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> dict[str, Any]:
+        """POST JSON and return a decoded JSON object."""
+
+
+class UrllibOpenAIResponsesTransport:
+    """Standard-library HTTP transport for OpenAI Responses API calls."""
+
+    def post_json(
+        self,
+        *,
+        url: str,
+        headers: Mapping[str, str],
+        payload: Mapping[str, object],
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> dict[str, Any]:
+        """POST JSON and return a decoded JSON object."""
+        request = Request(
+            url,
+            data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+            headers=dict(headers),
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=timeout_seconds) as response:
+                raw_response = response.read(max_response_bytes + 1)
+        except HTTPError as error:
+            raise ValueError(
+                f"OpenAI extraction request failed with HTTP {error.code}."
+            ) from error
+        except URLError as error:
+            raise ValueError("OpenAI extraction request failed.") from error
+
+        if len(raw_response) > max_response_bytes:
+            raise ValueError("OpenAI extraction response exceeded the size limit.")
+        if not raw_response:
+            raise ValueError("OpenAI extraction response was empty.")
+
+        try:
+            decoded = raw_response.decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise ValueError("OpenAI extraction response must be UTF-8 JSON.") from error
+
+        try:
+            response_payload = loads_json_without_duplicate_keys(decoded)
+        except json.JSONDecodeError as error:
+            raise ValueError("OpenAI extraction response must be valid JSON.") from error
+        if not isinstance(response_payload, dict):
+            raise ValueError("OpenAI extraction response must be a JSON object.")
+
+        return response_payload
+
+
+class OpenAIResponsesAIExtractionClient:
+    """AI extraction client backed by the OpenAI Responses API."""
+
+    _default_endpoint = "https://api.openai.com/v1/responses"
+
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        endpoint: str = _default_endpoint,
+        timeout_seconds: float = 30.0,
+        max_response_bytes: int = 1_048_576,
+        transport: OpenAIResponsesTransport | None = None,
+    ) -> None:
+        """Create an OpenAI Responses API extraction client."""
+        self._api_key = _required_text(api_key, "OpenAI API key")
+        self._model = _required_text(model, "OpenAI model")
+        self._endpoint = _required_text(endpoint, "OpenAI endpoint")
+        if isinstance(timeout_seconds, bool) or timeout_seconds <= 0:
+            raise ValueError("OpenAI timeout_seconds must be positive.")
+        if isinstance(max_response_bytes, bool) or max_response_bytes < 1:
+            raise ValueError("OpenAI max_response_bytes must be positive.")
+        self._timeout_seconds = timeout_seconds
+        self._max_response_bytes = max_response_bytes
+        self._transport = transport or UrllibOpenAIResponsesTransport()
+
+    def complete(self, prompt: str) -> str:
+        """Return a JSON extraction response for the prompt."""
+        prompt_text = _required_text(prompt, "OpenAI extraction prompt")
+        response_payload = self._transport.post_json(
+            url=self._endpoint,
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            payload={
+                "model": self._model,
+                "input": prompt_text,
+            },
+            timeout_seconds=self._timeout_seconds,
+            max_response_bytes=self._max_response_bytes,
+        )
+        output_text = _responses_output_text(response_payload)
+        logger.info(
+            "openai_extraction_response_received",
+            extra={"model": self._model},
+        )
+        return output_text
 
 
 class StaticAIExtractionClient:
@@ -386,3 +505,39 @@ class EvidenceBoundedAIExtractor:
             repaired = next_repair
 
         return repaired
+
+
+def _responses_output_text(response_payload: Mapping[str, Any]) -> str:
+    """Return concatenated output text from an OpenAI Responses API payload."""
+    direct_output = response_payload.get("output_text")
+    if isinstance(direct_output, str) and direct_output.strip():
+        return direct_output.strip()
+
+    output_parts: list[str] = []
+    output = response_payload.get("output")
+    if isinstance(output, list):
+        for output_item in output:
+            if not isinstance(output_item, dict):
+                continue
+            content = output_item.get("content")
+            if not isinstance(content, list):
+                continue
+            for content_item in content:
+                if not isinstance(content_item, dict):
+                    continue
+                if content_item.get("type") != "output_text":
+                    continue
+                text = content_item.get("text")
+                if isinstance(text, str) and text.strip():
+                    output_parts.append(text.strip())
+
+    if not output_parts:
+        raise ValueError("OpenAI extraction response did not include output text.")
+    return "\n".join(output_parts)
+
+
+def _required_text(value: str, field_name: str) -> str:
+    """Return a nonblank text value."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} cannot be blank.")
+    return value.strip()

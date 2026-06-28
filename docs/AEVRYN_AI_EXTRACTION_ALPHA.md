@@ -84,10 +84,28 @@ Machine IDs are allowed as secondary metadata, but they should not be the main r
 
 ---
 
-# Current Alpha Limitation
+# Worker Extraction Source
 
-The existing worker path uses the deterministic proof extractor unless a real evidence-bounded AI extraction source is wired in.
+The worker depends on the existing `SceneExtractor` boundary.
 
-That means the alpha UI can prove the workflow and presentation contract before broad story understanding is enabled.
+Default local alpha mode uses the deterministic proof extractor.
 
-The next extraction slice should add a real extraction source behind the existing `AIExtractionClient` boundary without letting the AI write directly to Canon.
+Configured alpha AI mode may inject an evidence-bounded extractor behind that worker boundary.
+
+The worker still follows the same authority chain:
+
+```text
+SceneExtractor
+-> Extraction candidates
+-> Canon Updating
+-> Canon snapshot
+-> Presentation panels
+```
+
+That means provider-backed AI can propose candidates without writing directly to Canon, persistence, logs, or frontend state.
+
+Aevryn now has an OpenAI Responses API `AIExtractionClient` adapter behind the same protocol. It is not the default worker path.
+
+Provider-backed extraction must be explicitly configured before any story text is sent to an external model.
+
+The remaining alpha limitation is provider selection and environment wiring. Broad story understanding should stay disabled until that configuration path is explicit, tested, and documented.

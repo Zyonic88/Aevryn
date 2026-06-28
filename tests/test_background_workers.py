@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,13 @@ from pathlib import Path
 import pytest
 from _pytest.logging import LogCaptureFixture
 
+from aevryn.extraction import (
+    ExtractedEntity,
+    ExtractedFact,
+    ExtractionResult,
+    SceneExtractionInput,
+)
+from aevryn.import_storage import ImportContentStore
 from aevryn.persistence import (
     DuplicateRecordError,
     EngineRunRecord,
@@ -33,6 +41,7 @@ from aevryn.workers import (
     InvalidJobTransitionError,
     JobNotFoundError,
     JobQueueError,
+    ProjectImportSnapshotHandler,
 )
 
 NOW = "2026-06-27T00:00:00Z"
@@ -659,6 +668,30 @@ def test_background_worker_preserves_run_scope() -> None:
     assert run.import_id == "import_demo"
 
 
+def test_project_import_snapshot_handler_uses_injected_extractor() -> None:
+    """Import processing should support the alpha AI extractor boundary."""
+    repository = seeded_repository()
+    extractor = RecordingSceneExtractor()
+    import_content_store: ImportContentStore = StaticImportContentStore(
+        b"Chapter 1\n\nLyra opened the sky gate."
+    )
+    handler = ProjectImportSnapshotHandler(
+        repository=repository,
+        import_content_store=import_content_store,
+        extractor=extractor,
+    )
+
+    snapshots = handler.process(background_job())
+
+    assert extractor.scene_ids == ("source_demo_chapter_001_scene_001",)
+    assert len(snapshots) == 1
+    snapshot_payload = json.loads(snapshots[0].serialized_output)
+    assert snapshot_payload["accepted_entity_count"] == 1
+    assert snapshot_payload["accepted_fact_count"] == 2
+    assert snapshot_payload["presentation"]["characters"][0]["display_name"] == "Lyra"
+    assert "Lyra opened the sky gate" not in snapshots[0].serialized_output
+
+
 @dataclass
 class RecordingHandler:
     """Test handler that records processed jobs."""
@@ -703,6 +736,60 @@ class FailingEnqueueQueue(InMemoryJobQueue):
     def enqueue(self, _job: BackgroundJob) -> None:
         """Raise a deterministic queue failure."""
         raise RuntimeError("Queue unavailable.")
+
+
+class StaticImportContentStore:
+    """Test import content store that returns one in-memory source body."""
+
+    def __init__(self, content: bytes) -> None:
+        """Create a static import content store."""
+        self._content = content
+
+    def store_import_content(self, _storage_ref: str, _content: bytes) -> None:
+        """Reject writes because this store is read-only for worker tests."""
+        raise NotImplementedError("Static test import store is read-only.")
+
+    def read_import_content(self, _storage_ref: str) -> bytes:
+        """Return the configured test source body."""
+        return self._content
+
+    def delete_import_content(self, _storage_ref: str) -> None:
+        """Ignore deletes because this store is read-only for worker tests."""
+
+
+class RecordingSceneExtractor:
+    """Test extractor that proves worker processing can use injected extraction."""
+
+    def __init__(self) -> None:
+        """Create a recording extractor."""
+        self.scene_ids: tuple[str, ...] = ()
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return one evidence-backed character proposal."""
+        self.scene_ids = (*self.scene_ids, scene.scene_id)
+        anchor_id = scene.evidence_anchor_ids[0]
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_lyra",
+                    entity_type="character",
+                    display_name="Lyra",
+                    evidence_anchor_id=anchor_id,
+                    confidence=0.95,
+                ),
+            ),
+            facts=(
+                ExtractedFact(
+                    fact_id="fact_character_lyra_role",
+                    entity_id="character_lyra",
+                    attribute="role",
+                    value="Sky Gate Keeper",
+                    evidence_anchor_id=anchor_id,
+                    confidence=0.91,
+                ),
+            ),
+        )
 
 
 def seeded_repository() -> InMemoryProjectRepository:

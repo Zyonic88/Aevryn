@@ -7,7 +7,10 @@ not update Canon or own truth.
 from aevryn.extraction.ai import (
     AIExtractionClient,
     EvidenceBoundedAIExtractor,
+    OpenAIResponsesAIExtractionClient,
+    OpenAIResponsesTransport,
     StaticAIExtractionClient,
+    UrllibOpenAIResponsesTransport,
 )
 from aevryn.extraction.engine import EntityExtractionEngine, SceneExtractor
 from aevryn.extraction.models import (
@@ -29,8 +32,11 @@ __all__ = [
     "ExtractedRelationship",
     "ExtractedStateChange",
     "ExtractionResult",
+    "OpenAIResponsesAIExtractionClient",
+    "OpenAIResponsesTransport",
     "SceneEvidenceAnchor",
     "SceneExtractionInput",
     "SceneExtractor",
     "StaticAIExtractionClient",
+    "UrllibOpenAIResponsesTransport",
 ]

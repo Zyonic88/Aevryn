@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
+from aevryn.extraction import SceneExtractor
 from aevryn.import_storage import ImportContentStore
 from aevryn.persistence import EngineRunRecord, ProjectRepository, SnapshotRecord
 from aevryn.presentation import PresentationEngine, PresentationSection
@@ -36,10 +37,12 @@ class ProjectImportSnapshotHandler:
         self,
         repository: ProjectRepository,
         import_content_store: ImportContentStore,
+        extractor: SceneExtractor | None = None,
     ) -> None:
         """Create a project import snapshot handler."""
         self._repository = repository
         self._import_content_store = import_content_store
+        self._extractor = extractor
 
     def process(self, job: BackgroundJob) -> tuple[SnapshotRecord, ...]:
         """Process one import job into deterministic engine output snapshots."""
@@ -52,11 +55,19 @@ class ProjectImportSnapshotHandler:
         with tempfile.TemporaryDirectory(prefix="AEVRYN_worker_import_") as directory:
             source_path = Path(directory) / import_record.filename
             source_path.write_bytes(content)
-            result = AevrynProjectRunner().run_demo_text_file(
+            runner = AevrynProjectRunner()
+            imported_source = runner.import_text_file(
                 path=source_path,
                 source_id=import_record.source_id,
                 title=source_path.stem,
             )
+            if self._extractor is None:
+                result = runner.run_demo_imported_source(imported_source)
+            else:
+                result = runner.run_imported_source(
+                    imported_source=imported_source,
+                    extractor=self._extractor,
+                )
         return (
             SnapshotRecord(
                 snapshot_id=f"snapshot_{job.run_id}_canon",
