@@ -108,4 +108,11 @@ Aevryn now has an OpenAI Responses API `AIExtractionClient` adapter behind the s
 
 Provider-backed extraction must be explicitly configured before any story text is sent to an external model.
 
-The remaining alpha limitation is provider selection and environment wiring. Broad story understanding should stay disabled until that configuration path is explicit, tested, and documented.
+Environment wiring supports:
+
+* `AEVRYN_EXTRACTION_MODE=demo`
+* `AEVRYN_EXTRACTION_MODE=openai`
+
+OpenAI mode requires `AEVRYN_OPENAI_API_KEY` and `AEVRYN_OPENAI_MODEL`.
+
+The remaining alpha limitation is live provider validation. Broad story understanding should stay disabled for testers until provider behavior, cost, latency, privacy language, and failure states are verified.

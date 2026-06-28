@@ -157,6 +157,38 @@ The JSON auth store is a deterministic local adapter, not the final production i
 
 If `AEVRYN_PROJECT_DATABASE_PATH` is absent, authenticated project routes fail clearly with `project_storage_unavailable` instead of silently creating stateless project shells.
 
+## Worker Extraction Mode
+
+The environment-backed worker defaults to local deterministic extraction.
+
+Default mode:
+
+```text
+AEVRYN_EXTRACTION_MODE=demo
+```
+
+Provider-backed extraction is opt-in only:
+
+```text
+AEVRYN_EXTRACTION_MODE=openai
+AEVRYN_OPENAI_API_KEY=...
+AEVRYN_OPENAI_MODEL=...
+```
+
+Optional provider settings:
+
+```text
+AEVRYN_OPENAI_ENDPOINT=https://api.openai.com/v1/responses
+AEVRYN_OPENAI_TIMEOUT_SECONDS=30
+AEVRYN_OPENAI_MAX_RESPONSE_BYTES=1048576
+```
+
+If `AEVRYN_EXTRACTION_MODE` is absent or `demo`, no external model receives story text.
+
+If `AEVRYN_EXTRACTION_MODE=openai`, `AEVRYN_OPENAI_API_KEY` and `AEVRYN_OPENAI_MODEL` are required before the app starts.
+
+Invalid modes, non-positive timeouts, and non-positive response byte limits fail at app creation time.
+
 ## Authentication Middleware
 
 Phase 1 supports optional API-key protection for workflow routes.

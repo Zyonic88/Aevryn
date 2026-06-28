@@ -13,10 +13,17 @@ from fastapi.testclient import TestClient
 
 from aevryn.api import (
     AUTH_STORE_PATH_ENV,
+    EXTRACTION_MODE_ENV,
+    OPENAI_API_KEY_ENV,
+    OPENAI_MAX_RESPONSE_BYTES_ENV,
+    OPENAI_MODEL_ENV,
+    OPENAI_TIMEOUT_SECONDS_ENV,
     PROJECT_DATABASE_PATH_ENV,
     create_app,
     create_app_from_env,
 )
+from aevryn.api.app import _worker_extractor_from_env
+from aevryn.extraction import EvidenceBoundedAIExtractor
 from aevryn.import_storage import InMemoryImportContentStore
 from aevryn.persistence import InMemoryProjectRepository
 
@@ -376,6 +383,100 @@ def test_create_app_from_env_configures_api_keys() -> None:
             "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
         },
     )
+
+    assert response.status_code == 200
+
+
+def test_worker_extractor_env_defaults_to_demo_mode() -> None:
+    """Provider-backed extraction should not be enabled implicitly."""
+    assert _worker_extractor_from_env({}) is None
+    assert _worker_extractor_from_env({EXTRACTION_MODE_ENV: "demo"}) is None
+
+
+def test_worker_extractor_env_configures_openai_mode() -> None:
+    """OpenAI extraction should require explicit mode, key, and model."""
+    extractor = _worker_extractor_from_env(
+        {
+            EXTRACTION_MODE_ENV: "openai",
+            OPENAI_API_KEY_ENV: "test-key",
+            OPENAI_MODEL_ENV: "test-model",
+            OPENAI_TIMEOUT_SECONDS_ENV: "12.5",
+            OPENAI_MAX_RESPONSE_BYTES_ENV: "2048",
+        }
+    )
+
+    assert isinstance(extractor, EvidenceBoundedAIExtractor)
+
+
+def test_worker_extractor_env_rejects_incomplete_openai_mode() -> None:
+    """OpenAI extraction config should fail before any worker can process text."""
+    try:
+        _worker_extractor_from_env({EXTRACTION_MODE_ENV: "openai"})
+    except ValueError as error:
+        assert OPENAI_API_KEY_ENV in str(error)
+    else:
+        raise AssertionError("Expected missing OpenAI API key to be rejected.")
+
+    try:
+        _worker_extractor_from_env(
+            {
+                EXTRACTION_MODE_ENV: "openai",
+                OPENAI_API_KEY_ENV: "test-key",
+            }
+        )
+    except ValueError as error:
+        assert OPENAI_MODEL_ENV in str(error)
+    else:
+        raise AssertionError("Expected missing OpenAI model to be rejected.")
+
+
+def test_worker_extractor_env_rejects_invalid_values() -> None:
+    """Extraction mode and numeric provider settings should fail clearly."""
+    for environ, expected in (
+        ({EXTRACTION_MODE_ENV: "magic"}, EXTRACTION_MODE_ENV),
+        (
+            {
+                EXTRACTION_MODE_ENV: "openai",
+                OPENAI_API_KEY_ENV: "test-key",
+                OPENAI_MODEL_ENV: "test-model",
+                OPENAI_TIMEOUT_SECONDS_ENV: "0",
+            },
+            OPENAI_TIMEOUT_SECONDS_ENV,
+        ),
+        (
+            {
+                EXTRACTION_MODE_ENV: "openai",
+                OPENAI_API_KEY_ENV: "test-key",
+                OPENAI_MODEL_ENV: "test-model",
+                OPENAI_MAX_RESPONSE_BYTES_ENV: "-1",
+            },
+            OPENAI_MAX_RESPONSE_BYTES_ENV,
+        ),
+    ):
+        try:
+            _worker_extractor_from_env(environ)
+        except ValueError as error:
+            assert expected in str(error)
+        else:
+            raise AssertionError(f"Expected invalid extraction config: {expected}")
+
+
+def test_create_app_from_env_accepts_explicit_openai_extraction_mode(
+    tmp_path: Path,
+) -> None:
+    """App env wiring should build the worker handler without calling providers."""
+    client = TestClient(
+        create_app_from_env(
+            {
+                PROJECT_DATABASE_PATH_ENV: str(tmp_path / "project_database.json"),
+                EXTRACTION_MODE_ENV: "openai",
+                OPENAI_API_KEY_ENV: "test-key",
+                OPENAI_MODEL_ENV: "test-model",
+            }
+        )
+    )
+
+    response = client.get("/v2/health")
 
     assert response.status_code == 200
 

@@ -120,7 +120,12 @@ from aevryn.auth import (
     PasswordPolicyError,
 )
 from aevryn.export import ExportEngine
-from aevryn.extraction import EvidenceBoundedAIExtractor, StaticAIExtractionClient
+from aevryn.extraction import (
+    EvidenceBoundedAIExtractor,
+    OpenAIResponsesAIExtractionClient,
+    SceneExtractor,
+    StaticAIExtractionClient,
+)
 from aevryn.import_storage import FileSystemImportContentStore, ImportContentStore
 from aevryn.importing import ImportedSource, SourceFileTextExtractor
 from aevryn.persistence import (
@@ -170,6 +175,12 @@ API_KEYS_ENV = "AEVRYN_API_KEYS"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
 IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
+EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
+OPENAI_API_KEY_ENV = "AEVRYN_OPENAI_API_KEY"
+OPENAI_MODEL_ENV = "AEVRYN_OPENAI_MODEL"
+OPENAI_ENDPOINT_ENV = "AEVRYN_OPENAI_ENDPOINT"
+OPENAI_TIMEOUT_SECONDS_ENV = "AEVRYN_OPENAI_TIMEOUT_SECONDS"
+OPENAI_MAX_RESPONSE_BYTES_ENV = "AEVRYN_OPENAI_MAX_RESPONSE_BYTES"
 PLATFORM_ENGINE_VERSION = "aevryn_v1"
 ALPHA_ACTIVE_RUN_TIMEOUT = timedelta(minutes=30)
 
@@ -1735,8 +1746,47 @@ def _platform_services_from_env(
         authentication_service,
         repository,
         InMemoryJobQueue(),
-        ProjectImportSnapshotHandler(repository, import_content_store),
+        ProjectImportSnapshotHandler(
+            repository,
+            import_content_store,
+            extractor=_worker_extractor_from_env(environ),
+        ),
         import_content_store,
+    )
+
+
+def _worker_extractor_from_env(environ: Mapping[str, str]) -> SceneExtractor | None:
+    """Return the configured worker extractor, or None for local demo mode."""
+    mode = environ.get(EXTRACTION_MODE_ENV, "").strip().lower()
+    if mode in {"", "demo"}:
+        return None
+    if mode != "openai":
+        raise ValueError("AEVRYN_EXTRACTION_MODE must be 'demo' or 'openai'.")
+
+    api_key = environ.get(OPENAI_API_KEY_ENV, "").strip()
+    if not api_key:
+        raise ValueError("AEVRYN_OPENAI_API_KEY is required for openai extraction.")
+    model = environ.get(OPENAI_MODEL_ENV, "").strip()
+    if not model:
+        raise ValueError("AEVRYN_OPENAI_MODEL is required for openai extraction.")
+
+    return EvidenceBoundedAIExtractor(
+        OpenAIResponsesAIExtractionClient(
+            api_key=api_key,
+            model=model,
+            endpoint=_optional_env_text(environ, OPENAI_ENDPOINT_ENV)
+            or "https://api.openai.com/v1/responses",
+            timeout_seconds=_optional_positive_float(
+                environ,
+                OPENAI_TIMEOUT_SECONDS_ENV,
+                default=30.0,
+            ),
+            max_response_bytes=_optional_positive_int(
+                environ,
+                OPENAI_MAX_RESPONSE_BYTES_ENV,
+                default=1_048_576,
+            ),
+        )
     )
 
 
@@ -1760,6 +1810,49 @@ def _import_storage_path_from_env(
     if configured_path:
         return Path(configured_path)
     return project_database_path.with_name(f"{project_database_path.stem}_imports")
+
+
+def _optional_env_text(environ: Mapping[str, str], key: str) -> str:
+    """Return an optional nonblank environment value."""
+    return environ.get(key, "").strip()
+
+
+def _optional_positive_float(
+    environ: Mapping[str, str],
+    key: str,
+    *,
+    default: float,
+) -> float:
+    """Return a positive float environment value or a default."""
+    raw_value = environ.get(key, "").strip()
+    if not raw_value:
+        return default
+    try:
+        value = float(raw_value)
+    except ValueError as error:
+        raise ValueError(f"{key} must be a positive number.") from error
+    if value <= 0:
+        raise ValueError(f"{key} must be a positive number.")
+    return value
+
+
+def _optional_positive_int(
+    environ: Mapping[str, str],
+    key: str,
+    *,
+    default: int,
+) -> int:
+    """Return a positive integer environment value or a default."""
+    raw_value = environ.get(key, "").strip()
+    if not raw_value:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError as error:
+        raise ValueError(f"{key} must be a positive integer.") from error
+    if value <= 0:
+        raise ValueError(f"{key} must be a positive integer.")
+    return value
 
 
 def _normalize_api_keys(api_keys: Sequence[str]) -> tuple[str, ...]:
