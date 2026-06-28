@@ -914,6 +914,142 @@ describe("App shell routing", () => {
     expect(healthCalls).toHaveLength(1);
   });
 
+  it("supports a Phase 10 frontend alpha smoke path across workspace surfaces", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(API_PATHS.projects)) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ projects: [projectAlphaPayload] })),
+          );
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ imports: [importRecordPayload] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                runs: [
+                  {
+                    ...engineRunPayload,
+                    status: "succeeded",
+                    finished_at: projectAlpha.updatedAt,
+                  },
+                ],
+              }),
+            ),
+          );
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [snapshotPayload] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+        }
+        if (url.endsWith(API_PATHS.charactersPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(characterPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.worldPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(worldPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.timelinePreview)) {
+          return Promise.resolve(new Response(JSON.stringify(timelinePreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.scenesPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(scenePreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.continuityPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(continuityPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.promptsPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(promptPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.exportsPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(exportPreviewPayload)));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("link", { name: /Alpha/ }));
+    expect(await screen.findByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Import" }));
+    expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
+    expect(await screen.findByText("Canon snapshot: snapshot_run_alpha_canon")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Monitoring" }));
+    expect(await screen.findByRole("region", { name: "Current project run state" })).toHaveTextContent(
+      "succeeded",
+    );
+    expect(screen.getByRole("region", { name: "Snapshot availability" })).toHaveTextContent(
+      "snapshot_run_alpha_canon",
+    );
+
+    await user.click(screen.getByRole("link", { name: "Characters" }));
+    await user.click(await screen.findByRole("button", { name: "Preview characters" }));
+    expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "World" }));
+    await user.click(await screen.findByRole("button", { name: "Preview world" }));
+    expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Timeline" }));
+    await user.click(await screen.findByRole("button", { name: "Preview timeline" }));
+    expect(await screen.findByRole("heading", { name: "Timeline" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Scenes" }));
+    await user.click(await screen.findByRole("button", { name: "Preview scene" }));
+    expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Continuity" }));
+    await user.click(await screen.findByRole("button", { name: "Preview continuity" }));
+    expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Prompt Packs" }));
+    await user.click(await screen.findByRole("button", { name: "Preview prompt pack" }));
+    expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Exports" }));
+    await user.click(await screen.findByRole("button", { name: "Preview export" }));
+    expect(
+      await screen.findByRole("heading", { name: "source_alpha_production_pack.md" }),
+    ).toBeInTheDocument();
+  });
+
   it("renders monitoring status API failures without inferring workflow state", async () => {
     storeAuthenticatedProject();
     vi.stubGlobal(
