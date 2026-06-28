@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import sys
@@ -11,10 +12,23 @@ from pathlib import Path
 from typing import Any, cast
 
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
-from aevryn.api import ALLOWED_ORIGINS_ENV, create_app_from_env
+from aevryn.api import ALLOWED_ORIGINS_ENV, create_app, create_app_from_env
+from aevryn.auth import (
+    AuthenticationConfig,
+    AuthenticationService,
+    InMemoryCredentialStore,
+    InMemorySessionStore,
+    PasswordHasher,
+)
 from aevryn.export import ExportEngine
-from aevryn.extraction import EvidenceBoundedAIExtractor, StaticAIExtractionClient
+from aevryn.extraction import (
+    EvidenceBoundedAIExtractor,
+    OpenAIResponsesAIExtractionClient,
+    StaticAIExtractionClient,
+)
+from aevryn.import_storage import InMemoryImportContentStore
 from aevryn.importing import SourceFileTextExtractor
 from aevryn.json_utils import loads_json_without_duplicate_keys
 from aevryn.performance import PerformanceRegressionPayload
@@ -22,6 +36,7 @@ from aevryn.performance_runner import (
     compare_local_v2_performance_baseline,
     write_local_v2_performance_baseline,
 )
+from aevryn.persistence import InMemoryProjectRepository
 from aevryn.presentation import PresentationEngine
 from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.prompts import CanonPromptBuilder
@@ -34,6 +49,7 @@ from aevryn.validation import (
     ValidationSuiteResult,
     ValidationTotals,
 )
+from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
 
 
 class _RawDefaultsHelpFormatter(
@@ -92,6 +108,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _handle_performance_baseline(args)
         if command == "api":
             _handle_api(args)
+            return 0
+        if command == "provider-smoke":
+            _handle_provider_smoke(args)
             return 0
     except FileNotFoundError as error:
         missing_path = error.filename or error.args[0]
@@ -466,6 +485,27 @@ def _build_parser() -> argparse.ArgumentParser:
         "--reload",
         action="store_true",
         help="Enable Uvicorn reload for local development.",
+    )
+
+    provider_smoke_parser = subcommands.add_parser(
+        "provider-smoke",
+        help="Run a synthetic provider-backed API workflow smoke test.",
+        description=(
+            "Run a synthetic provider-backed API workflow smoke test. "
+            "Uses invented source text only and prints metadata counts only."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    provider_smoke_parser.add_argument(
+        "--env-file",
+        default=".env.aevryn.local",
+        help="Ignored local env file containing AEVRYN_OPENAI_API_KEY and model.",
+    )
+    provider_smoke_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=60.0,
+        help="Provider request timeout for each synthetic extraction call.",
     )
 
     return parser
@@ -892,6 +932,202 @@ def _handle_api(args: argparse.Namespace) -> None:
         reload=reload_enabled,
         factory=reload_enabled,
     )
+
+
+def _handle_provider_smoke(args: argparse.Namespace) -> None:
+    """Handle the provider-smoke command."""
+    env_file = Path(cast(str, args.env_file))
+    timeout_seconds = cast(float, args.timeout_seconds)
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+    local_env = _load_local_env_file(env_file)
+    api_key = _required_env_value(local_env, "AEVRYN_OPENAI_API_KEY")
+    model = _required_env_value(local_env, "AEVRYN_OPENAI_MODEL")
+    summary = _run_provider_api_workflow_smoke(
+        api_key=api_key,
+        model=model,
+        timeout_seconds=timeout_seconds,
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
+def _load_local_env_file(path: Path) -> dict[str, str]:
+    """Load simple KEY=VALUE pairs from an ignored local env file."""
+    if not path.exists():
+        raise ValueError(f"Local env file does not exist: {path}")
+    values: dict[str, str] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise ValueError(f"Invalid local env line in {path}: expected KEY=VALUE.")
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip()
+    return values
+
+
+def _required_env_value(values: dict[str, str], key: str) -> str:
+    """Return a required local env value without logging its contents."""
+    value = values.get(key, "").strip()
+    if not value:
+        raise ValueError(f"{key} is required in the local env file.")
+    return value
+
+
+def _run_provider_api_workflow_smoke(
+    *,
+    api_key: str,
+    model: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Run the synthetic provider-backed API workflow and return metadata only."""
+    now = "2026-06-28T00:00:00Z"
+    soon = "2026-06-28T00:05:00Z"
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    content_store = InMemoryImportContentStore()
+    auth_service = AuthenticationService(
+        repository=repository,
+        credential_store=InMemoryCredentialStore(),
+        session_store=InMemorySessionStore(),
+        password_hasher=PasswordHasher(),
+        token_factory=lambda: "token_provider_smoke",
+        config=AuthenticationConfig(
+            session_duration_seconds=3600,
+            reset_duration_seconds=3600,
+        ),
+    )
+    handler = ProjectImportSnapshotHandler(
+        repository=repository,
+        import_content_store=content_store,
+        extractor=EvidenceBoundedAIExtractor(
+            OpenAIResponsesAIExtractionClient(
+                api_key=api_key,
+                model=model,
+                timeout_seconds=timeout_seconds,
+                max_response_bytes=262144,
+            )
+        ),
+    )
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service,
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=handler,
+            import_content_store=content_store,
+        )
+    )
+    register = client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": "user_provider_smoke",
+            "email": "provider-smoke@example.com",
+            "display_name": "Provider Smoke Tester",
+            "password": "StrongPass123",
+            "now": now,
+        },
+    )
+    _require_response_ok(register.status_code, register.text, "register")
+    headers = {
+        "Authorization": f"Bearer {register.json()['session_token']}",
+        "X-Aevryn-Now": soon,
+    }
+    _require_response_ok(
+        client.post(
+            "/v2/projects",
+            headers=headers,
+            json={
+                "project_id": "project_provider_smoke",
+                "name": "Provider API Smoke",
+                "now": now,
+            },
+        ).status_code,
+        "project creation failed",
+        "project",
+    )
+    _require_response_ok(
+        client.post(
+            "/v2/projects/project_provider_smoke/stories",
+            headers=headers,
+            json={
+                "story_id": "story_provider_smoke",
+                "title": "Provider API Synthetic Story",
+                "now": now,
+            },
+        ).status_code,
+        "story creation failed",
+        "story",
+    )
+    source_text = (
+        "Chapter 1\n"
+        "Mira opened the brass gate with a silver key while Jonah waited beside the tower.\n\n"
+        "Jonah gave Mira the river map before the storm reached the tower."
+    )
+    import_payload = {
+        "source_id": "source_provider_smoke",
+        "filename": "provider-api-smoke.txt",
+        "content_base64": base64.b64encode(source_text.encode("utf-8")).decode("ascii"),
+        "title": "Provider API Synthetic Story",
+    }
+    inspected = client.post("/v2/imports/inspect", json=import_payload)
+    _require_response_ok(inspected.status_code, inspected.text, "inspect")
+    saved_import = client.post(
+        "/v2/projects/project_provider_smoke/stories/story_provider_smoke/imports",
+        headers=headers,
+        json={"import_id": "import_provider_smoke", **import_payload, "now": now},
+    )
+    _require_response_ok(saved_import.status_code, saved_import.text, "save import")
+    submitted = client.post(
+        (
+            "/v2/projects/project_provider_smoke/stories/story_provider_smoke"
+            "/imports/import_provider_smoke/runs"
+        ),
+        headers=headers,
+        json={"run_id": "run_provider_smoke", "job_id": "job_provider_smoke", "now": now},
+    )
+    _require_response_ok(submitted.status_code, submitted.text, "submit run")
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": soon, "finished_at": soon, "max_jobs": 1},
+    )
+    _require_response_ok(processed.status_code, processed.text, "process worker")
+    status = client.get("/v2/projects/project_provider_smoke/status", headers=headers)
+    _require_response_ok(status.status_code, status.text, "status")
+    outputs = client.get("/v2/projects/project_provider_smoke/outputs", headers=headers)
+    _require_response_ok(outputs.status_code, outputs.text, "outputs")
+    snapshots = client.get("/v2/projects/project_provider_smoke/snapshots", headers=headers)
+    _require_response_ok(snapshots.status_code, snapshots.text, "snapshots")
+    snapshot_payload = json.loads(snapshots.json()["snapshots"][0]["serialized_output"])
+    outputs_payload = outputs.json()
+    return {
+        "model": model,
+        "inspect_chapters": inspected.json()["chapters"],
+        "inspect_scenes": inspected.json()["scenes"],
+        "inspect_evidence_anchors": inspected.json()["evidence_anchors"],
+        "worker_claimed": processed.json()["claimed_jobs"],
+        "worker_succeeded": processed.json()["succeeded_jobs"],
+        "project_status": status.json()["status"],
+        "run_status": status.json()["latest_engine_run"]["status"],
+        "snapshots_available": status.json()["snapshots"]["available"],
+        "output_status": outputs_payload["status"],
+        "output_characters": len(outputs_payload["character_profiles"]),
+        "output_world_sections": len(outputs_payload["world_sheet"]["entity_sections"]),
+        "accepted_entities": snapshot_payload["accepted_entity_count"],
+        "accepted_facts": snapshot_payload["accepted_fact_count"],
+        "accepted_relationships": snapshot_payload["accepted_relationship_count"],
+        "accepted_state_changes": snapshot_payload["accepted_state_change_count"],
+        "status_contains_source_sentence": "Mira opened the brass gate" in status.text,
+        "outputs_contains_source_sentence": "Mira opened the brass gate" in outputs.text,
+        "ok": "provider_api_workflow_synthetic_completed",
+    }
+
+def _require_response_ok(status_code: int, text: str, label: str) -> None:
+    """Raise a compact smoke-test error for failed API calls."""
+    if status_code != 200:
+        raise ValueError(f"Provider smoke {label} failed with HTTP {status_code}: {text}")
 
 
 def _run_api_server(

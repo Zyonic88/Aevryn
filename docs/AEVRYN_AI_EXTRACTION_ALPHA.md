@@ -117,4 +117,12 @@ OpenAI mode requires `AEVRYN_OPENAI_API_KEY` and `AEVRYN_OPENAI_MODEL`.
 
 Provider-backed extraction requests schema-constrained JSON and then still passes the result through Aevryn's evidence-bounded validator before Canon Updating.
 
+Repeatable local provider smoke:
+
+```text
+aevryn provider-smoke --env-file .env.aevryn.local
+```
+
+The provider smoke uses synthetic text only and prints metadata counts only.
+
 The remaining alpha limitation is live provider validation. Broad story understanding should stay disabled for testers until provider behavior, cost, latency, privacy language, and failure states are verified.

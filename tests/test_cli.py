@@ -233,6 +233,80 @@ def test_api_help_describes_server_options(capsys: CaptureFixture[str]) -> None:
     assert "--reload" in output
 
 
+def test_provider_smoke_help_describes_synthetic_workflow(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Provider smoke help should describe the local synthetic workflow."""
+    with pytest.raises(SystemExit) as error:
+        main(["provider-smoke", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "synthetic provider-backed API workflow smoke test" in output
+    assert "--env-file" in output
+    assert "--timeout-seconds" in output
+
+
+def test_provider_smoke_requires_local_env_file(
+    tmp_path: Path,
+    capsys: CaptureFixture[str],
+) -> None:
+    """Provider smoke should fail before any provider call when env is missing."""
+    exit_code = main(["provider-smoke", "--env-file", str(tmp_path / "missing.env")])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Local env file does not exist" in captured.err
+
+
+def test_provider_smoke_reads_env_file_without_printing_key(
+    tmp_path: Path,
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Provider smoke should print metadata only and never echo the API key."""
+    env_file = tmp_path / ".env.aevryn.local"
+    env_file.write_text(
+        "\n".join(
+            (
+                "AEVRYN_OPENAI_API_KEY=secret-provider-key",
+                "AEVRYN_OPENAI_MODEL=test-model",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_smoke(
+        *,
+        api_key: str,
+        model: str,
+        timeout_seconds: float,
+    ) -> dict[str, object]:
+        assert api_key == "secret-provider-key"
+        assert model == "test-model"
+        assert timeout_seconds == 12.5
+        return {"model": model, "ok": "provider_api_workflow_synthetic_completed"}
+
+    monkeypatch.setattr("aevryn.cli._run_provider_api_workflow_smoke", fake_smoke)
+
+    exit_code = main(
+        [
+            "provider-smoke",
+            "--env-file",
+            str(env_file),
+            "--timeout-seconds",
+            "12.5",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "model=test-model" in captured.out
+    assert "ok=provider_api_workflow_synthetic_completed" in captured.out
+    assert "secret-provider-key" not in captured.out
+    assert "secret-provider-key" not in captured.err
+
+
 def test_performance_baseline_help_describes_local_artifact(
     capsys: CaptureFixture[str],
 ) -> None:
