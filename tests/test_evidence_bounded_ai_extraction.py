@@ -126,6 +126,7 @@ def test_ai_extractor_returns_evidence_bounded_candidates() -> None:
     assert isinstance(result.facts[0], ExtractedFact)
     assert isinstance(result.state_changes[0], ExtractedStateChange)
     assert "Unknown stays unknown." in client.prompt
+    assert "Use entity_type=character for named people or persons." in client.prompt
     assert anchor_id in client.prompt
 
 
@@ -180,6 +181,8 @@ def test_openai_responses_client_returns_output_text_without_network() -> None:
         "type": "string",
         "pattern": r"^\S+$",
     }
+    entity_schema = schema["properties"]["entities"]["items"]
+    assert "character" in entity_schema["properties"]["entity_type"]["enum"]
     assert transport.timeout_seconds == 30.0
     assert transport.max_response_bytes == 1_048_576
 

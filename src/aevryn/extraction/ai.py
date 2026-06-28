@@ -260,6 +260,11 @@ class EvidenceBoundedAIExtractor:
                 "Use only the provided evidence anchors.",
                 "Do not infer unsupported claims.",
                 "If information is not stated, omit it. Unknown stays unknown.",
+                "Use entity_type=character for named people or persons.",
+                (
+                    "Allowed entity_type values: armor, building, character, creature, "
+                    "item, location, organization, skill, timeline_event, vehicle, weapon."
+                ),
                 "Return JSON only with keys: entities, facts, relationships, state_changes.",
                 "",
                 f"Scene ID: {scene.scene_id}",
@@ -554,12 +559,28 @@ def _required_text(value: str, field_name: str) -> str:
 def _extraction_response_schema() -> dict[str, object]:
     """Return the provider schema for evidence-bounded extraction JSON."""
     machine_token = {"type": "string", "pattern": r"^\S+$"}
+    entity_type = {
+        "type": "string",
+        "enum": [
+            "armor",
+            "building",
+            "character",
+            "creature",
+            "item",
+            "location",
+            "organization",
+            "skill",
+            "timeline_event",
+            "vehicle",
+            "weapon",
+        ],
+    }
     entity = {
         "type": "object",
         "additionalProperties": False,
         "properties": {
             "entity_id": machine_token,
-            "entity_type": machine_token,
+            "entity_type": entity_type,
             "display_name": {"type": "string"},
             "evidence_anchor_id": machine_token,
             "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
