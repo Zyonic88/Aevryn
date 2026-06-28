@@ -58,6 +58,16 @@ const engineRunPayload = {
   error_summary: "",
   job_ref: "queue://job_alpha",
 };
+const snapshotPayload = {
+  snapshot_id: "snapshot_alpha",
+  project_id: "project_alpha",
+  story_id: "story_alpha",
+  run_id: "run_alpha",
+  snapshot_kind: "character_profile",
+  content_type: "application/json",
+  serialized_output: '{"character_id":"character_mark"}',
+  created_at: "2026-06-27T00:30:00.000Z",
+};
 const sourceFormatsPayload = {
   supported: [
     {
@@ -685,6 +695,40 @@ describe("AevrynApiClient", () => {
       expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
     }
     expect(fetchMock.mock.calls[1][1].method).toBe("POST");
+  });
+
+  it("sends authenticated requests for snapshots", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ snapshots: [snapshotPayload] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ snapshots: [snapshotPayload] })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.listProjectSnapshots("project_alpha", "session-token", "2026-06-27T00:00:00.000Z"),
+    ).resolves.toEqual({ snapshots: [snapshotPayload] });
+    await expect(
+      client.listStorySnapshots(
+        "project_alpha",
+        "story_alpha",
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+        "character_profile",
+      ),
+    ).resolves.toEqual({ snapshots: [snapshotPayload] });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/snapshots`,
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/stories/story_alpha/snapshots?snapshot_kind=character_profile`,
+    );
+    for (const [, init] of fetchMock.mock.calls) {
+      const headers = init.headers as Headers;
+      expect(headers.get("Authorization")).toBe("Bearer session-token");
+      expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
+    }
   });
 
   it("normalizes API errors", async () => {

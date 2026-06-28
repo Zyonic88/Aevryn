@@ -140,6 +140,7 @@ When this value is present, `create_app_from_env` wires:
 * `JsonProjectRepository` for local Project Database records
 * `AuthenticationService` over the same repository for user ownership records
 * `JsonAuthenticationStore` for credential hashes, session token hashes, and password reset token hashes
+* an in-memory background job queue and metadata-only worker handler for local API smoke tests
 
 This means local project records, credential hashes, session token hashes, and password reset token hashes survive process restarts.
 
@@ -532,6 +533,26 @@ It does not execute queued work.
 
 Missing projects and cross-user project reads return a stable project-not-found response.
 
+## `GET /v2/projects/{project_id}/snapshots`
+
+Returns persisted engine output snapshots inside the authenticated user's project boundary.
+
+The route returns snapshot IDs, project/story/run scope, snapshot kind, content type, serialized output, and creation timestamp.
+
+It does not create or mutate snapshots.
+
+Missing projects and cross-user project reads return a stable project-not-found response.
+
+## `GET /v2/projects/{project_id}/stories/{story_id}/snapshots`
+
+Returns persisted engine output snapshots inside the authenticated user's story boundary.
+
+The optional `snapshot_kind` query parameter filters by supported snapshot kind.
+
+Invalid snapshot kinds fail clearly with `invalid_snapshot_kind`.
+
+Missing stories, cross-project story reads, and cross-user story reads return a stable story-not-found response.
+
 ## `POST /v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs`
 
 Submits a saved import for background engine processing.
@@ -567,6 +588,28 @@ When deployment API keys are configured, this internal workflow route requires `
 The route updates queue status and durable engine run status.
 
 It does not create snapshots.
+
+## `POST /v2/workers/runs/{run_id}/snapshots`
+
+Persists one trusted worker-produced snapshot for a completed run.
+
+The request includes:
+
+* `snapshot_id`
+* `snapshot_kind`
+* `content_type`
+* `serialized_output`
+* `now`
+
+Project, story, and run scope are derived from the stored run, not from the request payload.
+
+Snapshots can only attach to succeeded runs.
+
+Invalid snapshot kinds, invalid serialized JSON, incomplete runs, and wrong run scope fail clearly.
+
+Duplicate snapshot IDs fail clearly.
+
+When deployment API keys are configured, this internal workflow route requires `X-Aevryn-API-Key` or an equivalent bearer API key.
 
 ## `POST /v2/projects/preview`
 

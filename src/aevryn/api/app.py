@@ -10,9 +10,9 @@ import tempfile
 import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -77,6 +77,9 @@ from aevryn.api.models import (
     ScenePreviewRequest,
     ScenePreviewResponse,
     SceneSheetOutput,
+    SnapshotListResponse,
+    SnapshotOutput,
+    SnapshotStoreRequest,
     SourceFormat,
     SourceFormatsResponse,
     StoryCreateRequest,
@@ -113,6 +116,8 @@ from aevryn.persistence import (
     ProjectRepository,
     ProjectSettingsRecord,
     RecordNotFoundError,
+    SnapshotKind,
+    SnapshotRecord,
     StoryRecord,
     UserRecord,
 )
@@ -652,6 +657,35 @@ def create_app(
             raise _project_storage_error(error) from error
         return StoryListResponse(stories=tuple(_story_output(story) for story in stories))
 
+    @app.get(
+        "/v2/projects/{project_id}/snapshots",
+        response_model=SnapshotListResponse,
+        tags=["Projects"],
+        operation_id="getV2ProjectSnapshots",
+    )
+    def list_project_snapshots(project_id: str, request: Request) -> SnapshotListResponse:
+        """Return persisted engine output snapshots inside an authenticated project."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            snapshots = repository.list_snapshots_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return SnapshotListResponse(
+            snapshots=tuple(_snapshot_output(snapshot) for snapshot in snapshots),
+        )
+
     @app.post(
         "/v2/projects/{project_id}/stories",
         response_model=StoryOutput,
@@ -697,6 +731,47 @@ def create_app(
         except PersistenceError as error:
             raise _project_storage_error(error) from error
         return _story_output(story)
+
+    @app.get(
+        "/v2/projects/{project_id}/stories/{story_id}/snapshots",
+        response_model=SnapshotListResponse,
+        tags=["Projects"],
+        operation_id="getV2StorySnapshots",
+    )
+    def list_story_snapshots(
+        project_id: str,
+        story_id: str,
+        request: Request,
+        snapshot_kind: str | None = Query(default=None),
+    ) -> SnapshotListResponse:
+        """Return persisted engine output snapshots inside an authenticated story."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            _require_story_scope(
+                repository=repository,
+                user_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+            )
+            snapshots = repository.list_snapshots_for_story(
+                user_id=user.user_id,
+                story_id=story_id,
+                snapshot_kind=_snapshot_kind_filter(snapshot_kind),
+            )
+        except (AccessDeniedError, RecordNotFoundError, ValueError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "story_not_found", "detail": "Story not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return SnapshotListResponse(
+            snapshots=tuple(_snapshot_output(snapshot) for snapshot in snapshots),
+        )
 
     @app.get(
         "/v2/projects/{project_id}/stories/{story_id}/imports",
@@ -907,6 +982,50 @@ def create_app(
         except PersistenceError as error:
             raise _project_storage_error(error) from error
         return _worker_process_response(summary)
+
+    @app.post(
+        "/v2/workers/runs/{run_id}/snapshots",
+        response_model=SnapshotOutput,
+        tags=["Workers"],
+        operation_id="postV2WorkerRunSnapshots",
+    )
+    def store_worker_run_snapshot(
+        run_id: str,
+        request_body: SnapshotStoreRequest,
+    ) -> SnapshotOutput:
+        """Persist one trusted worker-produced snapshot for a completed run."""
+        repository = _require_project_repository(project_repository)
+        try:
+            run = repository.get_engine_run_for_worker(run_id=run_id)
+            snapshot = SnapshotRecord(
+                snapshot_id=request_body.snapshot_id,
+                project_id=run.project_id,
+                story_id=run.story_id,
+                run_id=run.run_id,
+                snapshot_kind=_required_snapshot_kind(request_body.snapshot_kind),
+                content_type=request_body.content_type,
+                serialized_output=request_body.serialized_output,
+                created_at=request_body.now,
+            )
+            repository.store_snapshot(snapshot)
+        except RecordNotFoundError as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "run_not_found", "detail": "Run not found."},
+            ) from error
+        except DuplicateRecordError as error:
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "snapshot_exists", "detail": str(error)},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "snapshot_store_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _snapshot_output(snapshot)
 
     @app.post(
         "/v2/imports/inspect",
@@ -1530,6 +1649,58 @@ def _engine_run_output(run: EngineRunRecord) -> EngineRunOutput:
     )
 
 
+def _snapshot_output(snapshot: SnapshotRecord) -> SnapshotOutput:
+    """Convert persisted snapshot metadata to the API contract."""
+    return SnapshotOutput(
+        snapshot_id=snapshot.snapshot_id,
+        project_id=snapshot.project_id,
+        story_id=snapshot.story_id,
+        run_id=snapshot.run_id,
+        snapshot_kind=snapshot.snapshot_kind,
+        content_type=snapshot.content_type,
+        serialized_output=snapshot.serialized_output,
+        created_at=snapshot.created_at,
+    )
+
+
+def _snapshot_kind_filter(value: str | None) -> SnapshotKind | None:
+    """Validate snapshot kind filters and worker payloads."""
+    if value is None:
+        return None
+    allowed = {
+        "canon",
+        "timeline",
+        "character_profile",
+        "world_state",
+        "scene_sheet",
+        "prompt_pack",
+        "continuity_report",
+    }
+    if value not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_snapshot_kind",
+                "detail": "Snapshot kind is invalid.",
+            },
+        )
+    return cast(SnapshotKind, value)
+
+
+def _required_snapshot_kind(value: str) -> SnapshotKind:
+    """Validate a required snapshot kind value."""
+    snapshot_kind = _snapshot_kind_filter(value)
+    if snapshot_kind is None:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_snapshot_kind",
+                "detail": "Snapshot kind is invalid.",
+            },
+        )
+    return snapshot_kind
+
+
 def _worker_process_response(summary: BackgroundWorkerRunSummary) -> WorkerProcessResponse:
     """Convert a worker drain summary to the API contract."""
     return WorkerProcessResponse(
@@ -1760,6 +1931,16 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
         ),
         ApiRouteCapability(
             method="GET",
+            path="/v2/projects/{project_id}/snapshots",
+            purpose="List durable engine output snapshots inside a project.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}/stories/{story_id}/snapshots",
+            purpose="List durable engine output snapshots inside a story.",
+        ),
+        ApiRouteCapability(
+            method="GET",
             path="/v2/projects/{project_id}/stories/{story_id}/imports",
             purpose="List durable import metadata inside a story.",
         ),
@@ -1782,6 +1963,11 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="POST",
             path="/v2/workers/process",
             purpose="Drain queued background jobs through the worker boundary.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/workers/runs/{run_id}/snapshots",
+            purpose="Persist trusted worker-produced snapshots for completed runs.",
         ),
         ApiRouteCapability(
             method="POST",

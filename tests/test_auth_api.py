@@ -726,6 +726,215 @@ def test_worker_process_api_uses_deployment_api_key_when_configured() -> None:
     assert authorized.json()["claimed_jobs"] == 0
 
 
+def test_worker_snapshot_api_stores_and_lists_completed_run_outputs() -> None:
+    """Worker snapshots should persist only after a run succeeds and list by scope."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=RecordingWorkerHandler(),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
+
+    stored = client.post(
+        "/v2/workers/runs/run_alpha/snapshots",
+        json={
+            "snapshot_id": "snapshot_alpha",
+            "snapshot_kind": "character_profile",
+            "content_type": "application/json",
+            "serialized_output": '{"character_id":"character_mark"}',
+            "now": SOON,
+        },
+    )
+
+    assert stored.status_code == 200
+    assert stored.json()["project_id"] == "project_alpha"
+    assert stored.json()["story_id"] == "story_alpha"
+    assert stored.json()["run_id"] == "run_alpha"
+    project_list = client.get(
+        "/v2/projects/project_alpha/snapshots",
+        headers=auth_headers("token_001"),
+    )
+    assert project_list.status_code == 200
+    assert [snapshot["snapshot_id"] for snapshot in project_list.json()["snapshots"]] == [
+        "snapshot_alpha"
+    ]
+    story_list = client.get(
+        "/v2/projects/project_alpha/stories/story_alpha/snapshots?snapshot_kind=character_profile",
+        headers=auth_headers("token_001"),
+    )
+    assert story_list.status_code == 200
+    assert story_list.json()["snapshots"][0]["serialized_output"] == (
+        '{"character_id":"character_mark"}'
+    )
+
+
+def test_worker_snapshot_api_rejects_incomplete_runs_and_invalid_kinds() -> None:
+    """Snapshot writes and filters should fail before unsafe records are persisted."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=InMemoryJobQueue(),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+
+    incomplete = client.post(
+        "/v2/workers/runs/run_alpha/snapshots",
+        json={
+            "snapshot_id": "snapshot_alpha",
+            "snapshot_kind": "canon",
+            "content_type": "application/json",
+            "serialized_output": "{}",
+            "now": SOON,
+        },
+    )
+    invalid_filter = client.get(
+        "/v2/projects/project_alpha/stories/story_alpha/snapshots?snapshot_kind=bad_kind",
+        headers=auth_headers("token_001"),
+    )
+
+    assert incomplete.status_code == 400
+    assert incomplete.json()["error"] == "snapshot_store_failed"
+    assert invalid_filter.status_code == 400
+    assert invalid_filter.json()["error"] == "invalid_snapshot_kind"
+
+
+def test_worker_snapshot_api_uses_deployment_api_key_when_configured() -> None:
+    """Trusted worker snapshot writes should remain deployment API-key protected."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            api_keys=("deployment-key",),
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+
+    unauthorized = client.post(
+        "/v2/workers/runs/run_missing/snapshots",
+        json={
+            "snapshot_id": "snapshot_alpha",
+            "snapshot_kind": "canon",
+            "content_type": "application/json",
+            "serialized_output": "{}",
+            "now": SOON,
+        },
+    )
+    authorized = client.post(
+        "/v2/workers/runs/run_missing/snapshots",
+        headers={"X-Aevryn-API-Key": "deployment-key"},
+        json={
+            "snapshot_id": "snapshot_alpha",
+            "snapshot_kind": "canon",
+            "content_type": "application/json",
+            "serialized_output": "{}",
+            "now": SOON,
+        },
+    )
+
+    assert unauthorized.status_code == 401
+    assert unauthorized.json()["error"] == "authentication_required"
+    assert authorized.status_code == 404
+    assert authorized.json()["error"] == "run_not_found"
+
+
+def test_project_snapshot_api_rejects_cross_user_reads() -> None:
+    """Snapshot lists should not leak projects or stories across users."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=RecordingWorkerHandler(),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
+    stored = client.post(
+        "/v2/workers/runs/run_alpha/snapshots",
+        json={
+            "snapshot_id": "snapshot_alpha",
+            "snapshot_kind": "canon",
+            "content_type": "application/json",
+            "serialized_output": "{}",
+            "now": SOON,
+        },
+    )
+    assert stored.status_code == 200
+
+    project_list = client.get(
+        "/v2/projects/project_alpha/snapshots",
+        headers=auth_headers("token_002"),
+    )
+    story_list = client.get(
+        "/v2/projects/project_alpha/stories/story_alpha/snapshots",
+        headers=auth_headers("token_002"),
+    )
+
+    assert project_list.status_code == 404
+    assert project_list.json()["error"] == "project_not_found"
+    assert story_list.status_code == 404
+    assert story_list.json()["error"] == "story_not_found"
+
+
 def test_project_storage_api_requires_configured_storage() -> None:
     """Project routes should fail clearly when no repository is configured."""
     client = TestClient(create_app(authentication_service=auth_service()))
@@ -818,10 +1027,13 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert "/v2/projects/{project_id}" in route_paths
     assert "/v2/projects/{project_id}/settings" in route_paths
     assert "/v2/projects/{project_id}/stories" in route_paths
+    assert "/v2/projects/{project_id}/snapshots" in route_paths
+    assert "/v2/projects/{project_id}/stories/{story_id}/snapshots" in route_paths
     assert "/v2/projects/{project_id}/stories/{story_id}/imports" in route_paths
     assert "/v2/projects/{project_id}/runs" in route_paths
     assert "/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs" in route_paths
     assert "/v2/workers/process" in route_paths
+    assert "/v2/workers/runs/{run_id}/snapshots" in route_paths
 
     paths = client.get("/openapi.json").json()["paths"]
     assert paths["/v2/projects"]["get"]["operationId"] == "getV2Projects"
@@ -839,6 +1051,12 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert paths["/v2/projects/{project_id}/stories"]["post"]["operationId"] == (
         "postV2ProjectStories"
     )
+    assert paths["/v2/projects/{project_id}/snapshots"]["get"]["operationId"] == (
+        "getV2ProjectSnapshots"
+    )
+    assert paths["/v2/projects/{project_id}/stories/{story_id}/snapshots"]["get"][
+        "operationId"
+    ] == "getV2StorySnapshots"
     assert paths["/v2/projects/{project_id}/stories/{story_id}/imports"]["get"][
         "operationId"
     ] == "getV2StoryImports"
@@ -852,6 +1070,9 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
         "operationId"
     ] == "postV2ImportRuns"
     assert paths["/v2/workers/process"]["post"]["operationId"] == "postV2WorkersProcess"
+    assert paths["/v2/workers/runs/{run_id}/snapshots"]["post"]["operationId"] == (
+        "postV2WorkerRunSnapshots"
+    )
 
 
 def register_user(client: TestClient, *, user_id: str, email: str) -> None:

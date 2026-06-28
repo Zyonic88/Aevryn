@@ -314,6 +314,41 @@ class EngineRunListResponse(BaseModel):
     runs: tuple[EngineRunOutput, ...]
 
 
+class SnapshotStoreRequest(BaseModel):
+    """Trusted worker request to persist one engine output snapshot."""
+
+    model_config = ConfigDict(frozen=True)
+
+    snapshot_id: str = Field(min_length=1)
+    snapshot_kind: str = Field(min_length=1)
+    content_type: str = Field(min_length=1)
+    serialized_output: str = Field(min_length=1)
+    now: str = Field(min_length=1)
+
+
+class SnapshotOutput(BaseModel):
+    """Ownership-safe immutable engine output snapshot metadata."""
+
+    model_config = ConfigDict(frozen=True)
+
+    snapshot_id: str
+    project_id: str
+    story_id: str
+    run_id: str
+    snapshot_kind: str
+    content_type: str
+    serialized_output: str
+    created_at: str
+
+
+class SnapshotListResponse(BaseModel):
+    """Snapshots visible inside an authenticated project or story."""
+
+    model_config = ConfigDict(frozen=True)
+
+    snapshots: tuple[SnapshotOutput, ...]
+
+
 class WorkerProcessRequest(BaseModel):
     """Request to drain queued background jobs through the worker boundary."""
 

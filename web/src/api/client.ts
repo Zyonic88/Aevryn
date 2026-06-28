@@ -11,6 +11,7 @@ import {
   exportPreviewSchema,
   promptPreviewSchema,
   scenePreviewSchema,
+  snapshotListSchema,
   storyListSchema,
   storySchema,
   timelinePreviewSchema,
@@ -34,6 +35,7 @@ import {
   type ExportPreview,
   type PromptPreview,
   type ScenePreview,
+  type SnapshotList,
   type TimelinePreview,
   type WorldPreview,
   type ImportInspect,
@@ -357,6 +359,32 @@ export class AevrynApiClient {
     });
   }
 
+  listProjectSnapshots(
+    projectId: string,
+    sessionToken: string,
+    now: string,
+  ): Promise<SnapshotList> {
+    return this.request(projectSnapshotsPath(projectId), snapshotListSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  listStorySnapshots(
+    projectId: string,
+    storyId: string,
+    sessionToken: string,
+    now: string,
+    snapshotKind?: string,
+  ): Promise<SnapshotList> {
+    return this.request(
+      storySnapshotsPath(projectId, storyId, snapshotKind),
+      snapshotListSchema,
+      {
+        headers: authHeaders(sessionToken, now),
+      },
+    );
+  }
+
   submitImportRun(
     projectId: string,
     storyId: string,
@@ -435,6 +463,22 @@ function projectStoryImportsPath(projectId: string, storyId: string): string {
 
 function projectRunsPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/runs`;
+}
+
+function projectSnapshotsPath(projectId: string): string {
+  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/snapshots`;
+}
+
+function storySnapshotsPath(
+  projectId: string,
+  storyId: string,
+  snapshotKind?: string,
+): string {
+  const path = `${projectStoriesPath(projectId)}/${encodeURIComponent(storyId)}/snapshots`;
+  if (!snapshotKind) {
+    return path;
+  }
+  return `${path}?snapshot_kind=${encodeURIComponent(snapshotKind)}`;
 }
 
 function projectImportRunsPath(projectId: string, storyId: string, importId: string): string {

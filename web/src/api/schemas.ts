@@ -118,6 +118,21 @@ export const engineRunListSchema = z.object({
   runs: z.array(engineRunSchema),
 });
 
+export const snapshotSchema = z.object({
+  snapshot_id: z.string(),
+  project_id: z.string(),
+  story_id: z.string(),
+  run_id: z.string(),
+  snapshot_kind: z.string(),
+  content_type: z.string(),
+  serialized_output: z.string(),
+  created_at: z.string(),
+});
+
+export const snapshotListSchema = z.object({
+  snapshots: z.array(snapshotSchema),
+});
+
 export const evidenceAnchorPreviewSchema = z.object({
   anchor_id: z.string(),
   chapter_id: z.string(),
@@ -304,3 +319,5 @@ export type ImportRecord = z.infer<typeof importRecordSchema>;
 export type ImportList = z.infer<typeof importListSchema>;
 export type EngineRun = z.infer<typeof engineRunSchema>;
 export type EngineRunList = z.infer<typeof engineRunListSchema>;
+export type Snapshot = z.infer<typeof snapshotSchema>;
+export type SnapshotList = z.infer<typeof snapshotListSchema>;
