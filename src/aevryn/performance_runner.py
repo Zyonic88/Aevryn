@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import base64
+import json
+import tempfile
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +29,7 @@ from aevryn.performance import (
     run_performance_baseline,
 )
 from aevryn.persistence import InMemoryProjectRepository
+from aevryn.validation import ValidationRunner
 from aevryn.workers import InMemoryJobQueue
 from aevryn.workers.models import BackgroundJob
 
@@ -38,43 +42,51 @@ def run_local_v2_performance_baseline() -> PerformanceSnapshotPayload:
     client = _baseline_client()
     _register_user(client)
     _create_project_and_story(client)
-    return run_performance_baseline(
-        {
-            "import_inspect": lambda: _assert_ok(
-                client.post("/v2/imports/inspect", json=_inspect_payload())
-            ),
-            "import_save": lambda: _assert_ok(
-                client.post(
-                    "/v2/projects/project_alpha/stories/story_alpha/imports",
-                    headers=_auth_headers(),
-                    json=_import_create_payload(),
+    with tempfile.TemporaryDirectory(prefix="aevryn_phase9_validation_") as temp_dir:
+        validation_case_dir, validation_source_root = _prepare_validation_fixture(
+            Path(temp_dir)
+        )
+        return run_performance_baseline(
+            {
+                "import_inspect": lambda: _assert_ok(
+                    client.post("/v2/imports/inspect", json=_inspect_payload())
+                ),
+                "import_save": lambda: _assert_ok(
+                    client.post(
+                        "/v2/projects/project_alpha/stories/story_alpha/imports",
+                        headers=_auth_headers(),
+                        json=_import_create_payload(),
+                    )
+                ),
+                "worker_processing": lambda: _process_worker_job(client),
+                "snapshot_creation": lambda: _assert_ok(
+                    client.post(
+                        "/v2/workers/runs/run_alpha/snapshots",
+                        json={
+                            "snapshot_id": "snapshot_alpha",
+                            "snapshot_kind": "canon",
+                            "content_type": "application/json",
+                            "serialized_output": "{}",
+                            "now": SOON,
+                        },
+                    )
+                ),
+                "project_status": lambda: _assert_ok(
+                    client.get(
+                        "/v2/projects/project_alpha/status",
+                        headers=_auth_headers(),
+                    )
+                ),
+                "workspace_load": lambda: _load_workspace_shell(client),
+                "export_preview": lambda: _assert_ok(
+                    client.post("/v2/exports/preview", json=_export_preview_payload())
+                ),
+                "validation_suite": lambda: _run_validation_suite(
+                    case_dir=validation_case_dir,
+                    source_root=validation_source_root,
                 )
-            ),
-            "worker_processing": lambda: _process_worker_job(client),
-            "snapshot_creation": lambda: _assert_ok(
-                client.post(
-                    "/v2/workers/runs/run_alpha/snapshots",
-                    json={
-                        "snapshot_id": "snapshot_alpha",
-                        "snapshot_kind": "canon",
-                        "content_type": "application/json",
-                        "serialized_output": "{}",
-                        "now": SOON,
-                    },
-                )
-            ),
-            "project_status": lambda: _assert_ok(
-                client.get(
-                    "/v2/projects/project_alpha/status",
-                    headers=_auth_headers(),
-                )
-            ),
-            "workspace_load": lambda: _load_workspace_shell(client),
-            "export_preview": lambda: _assert_ok(
-                client.post("/v2/exports/preview", json=_export_preview_payload())
-            ),
-        }
-    )
+            }
+        )
 
 
 def write_local_v2_performance_baseline(output_path: Path) -> Path:
@@ -170,6 +182,89 @@ def _load_workspace_shell(client: TestClient) -> object:
         "status": _assert_ok(
             client.get("/v2/projects/project_alpha/status", headers=_auth_headers())
         ),
+    }
+
+
+def _prepare_validation_fixture(root: Path) -> tuple[Path, Path]:
+    """Create a tiny deterministic validation fixture outside timed measurement."""
+    source_root = root / "sources"
+    source_dir = source_root / "Phase 9"
+    case_dir = root / "cases"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    case_dir.mkdir(parents=True, exist_ok=True)
+    (source_dir / "Chapter 1.txt").write_text(
+        "Chapter 1\nMark found a brass key.",
+        encoding="utf-8",
+    )
+    (source_dir / "Chapter 2.txt").write_text(
+        "Chapter 2\nMark opened the archive.",
+        encoding="utf-8",
+    )
+    case_path = case_dir / "phase9_validation_case.json"
+    _write_validation_case(
+        case_path,
+        expected_import={
+            "chapter_files": 1,
+            "source_manifest_digest": "0" * 64,
+            "chapters": 1,
+            "scenes": 1,
+            "paragraphs": 1,
+            "sentences": 1,
+            "evidence_anchors": 1,
+            "import_digest": "0" * 64,
+        },
+        expected_extraction={
+            "scene_inputs": 1,
+            "evidence_anchors": 1,
+            "extraction_input_digest": "0" * 64,
+            "extraction_prompt_digest": "0" * 64,
+        },
+    )
+    calibration = ValidationRunner(case_dir=case_dir, source_root=source_root).run()
+    result = calibration.results[0]
+    if result.actual_import is None or result.actual_extraction is None:
+        raise ValueError("Validation baseline fixture did not produce metrics.")
+    _write_validation_case(
+        case_path,
+        expected_import=asdict(result.actual_import),
+        expected_extraction=asdict(result.actual_extraction),
+    )
+    return case_dir, source_root
+
+
+def _write_validation_case(
+    case_path: Path,
+    *,
+    expected_import: dict[str, object],
+    expected_extraction: dict[str, object],
+) -> None:
+    """Write one deterministic validation case definition."""
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_id": "phase9_validation_case",
+                "title": "Phase 9 Baseline",
+                "genre": "Performance",
+                "source_directory": "Phase 9",
+                "chapter_glob": "*.txt",
+                "expected_import": expected_import,
+                "expected_extraction": expected_extraction,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _run_validation_suite(*, case_dir: Path, source_root: Path) -> object:
+    """Run the tiny validation suite and return metadata only."""
+    result = ValidationRunner(case_dir=case_dir, source_root=source_root).run()
+    if not result.passed:
+        raise ValueError("Validation baseline fixture failed.")
+    return {
+        "cases": result.totals.cases,
+        "score": result.score,
+        "suite_digest": result.suite_digest,
     }
 
 

@@ -248,6 +248,7 @@ def test_run_performance_baseline_measures_real_v2_boundaries() -> None:
             "export_preview": lambda: _assert_ok(
                 client.post("/v2/exports/preview", json=_export_preview_payload())
             ),
+            "validation_suite": lambda: {"cases": 1, "score": 100},
         },
         timer=timer,
     )
@@ -260,6 +261,7 @@ def test_run_performance_baseline_measures_real_v2_boundaries() -> None:
             {"benchmark": "import_save", "elapsed_ms": 10.0, "status": "target"},
             {"benchmark": "project_status", "elapsed_ms": 10.0, "status": "target"},
             {"benchmark": "snapshot_creation", "elapsed_ms": 10.0, "status": "measured"},
+            {"benchmark": "validation_suite", "elapsed_ms": 10.0, "status": "measured"},
             {"benchmark": "worker_processing", "elapsed_ms": 10.0, "status": "measured"},
             {"benchmark": "workspace_load", "elapsed_ms": 10.0, "status": "target"},
         ],

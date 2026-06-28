@@ -271,6 +271,7 @@ def test_performance_baseline_command_writes_metadata_only_artifact(
         "import_save",
         "project_status",
         "snapshot_creation",
+        "validation_suite",
         "worker_processing",
         "workspace_load",
     }
