@@ -172,6 +172,10 @@ class InMemoryProjectRepository:
         self.get_story(user_id=user_id, story_id=import_record.story_id)
         return import_record
 
+    def get_import_for_worker(self, import_id: str) -> ImportRecord:
+        """Return import metadata for trusted background worker execution."""
+        return self._get_required(self._imports, import_id, "import")
+
     def record_engine_run(self, run: EngineRunRecord) -> None:
         """Persist an engine run record."""
         self._require_story_in_project(story_id=run.story_id, project_id=run.project_id)

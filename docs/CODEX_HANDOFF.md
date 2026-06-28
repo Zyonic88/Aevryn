@@ -79,6 +79,7 @@ Phase 6 first project-storage slice implemented:
 - Routes use bearer-session authentication plus the Project Repository boundary
 - `create_app_from_env` can wire local JSON project storage from `AEVRYN_PROJECT_DATABASE_PATH`
 - `create_app_from_env` wires `JsonAuthenticationStore` from `AEVRYN_AUTH_STORE_PATH` or a sibling `_auth.json` file
+- `create_app_from_env` wires `FileSystemImportContentStore` from `AEVRYN_IMPORT_STORAGE_PATH` or a sibling `_imports` directory
 - CLI `aevryn api` now uses the environment-backed app factory in reload and non-reload modes
 - Dashboard list/create now uses the project storage API instead of browser project shells as source of truth
 - Direct workspace project routes load project detail through the API, with legacy local shell fallback only for compatibility
@@ -88,13 +89,14 @@ Phase 6 first project-storage slice implemented:
 - Engine Run API routes added for list/submit and the workspace Import tab now submits saved imports to the background job boundary
 - Worker Process API route added for draining queued jobs and durably moving engine runs through worker lifecycle states
 - Snapshot API storage boundary added: authenticated project/story snapshot read routes plus an internal worker route for persisting worker-produced snapshots against succeeded runs
+- Import snapshot worker handler added for reading saved import bytes and automatically producing deterministic `canon` snapshots from successful import runs
 - Frontend API client now understands project/story snapshot list responses
 
 Phase 6 storage limitation:
 
 - JSON project and auth stores are local deterministic adapters, not final production database or identity-provider choices
-- Story import storage currently persists metadata and storage references only; uploaded source bytes remain a later storage slice
-- Worker execution can persist supplied worker-produced snapshots, but generating full engine output snapshots from background jobs remains a later integration slice
+- Story import storage now has a local source-byte adapter, but this is not the final production object-storage choice
+- Worker execution now produces one deterministic `canon` snapshot from saved import content; richer snapshot families remain later integration slices
 
 ---
 

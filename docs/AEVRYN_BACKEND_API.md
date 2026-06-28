@@ -135,14 +135,23 @@ AEVRYN_AUTH_STORE_PATH=C:\Users\enigm\Documents\Aevryn\.local\auth_store.json
 
 If `AEVRYN_AUTH_STORE_PATH` is omitted, Aevryn stores local auth records beside the project database using the project database filename plus `_auth.json`.
 
+Optional explicit import content storage path:
+
+```text
+AEVRYN_IMPORT_STORAGE_PATH=C:\Users\enigm\Documents\Aevryn\.local\imports
+```
+
+If `AEVRYN_IMPORT_STORAGE_PATH` is omitted, Aevryn stores local import source bytes beside the project database using the project database filename plus `_imports`.
+
 When this value is present, `create_app_from_env` wires:
 
 * `JsonProjectRepository` for local Project Database records
 * `AuthenticationService` over the same repository for user ownership records
 * `JsonAuthenticationStore` for credential hashes, session token hashes, and password reset token hashes
-* an in-memory background job queue and metadata-only worker handler for local API smoke tests
+* `FileSystemImportContentStore` for uploaded source bytes referenced by import metadata
+* an in-memory background job queue and import snapshot worker handler for local API smoke tests
 
-This means local project records, credential hashes, session token hashes, and password reset token hashes survive process restarts.
+This means local project records, imported source bytes, credential hashes, session token hashes, and password reset token hashes survive process restarts.
 
 The JSON auth store is a deterministic local adapter, not the final production identity provider.
 
@@ -565,7 +574,9 @@ The request includes:
 
 The route records a pending engine run and enqueues a background job through the worker boundary.
 
-It does not run the engine inline and does not create snapshots.
+It does not run the engine inline.
+
+When an import content store and snapshot worker handler are configured, the worker can later generate a deterministic canon snapshot from the saved source bytes.
 
 Duplicate run IDs or job IDs fail clearly.
 
@@ -587,7 +598,7 @@ When deployment API keys are configured, this internal workflow route requires `
 
 The route updates queue status and durable engine run status.
 
-It does not create snapshots.
+When configured with the import snapshot worker handler, it also persists a deterministic `canon` snapshot for each successfully processed import run.
 
 ## `POST /v2/workers/runs/{run_id}/snapshots`
 

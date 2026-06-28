@@ -104,6 +104,7 @@ from aevryn.auth import (
 )
 from aevryn.export import ExportEngine
 from aevryn.extraction import EvidenceBoundedAIExtractor, StaticAIExtractionClient
+from aevryn.import_storage import FileSystemImportContentStore, ImportContentStore
 from aevryn.importing import ImportedSource, SourceFileTextExtractor
 from aevryn.persistence import (
     AccessDeniedError,
@@ -141,6 +142,7 @@ from aevryn.workers import (
     BackgroundWorkerRunSummary,
     DuplicateJobError,
     InMemoryJobQueue,
+    ProjectImportSnapshotHandler,
 )
 
 API_VERSION = "v2"
@@ -148,6 +150,7 @@ ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
 API_KEYS_ENV = "AEVRYN_API_KEYS"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
+IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
 PLATFORM_ENGINE_VERSION = "aevryn_v1"
 
 
@@ -169,6 +172,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         project_repository,
         background_job_queue,
         background_job_handler,
+        import_content_store,
     ) = _platform_services_from_env(active_environ)
     return create_app(
         allowed_origins=_allowed_origins_from_env(active_environ),
@@ -177,6 +181,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         project_repository=project_repository,
         background_job_queue=background_job_queue,
         background_job_handler=background_job_handler,
+        import_content_store=import_content_store,
     )
 
 
@@ -187,6 +192,7 @@ def create_app(
     project_repository: ProjectRepository | None = None,
     background_job_queue: BackgroundJobQueue | None = None,
     background_job_handler: BackgroundJobHandler | None = None,
+    import_content_store: ImportContentStore | None = None,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
 
@@ -197,6 +203,7 @@ def create_app(
         project_repository: Optional Phase 6 project storage repository.
         background_job_queue: Optional Phase 3 queue for engine run submission.
         background_job_handler: Optional Phase 3 worker handler for queued jobs.
+        import_content_store: Optional storage adapter for uploaded source bytes.
 
     Returns:
         Configured FastAPI application.
@@ -850,6 +857,11 @@ def create_app(
                 source_format=source_format,
                 imported_source=imported_source,
             )
+            if import_content_store is not None:
+                import_content_store.store_import_content(
+                    import_record.storage_ref,
+                    _decode_base64(request_body.content_base64),
+                )
             repository.record_import(import_record)
         except DuplicateRecordError as error:
             raise HTTPException(
@@ -1397,14 +1409,18 @@ def _platform_services_from_env(
     ProjectRepository | None,
     BackgroundJobQueue | None,
     BackgroundJobHandler | None,
+    ImportContentStore | None,
 ]:
     """Return configured platform services from deployment environment settings."""
     database_path = environ.get(PROJECT_DATABASE_PATH_ENV, "").strip()
     if not database_path:
-        return None, None, None, None
+        return None, None, None, None, None
 
     project_database_path = Path(database_path)
     repository = JsonProjectRepository(project_database_path)
+    import_content_store = FileSystemImportContentStore(
+        _import_storage_path_from_env(environ, project_database_path)
+    )
     auth_store = JsonAuthenticationStore(
         _auth_store_path_from_env(environ, project_database_path)
     )
@@ -1417,7 +1433,8 @@ def _platform_services_from_env(
         authentication_service,
         repository,
         InMemoryJobQueue(),
-        _MetadataOnlyBackgroundJobHandler(),
+        ProjectImportSnapshotHandler(repository, import_content_store),
+        import_content_store,
     )
 
 
@@ -1430,6 +1447,17 @@ def _auth_store_path_from_env(
     if configured_path:
         return Path(configured_path)
     return project_database_path.with_name(f"{project_database_path.stem}_auth.json")
+
+
+def _import_storage_path_from_env(
+    environ: Mapping[str, str],
+    project_database_path: Path,
+) -> Path:
+    """Return the local import content storage directory for environment app wiring."""
+    configured_path = environ.get(IMPORT_STORAGE_PATH_ENV, "").strip()
+    if configured_path:
+        return Path(configured_path)
+    return project_database_path.with_name(f"{project_database_path.stem}_imports")
 
 
 def _normalize_api_keys(api_keys: Sequence[str]) -> tuple[str, ...]:

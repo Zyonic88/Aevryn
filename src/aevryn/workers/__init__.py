@@ -19,6 +19,7 @@ from aevryn.workers.service import (
     BackgroundJobHandler,
     BackgroundJobService,
     BackgroundWorker,
+    ProjectImportSnapshotHandler,
 )
 
 __all__ = [
@@ -36,4 +37,5 @@ __all__ = [
     "InvalidJobTransitionError",
     "JobNotFoundError",
     "JobQueueError",
+    "ProjectImportSnapshotHandler",
 ]

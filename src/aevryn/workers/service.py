@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import tempfile
 from dataclasses import replace
 from datetime import datetime
+from pathlib import Path
 from typing import Protocol
 
-from aevryn.persistence import EngineRunRecord, ProjectRepository
+from aevryn.import_storage import ImportContentStore
+from aevryn.persistence import EngineRunRecord, ProjectRepository, SnapshotRecord
+from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.workers.models import BackgroundJob, BackgroundWorkerRunSummary
 from aevryn.workers.queue import BackgroundJobQueue, DuplicateJobError
 
@@ -17,8 +22,50 @@ logger = logging.getLogger(__name__)
 class BackgroundJobHandler(Protocol):
     """Handler that performs a claimed background job."""
 
-    def process(self, job: BackgroundJob) -> None:
+    def process(self, job: BackgroundJob) -> tuple[SnapshotRecord, ...] | None:
         """Execute a claimed job or raise a clear exception."""
+
+
+class ProjectImportSnapshotHandler:
+    """Run imported source content and return durable snapshot records."""
+
+    def __init__(
+        self,
+        repository: ProjectRepository,
+        import_content_store: ImportContentStore,
+    ) -> None:
+        """Create a project import snapshot handler."""
+        self._repository = repository
+        self._import_content_store = import_content_store
+
+    def process(self, job: BackgroundJob) -> tuple[SnapshotRecord, ...]:
+        """Process one import job into deterministic engine output snapshots."""
+        if job.kind != "process_import":
+            raise ValueError(f"Unsupported background job kind: {job.kind}")
+        import_record = self._repository.get_import_for_worker(job.import_id)
+        if import_record.story_id != job.story_id:
+            raise ValueError("Background job import does not match story scope.")
+        content = self._import_content_store.read_import_content(import_record.storage_ref)
+        with tempfile.TemporaryDirectory(prefix="AEVRYN_worker_import_") as directory:
+            source_path = Path(directory) / import_record.filename
+            source_path.write_bytes(content)
+            result = AevrynProjectRunner().run_demo_text_file(
+                path=source_path,
+                source_id=import_record.source_id,
+                title=source_path.stem,
+            )
+        return (
+            SnapshotRecord(
+                snapshot_id=f"snapshot_{job.run_id}_canon",
+                project_id=job.project_id,
+                story_id=job.story_id,
+                run_id=job.run_id,
+                snapshot_kind="canon",
+                content_type="application/json",
+                serialized_output=_canon_snapshot_payload(result),
+                created_at=job.status_updated_at,
+            ),
+        )
 
 
 class BackgroundJobService:
@@ -144,7 +191,7 @@ class BackgroundWorker:
             replace(run, status="running", status_updated_at=started_at)
         )
         try:
-            self._handler.process(job)
+            snapshots = self._handler.process(job) or ()
         except Exception as error:
             summary = _error_summary(error)
             latest_run = self._repository.get_engine_run_for_worker(job.run_id)
@@ -172,6 +219,8 @@ class BackgroundWorker:
                 finished_at=finished_at,
             )
         )
+        for snapshot in snapshots:
+            self._repository.store_snapshot(snapshot)
         return self._queue.complete(job_id=job.job_id, completed_at=finished_at)
 
     def process_available(
@@ -243,6 +292,55 @@ def _job_scope_error(job: BackgroundJob, run: EngineRunRecord) -> str:
     if run.job_ref != expected_job_ref:
         return "Background job reference does not match engine run job_ref."
     return ""
+
+
+def _canon_snapshot_payload(result: ProjectRunResult) -> str:
+    """Return a deterministic JSON snapshot for a completed canon run."""
+    scene_ids = tuple(
+        scene.scene_id
+        for chapter in result.imported_source.story.chapters
+        for scene in chapter.scenes
+    )
+    payload = {
+        "source_id": result.imported_source.source_id,
+        "title": result.imported_source.story.title,
+        "chapters": len(result.imported_source.story.chapters),
+        "scenes": len(scene_ids),
+        "scene_ids": scene_ids,
+        "evidence_anchor_count": len(result.imported_source.anchors),
+        "extraction_result_count": len(result.extraction_results),
+        "accepted_entity_count": sum(
+            len(summary.accepted_entities) for summary in result.update_summaries
+        ),
+        "accepted_fact_count": sum(
+            len(summary.accepted_facts) for summary in result.update_summaries
+        ),
+        "accepted_relationship_count": sum(
+            len(summary.accepted_relationships) for summary in result.update_summaries
+        ),
+        "accepted_state_change_count": sum(
+            len(summary.accepted_state_changes) for summary in result.update_summaries
+        ),
+        "rejected_candidate_count": sum(
+            len(summary.rejected_candidates) for summary in result.update_summaries
+        ),
+        "update_summaries": tuple(
+            {
+                "scene_id": extraction_result.scene_id,
+                "accepted_entities": summary.accepted_entities,
+                "accepted_facts": summary.accepted_facts,
+                "accepted_relationships": summary.accepted_relationships,
+                "accepted_state_changes": summary.accepted_state_changes,
+                "rejected_candidates": summary.rejected_candidates,
+            }
+            for extraction_result, summary in zip(
+                result.extraction_results,
+                result.update_summaries,
+                strict=True,
+            )
+        ),
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
 def _error_summary(error: Exception) -> str:

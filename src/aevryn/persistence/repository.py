@@ -80,6 +80,9 @@ class ProjectRepository(Protocol):
     def get_import(self, user_id: str, import_id: str) -> ImportRecord:
         """Return import metadata accessible to a user."""
 
+    def get_import_for_worker(self, import_id: str) -> ImportRecord:
+        """Return import metadata for trusted background worker execution."""
+
     def record_engine_run(self, run: EngineRunRecord) -> None:
         """Persist an engine run record."""
 

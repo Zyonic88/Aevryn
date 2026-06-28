@@ -14,8 +14,9 @@ from aevryn.auth import (
     InMemorySessionStore,
     PasswordHasher,
 )
+from aevryn.import_storage import InMemoryImportContentStore
 from aevryn.persistence import InMemoryProjectRepository
-from aevryn.workers import InMemoryJobQueue
+from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
 from aevryn.workers.models import BackgroundJob
 
 NOW = "2026-06-27T00:00:00Z"
@@ -675,6 +676,104 @@ def test_worker_process_api_drains_queued_runs() -> None:
     assert listed.json()["runs"][0]["status"] == "succeeded"
     assert listed.json()["runs"][0]["finished_at"] == SOON
     assert queue.get("job_alpha").status == "succeeded"
+
+
+def test_worker_process_api_generates_snapshot_from_stored_import_content() -> None:
+    """Worker processing should turn saved import bytes into durable snapshots."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    import_content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=import_content_store,
+            ),
+            import_content_store=import_content_store,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+
+    assert processed.status_code == 200
+    assert processed.json()["succeeded_jobs"] == 1
+    snapshots = client.get(
+        "/v2/projects/project_alpha/snapshots",
+        headers=auth_headers("token_001"),
+    )
+    assert snapshots.status_code == 200
+    assert snapshots.json()["snapshots"][0]["snapshot_id"] == "snapshot_run_alpha_canon"
+    assert snapshots.json()["snapshots"][0]["snapshot_kind"] == "canon"
+    assert '"source_id":"source_alpha"' in snapshots.json()["snapshots"][0]["serialized_output"]
+
+
+def test_worker_process_api_fails_when_import_content_is_missing() -> None:
+    """Worker processing should not fabricate snapshots without source bytes."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    missing_content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=missing_content_store,
+            ),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+
+    assert processed.status_code == 200
+    assert processed.json()["failed_jobs"] == 1
+    runs = client.get("/v2/projects/project_alpha/runs", headers=auth_headers("token_001"))
+    assert runs.status_code == 200
+    assert runs.json()["runs"][0]["status"] == "failed"
+    snapshots = client.get(
+        "/v2/projects/project_alpha/snapshots",
+        headers=auth_headers("token_001"),
+    )
+    assert snapshots.status_code == 200
+    assert snapshots.json()["snapshots"] == []
 
 
 def test_worker_process_api_requires_configured_handler() -> None:
