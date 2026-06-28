@@ -550,6 +550,24 @@ Duplicate run IDs or job IDs fail clearly.
 
 Missing imports, cross-story imports, cross-project imports, and cross-user imports return a stable import-not-found response.
 
+## `POST /v2/workers/process`
+
+Drains queued background jobs through the worker boundary.
+
+The request includes:
+
+* `started_at`
+* `finished_at`
+* `max_jobs`
+
+The route returns claimed, succeeded, and failed job counts.
+
+When deployment API keys are configured, this internal workflow route requires `X-Aevryn-API-Key` or an equivalent bearer API key.
+
+The route updates queue status and durable engine run status.
+
+It does not create snapshots.
+
 ## `POST /v2/projects/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns stateless project-level metadata.

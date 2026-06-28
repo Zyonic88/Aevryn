@@ -314,6 +314,26 @@ class EngineRunListResponse(BaseModel):
     runs: tuple[EngineRunOutput, ...]
 
 
+class WorkerProcessRequest(BaseModel):
+    """Request to drain queued background jobs through the worker boundary."""
+
+    model_config = ConfigDict(frozen=True)
+
+    started_at: str = Field(min_length=1)
+    finished_at: str = Field(min_length=1)
+    max_jobs: int = Field(ge=1)
+
+
+class WorkerProcessResponse(BaseModel):
+    """Summary returned after processing available background jobs."""
+
+    model_config = ConfigDict(frozen=True)
+
+    claimed_jobs: int
+    succeeded_jobs: int
+    failed_jobs: int
+
+
 class ImportInspectRequest(BaseModel):
     """Request to inspect imported source structure without storing a project."""
 

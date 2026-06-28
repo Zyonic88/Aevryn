@@ -16,6 +16,7 @@ from aevryn.auth import (
 )
 from aevryn.persistence import InMemoryProjectRepository
 from aevryn.workers import InMemoryJobQueue
+from aevryn.workers.models import BackgroundJob
 
 NOW = "2026-06-27T00:00:00Z"
 SOON = "2026-06-27T00:30:00Z"
@@ -631,6 +632,100 @@ def test_import_runs_api_requires_configured_queue() -> None:
     assert response.json()["error"] == "background_queue_unavailable"
 
 
+def test_worker_process_api_drains_queued_runs() -> None:
+    """Worker process API should move queued import runs through durable lifecycle."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=RecordingWorkerHandler(),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 5},
+    )
+
+    assert processed.status_code == 200
+    assert processed.json() == {
+        "claimed_jobs": 1,
+        "succeeded_jobs": 1,
+        "failed_jobs": 0,
+    }
+    listed = client.get("/v2/projects/project_alpha/runs", headers=auth_headers("token_001"))
+    assert listed.status_code == 200
+    assert listed.json()["runs"][0]["status"] == "succeeded"
+    assert listed.json()["runs"][0]["finished_at"] == SOON
+    assert queue.get("job_alpha").status == "succeeded"
+
+
+def test_worker_process_api_requires_configured_handler() -> None:
+    """Worker process API should fail clearly when execution is unavailable."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=InMemoryJobQueue(),
+        )
+    )
+
+    response = client.post(
+        "/v2/workers/process",
+        json={"started_at": NOW, "finished_at": NOW, "max_jobs": 1},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"] == "background_worker_unavailable"
+
+
+def test_worker_process_api_uses_deployment_api_key_when_configured() -> None:
+    """Internal worker routes should remain workflow API-key protected."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            api_keys=("deployment-key",),
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=InMemoryJobQueue(),
+            background_job_handler=RecordingWorkerHandler(),
+        )
+    )
+
+    unauthorized = client.post(
+        "/v2/workers/process",
+        json={"started_at": NOW, "finished_at": NOW, "max_jobs": 1},
+    )
+    authorized = client.post(
+        "/v2/workers/process",
+        headers={"X-Aevryn-API-Key": "deployment-key"},
+        json={"started_at": NOW, "finished_at": NOW, "max_jobs": 1},
+    )
+
+    assert unauthorized.status_code == 401
+    assert unauthorized.json()["error"] == "authentication_required"
+    assert authorized.status_code == 200
+    assert authorized.json()["claimed_jobs"] == 0
+
+
 def test_project_storage_api_requires_configured_storage() -> None:
     """Project routes should fail clearly when no repository is configured."""
     client = TestClient(create_app(authentication_service=auth_service()))
@@ -726,6 +821,7 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert "/v2/projects/{project_id}/stories/{story_id}/imports" in route_paths
     assert "/v2/projects/{project_id}/runs" in route_paths
     assert "/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs" in route_paths
+    assert "/v2/workers/process" in route_paths
 
     paths = client.get("/openapi.json").json()["paths"]
     assert paths["/v2/projects"]["get"]["operationId"] == "getV2Projects"
@@ -755,6 +851,7 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert paths["/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs"]["post"][
         "operationId"
     ] == "postV2ImportRuns"
+    assert paths["/v2/workers/process"]["post"]["operationId"] == "postV2WorkersProcess"
 
 
 def register_user(client: TestClient, *, user_id: str, email: str) -> None:
@@ -798,6 +895,13 @@ def import_create_payload() -> dict[str, str]:
         "title": "Alpha Source",
         "now": NOW,
     }
+
+
+class RecordingWorkerHandler:
+    """Worker handler used by API tests."""
+
+    def process(self, _job: BackgroundJob) -> None:
+        """Accept one queued background job."""
 
 
 def auth_headers(token: str) -> dict[str, str]:

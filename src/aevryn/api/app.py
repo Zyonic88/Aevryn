@@ -84,6 +84,8 @@ from aevryn.api.models import (
     StoryOutput,
     TimelinePreviewRequest,
     TimelinePreviewResponse,
+    WorkerProcessRequest,
+    WorkerProcessResponse,
     WorldPreviewRequest,
     WorldPreviewResponse,
     WorldSheetOutput,
@@ -126,8 +128,12 @@ from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.projects.runner import ContinuityRecord, ContinuityReport, ContinuitySceneReport
 from aevryn.prompts import CanonPromptBuilder, ProductionPack
 from aevryn.workers import (
+    BackgroundJob,
+    BackgroundJobHandler,
     BackgroundJobQueue,
     BackgroundJobService,
+    BackgroundWorker,
+    BackgroundWorkerRunSummary,
     DuplicateJobError,
     InMemoryJobQueue,
 )
@@ -153,15 +159,19 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         ValueError: If configured CORS origins are unsafe or invalid.
     """
     active_environ = environ or os.environ
-    authentication_service, project_repository, background_job_queue = _platform_services_from_env(
-        active_environ
-    )
+    (
+        authentication_service,
+        project_repository,
+        background_job_queue,
+        background_job_handler,
+    ) = _platform_services_from_env(active_environ)
     return create_app(
         allowed_origins=_allowed_origins_from_env(active_environ),
         api_keys=_api_keys_from_env(active_environ),
         authentication_service=authentication_service,
         project_repository=project_repository,
         background_job_queue=background_job_queue,
+        background_job_handler=background_job_handler,
     )
 
 
@@ -171,6 +181,7 @@ def create_app(
     authentication_service: AuthenticationService | None = None,
     project_repository: ProjectRepository | None = None,
     background_job_queue: BackgroundJobQueue | None = None,
+    background_job_handler: BackgroundJobHandler | None = None,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
 
@@ -180,6 +191,7 @@ def create_app(
         authentication_service: Optional Phase 4 authentication service.
         project_repository: Optional Phase 6 project storage repository.
         background_job_queue: Optional Phase 3 queue for engine run submission.
+        background_job_handler: Optional Phase 3 worker handler for queued jobs.
 
     Returns:
         Configured FastAPI application.
@@ -867,6 +879,36 @@ def create_app(
         return _engine_run_output(run)
 
     @app.post(
+        "/v2/workers/process",
+        response_model=WorkerProcessResponse,
+        tags=["Workers"],
+        operation_id="postV2WorkersProcess",
+    )
+    def process_worker_jobs(request_body: WorkerProcessRequest) -> WorkerProcessResponse:
+        """Drain queued background jobs through the worker boundary."""
+        repository = _require_project_repository(project_repository)
+        queue = _require_background_job_queue(background_job_queue)
+        handler = _require_background_job_handler(background_job_handler)
+        try:
+            summary = BackgroundWorker(
+                repository=repository,
+                queue=queue,
+                handler=handler,
+            ).process_available(
+                started_at=request_body.started_at,
+                finished_at=request_body.finished_at,
+                max_jobs=request_body.max_jobs,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "worker_process_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _worker_process_response(summary)
+
+    @app.post(
         "/v2/imports/inspect",
         response_model=ImportInspectResponse,
         tags=["Import"],
@@ -1231,11 +1273,16 @@ def _api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
 
 def _platform_services_from_env(
     environ: Mapping[str, str],
-) -> tuple[AuthenticationService | None, ProjectRepository | None, BackgroundJobQueue | None]:
+) -> tuple[
+    AuthenticationService | None,
+    ProjectRepository | None,
+    BackgroundJobQueue | None,
+    BackgroundJobHandler | None,
+]:
     """Return configured platform services from deployment environment settings."""
     database_path = environ.get(PROJECT_DATABASE_PATH_ENV, "").strip()
     if not database_path:
-        return None, None, None
+        return None, None, None, None
 
     project_database_path = Path(database_path)
     repository = JsonProjectRepository(project_database_path)
@@ -1247,7 +1294,12 @@ def _platform_services_from_env(
         credential_store=auth_store,
         session_store=auth_store,
     )
-    return authentication_service, repository, InMemoryJobQueue()
+    return (
+        authentication_service,
+        repository,
+        InMemoryJobQueue(),
+        _MetadataOnlyBackgroundJobHandler(),
+    )
 
 
 def _auth_store_path_from_env(
@@ -1370,6 +1422,21 @@ def _require_background_job_queue(
     return background_job_queue
 
 
+def _require_background_job_handler(
+    background_job_handler: BackgroundJobHandler | None,
+) -> BackgroundJobHandler:
+    """Return the configured background handler or fail clearly."""
+    if background_job_handler is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "background_worker_unavailable",
+                "detail": "Background worker handler is not configured.",
+            },
+        )
+    return background_job_handler
+
+
 def _authenticated_user(
     request: Request,
     authentication_service: AuthenticationService | None,
@@ -1463,6 +1530,15 @@ def _engine_run_output(run: EngineRunRecord) -> EngineRunOutput:
     )
 
 
+def _worker_process_response(summary: BackgroundWorkerRunSummary) -> WorkerProcessResponse:
+    """Convert a worker drain summary to the API contract."""
+    return WorkerProcessResponse(
+        claimed_jobs=summary.claimed_jobs,
+        succeeded_jobs=summary.succeeded_jobs,
+        failed_jobs=summary.failed_jobs,
+    )
+
+
 def _import_record(
     request: ImportCreateRequest,
     story_id: str,
@@ -1521,6 +1597,13 @@ def _require_import_scope(
 def _import_metadata_filename(value: str) -> str:
     """Return basename-only import metadata from a submitted filename."""
     return Path(value.replace("\\", "/")).name
+
+
+class _MetadataOnlyBackgroundJobHandler:
+    """Background handler that acknowledges jobs without creating snapshots."""
+
+    def process(self, _job: BackgroundJob) -> None:
+        """Process metadata-only jobs for local Phase 6 run lifecycle testing."""
 
 
 def _normalized_project_name(value: str) -> str:
@@ -1694,6 +1777,11 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="POST",
             path="/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs",
             purpose="Submit a saved import for background engine processing.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/workers/process",
+            purpose="Drain queued background jobs through the worker boundary.",
         ),
         ApiRouteCapability(
             method="POST",
