@@ -36,7 +36,9 @@ Performance metadata must stay outside deterministic canon, evidence, export, an
 
 # Acceptance Criteria
 
-Phase 9 is accepted when:
+Phase 9 is accepted.
+
+Accepted criteria:
 
 * Performance architecture is documented.
 * Latency budgets exist for import inspect, project status, workspace load, and export preview.
@@ -53,6 +55,14 @@ Phase 9 is accepted when:
 * At least one measured bottleneck is improved or explicitly documented as not worth changing.
 * Backend gates pass.
 * Frontend gates pass.
+
+Accepted implementation:
+
+* `docs/AEVRYN_PERFORMANCE.md` defines the performance architecture, latency budgets, throughput boundary, metadata-only snapshot policy, and optimization log.
+* `src/aevryn/performance.py` owns typed budgets, deterministic operation timing, metadata-only baseline JSON artifacts, and warning/critical regression comparison.
+* `aevryn performance-baseline` generates ignored local baseline artifacts with measurements for import inspect, import save, worker processing, snapshot creation, project status, workspace load, export preview, and validation suite.
+* `aevryn performance-baseline --compare-to <baseline.json>` reports warning and critical regressions and exits nonzero only for critical regressions.
+* Frontend workspace-load hardening reuses fresh dashboard health metadata during dashboard-to-monitoring navigation while still rendering API-provided monitoring status.
 
 ---
 

@@ -19,9 +19,9 @@ If a feature is not required for the current version, it must wait.
 Current active target:
 
 ```text
-V2 Phase 9
--> Performance planning
--> Optimize only after monitoring data exists
+V2 Phase 10
+-> Internal Alpha
+-> Private alpha after import, monitoring, and performance are stable
 ```
 
 Phase 6 Project Storage is accepted.
@@ -30,9 +30,9 @@ Phase 7 Import UI is accepted.
 
 Phase 8 Monitoring is accepted.
 
-The product path now has durable project identity, storage-backed workspace access, saved imports, queued runs, import source-byte storage, deterministic `canon` snapshots from successful import runs, supported-format import UI hardening, and metadata-only workflow observability.
+Phase 9 Performance is accepted.
 
-Phase 9 should optimize only after the monitored workflow path identifies meaningful bottlenecks.
+The product path now has durable project identity, storage-backed workspace access, saved imports, queued runs, import source-byte storage, deterministic `canon` snapshots from successful import runs, supported-format import UI hardening, metadata-only workflow observability, performance budgets, metadata-only baseline artifacts, regression comparison, and workspace-load request hardening.
 
 ---
 
@@ -487,7 +487,7 @@ Accepted monitoring scope:
 
 ## Phase 9 - Performance
 
-Status: **In Progress**
+Status: **Accepted**
 
 Optimize after the product path is measurable.
 
@@ -512,6 +512,15 @@ Optimize only where measured.
 ```
 
 Phase 9 optimizes latency for the single-user V2 product path. Throughput, horizontal scaling, distributed workers, production database tuning, cache infrastructure, and cloud autoscaling belong later.
+
+Accepted performance scope:
+
+* `docs/AEVRYN_PERFORMANCE.md` defines budgets, metadata-only measurements, regression snapshots, and the Phase 9 optimization log.
+* `aevryn performance-baseline` generates ignored metadata-only baseline artifacts.
+* Baseline measurements cover import inspect, import save, worker processing, snapshot creation, project status, workspace load, export preview, and validation suite.
+* `aevryn performance-baseline --compare-to <baseline.json>` reports warning and critical regressions while failing only on critical regressions.
+* Frontend workspace-load hardening avoids immediate duplicate API health fetches during dashboard-to-monitoring navigation.
+* Phase 9 does not include throughput optimization, production infrastructure, cache infrastructure, cloud scaling, new admin consoles, or broad frontend redesign.
 
 ---
 

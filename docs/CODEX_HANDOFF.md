@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 9 in progress - Performance**
+Current phase: **Phase 10 planned - Internal Alpha**
 
 Recent completed V2 work:
 
@@ -59,6 +59,7 @@ Recent completed V2 work:
 - Phase 6: Project Storage
 - Phase 7: Import UI
 - Phase 8: Monitoring
+- Phase 9: Performance
 - Import workspace view completed
 - Character workspace view completed
 - World workspace view completed
@@ -74,7 +75,7 @@ Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 ha
 
 Next expected V2 target:
 
-- Phase 9 Performance planning and implementation, governed by `docs/AEVRYN_ROADMAP.md`
+- Phase 10 Internal Alpha planning and implementation, governed by `docs/AEVRYN_ROADMAP.md`
 
 Phase 6 Project Storage accepted:
 
@@ -131,11 +132,8 @@ Phase 8 accepted:
 - API health now reports metadata-only project/import storage adapter availability, and Monitoring displays those API-provided storage states
 - Phase 8 exit verification passed before closeout: backend and frontend gates were green before the final closeout docs pass
 
-Phase 9 starting point:
+Phase 9 accepted:
 
-- Optimize after monitoring gives real workflow data
-- Keep performance work bounded to measured bottlenecks
-- Do not add new product surfaces before the monitored V2 path is stable
 - Performance architecture is defined in `docs/AEVRYN_PERFORMANCE.md`
 - Phase 9 acceptance is governed by `docs/AEVRYN_V2_PHASE_9_ACCEPTANCE.md`
 - Phase 9 optimizes latency for the single-user V2 product path; throughput and scalability belong later
@@ -143,6 +141,16 @@ Phase 9 starting point:
 - Local V2 baseline generation lives in `src/aevryn/performance_runner.py` and is exposed by `aevryn performance-baseline`
 - Baseline comparison is exposed by `aevryn performance-baseline --compare-to <baseline.json>` and exits nonzero only for critical regressions
 - Generated local performance baselines belong under ignored `performance-baselines/`
+- Baseline measurements cover import inspect, import save, worker processing, snapshot creation, project status, workspace load, export preview, and validation suite
+- Frontend workspace-load hardening reuses fresh dashboard health metadata during dashboard-to-monitoring navigation while preserving API-provided monitoring status
+- Phase 9 exit verification passed: backend gates, frontend gates, and the local `performance-baseline` command were green before closeout
+
+Phase 10 starting point:
+
+- Treat Phase 10 as private internal alpha readiness, not public launch
+- Verify the complete creator path: register, create project, upload story, wait for processing, view engine outputs, and export
+- Preserve all Phase 6-9 boundaries: durable storage, import workflow, monitoring observability, metadata-only performance measurement, and no frontend inference of backend workflow state
+- Do not add payments, public launch flows, broad redesign, image generation, video generation, or chatbot behavior in Phase 10 unless explicitly scoped later
 
 ---
 
