@@ -1164,6 +1164,10 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
         "No accepted world relationships have been extracted yet."
     )
     assert payload["surfaces"][3]["item_count"] == 1
+    assert payload["character_profiles"][0]["character_id"] == "character_mark"
+    assert payload["character_profiles"][0]["display_name"] == "Mark"
+    assert payload["character_profiles"][0]["status"]["items"] == ["Unknown"]
+    assert payload["world_sheet"]["entity_sections"] == []
     assert "Mark carried a rusty dagger" not in response.text
     assert "serialized_output" not in response.text
 

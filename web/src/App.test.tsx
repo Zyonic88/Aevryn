@@ -524,6 +524,8 @@ const projectOutputsPayload = {
       item_count: 8,
     },
   ],
+  character_profiles: characterPreviewPayload.character_profiles,
+  world_sheet: worldPreviewPayload.world_sheet,
 };
 
 function storeAuthenticatedProject() {
@@ -2146,9 +2148,23 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview characters" }));
 
     expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Mark" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Mark" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Rusty Dagger").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Luna - Ally").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("3 verified facts").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders processed character panels from project outputs", async () => {
+    storeAuthenticatedProject();
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/characters"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Mark" })).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
-    expect(screen.getByText("Luna - Ally")).toBeInTheDocument();
     expect(screen.getByText("3 verified facts")).toBeInTheDocument();
   });
 
@@ -2290,10 +2306,12 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview world" }));
 
     expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Hangar (location)" })).toBeInTheDocument();
-    expect(screen.getByText("condition: Alarm active")).toBeInTheDocument();
-    expect(screen.getByText("ownership: Academy")).toBeInTheDocument();
-    expect(screen.getByText("2 verified world facts")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { name: "Hangar (location)" }).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("condition: Alarm active").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("ownership: Academy").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("2 verified world facts").length).toBeGreaterThanOrEqual(1);
   });
 
   it("previews timeline order from the timeline workspace tab", async () => {

@@ -2,7 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { apiClient } from "../api/client";
-import type { ProjectOutputs, ProjectOutputSurface } from "../api/schemas";
+import type {
+  CharacterProfile,
+  OutputSection,
+  ProjectOutputs,
+  ProjectOutputSurface,
+  WorldSheet,
+} from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, LoadingMessage } from "../components/Feedback";
 import { formatDateTime, formatRunStatus } from "../formatting/display";
@@ -111,12 +117,95 @@ function ProjectOutputSummary({
         <Metric label="Snapshot" value={formatDateTime(outputs.canon.created_at)} />
       </dl>
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
+      <ReadableSurfacePanels surface={surface} outputs={outputs} />
       {surfaceSummary.status === "waiting" ? (
         <EmptyState title="No extracted canon content yet">
           This project has imported chapter and scene structure, but this output needs accepted
           extraction data before it can show creator-facing content.
         </EmptyState>
       ) : null}
+    </section>
+  );
+}
+
+function ReadableSurfacePanels({
+  surface,
+  outputs,
+}: {
+  surface: OutputSurface;
+  outputs: ProjectOutputs;
+}) {
+  if (surface === "characters" && outputs.character_profiles.length > 0) {
+    return (
+      <div className="profile-grid" aria-label="Character cards">
+        {outputs.character_profiles.map((profile) => (
+          <CharacterPanel key={profile.character_id} profile={profile} />
+        ))}
+      </div>
+    );
+  }
+  if (
+    surface === "world" &&
+    outputs.world_sheet &&
+    outputs.world_sheet.entity_sections.length > 0
+  ) {
+    return <WorldPanel world={outputs.world_sheet} />;
+  }
+  return null;
+}
+
+function CharacterPanel({ profile }: { profile: CharacterProfile }) {
+  return (
+    <article className="profile-card">
+      <header>
+        <p className="eyebrow">{profile.character_id}</p>
+        <h3>{profile.display_name}</h3>
+        <p>{profile.subtitle}</p>
+      </header>
+      <div className="profile-section-grid">
+        <PanelSection section={profile.status} />
+        <PanelSection section={profile.current_goal} />
+        <PanelSection section={profile.current_equipment} />
+        <PanelSection section={profile.current_abilities} />
+        <PanelSection section={profile.current_assets} />
+        <PanelSection section={profile.territory} />
+        <PanelSection section={profile.relationships} />
+        <PanelSection section={profile.current_limitations} />
+        <PanelSection section={profile.recent_changes} />
+      </div>
+      <p className="evidence-note">{profile.evidence_summary}</p>
+    </article>
+  );
+}
+
+function WorldPanel({ world }: { world: WorldSheet }) {
+  return (
+    <div>
+      <p className="result-summary">{world.chapter_label}</p>
+      <div className="profile-grid" aria-label="World sheets">
+        {world.entity_sections.map((section) => (
+          <article className="profile-card" key={section.title}>
+            <header>
+              <h3>{section.title}</h3>
+            </header>
+            <PanelSection section={section} />
+          </article>
+        ))}
+      </div>
+      <p className="evidence-note">{world.evidence_summary}</p>
+    </div>
+  );
+}
+
+function PanelSection({ section }: { section: OutputSection }) {
+  return (
+    <section className="profile-section">
+      <h4>{section.title}</h4>
+      <ul>
+        {section.items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
     </section>
   );
 }

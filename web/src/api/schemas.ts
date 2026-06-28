@@ -236,6 +236,8 @@ export const projectOutputsSchema = z.object({
   latest_engine_run: projectStatusRunSchema.nullable(),
   canon: projectOutputCanonSummarySchema,
   surfaces: z.array(projectOutputSurfaceSchema),
+  character_profiles: z.array(z.lazy(() => characterProfileSchema)),
+  world_sheet: z.lazy(() => worldSheetSchema).nullable(),
 });
 
 export const snapshotSchema = z.object({

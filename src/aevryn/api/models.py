@@ -443,7 +443,7 @@ class ProjectOutputCanonSummary(BaseModel):
     accepted_relationship_count: int = 0
     accepted_state_change_count: int = 0
     rejected_candidate_count: int = 0
-    chapter_scene_counts: tuple["ProjectOutputChapterSummary", ...] = ()
+    chapter_scene_counts: tuple[ProjectOutputChapterSummary, ...] = ()
 
 
 class ProjectOutputChapterSummary(BaseModel):
@@ -478,6 +478,8 @@ class ProjectOutputsResponse(BaseModel):
     latest_engine_run: ProjectStatusRun | None = None
     canon: ProjectOutputCanonSummary
     surfaces: tuple[ProjectOutputSurface, ...]
+    character_profiles: tuple[CharacterProfileOutput, ...] = ()
+    world_sheet: WorldSheetOutput | None = None
 
 
 class SnapshotStoreRequest(BaseModel):

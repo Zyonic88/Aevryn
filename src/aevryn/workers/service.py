@@ -13,6 +13,8 @@ from typing import Protocol
 
 from aevryn.import_storage import ImportContentStore
 from aevryn.persistence import EngineRunRecord, ProjectRepository, SnapshotRecord
+from aevryn.presentation import PresentationEngine, PresentationSection
+from aevryn.presentation.models import CharacterProfileView, WorldSheetView
 from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.workers.models import BackgroundJob, BackgroundWorkerRunSummary
 from aevryn.workers.queue import BackgroundJobQueue, DuplicateJobError
@@ -370,6 +372,7 @@ def _canon_snapshot_payload(result: ProjectRunResult) -> str:
         "rejected_candidate_count": sum(
             len(summary.rejected_candidates) for summary in result.update_summaries
         ),
+        "presentation": _presentation_snapshot_payload(result),
         "update_summaries": tuple(
             {
                 "scene_id": extraction_result.scene_id,
@@ -387,6 +390,146 @@ def _canon_snapshot_payload(result: ProjectRunResult) -> str:
         ),
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def _presentation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]:
+    """Return compact human-readable output panels for a completed run."""
+    runner = AevrynProjectRunner()
+    presenter = PresentationEngine()
+    scene_id = runner.latest_scene_id(result)
+    source_quotes = _source_quotes(result)
+    return {
+        "characters": tuple(
+            _character_profile_payload(
+                presenter.character_profile(
+                    runner.build_character_card_at_scene(
+                        result=result,
+                        character_id=character_id,
+                        scene_id=scene_id,
+                    )
+                ),
+                source_quotes=source_quotes,
+            )
+            for character_id in _accepted_character_ids(result)
+        ),
+        "world": _world_sheet_payload(
+            presenter.world_sheet(
+                runner.build_world_state_at_scene(
+                    result=result,
+                    entity_ids=_accepted_world_entity_ids(result),
+                    scene_id=scene_id,
+                )
+            ),
+            source_quotes=source_quotes,
+        ),
+    }
+
+
+def _accepted_character_ids(result: ProjectRunResult) -> tuple[str, ...]:
+    """Return accepted character IDs in first-seen scene order."""
+    character_ids: dict[str, None] = {}
+    for summary in result.update_summaries:
+        for entity_id in summary.accepted_entities:
+            if result.database.retrieve_character(entity_id) is not None:
+                character_ids.setdefault(entity_id, None)
+
+    return tuple(character_ids)
+
+
+def _accepted_world_entity_ids(result: ProjectRunResult) -> tuple[str, ...]:
+    """Return accepted non-character entity IDs in first-seen scene order."""
+    entity_ids: dict[str, None] = {}
+    for summary in result.update_summaries:
+        for entity_id in summary.accepted_entities:
+            entity = result.database.retrieve_entity(entity_id)
+            if entity is not None and entity.entity_type != "character":
+                entity_ids.setdefault(entity_id, None)
+
+    return tuple(entity_ids)
+
+
+def _source_quotes(result: ProjectRunResult) -> tuple[str, ...]:
+    """Return normalized source quotes that should not become display text."""
+    return tuple(
+        " ".join(anchor.quote.split())
+        for anchor in result.imported_source.anchors
+        if anchor.quote.strip()
+    )
+
+
+def _character_profile_payload(
+    profile: CharacterProfileView,
+    *,
+    source_quotes: tuple[str, ...],
+) -> dict[str, object]:
+    """Return a JSON-ready character profile panel."""
+    return {
+        "character_id": profile.character_id,
+        "display_name": _safe_display_text(profile.display_name, source_quotes),
+        "subtitle": _safe_display_text(profile.subtitle, source_quotes),
+        "status": _section_payload(profile.status, source_quotes=source_quotes),
+        "current_goal": _section_payload(profile.current_goal, source_quotes=source_quotes),
+        "current_equipment": _section_payload(
+            profile.current_equipment,
+            source_quotes=source_quotes,
+        ),
+        "current_abilities": _section_payload(
+            profile.current_abilities,
+            source_quotes=source_quotes,
+        ),
+        "current_assets": _section_payload(profile.current_assets, source_quotes=source_quotes),
+        "territory": _section_payload(profile.territory, source_quotes=source_quotes),
+        "relationships": _section_payload(profile.relationships, source_quotes=source_quotes),
+        "current_limitations": _section_payload(
+            profile.current_limitations,
+            source_quotes=source_quotes,
+        ),
+        "recent_changes": _section_payload(profile.recent_changes, source_quotes=source_quotes),
+        "evidence_summary": profile.evidence_summary,
+    }
+
+
+def _world_sheet_payload(
+    world: WorldSheetView,
+    *,
+    source_quotes: tuple[str, ...],
+) -> dict[str, object]:
+    """Return a JSON-ready world sheet panel."""
+    return {
+        "chapter_label": world.chapter_label,
+        "entity_sections": tuple(
+            _section_payload(section, source_quotes=source_quotes)
+            for section in world.entity_sections
+        ),
+        "evidence_summary": world.evidence_summary,
+    }
+
+
+def _section_payload(
+    section: PresentationSection,
+    *,
+    source_quotes: tuple[str, ...],
+) -> dict[str, object]:
+    """Return a JSON-ready presentation section without exact source prose."""
+    return {
+        "title": section.title,
+        "items": tuple(
+            _safe_display_text(item, source_quotes)
+            for item in section.items
+        ),
+    }
+
+
+def _safe_display_text(value: str, source_quotes: tuple[str, ...]) -> str:
+    """Return display text while suppressing exact long source-prose echoes."""
+    normalized = " ".join(value.split())
+    for quote in source_quotes:
+        if len(quote) >= 20 and (
+            quote in normalized or (len(normalized) >= 20 and normalized in quote)
+        ):
+            return "Source-backed detail available through evidence controls."
+
+    return normalized
 
 
 def _error_summary(error: Exception) -> str:

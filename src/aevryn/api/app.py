@@ -20,6 +20,7 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
+from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from aevryn.api.models import (
@@ -69,12 +70,12 @@ from aevryn.api.models import (
     ProjectCreateRequest,
     ProjectListResponse,
     ProjectOutput,
-    ProjectOutputChapterSummary,
     ProjectOutputCanonSummary,
-    ProjectOutputSurface,
-    ProjectOutputsResponse,
+    ProjectOutputChapterSummary,
     ProjectOutputsPreviewRequest,
     ProjectOutputsPreviewResponse,
+    ProjectOutputsResponse,
+    ProjectOutputSurface,
     ProjectPreviewRequest,
     ProjectPreviewResponse,
     ProjectSettingsRequest,
@@ -2038,6 +2039,7 @@ def _project_outputs_response(
     latest_run = _latest_run(runs)
     latest_canon = _latest_canon_snapshot(snapshots)
     canon_summary = _project_output_canon_summary(latest_canon)
+    canon_payload = _canon_snapshot_metadata(latest_canon) if latest_canon else {}
     return ProjectOutputsResponse(
         project_id=project_id,
         status=_project_workflow_state(runs=runs, imports=imports, snapshots=snapshots),
@@ -2045,6 +2047,8 @@ def _project_outputs_response(
         latest_engine_run=_project_status_run(latest_run) if latest_run else None,
         canon=canon_summary,
         surfaces=_project_output_surfaces(canon_summary),
+        character_profiles=_snapshot_character_profiles(canon_payload),
+        world_sheet=_snapshot_world_sheet(canon_payload),
     )
 
 
@@ -2191,6 +2195,92 @@ def _canon_snapshot_metadata(snapshot: SnapshotRecord) -> Mapping[str, object]:
     if not isinstance(payload, dict):
         return {}
     return cast(Mapping[str, object], payload)
+
+
+def _snapshot_character_profiles(
+    payload: Mapping[str, object],
+) -> tuple[CharacterProfileOutput, ...]:
+    """Return persisted character profile panels from snapshot metadata."""
+    presentation = _mapping_payload_value(payload, "presentation")
+    characters = presentation.get("characters")
+    if not isinstance(characters, list):
+        return ()
+    profiles: list[CharacterProfileOutput] = []
+    for character in characters:
+        if not isinstance(character, dict):
+            continue
+        try:
+            profiles.append(
+                CharacterProfileOutput(
+                    character_id=_string_payload_value(character, "character_id"),
+                    display_name=_string_payload_value(character, "display_name"),
+                    subtitle=_string_payload_value(character, "subtitle"),
+                    status=_snapshot_section(character, "status"),
+                    current_goal=_snapshot_section(character, "current_goal"),
+                    current_equipment=_snapshot_section(character, "current_equipment"),
+                    current_abilities=_snapshot_section(character, "current_abilities"),
+                    current_assets=_snapshot_section(character, "current_assets"),
+                    territory=_snapshot_section(character, "territory"),
+                    relationships=_snapshot_section(character, "relationships"),
+                    current_limitations=_snapshot_section(
+                        character,
+                        "current_limitations",
+                    ),
+                    recent_changes=_snapshot_section(character, "recent_changes"),
+                    evidence_summary=_string_payload_value(character, "evidence_summary"),
+                )
+            )
+        except (ValueError, ValidationError):
+            continue
+
+    return tuple(profiles)
+
+
+def _snapshot_world_sheet(payload: Mapping[str, object]) -> WorldSheetOutput | None:
+    """Return a persisted world sheet panel from snapshot metadata."""
+    presentation = _mapping_payload_value(payload, "presentation")
+    world = presentation.get("world")
+    if not isinstance(world, dict):
+        return None
+    entity_sections = world.get("entity_sections")
+    if not isinstance(entity_sections, list):
+        entity_sections = []
+    try:
+        return WorldSheetOutput(
+            chapter_label=_string_payload_value(world, "chapter_label"),
+            entity_sections=tuple(
+                _section_from_payload(section)
+                for section in entity_sections
+                if isinstance(section, dict)
+            ),
+            evidence_summary=_string_payload_value(world, "evidence_summary"),
+        )
+    except (ValueError, ValidationError):
+        return None
+
+
+def _snapshot_section(payload: Mapping[str, object], key: str) -> OutputSection:
+    """Return one required presentation section from snapshot metadata."""
+    return _section_from_payload(_mapping_payload_value(payload, key))
+
+
+def _section_from_payload(payload: Mapping[str, object]) -> OutputSection:
+    """Return one API output section from snapshot metadata."""
+    return OutputSection(
+        title=_string_payload_value(payload, "title"),
+        items=_string_sequence_payload_value(payload, "items"),
+    )
+
+
+def _mapping_payload_value(
+    payload: Mapping[str, object],
+    key: str,
+) -> Mapping[str, object]:
+    """Return a nested object payload when present."""
+    value = payload.get(key)
+    if not isinstance(value, dict):
+        return {}
+    return cast(Mapping[str, object], value)
 
 
 def _chapter_scene_counts(
