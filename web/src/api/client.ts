@@ -22,6 +22,7 @@ import {
   importRecordSchema,
   projectListSchema,
   projectSettingsSchema,
+  projectStatusSchema,
   projectSchema,
   sourceFormatsSchema,
   type ApiCapabilities,
@@ -44,6 +45,7 @@ import {
   type Project,
   type ProjectList,
   type ProjectSettings,
+  type ProjectStatus,
   type Story,
   type StoryList,
   type SourceFormats,
@@ -359,6 +361,12 @@ export class AevrynApiClient {
     });
   }
 
+  projectStatus(projectId: string, sessionToken: string, now: string): Promise<ProjectStatus> {
+    return this.request(projectStatusPath(projectId), projectStatusSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
   listProjectSnapshots(
     projectId: string,
     sessionToken: string,
@@ -463,6 +471,10 @@ function projectStoryImportsPath(projectId: string, storyId: string): string {
 
 function projectRunsPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/runs`;
+}
+
+function projectStatusPath(projectId: string): string {
+  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/status`;
 }
 
 function projectSnapshotsPath(projectId: string): string {

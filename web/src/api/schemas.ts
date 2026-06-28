@@ -118,6 +118,68 @@ export const engineRunListSchema = z.object({
   runs: z.array(engineRunSchema),
 });
 
+export const projectStatusImportSchema = z.object({
+  import_id: z.string(),
+  story_id: z.string(),
+  filename: z.string(),
+  source_format: z.string(),
+  created_at: z.string(),
+});
+
+export const projectStatusRunSchema = z.object({
+  run_id: z.string(),
+  story_id: z.string(),
+  import_id: z.string(),
+  status: z.string(),
+  started_at: z.string(),
+  status_updated_at: z.string().nullable(),
+  finished_at: z.string().nullable(),
+  error_summary: z.string(),
+  job_ref: z.string(),
+});
+
+export const projectStatusWorkerSchema = z.object({
+  state: z.string(),
+  total_jobs: z.number(),
+  queued_jobs: z.number(),
+  running_jobs: z.number(),
+  succeeded_jobs: z.number(),
+  failed_jobs: z.number(),
+  next_job_id: z.string(),
+});
+
+export const projectStatusSnapshotsSchema = z.object({
+  available: z.boolean(),
+  count: z.number(),
+  latest_snapshot_id: z.string().nullable(),
+  latest_snapshot_kind: z.string().nullable(),
+});
+
+export const projectWorkflowEventSchema = z.object({
+  event_type: z.string(),
+  status: z.string(),
+  occurred_at: z.string(),
+  story_id: z.string(),
+  import_id: z.string(),
+  run_id: z.string(),
+  snapshot_id: z.string(),
+  summary: z.string(),
+});
+
+export const projectStatusSchema = z.object({
+  project_id: z.string(),
+  status: z.string(),
+  story_count: z.number(),
+  import_count: z.number(),
+  run_count: z.number(),
+  latest_import: projectStatusImportSchema.nullable(),
+  latest_engine_run: projectStatusRunSchema.nullable(),
+  worker: projectStatusWorkerSchema,
+  snapshots: projectStatusSnapshotsSchema,
+  latest_failure_summary: z.string(),
+  recent_workflow_events: z.array(projectWorkflowEventSchema),
+});
+
 export const snapshotSchema = z.object({
   snapshot_id: z.string(),
   project_id: z.string(),
@@ -319,5 +381,6 @@ export type ImportRecord = z.infer<typeof importRecordSchema>;
 export type ImportList = z.infer<typeof importListSchema>;
 export type EngineRun = z.infer<typeof engineRunSchema>;
 export type EngineRunList = z.infer<typeof engineRunListSchema>;
+export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type SnapshotList = z.infer<typeof snapshotListSchema>;

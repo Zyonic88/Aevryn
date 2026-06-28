@@ -68,6 +68,59 @@ const snapshotPayload = {
   serialized_output: '{"character_id":"character_mark"}',
   created_at: "2026-06-27T00:30:00.000Z",
 };
+const projectStatusPayload = {
+  project_id: "project_alpha",
+  status: "succeeded",
+  story_count: 1,
+  import_count: 1,
+  run_count: 1,
+  latest_import: {
+    import_id: "import_alpha",
+    story_id: "story_alpha",
+    filename: "chapter_001.txt",
+    source_format: "txt",
+    created_at: "2026-06-27T00:00:00.000Z",
+  },
+  latest_engine_run: {
+    run_id: "run_alpha",
+    story_id: "story_alpha",
+    import_id: "import_alpha",
+    status: "succeeded",
+    started_at: "2026-06-27T00:00:00.000Z",
+    status_updated_at: "2026-06-27T00:30:00.000Z",
+    finished_at: "2026-06-27T00:30:00.000Z",
+    error_summary: "",
+    job_ref: "queue://job_alpha",
+  },
+  worker: {
+    state: "idle",
+    total_jobs: 1,
+    queued_jobs: 0,
+    running_jobs: 0,
+    succeeded_jobs: 1,
+    failed_jobs: 0,
+    next_job_id: "",
+  },
+  snapshots: {
+    available: true,
+    count: 1,
+    latest_snapshot_id: "snapshot_run_alpha_canon",
+    latest_snapshot_kind: "canon",
+  },
+  latest_failure_summary: "",
+  recent_workflow_events: [
+    {
+      event_type: "snapshot_created",
+      status: "succeeded",
+      occurred_at: "2026-06-27T00:30:00.000Z",
+      story_id: "story_alpha",
+      import_id: "",
+      run_id: "run_alpha",
+      snapshot_id: "snapshot_run_alpha_canon",
+      summary: "Created canon snapshot.",
+    },
+  ],
+};
 const sourceFormatsPayload = {
   supported: [
     {
@@ -695,6 +748,25 @@ describe("AevrynApiClient", () => {
       expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
     }
     expect(fetchMock.mock.calls[1][1].method).toBe("POST");
+  });
+
+  it("sends authenticated requests for project status", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(projectStatusPayload)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.projectStatus("project_alpha", "session-token", "2026-06-27T00:00:00.000Z"),
+    ).resolves.toEqual(projectStatusPayload);
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/status`,
+    );
+    const headers = fetchMock.mock.calls[0][1].headers as Headers;
+    expect(headers.get("Authorization")).toBe("Bearer session-token");
+    expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
   });
 
   it("sends authenticated requests for snapshots", async () => {
