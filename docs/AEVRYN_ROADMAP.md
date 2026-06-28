@@ -540,6 +540,10 @@ Phase 10 completion is governed by `docs/AEVRYN_V2_PHASE_10_ACCEPTANCE.md`.
 
 Internal alpha readiness is defined in `docs/AEVRYN_INTERNAL_ALPHA.md`.
 
+Phase 10 includes recovery as a first-class readiness concern: after refresh, session expiry, worker interruption, failed runs, or network/API interruption, the question is whether the user can continue.
+
+Phase 10 readiness should be versioned through Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test gates.
+
 ---
 
 ## Version 2 Success Criteria

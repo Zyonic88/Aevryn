@@ -151,6 +151,8 @@ Phase 10 starting point:
 - Internal alpha readiness is defined in `docs/AEVRYN_INTERNAL_ALPHA.md`
 - Treat Phase 10 as private internal alpha readiness, not public launch
 - Verify the complete creator path: register, create project, upload story, wait for processing, view engine outputs, and export
+- Treat recovery as distinct from failure display: after browser refresh, session expiry, worker interruption, failed runs, or network/API interruption, answer whether the user can continue
+- Version readiness through Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test gates
 - Preserve all Phase 6-9 boundaries: durable storage, import workflow, monitoring observability, metadata-only performance measurement, and no frontend inference of backend workflow state
 - Do not add payments, public launch flows, broad redesign, image generation, video generation, or chatbot behavior in Phase 10 unless explicitly scoped later
 

@@ -42,8 +42,16 @@ def test_phase10_internal_alpha_docs_define_private_readiness_boundary() -> None
     assert "performance metadata stays outside canon" in alpha_doc
     assert "# Automated Gates" in alpha_doc
     assert "# Manual Alpha Checks" in alpha_doc
+    assert "# Recovery" in alpha_doc
+    assert "Can the user continue?" in alpha_doc
+    assert "# Readiness Test Ladder" in alpha_doc
+    assert "Smoke Test" in alpha_doc
+    assert "Integration Test" in alpha_doc
+    assert "Operational Readiness Test" in alpha_doc
+    assert "Release Candidate Test" in alpha_doc
     assert "Manual checks must not expand Phase 10" in alpha_doc
     assert "Phase 10 is accepted when:" in acceptance_doc
+    assert "Recovery is covered as its own readiness layer" in acceptance_doc
     assert "Aevryn validation passes." in acceptance_doc
     assert "public launch" in acceptance_doc
 

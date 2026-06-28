@@ -23,6 +23,8 @@ Phase 10 starts with:
 * this acceptance document
 * a complete alpha smoke path
 * a clear split between automated gates and manual alpha checks
+* a recovery plan for interrupted workflows
+* a versioned readiness test ladder
 * known limitations documented before testers hit them
 
 ---
@@ -34,6 +36,9 @@ Phase 10 is accepted when:
 * Internal alpha architecture is documented.
 * The complete creator path is covered by an alpha smoke plan.
 * The smoke path covers auth, project creation, story/import workflow, worker processing, monitoring, output views, export preview, and performance baseline generation.
+* Recovery is covered as its own readiness layer, separate from failure display.
+* Recovery checks explain whether the user can continue after refresh, session expiry, worker interruption, failed runs, or network/API interruption.
+* Readiness tests are organized as Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test.
 * Backend workflow state remains API-owned.
 * Frontend does not infer backend workflow state.
 * Monitoring observes workflows and does not execute workflows.
@@ -61,4 +66,3 @@ Phase 10 does not include:
 * production cloud deployment
 * broad frontend redesign
 * new admin console
-
