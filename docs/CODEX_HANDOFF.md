@@ -149,6 +149,7 @@ Phase 10 starting point:
 
 - Phase 10 acceptance is governed by `docs/AEVRYN_V2_PHASE_10_ACCEPTANCE.md`
 - Internal alpha readiness is defined in `docs/AEVRYN_INTERNAL_ALPHA.md`
+- Repeatable private alpha readiness runs are recorded with `docs/AEVRYN_INTERNAL_ALPHA_CHECKLIST.md`
 - Treat Phase 10 as private internal alpha readiness, not public launch
 - Verify the complete creator path: register, create project, upload story, wait for processing, view engine outputs, and export
 - Treat recovery as distinct from failure display: after browser refresh, session expiry, worker interruption, failed runs, or network/API interruption, answer whether the user can continue

@@ -20,6 +20,7 @@ Phase 10 must prove the V2 creator path can be used without the CLI, while keepi
 Phase 10 starts with:
 
 * `docs/AEVRYN_INTERNAL_ALPHA.md`
+* `docs/AEVRYN_INTERNAL_ALPHA_CHECKLIST.md`
 * this acceptance document
 * a complete alpha smoke path
 * a clear split between automated gates and manual alpha checks
@@ -39,6 +40,7 @@ Phase 10 is accepted when:
 * Recovery is covered as its own readiness layer, separate from failure display.
 * Recovery checks explain whether the user can continue after refresh, session expiry, worker interruption, failed runs, or network/API interruption.
 * Readiness tests are organized as Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test.
+* Readiness runs record result, known limitations, and whether the tester can continue.
 * Backend workflow state remains API-owned.
 * Frontend does not infer backend workflow state.
 * Monitoring observes workflows and does not execute workflows.

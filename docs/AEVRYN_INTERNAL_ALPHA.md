@@ -124,6 +124,8 @@ Recovery checks may be automated or manual depending on the interruption being t
 
 Phase 10 readiness should be versioned and repeatable.
 
+Record readiness runs in `docs/AEVRYN_INTERNAL_ALPHA_CHECKLIST.md`.
+
 Use this ladder:
 
 * Smoke Test: fast confidence that the happy path works.
