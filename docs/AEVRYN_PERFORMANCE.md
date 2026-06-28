@@ -156,3 +156,23 @@ Each optimization should identify:
 * correctness checks that still pass
 
 If further optimization gives marginal returns or pushes into throughput/scalability, stop and leave it for a later phase.
+
+---
+
+# Optimization Log
+
+Initial Phase 9 frontend hardening reduced redundant metadata requests during workspace navigation. Dashboard API health data now remains fresh for a short window and is reused by the Monitoring view instead of being refetched immediately during dashboard-to-workspace navigation.
+
+Measured bottleneck:
+
+* frontend workspace load behavior: repeated metadata queries during quick navigation between dashboard and monitoring surfaces
+
+Change made:
+
+* shared frontend query policy disables focus-triggered refetches and keeps successful metadata queries fresh for 10 seconds
+* regression coverage verifies dashboard-to-monitoring navigation performs one API health request while still rendering backend-provided monitoring status
+
+Correctness checks:
+
+* backend gates: `pytest -q`
+* frontend gates: `npm.cmd test -- --run --reporter=dot`, `npm.cmd run lint`, `npx.cmd tsc -p tsconfig.json --noEmit`, `npm.cmd run build`
