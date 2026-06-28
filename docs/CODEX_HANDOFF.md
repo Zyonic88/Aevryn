@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 7 accepted - Import UI hardening**
+Current phase: **Phase 8 in progress - Monitoring**
 
 Recent completed V2 work:
 
@@ -116,6 +116,12 @@ Phase 7 progress:
 - Failed import runs now render stable no-snapshot and run-error labels after refresh
 - Web Import is visible as an unavailable, permission-check-gated placeholder; no URL fetching is enabled
 - Deferred PDF, MOBI, and AZW3 formats are all covered by UI preflight tests that block inspection before the API import endpoint is called
+
+Phase 8 starting point:
+
+- Monitoring is metadata-only observability, not Phase 9 performance optimization
+- `docs/AEVRYN_MONITORING.md` defines the first monitoring contract and privacy boundary
+- Project workflow status starts with authenticated counts for stories, imports, run statuses, snapshots, and latest run state
 
 ---
 

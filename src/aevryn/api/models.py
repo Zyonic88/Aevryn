@@ -314,6 +314,25 @@ class EngineRunListResponse(BaseModel):
     runs: tuple[EngineRunOutput, ...]
 
 
+class WorkflowStatusResponse(BaseModel):
+    """Metadata-only project workflow status for monitoring surfaces."""
+
+    model_config = ConfigDict(frozen=True)
+
+    project_id: str
+    story_count: int
+    import_count: int
+    run_count: int
+    pending_runs: int
+    running_runs: int
+    succeeded_runs: int
+    failed_runs: int
+    snapshot_count: int
+    latest_run_id: str | None = None
+    latest_run_status: str | None = None
+    latest_error_summary: str = ""
+
+
 class SnapshotStoreRequest(BaseModel):
     """Trusted worker request to persist one engine output snapshot."""
 

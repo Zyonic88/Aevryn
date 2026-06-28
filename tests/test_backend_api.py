@@ -413,6 +413,7 @@ def test_capabilities_endpoint_reports_routes_and_limits() -> None:
     assert "/v2/canon/preview" in route_paths
     assert "/v2/timeline/preview" in route_paths
     assert "/v2/projects/preview" in route_paths
+    assert "/v2/projects/{project_id}/workflow-status" in route_paths
     assert "/v2/characters/preview" in route_paths
     assert "/v2/scenes/preview" in route_paths
     assert "/v2/prompts/preview" in route_paths
@@ -447,6 +448,10 @@ def test_openapi_schema_uses_stable_operation_ids_and_tags() -> None:
         "getV2SourceFormats"
     )
     assert paths["/v2/source-formats"]["get"]["tags"] == ["Import"]
+    assert paths["/v2/projects/{project_id}/workflow-status"]["get"]["operationId"] == (
+        "getV2ProjectWorkflowStatus"
+    )
+    assert paths["/v2/projects/{project_id}/workflow-status"]["get"]["tags"] == ["Projects"]
     assert paths["/v2/imports/inspect"]["post"]["operationId"] == (
         "postV2ImportsInspect"
     )

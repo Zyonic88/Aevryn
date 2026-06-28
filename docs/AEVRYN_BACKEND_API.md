@@ -542,6 +542,16 @@ It does not execute queued work.
 
 Missing projects and cross-user project reads return a stable project-not-found response.
 
+## `GET /v2/projects/{project_id}/workflow-status`
+
+Returns metadata-only workflow status inside the authenticated user's project boundary.
+
+The route reports story count, saved import count, run status counts, snapshot count, latest run ID, latest run status, and latest run error summary.
+
+It does not inspect source, execute workers, create snapshots, or return source prose.
+
+Missing projects and cross-user project reads return a stable project-not-found response.
+
 ## `GET /v2/projects/{project_id}/snapshots`
 
 Returns persisted engine output snapshots inside the authenticated user's project boundary.

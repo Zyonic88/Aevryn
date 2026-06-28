@@ -89,6 +89,7 @@ from aevryn.api.models import (
     TimelinePreviewResponse,
     WorkerProcessRequest,
     WorkerProcessResponse,
+    WorkflowStatusResponse,
     WorldPreviewRequest,
     WorldPreviewResponse,
     WorldSheetOutput,
@@ -904,6 +905,55 @@ def create_app(
             raise _project_storage_error(error) from error
         return EngineRunListResponse(runs=tuple(_engine_run_output(run) for run in runs))
 
+    @app.get(
+        "/v2/projects/{project_id}/workflow-status",
+        response_model=WorkflowStatusResponse,
+        tags=["Projects"],
+        operation_id="getV2ProjectWorkflowStatus",
+    )
+    def project_workflow_status(project_id: str, request: Request) -> WorkflowStatusResponse:
+        """Return metadata-only project workflow status for monitoring surfaces."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            stories = repository.list_stories_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+            imports = tuple(
+                import_record
+                for story in stories
+                for import_record in repository.list_imports_for_story(
+                    user_id=user.user_id,
+                    story_id=story.story_id,
+                )
+            )
+            runs = repository.list_engine_runs_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+            snapshots = repository.list_snapshots_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _workflow_status_output(
+            project_id=project_id,
+            story_count=len(stories),
+            import_count=len(imports),
+            runs=runs,
+            snapshot_count=len(snapshots),
+        )
+
     @app.post(
         "/v2/projects/{project_id}/stories/{story_id}/imports/{import_id}/runs",
         response_model=EngineRunOutput,
@@ -1677,6 +1727,41 @@ def _engine_run_output(run: EngineRunRecord) -> EngineRunOutput:
     )
 
 
+def _workflow_status_output(
+    *,
+    project_id: str,
+    story_count: int,
+    import_count: int,
+    runs: Sequence[EngineRunRecord],
+    snapshot_count: int,
+) -> WorkflowStatusResponse:
+    """Build metadata-only workflow status without exposing source content."""
+    latest_run = max(
+        runs,
+        key=lambda run: run.status_updated_at or run.started_at,
+        default=None,
+    )
+    return WorkflowStatusResponse(
+        project_id=project_id,
+        story_count=story_count,
+        import_count=import_count,
+        run_count=len(runs),
+        pending_runs=_run_status_count(runs, "pending"),
+        running_runs=_run_status_count(runs, "running"),
+        succeeded_runs=_run_status_count(runs, "succeeded"),
+        failed_runs=_run_status_count(runs, "failed"),
+        snapshot_count=snapshot_count,
+        latest_run_id=latest_run.run_id if latest_run else None,
+        latest_run_status=latest_run.status if latest_run else None,
+        latest_error_summary=latest_run.error_summary if latest_run else "",
+    )
+
+
+def _run_status_count(runs: Sequence[EngineRunRecord], status: str) -> int:
+    """Return count of runs in one lifecycle status."""
+    return sum(1 for run in runs if run.status == status)
+
+
 def _snapshot_output(snapshot: SnapshotRecord) -> SnapshotOutput:
     """Convert persisted snapshot metadata to the API contract."""
     return SnapshotOutput(
@@ -1981,6 +2066,11 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="GET",
             path="/v2/projects/{project_id}/runs",
             purpose="List durable engine run metadata inside a project.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}/workflow-status",
+            purpose="Report metadata-only project workflow status for monitoring.",
         ),
         ApiRouteCapability(
             method="POST",

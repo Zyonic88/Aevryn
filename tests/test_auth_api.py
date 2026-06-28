@@ -727,6 +727,66 @@ def test_worker_process_api_generates_snapshot_from_stored_import_content() -> N
     assert '"source_id":"source_alpha"' in snapshots.json()["snapshots"][0]["serialized_output"]
 
 
+def test_project_workflow_status_reports_metadata_only_monitoring_summary() -> None:
+    """Project workflow status should summarize durable workflow state without source prose."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    import_content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=import_content_store,
+            ),
+            import_content_store=import_content_store,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
+
+    response = client.get(
+        "/v2/projects/project_alpha/workflow-status",
+        headers=auth_headers("token_001"),
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "project_id": "project_alpha",
+        "story_count": 1,
+        "import_count": 1,
+        "run_count": 1,
+        "pending_runs": 0,
+        "running_runs": 0,
+        "succeeded_runs": 1,
+        "failed_runs": 0,
+        "snapshot_count": 1,
+        "latest_run_id": "run_alpha",
+        "latest_run_status": "succeeded",
+        "latest_error_summary": "",
+    }
+    assert "Mark carried a rusty dagger" not in response.text
+
+
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:
     """Worker processing should not fabricate snapshots without source bytes."""
     repository = InMemoryProjectRepository()
