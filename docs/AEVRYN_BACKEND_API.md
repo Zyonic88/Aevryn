@@ -117,6 +117,28 @@ The API should never use broad browser access by accident.
 
 Allowed origins are a platform deployment decision, not an engine decision.
 
+## Local Project Storage
+
+Phase 6 project routes require an explicit Project Database adapter.
+
+For local durable project metadata, set:
+
+```text
+AEVRYN_PROJECT_DATABASE_PATH=C:\Users\enigm\Documents\Aevryn\.local\project_database.json
+```
+
+When this value is present, `create_app_from_env` wires:
+
+* `JsonProjectRepository` for local Project Database records
+* `AuthenticationService` over the same repository for user ownership records
+* in-memory credential and session stores from the Phase 4 authentication foundation
+
+This means project records are durable in the JSON repository.
+
+Credential and session stores are still local in-memory foundations; production credential persistence belongs to a later platform hardening step.
+
+If `AEVRYN_PROJECT_DATABASE_PATH` is absent, authenticated project routes fail clearly with `project_storage_unavailable` instead of silently creating stateless project shells.
+
 ## Authentication Middleware
 
 Phase 1 supports optional API-key protection for workflow routes.
@@ -381,7 +403,7 @@ This is the Phase 6 Project Storage API foundation.
 
 The route requires a bearer session token and `X-Aevryn-Now` header.
 
-It reads through the Project Repository boundary.
+It reads through the Project Repository boundary configured by `create_app` or `AEVRYN_PROJECT_DATABASE_PATH`.
 
 It does not read browser storage.
 
@@ -399,7 +421,7 @@ The request includes:
 
 Project names are normalized before storage.
 
-The route writes through the Project Repository boundary.
+The route writes through the Project Repository boundary configured by `create_app` or `AEVRYN_PROJECT_DATABASE_PATH`.
 
 Duplicate project IDs fail clearly.
 

@@ -77,8 +77,15 @@ Phase 6 first project-storage slice implemented:
 
 - Durable project storage API routes added for list/create/detail
 - Routes use bearer-session authentication plus the Project Repository boundary
+- `create_app_from_env` can wire local JSON project storage from `AEVRYN_PROJECT_DATABASE_PATH`
+- CLI `aevryn api` now uses the environment-backed app factory in reload and non-reload modes
 - Dashboard list/create now uses the project storage API instead of browser project shells as source of truth
 - Direct workspace project routes load project detail through the API, with legacy local shell fallback only for compatibility
+
+Phase 6 storage limitation:
+
+- Project records are durable when `AEVRYN_PROJECT_DATABASE_PATH` is set
+- Credential and session stores remain in-memory Phase 4 foundations until a later auth-persistence hardening step
 
 ---
 

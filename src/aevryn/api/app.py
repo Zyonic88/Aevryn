@@ -80,6 +80,8 @@ from aevryn.api.models import (
 from aevryn.auth import (
     AuthenticationError,
     AuthenticationService,
+    InMemoryCredentialStore,
+    InMemorySessionStore,
     InvalidCredentialsError,
     InvalidResetTokenError,
     InvalidSessionError,
@@ -91,6 +93,7 @@ from aevryn.importing import ImportedSource, SourceFileTextExtractor
 from aevryn.persistence import (
     AccessDeniedError,
     DuplicateRecordError,
+    JsonProjectRepository,
     PersistenceError,
     ProjectRecord,
     ProjectRepository,
@@ -112,6 +115,7 @@ from aevryn.prompts import CanonPromptBuilder, ProductionPack
 API_VERSION = "v2"
 ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
 API_KEYS_ENV = "AEVRYN_API_KEYS"
+PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 
 
 def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
@@ -127,9 +131,14 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         ValueError: If configured CORS origins are unsafe or invalid.
     """
     active_environ = environ or os.environ
+    authentication_service, project_repository = _platform_services_from_env(
+        active_environ
+    )
     return create_app(
         allowed_origins=_allowed_origins_from_env(active_environ),
         api_keys=_api_keys_from_env(active_environ),
+        authentication_service=authentication_service,
+        project_repository=project_repository,
     )
 
 
@@ -873,6 +882,23 @@ def _allowed_origins_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
 def _api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
     """Return workflow API keys from deployment environment settings."""
     return _normalize_api_keys(environ.get(API_KEYS_ENV, "").split(","))
+
+
+def _platform_services_from_env(
+    environ: Mapping[str, str],
+) -> tuple[AuthenticationService | None, ProjectRepository | None]:
+    """Return configured platform services from deployment environment settings."""
+    database_path = environ.get(PROJECT_DATABASE_PATH_ENV, "").strip()
+    if not database_path:
+        return None, None
+
+    repository = JsonProjectRepository(Path(database_path))
+    authentication_service = AuthenticationService(
+        repository=repository,
+        credential_store=InMemoryCredentialStore(),
+        session_store=InMemorySessionStore(),
+    )
+    return authentication_service, repository
 
 
 def _normalize_api_keys(api_keys: Sequence[str]) -> tuple[str, ...]:

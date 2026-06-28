@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import base64
 import json
+from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
 
-from aevryn.api import create_app, create_app_from_env
+from aevryn.api import PROJECT_DATABASE_PATH_ENV, create_app, create_app_from_env
 
 
 def test_health_endpoint_reports_api_status() -> None:
@@ -128,6 +129,52 @@ def test_create_app_from_env_configures_cors_origins() -> None:
     assert response.headers["access-control-allow-origin"] == (
         "https://app.aevryn.local"
     )
+
+
+def test_create_app_from_env_configures_project_storage(
+    tmp_path: Path,
+) -> None:
+    """Environment app factory should wire durable local project storage."""
+    database_path = tmp_path / "project_database.json"
+    client = TestClient(
+        create_app_from_env({PROJECT_DATABASE_PATH_ENV: str(database_path)})
+    )
+    now = "2026-06-27T00:00:00Z"
+
+    register = client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": "user_demo",
+            "email": "demo@example.com",
+            "display_name": "Demo User",
+            "password": "StrongPass123",
+            "now": now,
+        },
+    )
+    assert register.status_code == 200
+    session_token = register.json()["session_token"]
+    headers = {
+        "Authorization": f"Bearer {session_token}",
+        "X-Aevryn-Now": now,
+    }
+
+    created = client.post(
+        "/v2/projects",
+        json={"project_id": "project_demo", "name": " Demo   Novel ", "now": now},
+        headers=headers,
+    )
+    assert created.status_code == 200
+    assert created.json() == {
+        "project_id": "project_demo",
+        "name": "Demo Novel",
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    listed = client.get("/v2/projects", headers=headers)
+    assert listed.status_code == 200
+    assert listed.json()["projects"] == [created.json()]
+    assert database_path.exists()
 
 
 def test_create_app_from_env_rejects_wildcard_cors_origin() -> None:

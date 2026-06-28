@@ -12,7 +12,7 @@ from typing import Any, cast
 
 from fastapi import FastAPI
 
-from aevryn.api import ALLOWED_ORIGINS_ENV, create_app
+from aevryn.api import ALLOWED_ORIGINS_ENV, create_app_from_env
 from aevryn.export import ExportEngine
 from aevryn.extraction import EvidenceBoundedAIExtractor, StaticAIExtractionClient
 from aevryn.importing import SourceFileTextExtractor
@@ -822,7 +822,10 @@ def _handle_api(args: argparse.Namespace) -> None:
             os.environ[ALLOWED_ORIGINS_ENV] = ",".join(allowed_origins)
         app_target: FastAPI | str = "aevryn.api.app:create_app_from_env"
     else:
-        app_target = create_app(allowed_origins=allowed_origins)
+        environ = dict(os.environ)
+        if allowed_origins:
+            environ[ALLOWED_ORIGINS_ENV] = ",".join(allowed_origins)
+        app_target = create_app_from_env(environ)
 
     _run_api_server(
         app=app_target,
