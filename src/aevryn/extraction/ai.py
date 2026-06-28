@@ -553,14 +553,15 @@ def _required_text(value: str, field_name: str) -> str:
 
 def _extraction_response_schema() -> dict[str, object]:
     """Return the provider schema for evidence-bounded extraction JSON."""
+    machine_token = {"type": "string", "pattern": r"^\S+$"}
     entity = {
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "entity_id": {"type": "string"},
-            "entity_type": {"type": "string"},
+            "entity_id": machine_token,
+            "entity_type": machine_token,
             "display_name": {"type": "string"},
-            "evidence_anchor_id": {"type": "string"},
+            "evidence_anchor_id": machine_token,
             "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
         },
         "required": [
@@ -575,11 +576,11 @@ def _extraction_response_schema() -> dict[str, object]:
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "fact_id": {"type": "string"},
-            "entity_id": {"type": "string"},
-            "attribute": {"type": "string"},
+            "fact_id": machine_token,
+            "entity_id": machine_token,
+            "attribute": machine_token,
             "value": {"type": "string"},
-            "evidence_anchor_id": {"type": "string"},
+            "evidence_anchor_id": machine_token,
             "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
         },
         "required": [
@@ -595,10 +596,10 @@ def _extraction_response_schema() -> dict[str, object]:
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "source_entity_id": {"type": "string"},
-            "relationship_type": {"type": "string"},
-            "target_entity_id": {"type": "string"},
-            "evidence_anchor_id": {"type": "string"},
+            "source_entity_id": machine_token,
+            "relationship_type": machine_token,
+            "target_entity_id": machine_token,
+            "evidence_anchor_id": machine_token,
             "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
         },
         "required": [
@@ -613,11 +614,16 @@ def _extraction_response_schema() -> dict[str, object]:
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "entity_id": {"type": "string"},
-            "attribute": {"type": "string"},
+            "entity_id": machine_token,
+            "attribute": machine_token,
             "value": {"type": "string"},
-            "valid_from_anchor_id": {"type": "string"},
-            "valid_until_anchor_id": {"type": ["string", "null"]},
+            "valid_from_anchor_id": machine_token,
+            "valid_until_anchor_id": {
+                "anyOf": [
+                    machine_token,
+                    {"type": "null"},
+                ]
+            },
             "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
         },
         "required": [

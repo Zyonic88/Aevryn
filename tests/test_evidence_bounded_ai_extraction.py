@@ -174,6 +174,12 @@ def test_openai_responses_client_returns_output_text_without_network() -> None:
     assert transport.payload["text"]["format"]["type"] == "json_schema"
     assert transport.payload["text"]["format"]["name"] == "aevryn_scene_extraction"
     assert transport.payload["text"]["format"]["strict"] is True
+    schema = transport.payload["text"]["format"]["schema"]
+    relationship_schema = schema["properties"]["relationships"]["items"]
+    assert relationship_schema["properties"]["relationship_type"] == {
+        "type": "string",
+        "pattern": r"^\S+$",
+    }
     assert transport.timeout_seconds == 30.0
     assert transport.max_response_bytes == 1_048_576
 
