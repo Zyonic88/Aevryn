@@ -15,6 +15,8 @@ import {
   worldPreviewSchema,
   healthSchema,
   importInspectSchema,
+  importListSchema,
+  importRecordSchema,
   projectListSchema,
   projectSettingsSchema,
   projectSchema,
@@ -31,6 +33,8 @@ import {
   type TimelinePreview,
   type WorldPreview,
   type ImportInspect,
+  type ImportList,
+  type ImportRecord,
   type Project,
   type ProjectList,
   type ProjectSettings,
@@ -102,6 +106,11 @@ export type ImportInspectRequest = {
   filename: string;
   content_base64: string;
   title?: string;
+};
+
+export type ImportCreateRequest = ImportInspectRequest & {
+  import_id: string;
+  now: string;
 };
 
 export type CharacterPreviewRequest = ImportInspectRequest & {
@@ -307,6 +316,31 @@ export class AevrynApiClient {
     });
   }
 
+  listStoryImports(
+    projectId: string,
+    storyId: string,
+    sessionToken: string,
+    now: string,
+  ): Promise<ImportList> {
+    return this.request(projectStoryImportsPath(projectId, storyId), importListSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  createStoryImport(
+    projectId: string,
+    storyId: string,
+    payload: ImportCreateRequest,
+    sessionToken: string,
+    now: string,
+  ): Promise<ImportRecord> {
+    return this.request(projectStoryImportsPath(projectId, storyId), importRecordSchema, {
+      method: "POST",
+      headers: authHeaders(sessionToken, now),
+      body: JSON.stringify(payload),
+    });
+  }
+
   private async request<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
@@ -362,6 +396,10 @@ function projectSettingsPath(projectId: string): string {
 
 function projectStoriesPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/stories`;
+}
+
+function projectStoryImportsPath(projectId: string, storyId: string): string {
+  return `${projectStoriesPath(projectId)}/${encodeURIComponent(storyId)}/imports`;
 }
 
 async function readJsonPayload(response: Response): Promise<unknown> {

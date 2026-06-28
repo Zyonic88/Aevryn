@@ -1,7 +1,8 @@
-﻿import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 
 import { apiClient, type ImportInspectRequest } from "../api/client";
+import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage, StatusPanel } from "../components/Feedback";
 import {
   MAX_IMPORT_SOURCE_CHARACTERS,
@@ -14,30 +15,78 @@ import {
   importScenePreviewRows,
   importScenePreviewSummary,
 } from "../importing/importResult";
-import type { ImportInspect } from "../api/schemas";
+import type { ImportInspect, ImportRecord } from "../api/schemas";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_IMPORT_TEXT = "Chapter 1\n";
 
 export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const [selectedStoryId, setSelectedStoryId] = useState("");
+  const [importId, setImportId] = useState(project.id.replace(/^project_/, "import_"));
   const [sourceId, setSourceId] = useState(project.id.replace(/^project_/, "source_"));
   const [filename, setFilename] = useState("chapter_001.txt");
   const [title, setTitle] = useState(project.name);
   const [sourceText, setSourceText] = useState(DEFAULT_IMPORT_TEXT);
   const [formError, setFormError] = useState<string | null>(null);
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
+  const [savedImport, setSavedImport] = useState<ImportRecord | null>(null);
 
   const sourceFormats = useQuery({
     queryKey: ["source-formats"],
     queryFn: () => apiClient.sourceFormats(),
   });
+  const storiesQuery = useQuery({
+    queryKey: ["project-stories", project.id, session?.session_token],
+    queryFn: () =>
+      apiClient.listStories(project.id, requireSessionToken(session), new Date().toISOString()),
+    enabled: session !== null,
+  });
+  const activeStoryId = selectedStoryId || storiesQuery.data?.stories[0]?.story_id || "";
+  const importsQuery = useQuery({
+    queryKey: importQueryKey(project.id, activeStoryId, session?.session_token),
+    queryFn: () =>
+      apiClient.listStoryImports(
+        project.id,
+        activeStoryId,
+        requireSessionToken(session),
+        new Date().toISOString(),
+      ),
+    enabled: session !== null && activeStoryId !== "",
+  });
   const inspectImport = useMutation({
     mutationFn: (payload: ImportInspectRequest) => apiClient.inspectImport(payload),
     onSuccess(result) {
       setInspectionResult(result);
+      setSavedImport(null);
     },
     onError() {
       setInspectionResult(null);
+      setSavedImport(null);
+    },
+  });
+  const createImport = useMutation({
+    mutationFn: (payload: ImportInspectRequest) => {
+      const now = new Date().toISOString();
+      return apiClient.createStoryImport(
+        project.id,
+        activeStoryId,
+        { ...payload, import_id: importId.trim(), now },
+        requireSessionToken(session),
+        now,
+      );
+    },
+    onSuccess(importRecord) {
+      setSavedImport(importRecord);
+      queryClient.setQueryData(importQueryKey(project.id, activeStoryId, session?.session_token), {
+        imports: [
+          importRecord,
+          ...(importsQuery.data?.imports ?? []).filter(
+            (candidate) => candidate.import_id !== importRecord.import_id,
+          ),
+        ],
+      });
     },
   });
 
@@ -48,13 +97,35 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     inspectImport.reset();
+    createImport.reset();
     try {
       const payload = buildImportInspectPayload({ sourceId, filename, title, sourceText });
       setFormError(null);
       setInspectionResult(null);
+      setSavedImport(null);
       inspectImport.mutate(payload);
     } catch (error) {
       setInspectionResult(null);
+      setSavedImport(null);
+      setFormError(error instanceof Error ? error.message : "Import form is invalid.");
+    }
+  }
+
+  function saveImportMetadata() {
+    createImport.reset();
+    if (!activeStoryId) {
+      setFormError("Create a story before saving import metadata.");
+      return;
+    }
+    if (!importId.trim()) {
+      setFormError("Import ID is required.");
+      return;
+    }
+    try {
+      const payload = buildImportInspectPayload({ sourceId, filename, title, sourceText });
+      setFormError(null);
+      createImport.mutate(payload);
+    } catch (error) {
       setFormError(error instanceof Error ? error.message : "Import form is invalid.");
     }
   }
@@ -88,6 +159,26 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
+              Story
+              <select
+                value={activeStoryId}
+                onChange={(event) => setSelectedStoryId(event.target.value)}
+                disabled={storiesQuery.isLoading || (storiesQuery.data?.stories.length ?? 0) === 0}
+              >
+                {(storiesQuery.data?.stories ?? []).map((story) => (
+                  <option key={story.story_id} value={story.story_id}>
+                    {story.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Import ID
+              <input value={importId} onChange={(event) => setImportId(event.target.value)} />
+            </label>
+          </div>
+          <div className="form-row-grid">
+            <label>
               Source ID
               <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
             </label>
@@ -117,6 +208,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           </p>
           {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
           {inspectImport.error ? <ErrorMessage>{inspectImport.error.message}</ErrorMessage> : null}
+          {createImport.error ? <ErrorMessage>{createImport.error.message}</ErrorMessage> : null}
           <button
             type="submit"
             className="primary-button"
@@ -174,10 +266,59 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               The import returned no scene map entries.
             </EmptyState>
           )}
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={!activeStoryId || createImport.isPending}
+            onClick={saveImportMetadata}
+          >
+            {createImport.isPending ? "Saving import" : "Save import metadata"}
+          </button>
+          {savedImport ? (
+            <p className="field-note">Saved {savedImport.import_id} for durable project storage.</p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {activeStoryId ? (
+        <section className="project-panel" aria-label="Saved imports">
+          <h2>Saved Imports</h2>
+          {importsQuery.isLoading ? <LoadingMessage>Loading saved imports.</LoadingMessage> : null}
+          {importsQuery.error ? <ErrorMessage>{importsQuery.error.message}</ErrorMessage> : null}
+          {!importsQuery.isLoading &&
+          !importsQuery.error &&
+          (importsQuery.data?.imports.length ?? 0) === 0 ? (
+            <EmptyState title="No saved imports">
+              Save import metadata after inspecting source.
+            </EmptyState>
+          ) : null}
+          {(importsQuery.data?.imports ?? []).length > 0 ? (
+            <div className="compact-list">
+              {(importsQuery.data?.imports ?? []).map((importRecord) => (
+                <div key={importRecord.import_id} className="compact-row">
+                  <strong>{importRecord.filename}</strong>
+                  <span>
+                    {importRecord.import_id} / {importRecord.scene_count} scenes
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </section>
       ) : null}
     </div>
   );
+}
+
+function importQueryKey(projectId: string, storyId: string, sessionToken: string | undefined) {
+  return ["story-imports", projectId, storyId, sessionToken] as const;
+}
+
+function requireSessionToken(session: { session_token: string } | null): string {
+  if (!session) {
+    throw new Error("Aevryn session is required.");
+  }
+  return session.session_token;
 }
 
 function FormatColumn({ title, items }: { title: string; items: string[] }) {

@@ -279,6 +279,25 @@ const projectSettingsPayload = {
   default_export_format: "markdown",
   locale: "en-US",
 };
+const storyAlphaPayload = {
+  story_id: "story_alpha",
+  project_id: projectAlpha.id,
+  title: "Alpha Story",
+  created_at: projectAlpha.updatedAt,
+  updated_at: projectAlpha.updatedAt,
+};
+const importRecordPayload = {
+  import_id: "import_alpha",
+  story_id: storyAlphaPayload.story_id,
+  source_id: "source_alpha",
+  filename: "chapter_001.txt",
+  source_format: "txt",
+  storage_ref: "api_import://story_alpha/import_alpha",
+  chapter_count: 1,
+  scene_count: 8,
+  evidence_anchor_count: 1,
+  created_at: projectAlpha.updatedAt,
+};
 
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
@@ -348,6 +367,27 @@ describe("App shell routing", () => {
             );
           }
           return Promise.resolve(new Response(JSON.stringify({ stories: [] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          if (init?.method === "POST") {
+            const body = JSON.parse(String(init.body));
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  ...importRecordPayload,
+                  import_id: body.import_id,
+                  source_id: body.source_id,
+                  filename: body.filename,
+                  created_at: body.now,
+                }),
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
         }
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
@@ -809,6 +849,72 @@ describe("App shell routing", () => {
     expect(screen.getByText("Showing first 6 of 8 scenes.")).toBeInTheDocument();
     expect(screen.getByText("source_alpha_chapter_001_scene_001")).toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_007_scene_001")).not.toBeInTheDocument();
+  });
+
+  it("saves import metadata from the import workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          if (init?.method === "POST") {
+            const body = JSON.parse(String(init.body));
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  ...importRecordPayload,
+                  import_id: body.import_id,
+                  source_id: body.source_id,
+                  filename: body.filename,
+                  created_at: body.now,
+                }),
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.importsInspect)) {
+          return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByText("No saved imports")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Import ID"));
+    await user.type(screen.getByLabelText("Import ID"), "import_alpha");
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(await screen.findByRole("button", { name: "Save import metadata" }));
+
+    expect(
+      await screen.findByText("Saved import_alpha for durable project storage."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("chapter_001.txt")).toBeInTheDocument();
+    expect(screen.getByText("import_alpha / 8 scenes")).toBeInTheDocument();
   });
 
   it("previews character profiles from the characters workspace tab", async () => {

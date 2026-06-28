@@ -83,6 +83,23 @@ export const storyListSchema = z.object({
   stories: z.array(storySchema),
 });
 
+export const importRecordSchema = z.object({
+  import_id: z.string(),
+  story_id: z.string(),
+  source_id: z.string(),
+  filename: z.string(),
+  source_format: z.string(),
+  storage_ref: z.string(),
+  chapter_count: z.number(),
+  scene_count: z.number(),
+  evidence_anchor_count: z.number(),
+  created_at: z.string(),
+});
+
+export const importListSchema = z.object({
+  imports: z.array(importRecordSchema),
+});
+
 export const evidenceAnchorPreviewSchema = z.object({
   anchor_id: z.string(),
   chapter_id: z.string(),
@@ -265,3 +282,5 @@ export type ProjectList = z.infer<typeof projectListSchema>;
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
 export type Story = z.infer<typeof storySchema>;
 export type StoryList = z.infer<typeof storyListSchema>;
+export type ImportRecord = z.infer<typeof importRecordSchema>;
+export type ImportList = z.infer<typeof importListSchema>;

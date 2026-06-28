@@ -52,8 +52,11 @@ from aevryn.api.models import (
     ExtractionPromptResponse,
     ExtractionSceneResult,
     HealthResponse,
+    ImportCreateRequest,
     ImportInspectRequest,
     ImportInspectResponse,
+    ImportListResponse,
+    ImportOutput,
     OutputSection,
     ProductionPackOutput,
     ProjectCreateRequest,
@@ -97,6 +100,7 @@ from aevryn.importing import ImportedSource, SourceFileTextExtractor
 from aevryn.persistence import (
     AccessDeniedError,
     DuplicateRecordError,
+    ImportRecord,
     JsonProjectRepository,
     PersistenceError,
     ProjectRecord,
@@ -668,6 +672,98 @@ def create_app(
             raise _project_storage_error(error) from error
         return _story_output(story)
 
+    @app.get(
+        "/v2/projects/{project_id}/stories/{story_id}/imports",
+        response_model=ImportListResponse,
+        tags=["Projects"],
+        operation_id="getV2StoryImports",
+    )
+    def list_story_imports(
+        project_id: str,
+        story_id: str,
+        request: Request,
+    ) -> ImportListResponse:
+        """Return durable import metadata inside the authenticated story boundary."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            _require_story_scope(
+                repository=repository,
+                user_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+            )
+            imports = repository.list_imports_for_story(
+                user_id=user.user_id,
+                story_id=story_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError, ValueError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "story_not_found", "detail": "Story not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return ImportListResponse(
+            imports=tuple(_import_output(import_record) for import_record in imports),
+        )
+
+    @app.post(
+        "/v2/projects/{project_id}/stories/{story_id}/imports",
+        response_model=ImportOutput,
+        tags=["Projects"],
+        operation_id="postV2StoryImports",
+    )
+    def create_story_import(
+        project_id: str,
+        story_id: str,
+        request_body: ImportCreateRequest,
+        request: Request,
+    ) -> ImportOutput:
+        """Inspect and persist source import metadata inside a story boundary."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            _require_story_scope(
+                repository=repository,
+                user_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError, ValueError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "story_not_found", "detail": "Story not found."},
+            ) from error
+        try:
+            imported_source, source_format = _import_request_source(request_body)
+            import_record = _import_record(
+                request=request_body,
+                story_id=story_id,
+                source_format=source_format,
+                imported_source=imported_source,
+            )
+            repository.record_import(import_record)
+        except DuplicateRecordError as error:
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "import_exists", "detail": str(error)},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "import_create_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _import_output(import_record)
+
     @app.post(
         "/v2/imports/inspect",
         response_model=ImportInspectResponse,
@@ -1217,6 +1313,62 @@ def _story_output(story: StoryRecord) -> StoryOutput:
     )
 
 
+def _import_output(import_record: ImportRecord) -> ImportOutput:
+    """Convert persisted import metadata to the API contract."""
+    return ImportOutput(
+        import_id=import_record.import_id,
+        story_id=import_record.story_id,
+        source_id=import_record.source_id,
+        filename=import_record.filename,
+        source_format=import_record.source_format,
+        storage_ref=import_record.storage_ref,
+        chapter_count=import_record.chapter_count,
+        scene_count=import_record.scene_count,
+        evidence_anchor_count=import_record.evidence_anchor_count,
+        created_at=import_record.created_at,
+    )
+
+
+def _import_record(
+    request: ImportCreateRequest,
+    story_id: str,
+    source_format: str,
+    imported_source: ImportedSource,
+) -> ImportRecord:
+    """Build persistent import metadata from an inspected source."""
+    scene_count = sum(len(chapter.scenes) for chapter in imported_source.story.chapters)
+    return ImportRecord(
+        import_id=request.import_id,
+        story_id=story_id,
+        source_id=imported_source.source_id,
+        filename=_import_metadata_filename(request.filename),
+        source_format=source_format,
+        storage_ref=f"api_import://{story_id}/{request.import_id}",
+        chapter_count=len(imported_source.story.chapters),
+        scene_count=scene_count,
+        evidence_anchor_count=len(imported_source.anchors),
+        created_at=request.now,
+    )
+
+
+def _require_story_scope(
+    repository: ProjectRepository,
+    user_id: str,
+    project_id: str,
+    story_id: str,
+) -> StoryRecord:
+    """Return a story only when it belongs to the requested project and user."""
+    story = repository.get_story(user_id=user_id, story_id=story_id)
+    if story.project_id != project_id:
+        raise ValueError("Story does not belong to project.")
+    return story
+
+
+def _import_metadata_filename(value: str) -> str:
+    """Return basename-only import metadata from a submitted filename."""
+    return Path(value.replace("\\", "/")).name
+
+
 def _normalized_project_name(value: str) -> str:
     """Return normalized project display text."""
     return " ".join(value.split())
@@ -1368,6 +1520,16 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="POST",
             path="/v2/projects/{project_id}/stories",
             purpose="Create durable story metadata inside a project.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}/stories/{story_id}/imports",
+            purpose="List durable import metadata inside a story.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/projects/{project_id}/stories/{story_id}/imports",
+            purpose="Inspect and create durable import metadata inside a story.",
         ),
         ApiRouteCapability(
             method="POST",

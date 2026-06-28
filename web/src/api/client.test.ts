@@ -33,6 +33,18 @@ const storyPayload = {
   created_at: "2026-06-27T00:00:00.000Z",
   updated_at: "2026-06-27T00:00:00.000Z",
 };
+const importRecordPayload = {
+  import_id: "import_alpha",
+  story_id: "story_alpha",
+  source_id: "source_alpha",
+  filename: "chapter_001.txt",
+  source_format: "txt",
+  storage_ref: "api_import://story_alpha/import_alpha",
+  chapter_count: 1,
+  scene_count: 1,
+  evidence_anchor_count: 1,
+  created_at: "2026-06-27T00:00:00.000Z",
+};
 const sourceFormatsPayload = {
   supported: [
     {
@@ -575,6 +587,50 @@ describe("AevrynApiClient", () => {
 
     for (const [input, init] of fetchMock.mock.calls) {
       expect(input).toBe(`https://api.aevryn.ai${API_PATHS.projects}/project_alpha/stories`);
+      const headers = init.headers as Headers;
+      expect(headers.get("Authorization")).toBe("Bearer session-token");
+      expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
+    }
+    expect(fetchMock.mock.calls[1][1].method).toBe("POST");
+  });
+
+  it("sends authenticated requests for story imports", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ imports: [importRecordPayload] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify(importRecordPayload)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.listStoryImports(
+        "project_alpha",
+        "story_alpha",
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toEqual({ imports: [importRecordPayload] });
+    await expect(
+      client.createStoryImport(
+        "project_alpha",
+        "story_alpha",
+        {
+          import_id: "import_alpha",
+          source_id: "source_alpha",
+          filename: "chapter_001.txt",
+          title: "Alpha",
+          content_base64: "Q2hhcHRlciAx",
+          now: "2026-06-27T00:00:00.000Z",
+        },
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toEqual(importRecordPayload);
+
+    for (const [input, init] of fetchMock.mock.calls) {
+      expect(input).toBe(
+        `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/stories/story_alpha/imports`,
+      );
       const headers = init.headers as Headers;
       expect(headers.get("Authorization")).toBe("Bearer session-token");
       expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");

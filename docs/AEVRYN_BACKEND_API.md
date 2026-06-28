@@ -493,6 +493,35 @@ Duplicate story IDs fail clearly.
 
 Missing projects and cross-user project writes return a stable project-not-found response.
 
+## `GET /v2/projects/{project_id}/stories/{story_id}/imports`
+
+Returns durable source import metadata inside the authenticated user's story boundary.
+
+The route returns import IDs, source IDs, filenames, source formats, storage references, structure counts, and timestamps only.
+
+It does not return uploaded source prose.
+
+Missing stories, cross-project story reads, and cross-user story reads return a stable story-not-found response.
+
+## `POST /v2/projects/{project_id}/stories/{story_id}/imports`
+
+Inspects source structure through Story Import and persists import metadata inside the authenticated user's story boundary.
+
+The request includes:
+
+* `import_id`
+* `source_id`
+* `filename`
+* `content_base64`
+* `title`
+* `now`
+
+The route stores metadata and a storage reference, not uploaded source bytes.
+
+Duplicate import IDs fail clearly.
+
+Missing stories, cross-project story writes, and cross-user story writes return a stable story-not-found response.
+
 ## `POST /v2/projects/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns stateless project-level metadata.

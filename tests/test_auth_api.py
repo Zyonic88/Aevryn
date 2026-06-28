@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+
 from fastapi.testclient import TestClient
 
 from aevryn.api import create_app
@@ -418,6 +420,96 @@ def test_project_stories_api_rejects_duplicate_and_cross_user_writes() -> None:
     assert cross_user.json()["error"] == "project_not_found"
 
 
+def test_story_imports_api_creates_and_lists_import_metadata() -> None:
+    """Story imports API should inspect source and persist metadata behind auth."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+
+    empty = client.get(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+    )
+    assert empty.status_code == 200
+    assert empty.json() == {"imports": []}
+
+    created = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created.status_code == 200
+    assert created.json() == {
+        "import_id": "import_alpha",
+        "story_id": "story_alpha",
+        "source_id": "source_alpha",
+        "filename": "chapter_001.txt",
+        "source_format": "txt",
+        "storage_ref": "api_import://story_alpha/import_alpha",
+        "chapter_count": 1,
+        "scene_count": 1,
+        "evidence_anchor_count": 1,
+        "created_at": NOW,
+    }
+
+    listed = client.get(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+    )
+    assert listed.status_code == 200
+    assert listed.json()["imports"] == [created.json()]
+
+
+def test_story_imports_api_rejects_duplicate_and_cross_user_writes() -> None:
+    """Story imports API should preserve identity and ownership boundaries."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    create_project_and_story(client)
+
+    created = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created.status_code == 200
+
+    duplicate = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"] == "import_exists"
+
+    cross_user = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_002"),
+        json={**import_create_payload(), "import_id": "import_other"},
+    )
+    assert cross_user.status_code == 404
+    assert cross_user.json()["error"] == "story_not_found"
+
+    wrong_project = client.get(
+        "/v2/projects/project_missing/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+    )
+    assert wrong_project.status_code == 404
+    assert wrong_project.json()["error"] == "story_not_found"
+
+
 def test_project_storage_api_requires_configured_storage() -> None:
     """Project routes should fail clearly when no repository is configured."""
     client = TestClient(create_app(authentication_service=auth_service()))
@@ -510,6 +602,7 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert "/v2/projects/{project_id}" in route_paths
     assert "/v2/projects/{project_id}/settings" in route_paths
     assert "/v2/projects/{project_id}/stories" in route_paths
+    assert "/v2/projects/{project_id}/stories/{story_id}/imports" in route_paths
 
     paths = client.get("/openapi.json").json()["paths"]
     assert paths["/v2/projects"]["get"]["operationId"] == "getV2Projects"
@@ -527,6 +620,12 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert paths["/v2/projects/{project_id}/stories"]["post"]["operationId"] == (
         "postV2ProjectStories"
     )
+    assert paths["/v2/projects/{project_id}/stories/{story_id}/imports"]["get"][
+        "operationId"
+    ] == "getV2StoryImports"
+    assert paths["/v2/projects/{project_id}/stories/{story_id}/imports"]["post"][
+        "operationId"
+    ] == "postV2StoryImports"
 
 
 def register_user(client: TestClient, *, user_id: str, email: str) -> None:
@@ -542,6 +641,34 @@ def register_user(client: TestClient, *, user_id: str, email: str) -> None:
         },
     )
     assert response.status_code == 200
+
+
+def create_project_and_story(client: TestClient) -> None:
+    """Create deterministic project and story parents for API tests."""
+    created_project = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created_project.status_code == 200
+    created_story = client.post(
+        "/v2/projects/project_alpha/stories",
+        headers=auth_headers("token_001"),
+        json={"story_id": "story_alpha", "title": "Alpha Story", "now": NOW},
+    )
+    assert created_story.status_code == 200
+
+
+def import_create_payload() -> dict[str, str]:
+    """Return a deterministic import create payload."""
+    return {
+        "import_id": "import_alpha",
+        "source_id": "source_alpha",
+        "filename": "chapter_001.txt",
+        "content_base64": base64.b64encode(b"Chapter 1\nMark carried a dagger.").decode("ascii"),
+        "title": "Alpha Source",
+        "now": NOW,
+    }
 
 
 def auth_headers(token: str) -> dict[str, str]:

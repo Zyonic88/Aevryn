@@ -253,6 +253,31 @@ class StoryListResponse(BaseModel):
     stories: tuple[StoryOutput, ...]
 
 
+class ImportOutput(BaseModel):
+    """Ownership-safe source import metadata returned by the API."""
+
+    model_config = ConfigDict(frozen=True)
+
+    import_id: str
+    story_id: str
+    source_id: str
+    filename: str
+    source_format: str
+    storage_ref: str
+    chapter_count: int
+    scene_count: int
+    evidence_anchor_count: int
+    created_at: str
+
+
+class ImportListResponse(BaseModel):
+    """Saved source import metadata inside an authenticated story."""
+
+    model_config = ConfigDict(frozen=True)
+
+    imports: tuple[ImportOutput, ...]
+
+
 class ImportInspectRequest(BaseModel):
     """Request to inspect imported source structure without storing a project."""
 
@@ -262,6 +287,13 @@ class ImportInspectRequest(BaseModel):
     filename: str = Field(min_length=1)
     content_base64: str = Field(min_length=1)
     title: str | None = None
+
+
+class ImportCreateRequest(ImportInspectRequest):
+    """Request to inspect and persist source import metadata inside a story."""
+
+    import_id: str = Field(min_length=1)
+    now: str = Field(min_length=1)
 
 
 class ExtractionPromptRequest(ImportInspectRequest):
