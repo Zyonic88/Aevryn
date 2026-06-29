@@ -22,6 +22,7 @@ Phase 11 starts with:
 * `docs/AEVRYN_SECURITY.md`
 * `docs/AEVRYN_PRIVACY.md`
 * this acceptance document
+* `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`
 * explicit authorization-boundary audit
 * explicit deletion-boundary audit
 * explicit no-source-prose logging audit

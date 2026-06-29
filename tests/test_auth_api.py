@@ -18,7 +18,7 @@ from aevryn.auth import (
     PasswordHasher,
 )
 from aevryn.import_storage import ImportContentNotFoundError, InMemoryImportContentStore
-from aevryn.persistence import ExportRecord, InMemoryProjectRepository
+from aevryn.persistence import ExportRecord, InMemoryProjectRepository, RecordNotFoundError
 from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
 from aevryn.workers.models import BackgroundJob
 
@@ -623,7 +623,7 @@ def test_import_runs_api_rejects_duplicate_and_cross_user_submissions() -> None:
 
 
 def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
-    """Story deletion should remove scoped metadata and stored source bytes."""
+    """Story deletion should remove scoped metadata, exports, and source bytes."""
     repository = InMemoryProjectRepository()
     queue = InMemoryJobQueue()
     content_store = InMemoryImportContentStore()
@@ -632,6 +632,10 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
             authentication_service=auth_service(repository=repository),
             project_repository=repository,
             background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=content_store,
+            ),
             import_content_store=content_store,
         )
     )
@@ -645,6 +649,32 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
     assert created_import.status_code == 200
     storage_ref = created_import.json()["storage_ref"]
     assert content_store.read_import_content(storage_ref)
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
+    repository.record_export(
+        ExportRecord(
+            export_id="export_alpha",
+            project_id="project_alpha",
+            snapshot_id="snapshot_run_alpha_canon",
+            export_kind="canon",
+            export_format="markdown",
+            filename="canon.md",
+            content_type="text/markdown; charset=utf-8",
+            storage_ref="storage://exports/canon.md",
+            created_at="2026-06-27T00:45:00Z",
+        )
+    )
+    assert repository.list_snapshots_for_project("user_owner", "project_alpha")
+    assert repository.list_exports_for_project("user_owner", "project_alpha")
 
     response = client.delete(
         "/v2/projects/project_alpha/stories/story_alpha",
@@ -662,6 +692,33 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
         headers=auth_headers("token_001"),
     )
     assert listed_runs.json() == {"runs": []}
+    listed_snapshots = client.get(
+        "/v2/projects/project_alpha/snapshots",
+        headers=auth_headers("token_001"),
+    )
+    assert listed_snapshots.json() == {"snapshots": []}
+    status = client.get(
+        "/v2/projects/project_alpha/status",
+        headers=auth_headers("token_001"),
+    )
+    assert status.status_code == 200
+    assert status.json()["snapshots"] == {
+        "available": False,
+        "count": 0,
+        "latest_snapshot_id": None,
+        "latest_snapshot_kind": None,
+    }
+    assert status.json()["exports"] == {
+        "available": False,
+        "count": 0,
+        "latest_export_id": None,
+        "latest_export_kind": None,
+        "latest_export_format": None,
+    }
+    with pytest.raises(RecordNotFoundError):
+        repository.get_snapshot("user_owner", "snapshot_run_alpha_canon")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_export("user_owner", "export_alpha")
     with pytest.raises(ImportContentNotFoundError):
         content_store.read_import_content(storage_ref)
 

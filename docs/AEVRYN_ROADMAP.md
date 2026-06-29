@@ -576,6 +576,8 @@ Security architecture is defined in `docs/AEVRYN_SECURITY.md`.
 
 Privacy architecture is defined in `docs/AEVRYN_PRIVACY.md`.
 
+Repeatable security gates are tracked in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`.
+
 Opening slice:
 
 * Verify authorization boundaries across every owned project surface.
