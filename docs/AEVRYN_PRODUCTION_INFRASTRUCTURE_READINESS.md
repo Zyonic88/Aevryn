@@ -251,7 +251,8 @@ Decision 2 progress:
 Cloudflare R2 is approved as the production object storage provider.
 General StorageService, LocalFilesystemStorage, and R2Storage adapters are implemented.
 Production source/import byte wiring can use Cloudflare R2.
-Generated export storage, large snapshot storage, and project-scoped storage reference migration remain open.
+Generated export storage service writes bytes through StorageService and records database metadata.
+Generated export API/download routes, large snapshot storage, and project-scoped import storage reference migration remain open.
 ```
 
 ---

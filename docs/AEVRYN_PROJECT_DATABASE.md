@@ -189,7 +189,7 @@ Stores export metadata.
 
 Export file bytes belong to Storage.
 
-The database stores filename, content type, export kind, format, source snapshot, and storage reference. Export reads must remain inside project ownership boundaries.
+The database stores filename, content type, export kind, format, source snapshot, storage reference, size, checksum, and creation timestamp. Export reads must remain inside project ownership boundaries.
 
 ## Settings
 

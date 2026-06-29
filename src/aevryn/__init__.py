@@ -37,6 +37,7 @@ from aevryn.characters import (
     NotACharacterError,
 )
 from aevryn.export import ExportEngine
+from aevryn.export_storage import ExportStorageService, ExportWriteRequest
 from aevryn.extraction import (
     AIExtractionClient,
     EntityExtractionEngine,
@@ -201,6 +202,8 @@ __all__ = [
     "EpubText",
     "EpubTextExtractor",
     "ExportEngine",
+    "ExportStorageService",
+    "ExportWriteRequest",
     "ExtractedEntity",
     "ExtractedRelationship",
     "ExtractionResult",

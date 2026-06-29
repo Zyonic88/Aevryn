@@ -126,7 +126,7 @@ This prevents public deployments from accidentally starting with stateless stora
 Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because that path selects the local JSON adapter.
 Production mode rejects `AEVRYN_IMPORT_STORAGE_PATH` because that path selects local filesystem source-byte storage.
 
-The PostgreSQL Project Database adapter is available through the optional `postgresql` dependencies. Cloudflare R2 source/import storage is available through the optional `object-storage` dependencies. Public-beta production startup still remains blocked by remaining production identity, export storage, snapshot storage, secrets, HTTPS, monitoring, and smoke-test decisions.
+The PostgreSQL Project Database adapter is available through the optional `postgresql` dependencies. Cloudflare R2 source/import storage is available through the optional `object-storage` dependencies. Generated export writes can use the same `StorageService` boundary and record export metadata in the Project Database. Public-beta production startup still remains blocked by remaining production identity, export API/download routes, snapshot storage, secrets, HTTPS, monitoring, and smoke-test decisions.
 
 For local development, the Aevryn CLI can launch the same API:
 
@@ -196,7 +196,7 @@ AEVRYN_IMPORT_STORAGE_PREFIX=imports/source
 
 R2 buckets must be private. The frontend must never receive R2 credentials. The API and worker write bytes, and PostgreSQL stores only references and metadata such as `storage_ref`, filename, content type, size, checksum, and timestamps.
 
-Generated export object storage and large snapshot object storage remain release-candidate work.
+Generated export storage service support exists. Generated export API/download routes and large snapshot object storage remain release-candidate work.
 
 Optional explicit authentication store path:
 

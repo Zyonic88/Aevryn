@@ -218,6 +218,8 @@ class ExportRecord:
     content_type: str
     storage_ref: str
     created_at: str
+    size: int = 0
+    checksum: str = ""
 
     def __post_init__(self) -> None:
         """Validate export metadata."""
@@ -230,6 +232,9 @@ class ExportRecord:
         _require_text(self.content_type, "Export content type")
         _require_storage_ref(self.storage_ref, "Export storage reference")
         _require_timestamp(self.created_at, "Export created_at")
+        _require_non_negative(self.size, "Export size")
+        if self.checksum:
+            _require_checksum(self.checksum, "Export checksum")
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,6 +299,16 @@ def _require_non_negative(value: int, label: str) -> None:
     """Require a non-negative integer count."""
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{label} must be a non-negative integer.")
+
+
+def _require_checksum(value: str, label: str) -> None:
+    """Require a supported checksum metadata value."""
+    _require_text(value, label)
+    algorithm, separator, digest = value.partition(":")
+    if separator != ":" or algorithm != "sha256":
+        raise ValueError(f"{label} must use sha256:<hex> notation.")
+    if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
+        raise ValueError(f"{label} must contain a lowercase SHA-256 hex digest.")
 
 
 def _require_serialized_payload(value: str, content_type: str) -> None:

@@ -24,6 +24,7 @@ from aevryn.persistence.models import (
 from aevryn.persistence.repository import PersistenceError, RecordNotFoundError
 from aevryn.persistence.schema import (
     PROJECT_DATABASE_SCHEMA,
+    ColumnDefinition,
     postgresql_create_index_statements,
     postgresql_create_table_statements,
 )
@@ -61,6 +62,8 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 for statement in _create_table_if_not_exists_statements():
+                    cursor.execute(statement)
+                for statement in _add_missing_column_statements():
                     cursor.execute(statement)
                 for statement in _create_constraint_if_missing_statements():
                     cursor.execute(statement)
@@ -333,6 +336,38 @@ def _create_constraint_if_missing_statements() -> tuple[str, ...]:
         )
         for statement in _constraint_statements()
     )
+
+
+def _add_missing_column_statements() -> tuple[str, ...]:
+    """Return idempotent column migration statements for existing dev databases."""
+    statements: list[str] = []
+    for table in PROJECT_DATABASE_SCHEMA.tables:
+        for column in table.columns:
+            statements.append(
+                f"ALTER TABLE {table.name} ADD COLUMN IF NOT EXISTS "
+                f"{_postgresql_column_without_primary_key(column)};"  # nosec B608
+            )
+    return tuple(statements)
+
+
+def _postgresql_column_without_primary_key(column: ColumnDefinition) -> str:
+    """Render a column definition suitable for ADD COLUMN IF NOT EXISTS."""
+    parts = [column.name, column.data_type]
+    if not column.nullable and not column.primary_key:
+        parts.append("NOT NULL")
+        parts.append(f"DEFAULT {_default_value_for_column(column)}")
+    return " ".join(parts)
+
+
+def _default_value_for_column(column: ColumnDefinition) -> str:
+    """Return a conservative default for adding non-null columns to existing tables."""
+    if column.data_type == "integer":
+        return "0"
+    if column.data_type == "jsonb":
+        return "'{}'::jsonb"
+    if column.data_type == "timestamptz":
+        return "'1970-01-01T00:00:00Z'"
+    return "''"
 
 
 def _constraint_statements() -> tuple[str, ...]:

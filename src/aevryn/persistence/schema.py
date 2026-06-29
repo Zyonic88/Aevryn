@@ -293,6 +293,8 @@ PROJECT_DATABASE_SCHEMA = SchemaDefinition(
                 ColumnDefinition("content_type", "text"),
                 ColumnDefinition("storage_ref", "text"),
                 ColumnDefinition("created_at", "timestamptz"),
+                ColumnDefinition("size", "integer"),
+                ColumnDefinition("checksum", "text"),
             ),
         ),
         TableDefinition(
@@ -341,6 +343,11 @@ PROJECT_DATABASE_SCHEMA = SchemaDefinition(
             "snapshots",
             "snapshot_kind IN ('canon', 'timeline', 'character_profile', "
             "'world_state', 'scene_sheet', 'prompt_pack', 'continuity_report')",
+        ),
+        CheckConstraintDefinition(
+            "chk_exports_size_non_negative",
+            "exports",
+            "size >= 0",
         ),
     ),
     indexes=(

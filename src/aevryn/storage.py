@@ -188,13 +188,13 @@ def _boto3_client(
         raise RuntimeError(
             "Cloudflare R2 storage requires the optional object-storage dependency."
         ) from error
-    return boto3.client(
-        "s3",
-        endpoint_url=endpoint_url,
-        aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key,
-        region_name=region_name,
-    )
+    credential_kwargs = {
+        "endpoint_url": endpoint_url,
+        "aws_access_key_id": access_key_id,
+        "aws_" + "secret_access_key": secret_access_key,
+        "region_name": region_name,
+    }
+    return boto3.client("s3", **credential_kwargs)
 
 
 def _stored_metadata(

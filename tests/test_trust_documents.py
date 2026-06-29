@@ -253,7 +253,7 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Owner approval: Decisions 1-2 approved",
         (
             "Implementation status: Decision 1 implemented; "
-            "Decision 2 source/import R2 adapter wiring started"
+            "Decision 2 source/import/export storage wiring started"
         ),
         "Public beta: Blocked",
         "managed PostgreSQL",
@@ -269,7 +269,8 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Local PostgreSQL browser/API smoke passed",
         "Cloudflare R2 storage adapter is implemented",
         "Storage owns bytes. Database owns references. Engine owns meaning.",
-        "Generated export object storage is not implemented yet.",
+        "Generated export storage service writes bytes through StorageService",
+        "Generated export API/download routes are not implemented yet.",
         "Public beta remains blocked.",
     )
 

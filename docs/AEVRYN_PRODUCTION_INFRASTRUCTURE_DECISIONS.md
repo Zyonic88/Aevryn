@@ -16,7 +16,7 @@ They are the recommended public-beta architecture shape to approve, revise, or r
 Gate: Production Infrastructure
 Decision status: Decisions 1-2 approved
 Owner approval: Decisions 1-2 approved
-Implementation status: Decision 1 implemented; Decision 2 source/import R2 adapter wiring started
+Implementation status: Decision 1 implemented; Decision 2 source/import/export storage wiring started
 Public beta: Blocked
 ```
 
@@ -182,7 +182,8 @@ General StorageService boundary is implemented.
 LocalFilesystemStorage development adapter is implemented.
 Cloudflare R2 storage adapter is implemented behind the optional object-storage dependency.
 Production source/import byte wiring can use Cloudflare R2.
-Generated export object storage is not implemented yet.
+Generated export storage service writes bytes through StorageService and records database metadata.
+Generated export API/download routes are not implemented yet.
 Large snapshot object storage is not implemented yet.
 Import storage references still use the existing story/import reference shape until the project-scoped reference migration is implemented.
 ```

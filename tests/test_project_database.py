@@ -92,6 +92,7 @@ def test_project_database_schema_manifest_defines_check_constraints() -> None:
         "chk_engine_runs_status",
         "chk_engine_runs_finished_at_by_status",
         "chk_snapshots_snapshot_kind",
+        "chk_exports_size_non_negative",
     )
 
 
