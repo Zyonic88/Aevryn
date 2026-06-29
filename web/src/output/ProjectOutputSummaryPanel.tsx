@@ -7,6 +7,7 @@ import type {
   OutputSection,
   ProjectOutputs,
   ProjectOutputSurface,
+  ProjectTimelineChange,
   WorldSheet,
 } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
@@ -153,6 +154,9 @@ function ReadableSurfacePanels({
   ) {
     return <WorldPanel world={outputs.world_sheet} />;
   }
+  if (surface === "timeline" && outputs.timeline_changes.length > 0) {
+    return <TimelinePanel changes={outputs.timeline_changes} />;
+  }
   return null;
 }
 
@@ -167,6 +171,8 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
     profilesByName.set(profile.display_name, {
       ...existingProfile,
       subtitle: bestSubtitle(existingProfile.subtitle, profile.subtitle),
+      race: mergeSection(existingProfile.race, profile.race),
+      gender: mergeSection(existingProfile.gender, profile.gender),
       status: mergeSection(existingProfile.status, profile.status),
       current_goal: mergeSection(existingProfile.current_goal, profile.current_goal),
       current_equipment: mergeSection(existingProfile.current_equipment, profile.current_equipment),
@@ -208,7 +214,6 @@ function mergedEvidenceSummary(left: string, right: string): string {
 }
 
 function CharacterPanel({ profile }: { profile: CharacterProfile }) {
-  const identitySections = characterIdentitySections(profile);
   const recentChanges = characterRecentChanges(profile);
   return (
     <article className="profile-card">
@@ -217,9 +222,8 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
         <p>{profile.subtitle}</p>
       </header>
       <div className="profile-section-grid">
-        {identitySections.map((section) => (
-          <PanelSection key={section.title} section={section} />
-        ))}
+        <PanelSection section={profile.race} />
+        <PanelSection section={profile.gender} />
         <PanelSection section={profile.status} />
         <PanelSection section={profile.current_goal} />
         <PanelSection section={profile.current_equipment} />
@@ -240,17 +244,6 @@ function evidenceFactCount(summary: string): number {
   return match ? Number(match[1].replace(/,/g, "")) : 0;
 }
 
-function characterIdentitySections(profile: CharacterProfile): OutputSection[] {
-  const readableRecentChanges = readableOutputItems(profile.recent_changes.items);
-  return ["Race", "Gender"].map((title) => {
-    const values = valuesForLabel(readableRecentChanges, title);
-    return {
-      title,
-      items: values.length > 0 ? values : ["Unknown"],
-    };
-  });
-}
-
 function characterRecentChanges(profile: CharacterProfile): OutputSection {
   return {
     title: profile.recent_changes.title,
@@ -258,14 +251,6 @@ function characterRecentChanges(profile: CharacterProfile): OutputSection {
       (item) => !item.startsWith("Name: ") && !item.startsWith("Race: ") && !item.startsWith("Gender: "),
     ),
   };
-}
-
-function valuesForLabel(items: string[], label: string): string[] {
-  const prefix = `${label}: `;
-  return items
-    .filter((item) => item.startsWith(prefix))
-    .map((item) => item.slice(prefix.length))
-    .filter((item, index, allItems) => allItems.indexOf(item) === index);
 }
 
 function WorldPanel({ world }: { world: WorldSheet }) {
@@ -284,6 +269,77 @@ function WorldPanel({ world }: { world: WorldSheet }) {
       <p className="evidence-note">{world.evidence_summary}</p>
     </div>
   );
+}
+
+function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
+  const timelineGroups = groupedTimelineChanges(changes);
+  return (
+    <div className="compact-list timeline-change-list" aria-label="Timeline changes">
+      {timelineGroups.map((group) => (
+        <section
+          className="compact-row timeline-change-group"
+          key={`${group.chapterIndex}-${group.sceneIndex}`}
+        >
+          <div>
+            <strong>{group.title}</strong>
+            <span>{group.subtitle}</span>
+          </div>
+          <ul>
+            {group.changes.map((change) => (
+              <li key={change.change_id}>
+                <strong>{change.entity_name}</strong>
+                <span aria-hidden="true"> - </span>
+                <span>
+                  {readableLabel(change.attribute)}: {change.value}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function groupedTimelineChanges(changes: ProjectTimelineChange[]): Array<{
+  chapterIndex: number;
+  sceneIndex: number;
+  title: string;
+  subtitle: string;
+  changes: ProjectTimelineChange[];
+}> {
+  const groups = new Map<string, {
+    chapterIndex: number;
+    sceneIndex: number;
+    title: string;
+    subtitle: string;
+    changes: ProjectTimelineChange[];
+  }>();
+  for (const change of changes) {
+    const key = `${change.chapter_index}:${change.scene_index}`;
+    const existingGroup = groups.get(key);
+    if (existingGroup) {
+      existingGroup.changes.push(change);
+      continue;
+    }
+    groups.set(key, {
+      chapterIndex: change.chapter_index,
+      sceneIndex: change.scene_index,
+      title: `Chapter ${change.chapter_index}, Scene ${change.scene_index}`,
+      subtitle: sceneTitle(change),
+      changes: [change],
+    });
+  }
+  return Array.from(groups.values());
+}
+
+function sceneTitle(change: ProjectTimelineChange): string {
+  const chapterTitle = change.chapter_title || `Chapter ${change.chapter_index}`;
+  const sceneTitle = change.scene_title || `Scene ${change.scene_index}`;
+  if (chapterTitle === sceneTitle) {
+    return chapterTitle;
+  }
+  return `${chapterTitle} / ${sceneTitle}`;
 }
 
 function PanelSection({ section }: { section: OutputSection }) {
@@ -309,6 +365,14 @@ function WorldSection({ section }: { section: OutputSection }) {
       ))}
     </ul>
   );
+}
+
+function readableLabel(value: string): string {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+    .join(" ");
 }
 
 function SurfaceDetails({

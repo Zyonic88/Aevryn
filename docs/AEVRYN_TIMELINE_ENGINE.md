@@ -110,6 +110,29 @@ It does not decide what is true.
 
 It decides when a recorded truth is valid.
 
+## Workspace Output
+
+The Version 2 workspace Timeline view renders API-provided chapter and scene
+state-change rows from the latest canon snapshot.
+
+The intended alpha shape is:
+
+```text
+Chapter -> Scene -> Changes
+```
+
+Each change should be human-readable and metadata-only: entity display name,
+state attribute, and state value. It must not show full source prose or raw AI
+payloads.
+
+The workspace Timeline should omit identity bookkeeping such as display-name, race,
+gender, sex, and species state changes. Those belong in character/world profiles.
+Rows whose entity or value has been redacted behind evidence controls should also
+stay out of the alpha Timeline until explicit evidence review exists.
+
+Continuity owns deeper audit reports such as new, updated, invalidated, warning,
+and evidence review groups. Timeline owns story order and visible state changes.
+
 ## How Does It Fail?
 
 The Timeline Engine can fail if:

@@ -86,6 +86,7 @@ from aevryn.api.models import (
     ProjectStatusRun,
     ProjectStatusSnapshots,
     ProjectStatusWorker,
+    ProjectTimelineChangeOutput,
     ProjectWorkflowEvent,
     PromptPreviewRequest,
     PromptPreviewResponse,
@@ -2142,6 +2143,7 @@ def _project_outputs_response(
         surfaces=_project_output_surfaces(canon_summary),
         character_profiles=_snapshot_character_profiles(canon_payload),
         world_sheet=_snapshot_world_sheet(canon_payload),
+        timeline_changes=_snapshot_timeline_changes(canon_payload),
     )
 
 
@@ -2308,6 +2310,8 @@ def _snapshot_character_profiles(
                     character_id=_string_payload_value(character, "character_id"),
                     display_name=_string_payload_value(character, "display_name"),
                     subtitle=_string_payload_value(character, "subtitle"),
+                    race=_snapshot_section_or_unknown(character, "race", "Race"),
+                    gender=_snapshot_section_or_unknown(character, "gender", "Gender"),
                     status=_snapshot_section(character, "status"),
                     current_goal=_snapshot_section(character, "current_goal"),
                     current_equipment=_snapshot_section(character, "current_equipment"),
@@ -2352,9 +2356,55 @@ def _snapshot_world_sheet(payload: Mapping[str, object]) -> WorldSheetOutput | N
         return None
 
 
+def _snapshot_timeline_changes(
+    payload: Mapping[str, object],
+) -> tuple[ProjectTimelineChangeOutput, ...]:
+    """Return persisted timeline state changes from snapshot metadata."""
+    changes = payload.get("timeline_changes")
+    if not isinstance(changes, list):
+        return ()
+    timeline_changes: list[ProjectTimelineChangeOutput] = []
+    for change in changes:
+        if not isinstance(change, dict):
+            continue
+        try:
+            timeline_changes.append(
+                ProjectTimelineChangeOutput(
+                    change_id=_string_payload_value(change, "change_id"),
+                    chapter_index=_int_payload_value(change, "chapter_index"),
+                    scene_index=_int_payload_value(change, "scene_index"),
+                    chapter_title=_string_payload_value(change, "chapter_title"),
+                    scene_title=_string_payload_value(change, "scene_title"),
+                    entity_id=_string_payload_value(change, "entity_id"),
+                    entity_name=_string_payload_value(change, "entity_name"),
+                    attribute=_string_payload_value(change, "attribute"),
+                    value=_string_payload_value(change, "value"),
+                )
+            )
+        except (ValueError, ValidationError):
+            continue
+
+    return tuple(timeline_changes)
+
+
 def _snapshot_section(payload: Mapping[str, object], key: str) -> OutputSection:
     """Return one required presentation section from snapshot metadata."""
     return _section_from_payload(_mapping_payload_value(payload, key))
+
+
+def _snapshot_section_or_unknown(
+    payload: Mapping[str, object],
+    key: str,
+    title: str,
+) -> OutputSection:
+    """Return an optional presentation section from snapshot metadata."""
+    section_payload = _mapping_payload_value(payload, key)
+    if not section_payload:
+        return OutputSection(title=title, items=("Unknown",))
+    try:
+        return _section_from_payload(section_payload)
+    except (ValueError, ValidationError):
+        return OutputSection(title=title, items=("Unknown",))
 
 
 def _section_from_payload(payload: Mapping[str, object]) -> OutputSection:
@@ -3693,6 +3743,8 @@ def _character_profile_output(
         character_id=profile.character_id,
         display_name=profile.display_name,
         subtitle=profile.subtitle,
+        race=_section_output(profile.race),
+        gender=_section_output(profile.gender),
         status=_section_output(profile.status),
         current_goal=_section_output(profile.current_goal),
         current_equipment=_section_output(profile.current_equipment),

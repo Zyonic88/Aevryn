@@ -160,6 +160,130 @@ def test_presentation_engine_groups_generic_character_attributes() -> None:
     assert profile.current_assets.items == ("Delivery Van",)
 
 
+def test_presentation_engine_routes_identity_and_profile_facts() -> None:
+    """Character profile facts should not fall through to recent changes."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = card.facts[0].evidence
+    identity_card = replace(
+        card,
+        display_name="Human male captain Mark",
+        facts=(
+            CanonCharacterFact(
+                attribute="race",
+                value="Human",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="gender",
+                value="Male",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="family_background",
+                value="Merchant family",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="current_weapon",
+                value="Iron Sword",
+                previous_value="Rusty Dagger",
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.race.items == ("Human",)
+    assert profile.gender.items == ("Male",)
+    assert profile.relationships.items == ("Merchant family",)
+    assert profile.current_equipment.items == ("Iron Sword",)
+    assert profile.recent_changes.items == (
+        "source_demo_chapter_002: current_weapon -> Iron Sword",
+    )
+
+
+def test_presentation_engine_does_not_infer_identity_from_broad_context() -> None:
+    """Race and gender should not be inferred from unrelated story context."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = card.facts[0].evidence
+    identity_card = replace(
+        card,
+        display_name="Zhao Chen",
+        facts=(
+            CanonCharacterFact(
+                attribute="race",
+                value="Half-Beastman",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="current_goal",
+                value="Find a way to support the Half-Beastman crew",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.race.items == ("Unknown",)
+    assert profile.gender.items == ("Unknown",)
+    assert profile.current_goal.items == ("Find a way to support the Half-Beastman crew",)
+
+
+def test_presentation_engine_uses_explicit_identity_language() -> None:
+    """Explicit kinship and species terms should fill identity sections."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = card.facts[0].evidence
+    identity_card = replace(
+        card,
+        facts=(
+            CanonCharacterFact(
+                attribute="family_context",
+                value="Sister of Zhao Chen",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="origin_context",
+                value="Half-Beastman slave from the frontier",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.gender.items == ("Female",)
+    assert profile.race.items == ("Half-Beastman",)
+    assert profile.relationships.items == (
+        "Sister of Zhao Chen",
+        "Half-Beastman slave from the frontier",
+    )
+
+
 def test_presentation_engine_builds_scene_sheet() -> None:
     """Presentation Engine builds a scan-friendly scene sheet."""
     _card, context, analysis, _pack = build_outputs()

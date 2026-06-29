@@ -267,6 +267,27 @@ class EvidenceBoundedAIExtractor:
                 "If information is not stated, omit it. Unknown stays unknown.",
                 "Use entity_type=character for named people or persons.",
                 (
+                    "For characters, capture explicit identity facts when stated, "
+                    "especially gender, race, species, age, role, title, profession, "
+                    "appearance, family, relationships, equipment, abilities, assets, "
+                    "goals, limitations, and current status."
+                ),
+                (
+                    "Gendered relationship or title words such as sister, brother, "
+                    "mother, father, wife, husband, princess, or prince are explicit "
+                    "gender evidence only for the character being described. Race or "
+                    "species labels such as Half-Beastman are explicit race/species "
+                    "evidence only for the character being described. Do not infer "
+                    "gender or race from another character, from a group merely being "
+                    "discussed, or from a chapter title/question."
+                ),
+                (
+                    "Use stable character fact attributes such as gender, race, species, "
+                    "role, profession, appearance, family_context, relationship_context, "
+                    "current_equipment, current_abilities, current_assets, current_goal, "
+                    "current_limitation, and status."
+                ),
+                (
                     "Allowed entity_type values: armor, building, character, creature, "
                     "item, location, organization, skill, timeline_event, vehicle, weapon."
                 ),

@@ -467,6 +467,22 @@ class ProjectOutputSurface(BaseModel):
     item_count: int = 0
 
 
+class ProjectTimelineChangeOutput(BaseModel):
+    """One creator-facing state change in story order."""
+
+    model_config = ConfigDict(frozen=True)
+
+    change_id: str
+    chapter_index: int
+    scene_index: int
+    chapter_title: str
+    scene_title: str
+    entity_id: str
+    entity_name: str
+    attribute: str
+    value: str
+
+
 class ProjectOutputsResponse(BaseModel):
     """API-owned project output summary for alpha workspace surfaces."""
 
@@ -480,6 +496,7 @@ class ProjectOutputsResponse(BaseModel):
     surfaces: tuple[ProjectOutputSurface, ...]
     character_profiles: tuple[CharacterProfileOutput, ...] = ()
     world_sheet: WorldSheetOutput | None = None
+    timeline_changes: tuple[ProjectTimelineChangeOutput, ...] = ()
 
 
 class SnapshotStoreRequest(BaseModel):
@@ -766,6 +783,8 @@ class CharacterProfileOutput(BaseModel):
     character_id: str
     display_name: str
     subtitle: str
+    race: OutputSection
+    gender: OutputSection
     status: OutputSection
     current_goal: OutputSection
     current_equipment: OutputSection

@@ -444,7 +444,11 @@ export class AevrynApiClient {
     });
   }
 
-  private async request<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
+  private async request<TSchema extends z.ZodTypeAny>(
+    path: string,
+    schema: TSchema,
+    init: RequestInit = {},
+  ): Promise<z.output<TSchema>> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     if (init.body) {

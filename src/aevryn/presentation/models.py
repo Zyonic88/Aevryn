@@ -32,6 +32,8 @@ class CharacterProfileView:
     character_id: str
     display_name: str
     subtitle: str
+    race: PresentationSection
+    gender: PresentationSection
     status: PresentationSection
     current_goal: PresentationSection
     current_equipment: PresentationSection

@@ -59,6 +59,8 @@ The frontend renders API-provided output only.
 Character output should read like a living character panel:
 
 * identity
+* race
+* gender
 * status
 * current goal
 * equipment
@@ -79,6 +81,8 @@ World output should read like a world sheet:
 * evidence summary
 
 Unknown information remains `Unknown`.
+
+When source text explicitly states character identity facts such as gender, race, species, role, profession, family context, relationship context, appearance, equipment, abilities, assets, goals, limitations, or status, extraction should capture them as evidence-backed facts with stable attributes. Gendered kinship/title terms such as sister, brother, mother, father, wife, husband, princess, or prince count as explicit gender evidence only for the character being described. Race/species labels such as Half-Beastman count as explicit race/species evidence only for the character being described. It should not infer gender or race from names alone, another character, a group merely being discussed, or a chapter title/question.
 
 Machine IDs are allowed as secondary metadata, but they should not be the main reading experience.
 

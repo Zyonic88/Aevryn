@@ -13,6 +13,7 @@ from _pytest.logging import LogCaptureFixture
 from aevryn.extraction import (
     ExtractedEntity,
     ExtractedFact,
+    ExtractedStateChange,
     ExtractionResult,
     SceneExtractionInput,
 )
@@ -805,6 +806,18 @@ def test_project_import_snapshot_handler_uses_injected_extractor() -> None:
     assert snapshot_payload["accepted_entity_count"] == 1
     assert snapshot_payload["accepted_fact_count"] == 2
     assert snapshot_payload["presentation"]["characters"][0]["display_name"] == "Lyra"
+    assert snapshot_payload["timeline_changes"][0]["change_id"] == "state_fact_character_lyra_role"
+    assert snapshot_payload["timeline_changes"][0] | {"change_id": ""} == {
+        "attribute": "role",
+        "change_id": "",
+        "chapter_index": 1,
+        "chapter_title": "Chapter 1",
+        "entity_id": "character_lyra",
+        "entity_name": "Lyra",
+        "scene_index": 1,
+        "scene_title": "Scene 1",
+        "value": "Sky Gate Keeper",
+    }
     assert "Lyra opened the sky gate" not in snapshots[0].serialized_output
 
 
@@ -956,6 +969,15 @@ class RecordingSceneExtractor:
                     attribute="role",
                     value="Sky Gate Keeper",
                     evidence_anchor_id=anchor_id,
+                    confidence=0.91,
+                ),
+            ),
+            state_changes=(
+                ExtractedStateChange(
+                    entity_id="character_lyra",
+                    attribute="role",
+                    value="Sky Gate Keeper",
+                    valid_from_anchor_id=anchor_id,
                     confidence=0.91,
                 ),
             ),

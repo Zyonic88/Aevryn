@@ -710,6 +710,8 @@ It asks Project Manager and Character Engine for character state at the requeste
 
 The API does not build character cards itself.
 
+Character profiles expose backend-provided `race` and `gender` sections alongside status, goals, equipment, abilities, assets, territory, relationships, limitations, recent changes, and evidence summary. Unknown identity facts remain `Unknown`; the frontend should not infer them.
+
 ## `POST /v2/scenes/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns one timeline-aware scene sheet.
@@ -776,10 +778,28 @@ Updating, reconstructs the requested scene position, and returns:
 
 The response is presentation-ready.
 
+Character profile output must include API-provided `race` and `gender` sections so identity facts are tracked by Canon-backed presentation rather than inferred in the browser.
+
 It must not include full source chapter text by default.
 
 Exact evidence inspection should be exposed later through intentional evidence
 controls.
+
+Timeline output must include API-provided `timeline_changes` rows for the latest
+canon snapshot. Each row is metadata-only:
+
+* change ID
+* chapter index
+* scene index
+* chapter title
+* scene title
+* entity ID
+* entity display name
+* state attribute
+* state value
+
+The frontend may group and render these rows, but it must not infer Timeline
+state or reconstruct continuity from raw snapshot payloads.
 
 ## `POST /v2/exports/preview`
 

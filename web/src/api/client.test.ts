@@ -201,6 +201,8 @@ const characterPreviewPayload = {
       character_id: "character_mark",
       display_name: "Mark",
       subtitle: "Known character",
+      race: { title: "Race", items: ["Human"] },
+      gender: { title: "Gender", items: ["Male"] },
       status: { title: "Status", items: ["Alive"] },
       current_goal: { title: "Current Goal", items: ["Unknown"] },
       current_equipment: { title: "Current Equipment", items: ["Rusty Dagger"] },
@@ -423,6 +425,45 @@ describe("AevrynApiClient", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.charactersPreview}`);
     expect(init.method).toBe("POST");
     expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("defaults legacy character identity sections", async () => {
+    const legacyCharacterPreviewPayload = {
+      ...characterPreviewPayload,
+      character_profiles: characterPreviewPayload.character_profiles.map((profile) => {
+        const legacyProfile: Record<string, unknown> = { ...profile };
+        delete legacyProfile.race;
+        delete legacyProfile.gender;
+        return legacyProfile;
+      }),
+    };
+    const expectedPayload = {
+      ...characterPreviewPayload,
+      character_profiles: characterPreviewPayload.character_profiles.map((profile) => ({
+        ...profile,
+        race: { title: "Race", items: ["Unknown"] },
+        gender: { title: "Gender", items: ["Unknown"] },
+      })),
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(legacyCharacterPreviewPayload), { status: 200 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+
+    await expect(
+      client.previewCharacters({
+        source_id: "api_demo",
+        filename: "chapter.txt",
+        title: "API Demo",
+        content_base64: "Q2hhcHRlciAx",
+        ai_response: { entities: [] },
+        character_ids: ["character_mark"],
+      }),
+    ).resolves.toEqual(expectedPayload);
   });
 
   it("sends JSON requests for timeline previews", async () => {

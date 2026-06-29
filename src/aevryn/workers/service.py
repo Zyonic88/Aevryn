@@ -20,6 +20,12 @@ from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.workers.models import BackgroundJob, BackgroundWorkerRunSummary
 from aevryn.workers.queue import BackgroundJobQueue, DuplicateJobError
 
+_TIMELINE_OMITTED_ATTRIBUTES = frozenset(
+    {"display_name", "race", "species", "gender", "sex"}
+)
+_SOURCE_BACKED_PLACEHOLDER = "Source-backed detail available through evidence controls."
+_MAX_TIMELINE_CHANGES_PER_SCENE = 8
+
 logger = logging.getLogger(__name__)
 
 
@@ -384,6 +390,7 @@ def _canon_snapshot_payload(result: ProjectRunResult) -> str:
         "rejected_candidate_count": sum(
             len(summary.rejected_candidates) for summary in result.update_summaries
         ),
+        "timeline_changes": _timeline_changes_payload(result, source_quotes=_source_quotes(result)),
         "presentation": _presentation_snapshot_payload(result),
         "update_summaries": tuple(
             {
@@ -402,6 +409,87 @@ def _canon_snapshot_payload(result: ProjectRunResult) -> str:
         ),
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def _timeline_changes_payload(
+    result: ProjectRunResult,
+    *,
+    source_quotes: tuple[str, ...],
+) -> tuple[dict[str, object], ...]:
+    """Return safe, creator-readable timeline state changes in story order."""
+    chapters_by_id = {
+        chapter.chapter_id: chapter for chapter in result.imported_source.story.chapters
+    }
+    scenes_by_id = {
+        scene.scene_id: scene
+        for chapter in result.imported_source.story.chapters
+        for scene in chapter.scenes
+    }
+    changes: list[dict[str, object]] = []
+    scene_change_counts: dict[str, int] = {}
+    for summary in result.update_summaries:
+        for state_change_id in summary.accepted_state_changes:
+            state_change = result.database.retrieve_state_change(state_change_id)
+            if state_change is None:
+                continue
+            fact = result.database.retrieve_fact(state_change.fact_id)
+            if fact is None:
+                continue
+            evidence = result.database.retrieve_evidence(fact.evidence_id)
+            if evidence is None:
+                continue
+            chapter = chapters_by_id.get(evidence.chapter_id)
+            if chapter is None:
+                continue
+            scene = scenes_by_id.get(evidence.scene_id)
+            if scene is None:
+                continue
+            entity = result.database.retrieve_entity(fact.entity_id)
+            entity_name = entity.display_name if entity is not None else fact.entity_id
+            if _timeline_change_should_be_hidden(
+                attribute=fact.attribute,
+                entity_name=entity_name,
+                value=fact.value,
+                source_quotes=source_quotes,
+            ):
+                continue
+            scene_count = scene_change_counts.get(scene.scene_id, 0)
+            if scene_count >= _MAX_TIMELINE_CHANGES_PER_SCENE:
+                continue
+            scene_change_counts[scene.scene_id] = scene_count + 1
+            changes.append(
+                {
+                    "change_id": state_change.state_change_id,
+                    "chapter_index": chapter.chapter_index,
+                    "scene_index": scene.scene_index,
+                    "chapter_title": _safe_display_text(chapter.title, source_quotes),
+                    "scene_title": _safe_display_text(scene.title, source_quotes),
+                    "entity_id": fact.entity_id,
+                    "entity_name": _safe_display_text(
+                        entity_name, source_quotes
+                    ),
+                    "attribute": _safe_display_text(fact.attribute, source_quotes),
+                    "value": _safe_display_text(fact.value, source_quotes),
+                }
+            )
+
+    return tuple(changes)
+
+
+def _timeline_change_should_be_hidden(
+    *,
+    attribute: str,
+    entity_name: str,
+    value: str,
+    source_quotes: tuple[str, ...],
+) -> bool:
+    """Return whether a state change is UI noise for the alpha Timeline."""
+    if attribute.lower() in _TIMELINE_OMITTED_ATTRIBUTES:
+        return True
+    return (
+        _safe_display_text(entity_name, source_quotes) == _SOURCE_BACKED_PLACEHOLDER
+        or _safe_display_text(value, source_quotes) == _SOURCE_BACKED_PLACEHOLDER
+    )
 
 
 def _presentation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]:
@@ -479,6 +567,8 @@ def _character_profile_payload(
         "character_id": profile.character_id,
         "display_name": _safe_display_text(profile.display_name, source_quotes),
         "subtitle": _safe_display_text(profile.subtitle, source_quotes),
+        "race": _section_payload(profile.race, source_quotes=source_quotes),
+        "gender": _section_payload(profile.gender, source_quotes=source_quotes),
         "status": _section_payload(profile.status, source_quotes=source_quotes),
         "current_goal": _section_payload(profile.current_goal, source_quotes=source_quotes),
         "current_equipment": _section_payload(

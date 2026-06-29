@@ -229,6 +229,18 @@ export const projectOutputSurfaceSchema = z.object({
   item_count: z.number(),
 });
 
+export const projectTimelineChangeSchema = z.object({
+  change_id: z.string(),
+  chapter_index: z.number(),
+  scene_index: z.number(),
+  chapter_title: z.string(),
+  scene_title: z.string(),
+  entity_id: z.string(),
+  entity_name: z.string(),
+  attribute: z.string(),
+  value: z.string(),
+});
+
 export const projectOutputsSchema = z.object({
   project_id: z.string(),
   status: z.string(),
@@ -238,6 +250,7 @@ export const projectOutputsSchema = z.object({
   surfaces: z.array(projectOutputSurfaceSchema),
   character_profiles: z.array(z.lazy(() => characterProfileSchema)),
   world_sheet: z.lazy(() => worldSheetSchema).nullable(),
+  timeline_changes: z.array(projectTimelineChangeSchema).default([]),
 });
 
 export const snapshotSchema = z.object({
@@ -290,21 +303,32 @@ export const outputSectionSchema = z.object({
   items: z.array(z.string()),
 });
 
-export const characterProfileSchema = z.object({
-  character_id: z.string(),
-  display_name: z.string(),
-  subtitle: z.string(),
-  status: outputSectionSchema,
-  current_goal: outputSectionSchema,
-  current_equipment: outputSectionSchema,
-  current_abilities: outputSectionSchema,
-  current_assets: outputSectionSchema,
-  territory: outputSectionSchema,
-  relationships: outputSectionSchema,
-  current_limitations: outputSectionSchema,
-  recent_changes: outputSectionSchema,
-  evidence_summary: z.string(),
-});
+const unknownRaceSection = { title: "Race", items: ["Unknown"] };
+const unknownGenderSection = { title: "Gender", items: ["Unknown"] };
+
+export const characterProfileSchema = z
+  .object({
+    character_id: z.string(),
+    display_name: z.string(),
+    subtitle: z.string(),
+    race: outputSectionSchema.optional(),
+    gender: outputSectionSchema.optional(),
+    status: outputSectionSchema,
+    current_goal: outputSectionSchema,
+    current_equipment: outputSectionSchema,
+    current_abilities: outputSectionSchema,
+    current_assets: outputSectionSchema,
+    territory: outputSectionSchema,
+    relationships: outputSectionSchema,
+    current_limitations: outputSectionSchema,
+    recent_changes: outputSectionSchema,
+    evidence_summary: z.string(),
+  })
+  .transform((profile) => ({
+    ...profile,
+    race: profile.race ?? unknownRaceSection,
+    gender: profile.gender ?? unknownGenderSection,
+  }));
 
 export const characterPreviewSchema = z.object({
   source_id: z.string(),
@@ -445,6 +469,7 @@ export type WorkerProcess = z.infer<typeof workerProcessSchema>;
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 export type ProjectOutputCanonSummary = z.infer<typeof projectOutputCanonSummarySchema>;
 export type ProjectOutputSurface = z.infer<typeof projectOutputSurfaceSchema>;
+export type ProjectTimelineChange = z.infer<typeof projectTimelineChangeSchema>;
 export type ProjectOutputs = z.infer<typeof projectOutputsSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type SnapshotList = z.infer<typeof snapshotListSchema>;

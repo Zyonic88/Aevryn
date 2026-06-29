@@ -143,6 +143,10 @@ def test_ai_extractor_returns_evidence_bounded_candidates() -> None:
     assert isinstance(result.state_changes[0], ExtractedStateChange)
     assert "Unknown stays unknown." in client.prompt
     assert "Use entity_type=character for named people or persons." in client.prompt
+    assert "especially gender, race, species" in client.prompt
+    assert "sister, brother" in client.prompt
+    assert "Half-Beastman" in client.prompt
+    assert "gender, race, species, role" in client.prompt
     assert anchor_id in client.prompt
 
 

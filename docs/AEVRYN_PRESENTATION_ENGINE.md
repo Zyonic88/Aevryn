@@ -73,7 +73,15 @@ Long prompt lines are shortened for scan-friendly views.
 
 Prompt pack views must remove raw structural placeholders such as empty section labels, Unknown-only entries, and duplicated Markdown bullet markers.
 
-Character profile grouping must use genre-neutral attribute categories such as goals, tasks, plans, equipment, abilities, assets, relationships, and limitations.
+Character profile grouping must use genre-neutral attribute categories such as identity, race, gender, goals, tasks, plans, equipment, abilities, assets, relationships, and limitations.
+
+Race and gender are conservative presentation fields. They should display only when
+the character's own name, role, status, family/relationship context, origin context,
+or direct identity fact clearly supports the value. Broad story context such as goals,
+chapter titles, or groups merely being discussed must not assign identity to the
+character.
+
+Recent Changes must not become a dumping ground for profile facts. Facts that already belong to identity, status, goals, equipment, abilities, assets, territory, relationships, or limitations should appear in those sections. Recent Changes should emphasize actual changed state or facts that have no better home yet.
 
 It must not depend on one test story's names, factions, power systems, vehicles, or item labels.
 

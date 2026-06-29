@@ -303,6 +303,8 @@ class ExportEngine:
             "",
         ]
         sections = (
+            profile.race,
+            profile.gender,
             profile.status,
             profile.current_goal,
             profile.current_equipment,

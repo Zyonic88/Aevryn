@@ -1237,6 +1237,8 @@ def test_characters_preview_returns_character_profiles() -> None:
     assert payload["source_id"] == "api_demo"
     assert payload["scene_id"] == "api_demo_chapter_001_scene_001"
     assert payload["character_profiles"][0]["display_name"] == "Mark"
+    assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
+    assert payload["character_profiles"][0]["gender"]["items"] == ["Unknown"]
     assert payload["character_profiles"][0]["current_equipment"]["items"] == [
         "Rusty Dagger"
     ]
@@ -1377,6 +1379,8 @@ def test_project_outputs_preview_returns_presentation_ready_outputs() -> None:
     assert payload["source_format"] == "txt"
     assert payload["scene_id"] == "api_demo_chapter_002_scene_001"
     assert payload["character_profiles"][0]["display_name"] == "Mark"
+    assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
+    assert payload["character_profiles"][0]["gender"]["items"] == ["Unknown"]
     assert payload["character_profiles"][0]["current_equipment"]["items"] == [
         "Iron Sword"
     ]

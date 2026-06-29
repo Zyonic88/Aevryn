@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import textwrap
 from collections.abc import Iterable
 
@@ -19,6 +20,90 @@ from aevryn.scenes import CanonSceneContext, SceneAnalysis
 from aevryn.world import WorldEntityState, WorldState
 
 logger = logging.getLogger(__name__)
+
+_STATUS_ATTRIBUTES = ("status", "role", "academic_year", "year", "student_status")
+_GOAL_EXACT_ATTRIBUTES = ("current_goal", "current_task", "next_semester_requirement", "intention")
+_GOAL_PARTIAL_ATTRIBUTES = (
+    "goal",
+    "intention",
+    "objective",
+    "plan",
+    "planning",
+    "requirement",
+    "task",
+)
+_EQUIPMENT_EXACT_ATTRIBUTES = ("current_equipment", "current_weapon", "equipment", "inventory")
+_EQUIPMENT_PARTIAL_ATTRIBUTES = ("armor", "equipment", "inventory", "item", "tool", "weapon")
+_ABILITY_EXACT_ATTRIBUTES = (
+    "ability",
+    "profession",
+    "skill",
+    "special_attribute",
+)
+_ABILITY_PARTIAL_ATTRIBUTES = (
+    "ability",
+    "effect",
+    "profession",
+    "reward",
+    "skill",
+    "technique",
+)
+_ASSET_EXACT_ATTRIBUTES = ("current_assets", "possession", "territory", "warehouse")
+_ASSET_PARTIAL_ATTRIBUTES = (
+    "asset",
+    "owned",
+    "possession",
+    "resource",
+    "territory",
+    "vehicle",
+    "warehouse",
+)
+_TERRITORY_ATTRIBUTES = (
+    "noble_title",
+    "territory",
+    "territory_condition",
+    "territory_limitation",
+    "territory_security",
+)
+_RELATIONSHIP_ATTRIBUTES = (
+    "relationship_context",
+    "family_context",
+    "origin_context",
+)
+_RELATIONSHIP_PARTIAL_ATTRIBUTES = (
+    "classmate",
+    "family",
+    "father",
+    "feeling_toward",
+    "fiance",
+    "fiancee",
+    "friend",
+    "mother",
+    "relationship",
+)
+_LIMITATION_EXACT_ATTRIBUTES = (
+    "current_limitation",
+    "injury",
+    "territory_limitation",
+)
+_LIMITATION_PARTIAL_ATTRIBUTES = ("disadvantage", "injury", "limitation", "weakness")
+_EXPLICIT_GENDER_TERMS = (
+    (
+        "Female",
+        ("sister", "mother", "daughter", "wife", "fiancee", "fiancée", "princess", "empress"),
+    ),
+    ("Male", ("brother", "father", "son", "husband", "fiance", "fiancé", "prince", "emperor")),
+)
+_EXPLICIT_RACE_TERMS = (
+    ("Half-Beastman", ("half-beastman", "half beastman")),
+    ("Beastman", ("beastman", "beast man")),
+    ("Beastkin", ("beastkin", "beast kin")),
+    ("Human", ("human",)),
+    ("Elf", ("elf", "elven")),
+    ("Demon", ("demon",)),
+    ("Dragon", ("dragon",)),
+    ("Vampire", ("vampire",)),
+)
 
 
 class PresentationEngine:
@@ -38,60 +123,63 @@ class PresentationEngine:
             character_id=card.character_id,
             display_name=card.display_name,
             subtitle=self._subtitle(facts_by_attribute),
-            status=self._section("Status", facts_by_attribute, ("status", "role")),
+            race=self._identity_section(
+                "Race",
+                facts_by_attribute,
+                attributes=("race", "species"),
+                character_label=card.display_name,
+                term_groups=_EXPLICIT_RACE_TERMS,
+            ),
+            gender=self._identity_section(
+                "Gender",
+                facts_by_attribute,
+                attributes=("gender", "sex"),
+                character_label=card.display_name,
+                term_groups=_EXPLICIT_GENDER_TERMS,
+            ),
+            status=self._section("Status", facts_by_attribute, _STATUS_ATTRIBUTES),
             current_goal=self._section_by_category(
                 "Current Goal",
                 facts_by_attribute,
-                exact_attributes=("current_goal", "current_task", "next_semester_requirement"),
-                partial_attributes=("goal", "objective", "plan", "requirement", "task"),
+                exact_attributes=_GOAL_EXACT_ATTRIBUTES,
+                partial_attributes=_GOAL_PARTIAL_ATTRIBUTES,
             ),
             current_equipment=self._section_by_category(
                 "Current Equipment",
                 facts_by_attribute,
-                exact_attributes=("current_equipment", "current_weapon", "equipment", "inventory"),
-                partial_attributes=("armor", "equipment", "inventory", "item", "tool", "weapon"),
+                exact_attributes=_EQUIPMENT_EXACT_ATTRIBUTES,
+                partial_attributes=_EQUIPMENT_PARTIAL_ATTRIBUTES,
             ),
             current_abilities=self._section_by_category(
                 "Current Abilities",
                 facts_by_attribute,
-                exact_attributes=("ability", "profession", "skill"),
-                partial_attributes=("ability", "effect", "profession", "reward", "skill"),
+                exact_attributes=_ABILITY_EXACT_ATTRIBUTES,
+                partial_attributes=_ABILITY_PARTIAL_ATTRIBUTES,
             ),
             current_assets=self._section_by_category(
                 "Current Assets",
                 facts_by_attribute,
-                exact_attributes=("current_assets", "territory", "warehouse"),
-                partial_attributes=(
-                    "asset",
-                    "owned",
-                    "resource",
-                    "territory",
-                    "vehicle",
-                    "warehouse",
-                ),
+                exact_attributes=_ASSET_EXACT_ATTRIBUTES,
+                partial_attributes=_ASSET_PARTIAL_ATTRIBUTES,
             ),
             territory=self._section(
                 "Territory",
                 facts_by_attribute,
-                (
-                    "noble_title",
-                    "territory",
-                    "territory_condition",
-                    "territory_limitation",
-                    "territory_security",
-                ),
+                _TERRITORY_ATTRIBUTES,
             ),
-            relationships=self._section(
+            relationships=self._section_by_category(
                 "Relationships",
                 facts_by_attribute,
-                ("relationship_context", "family_context", "origin_context"),
+                exact_attributes=_RELATIONSHIP_ATTRIBUTES,
+                partial_attributes=_RELATIONSHIP_PARTIAL_ATTRIBUTES,
             ),
-            current_limitations=self._section(
+            current_limitations=self._section_by_category(
                 "Current Limitations",
                 facts_by_attribute,
-                ("current_limitation", "territory_limitation"),
+                exact_attributes=_LIMITATION_EXACT_ATTRIBUTES,
+                partial_attributes=_LIMITATION_PARTIAL_ATTRIBUTES,
             ),
-            recent_changes=self._recent_changes(card.facts),
+            recent_changes=self._recent_changes(card.facts, facts_by_attribute),
             evidence_summary=self._evidence_summary(card.facts),
         )
         logger.debug(
@@ -245,6 +333,39 @@ class PresentationEngine:
         )
 
     @staticmethod
+    def _identity_section(
+        title: str,
+        facts_by_attribute: dict[str, tuple[CanonCharacterFact, ...]],
+        attributes: tuple[str, ...],
+        character_label: str,
+        term_groups: tuple[tuple[str, tuple[str, ...]], ...],
+    ) -> PresentationSection:
+        """Build identity section from direct facts or conservative explicit clues."""
+        support_haystacks = PresentationEngine._identity_support_haystacks(
+            character_label=character_label,
+            facts_by_attribute=facts_by_attribute,
+        )
+        direct_items = PresentationEngine._supported_identity_items(
+            (
+                fact.value
+                for attribute in attributes
+                for fact in facts_by_attribute.get(attribute, ())
+            ),
+            support_haystacks=support_haystacks,
+            term_groups=term_groups,
+        )
+        return PresentationSection(
+            title=title,
+            items=PresentationEngine._items_or_unknown(
+                direct_items
+                or PresentationEngine._explicit_identity_items(
+                    support_haystacks,
+                    term_groups,
+                )
+            ),
+        )
+
+    @staticmethod
     def _section_by_category(
         title: str,
         facts_by_attribute: dict[str, tuple[CanonCharacterFact, ...]],
@@ -281,16 +402,139 @@ class PresentationEngine:
         )
 
     @staticmethod
-    def _recent_changes(facts: tuple[CanonCharacterFact, ...]) -> PresentationSection:
+    def _recent_changes(
+        facts: tuple[CanonCharacterFact, ...],
+        facts_by_attribute: dict[str, tuple[CanonCharacterFact, ...]],
+    ) -> PresentationSection:
         """Build recent changes section from valid-from chapters."""
+        presented_attributes = PresentationEngine._presented_character_attributes(
+            facts_by_attribute,
+        )
         items = tuple(
             f"{fact.valid_from_chapter_id}: {fact.attribute} -> {fact.value}"
             for fact in facts[-8:]
+            if fact.previous_value is not None or fact.attribute not in presented_attributes
         )
         return PresentationSection(
             title="Recent Changes",
             items=PresentationEngine._items_or_unknown(items),
         )
+
+    @staticmethod
+    def _presented_character_attributes(
+        facts_by_attribute: dict[str, tuple[CanonCharacterFact, ...]],
+    ) -> set[str]:
+        """Return attributes already routed into first-class profile sections."""
+        presented: set[str] = set()
+        exact_groups = (
+            ("race", "species", "gender", "sex"),
+            _STATUS_ATTRIBUTES,
+            _TERRITORY_ATTRIBUTES,
+        )
+        category_groups = (
+            (_GOAL_EXACT_ATTRIBUTES, _GOAL_PARTIAL_ATTRIBUTES),
+            (_EQUIPMENT_EXACT_ATTRIBUTES, _EQUIPMENT_PARTIAL_ATTRIBUTES),
+            (_ABILITY_EXACT_ATTRIBUTES, _ABILITY_PARTIAL_ATTRIBUTES),
+            (_ASSET_EXACT_ATTRIBUTES, _ASSET_PARTIAL_ATTRIBUTES),
+            (_RELATIONSHIP_ATTRIBUTES, _RELATIONSHIP_PARTIAL_ATTRIBUTES),
+            (_LIMITATION_EXACT_ATTRIBUTES, _LIMITATION_PARTIAL_ATTRIBUTES),
+        )
+        for attribute in facts_by_attribute:
+            normalized_attribute = attribute.lower()
+            if any(normalized_attribute in group for group in exact_groups):
+                presented.add(attribute)
+                continue
+            for exact_attributes, partial_attributes in category_groups:
+                if PresentationEngine._attribute_matches(
+                    attribute=attribute,
+                    exact_attributes=set(exact_attributes),
+                    partial_attributes=partial_attributes,
+                ):
+                    presented.add(attribute)
+                    break
+        return presented
+
+    @staticmethod
+    def _identity_support_haystacks(
+        *,
+        character_label: str,
+        facts_by_attribute: dict[str, tuple[CanonCharacterFact, ...]],
+    ) -> tuple[str, ...]:
+        """Return self-describing identity text, not broad story context."""
+        supported_attributes = (
+            "display_name",
+            "role",
+            "status",
+            "family_context",
+            "relationship_context",
+            "origin_context",
+        )
+        values = [character_label]
+        values.extend(
+            fact.value
+            for attribute in supported_attributes
+            for fact in facts_by_attribute.get(attribute, ())
+        )
+        return tuple(value.lower() for value in values if value.strip())
+
+    @staticmethod
+    def _supported_identity_items(
+        values: Iterable[str],
+        *,
+        support_haystacks: tuple[str, ...],
+        term_groups: tuple[tuple[str, tuple[str, ...]], ...],
+    ) -> tuple[str, ...]:
+        """Return direct identity values only when self-description supports them."""
+        supported_labels = set(
+            PresentationEngine._explicit_identity_items(support_haystacks, term_groups)
+        )
+        return tuple(
+            PresentationEngine._unique_values(
+                value
+                for value in values
+                if value in supported_labels
+                or PresentationEngine._identity_value_has_support(
+                    value,
+                    support_haystacks=support_haystacks,
+                )
+            )
+        )
+
+    @staticmethod
+    def _identity_value_has_support(
+        value: str,
+        *,
+        support_haystacks: tuple[str, ...],
+    ) -> bool:
+        """Return whether a direct identity value appears in self-describing text."""
+        normalized_value = value.lower()
+        return any(
+            PresentationEngine._contains_identity_term(haystack, normalized_value)
+            for haystack in support_haystacks
+        )
+
+    @staticmethod
+    def _explicit_identity_items(
+        haystacks: tuple[str, ...],
+        term_groups: tuple[tuple[str, tuple[str, ...]], ...],
+    ) -> tuple[str, ...]:
+        """Return identity labels only when self-description explicitly contains them."""
+        labels: list[str] = []
+        for haystack in haystacks:
+            for label, terms in term_groups:
+                if any(
+                    PresentationEngine._contains_identity_term(haystack, term)
+                    for term in terms
+                ):
+                    labels.append(label)
+                    break
+        return tuple(PresentationEngine._unique_values(labels))
+
+    @staticmethod
+    def _contains_identity_term(value: str, term: str) -> bool:
+        """Return whether value contains a standalone identity term."""
+        escaped_term = re.escape(term).replace(r"\ ", r"[\s_-]+")
+        return re.search(rf"(?<![a-z0-9]){escaped_term}(?![a-z0-9])", value) is not None
 
     @staticmethod
     def _evidence_summary(facts: tuple[CanonCharacterFact, ...]) -> str:

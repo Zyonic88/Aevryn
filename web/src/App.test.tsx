@@ -302,6 +302,8 @@ const characterPreviewPayload = {
       character_id: "character_mark",
       display_name: "Mark",
       subtitle: "Known character",
+      race: { title: "Race", items: ["Human"] },
+      gender: { title: "Gender", items: ["Male"] },
       status: { title: "Status", items: ["Alive"] },
       current_goal: { title: "Current Goal", items: ["Find the fortress"] },
       current_equipment: { title: "Current Equipment", items: ["Rusty Dagger"] },
@@ -532,6 +534,8 @@ const projectOutputsPayload = {
     {
       ...characterPreviewPayload.character_profiles[0],
       character_id: "character_mark_duplicate",
+      race: { title: "Race", items: ["Human"] },
+      gender: { title: "Gender", items: ["Male"] },
       recent_changes: {
         title: "Recent Changes",
         items: ["display_name -> Mark", "gender -> Male", "current_weapon -> Rusty Dagger"],
@@ -540,6 +544,30 @@ const projectOutputsPayload = {
     },
   ],
   world_sheet: worldPreviewPayload.world_sheet,
+  timeline_changes: [
+    {
+      change_id: "state_fact_character_mark_current_weapon_iron_sword",
+      chapter_index: 1,
+      scene_index: 1,
+      chapter_title: "Chapter 1",
+      scene_title: "Scene 1",
+      entity_id: "character_mark",
+      entity_name: "Mark",
+      attribute: "current_weapon",
+      value: "Iron Sword",
+    },
+    {
+      change_id: "state_fact_character_lyra_status_injured",
+      chapter_index: 2,
+      scene_index: 1,
+      chapter_title: "Chapter 2",
+      scene_title: "Scene 1",
+      entity_id: "character_lyra",
+      entity_name: "Lyra",
+      attribute: "status",
+      value: "Injured",
+    },
+  ],
 };
 
 function storeAuthenticatedProject() {
@@ -1199,6 +1227,12 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("link", { name: "Timeline" }));
     expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "2 accepted state changes",
+    );
+    expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
+      "Chapter 1, Scene 1",
+    );
+    expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
+      "Mark - Current Weapon: Iron Sword",
     );
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview timeline" }));
