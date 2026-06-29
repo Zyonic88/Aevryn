@@ -666,6 +666,163 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
         content_store.read_import_content(storage_ref)
 
 
+def test_phase11_project_surfaces_fail_closed_across_users() -> None:
+    """Phase 11 auth boundaries should cover every owned project surface."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=content_store,
+            ),
+            import_content_store=content_store,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
+    repository.record_export(
+        ExportRecord(
+            export_id="export_alpha",
+            project_id="project_alpha",
+            snapshot_id="snapshot_run_alpha_canon",
+            export_kind="canon",
+            export_format="markdown",
+            filename="canon.md",
+            content_type="text/markdown; charset=utf-8",
+            storage_ref="storage://exports/canon.md",
+            created_at="2026-06-27T00:45:00Z",
+        )
+    )
+
+    owner_status = client.get(
+        "/v2/projects/project_alpha/status",
+        headers=auth_headers("token_001"),
+    )
+    assert owner_status.status_code == 200
+    assert owner_status.json()["exports"]["latest_export_id"] == "export_alpha"
+
+    cross_user_requests = [
+        (
+            client.get,
+            "/v2/projects/project_alpha",
+            None,
+            "project_not_found",
+        ),
+        (
+            client.get,
+            "/v2/projects/project_alpha/settings",
+            None,
+            "project_not_found",
+        ),
+        (
+            client.put,
+            "/v2/projects/project_alpha/settings",
+            {"default_export_format": "json", "locale": "en-US"},
+            "project_not_found",
+        ),
+        (
+            client.get,
+            "/v2/projects/project_alpha/stories",
+            None,
+            "project_not_found",
+        ),
+        (
+            client.post,
+            "/v2/projects/project_alpha/stories",
+            {"story_id": "story_other", "title": "Other", "now": NOW},
+            "project_not_found",
+        ),
+        (
+            client.get,
+            "/v2/projects/project_alpha/stories/story_alpha/imports",
+            None,
+            "story_not_found",
+        ),
+        (
+            client.post,
+            "/v2/projects/project_alpha/stories/story_alpha/imports",
+            {**import_create_payload(), "import_id": "import_other"},
+            "story_not_found",
+        ),
+        (
+            client.post,
+            "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+            {"run_id": "run_other", "job_id": "job_other", "now": NOW},
+            "import_not_found",
+        ),
+        (
+            client.get,
+            "/v2/projects/project_alpha/runs",
+            None,
+            "project_not_found",
+        ),
+        (
+            client.get,
+            "/v2/projects/project_alpha/snapshots",
+            None,
+            "project_not_found",
+        ),
+        (
+            client.get,
+            "/v2/projects/project_alpha/stories/story_alpha/snapshots",
+            None,
+            "story_not_found",
+        ),
+        (
+            client.get,
+            "/v2/projects/project_alpha/status",
+            None,
+            "project_not_found",
+        ),
+        (
+            client.get,
+            "/v2/projects/project_alpha/outputs",
+            None,
+            "project_not_found",
+        ),
+        (
+            client.delete,
+            "/v2/projects/project_alpha/stories/story_alpha",
+            None,
+            "story_not_found",
+        ),
+    ]
+
+    for method, path, body, expected_error in cross_user_requests:
+        if body is None:
+            response = method(path, headers=auth_headers("token_002"))
+        else:
+            response = method(path, headers=auth_headers("token_002"), json=body)
+        assert response.status_code == 404
+        assert response.json()["error"] == expected_error
+        assert "Mark carried a rusty dagger" not in response.text
+        assert "export_alpha" not in response.text
+        assert "storage://exports/canon.md" not in response.text
+
+
 def test_import_runs_api_allows_retry_after_stale_active_run() -> None:
     """Old alpha runs should not block retry forever."""
     repository = InMemoryProjectRepository()

@@ -19,9 +19,9 @@ If a feature is not required for the current version, it must wait.
 Current active target:
 
 ```text
-V2 Phase 10
--> Internal Alpha
--> Private alpha after import, monitoring, and performance are stable
+V2 Phase 11
+-> Security & Privacy Hardening
+-> Trust gate before public beta
 ```
 
 Phase 6 Project Storage is accepted.
@@ -32,7 +32,9 @@ Phase 8 Monitoring is accepted.
 
 Phase 9 Performance is accepted.
 
-Phase 11 Security & Privacy Hardening is planned after private internal alpha and before any public beta.
+Phase 10 Internal Alpha is accepted for narrow private alpha with documented limitations.
+
+Phase 11 Security & Privacy Hardening is now active before any public beta or untrusted manuscript intake.
 
 The product path now has durable project identity, storage-backed workspace access, saved imports, queued runs, import source-byte storage, deterministic `canon` snapshots from successful import runs, supported-format import UI hardening, metadata-only workflow observability, performance budgets, metadata-only baseline artifacts, regression comparison, and workspace-load request hardening.
 
@@ -179,7 +181,8 @@ Everything the CLI can do, the API must be able to do.
 | 7 | Import UI | Accepted | Supported import formats, deferred-format failures, refresh visibility, snapshots, failed runs, and Web Import boundary are hardened. |
 | 8 | Monitoring | Accepted | Metadata-only project status, workflow observability, health/storage status, and restrained monitoring UI exist. |
 | 9 | Performance | Accepted | Budgets, baseline measurements, regression checks, and measured optimizations are in place. |
-| 10 | Internal Alpha | In Progress | Private alpha after import, monitoring, and performance are stable. |
+| 10 | Internal Alpha | Accepted | Narrow private alpha path is ready with documented limitations. |
+| 11 | Security & Privacy Hardening | In Progress | Trust gate before public beta or untrusted manuscript intake. |
 
 ---
 
@@ -528,7 +531,7 @@ Accepted performance scope:
 
 ## Phase 10 - Internal Alpha
 
-Status: **Release Candidate Ready For Narrow Private Alpha**
+Status: **Accepted For Narrow Private Alpha**
 
 Version 2 ends with a private alpha, not a public launch.
 
@@ -553,13 +556,13 @@ Current alpha status:
 * Processed Continuity, Prompt Packs, and Exports panels now consume persisted backend snapshot output at the API/frontend contract level.
 * Browser sanity testing validated Continuity, Prompt Packs, and Exports against persisted backend snapshots.
 * Private tester instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
-* Phase 10 remains a private alpha gate only; public beta still requires Phase 11 Security & Privacy Hardening.
+* Phase 10 is closed as a private alpha gate only; public beta still requires Phase 11 Security & Privacy Hardening.
 
 ---
 
 ## Phase 11 - Security & Privacy Hardening
 
-Status: **Planned**
+Status: **In Progress**
 
 Security is architecture.
 
@@ -572,6 +575,12 @@ Phase 11 completion is governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`.
 Security architecture is defined in `docs/AEVRYN_SECURITY.md`.
 
 Privacy architecture is defined in `docs/AEVRYN_PRIVACY.md`.
+
+Opening slice:
+
+* Verify authorization boundaries across every owned project surface.
+* Prove cross-user project, story, import, run, snapshot, export/status, settings, output, and deletion access fails closed.
+* Keep all security diagnostics metadata-only and free of source prose, full AI payloads, serialized export content, credentials, tokens, and storage references.
 
 Phase 11 includes:
 

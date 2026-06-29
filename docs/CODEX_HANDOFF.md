@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 10 in progress - Internal Alpha**
+Current phase: **Phase 11 in progress - Security & Privacy Hardening**
 
 Recent completed V2 work:
 
@@ -60,6 +60,7 @@ Recent completed V2 work:
 - Phase 7: Import UI
 - Phase 8: Monitoring
 - Phase 9: Performance
+- Phase 10: Internal Alpha
 - Import workspace view completed
 - Character workspace view completed
 - World workspace view completed
@@ -75,8 +76,8 @@ Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 ha
 
 Next expected V2 target:
 
-- Continue Phase 10 Internal Alpha release-candidate hardening, governed by `docs/AEVRYN_ROADMAP.md`
-- Phase 11 Security & Privacy Hardening is now planned after private internal alpha and before public beta, governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
+- Continue Phase 11 Security & Privacy Hardening, governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
+- Treat Phase 11 as the trust gate before public beta or untrusted manuscript intake, not as a product expansion phase
 
 Phase 6 Project Storage accepted:
 
@@ -170,12 +171,13 @@ Phase 10 progress:
 - Private tester instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
 - Phase 10 is ready for narrow private alpha testing with documented limitations; Phase 11 Security & Privacy Hardening is still required before public beta or untrusted manuscript intake.
 
-Phase 11 planned security/privacy gate:
+Phase 11 active security/privacy gate:
 
 - Phase 11 acceptance is governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
 - Security architecture is documented in `docs/AEVRYN_SECURITY.md`
 - Privacy architecture is documented in `docs/AEVRYN_PRIVACY.md`
 - Treat Phase 11 as a trust gate before public beta, not as a product expansion phase
+- Opening slice: explicit authorization-boundary verification across project, story, import, run, snapshot, export/status, settings, output, and deletion access
 - Core principle: security is architecture, not a feature
 - Core privacy principle: uploaded stories, generated canon, and generated exports belong to the creator
 - Aetherra Labs must not train on user stories without explicit opt-in
