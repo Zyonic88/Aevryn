@@ -469,7 +469,10 @@ def test_story_imports_api_creates_and_lists_import_metadata() -> None:
         "source_id": "source_alpha",
         "filename": "chapter_001.txt",
         "source_format": "txt",
-        "storage_ref": "api_import://story_alpha/import_alpha",
+        "storage_ref": (
+            "api_import://projects/project_alpha/stories/story_alpha/"
+            "imports/import_alpha"
+        ),
         "chapter_count": 1,
         "scene_count": 1,
         "evidence_anchor_count": 1,

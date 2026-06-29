@@ -1137,6 +1137,7 @@ def create_app(
             imported_source, source_format = _import_request_source(request_body)
             import_record = _import_record(
                 request=request_body,
+                project_id=project_id,
                 story_id=story_id,
                 source_format=source_format,
                 imported_source=imported_source,
@@ -3314,6 +3315,7 @@ def _worker_process_response(summary: BackgroundWorkerRunSummary) -> WorkerProce
 
 def _import_record(
     request: ImportCreateRequest,
+    project_id: str,
     story_id: str,
     source_format: str,
     imported_source: ImportedSource,
@@ -3326,7 +3328,10 @@ def _import_record(
         source_id=imported_source.source_id,
         filename=_import_metadata_filename(request.filename),
         source_format=source_format,
-        storage_ref=f"api_import://{story_id}/{request.import_id}",
+        storage_ref=(
+            f"api_import://projects/{project_id}/stories/{story_id}/"
+            f"imports/{request.import_id}"
+        ),
         chapter_count=len(imported_source.story.chapters),
         scene_count=scene_count,
         evidence_anchor_count=len(imported_source.anchors),

@@ -239,7 +239,25 @@ def _object_storage_ref_for_import_ref(storage_ref: str) -> str:
     """Return the storage-service reference for one API import reference."""
     _require_storage_ref(storage_ref)
     without_scheme = storage_ref.removeprefix("api_import://")
-    if "/" not in without_scheme:
+    parts = without_scheme.split("/")
+    if (
+        len(parts) == 6
+        and parts[0] == "projects"
+        and parts[2] == "stories"
+        and parts[4] == "imports"
+    ):
+        project_id = _require_ref_segment(parts[1], "Project ID")
+        import_id = _require_ref_segment(parts[5], "Import ID")
+        return f"storage://projects/{project_id}/imports/{import_id}/source.bin"
+    if len(parts) != 2:
         raise ValueError("Import content storage_ref is missing an import ID.")
-    story_id, import_id = without_scheme.split("/", maxsplit=1)
+    story_id = _require_ref_segment(parts[0], "Story ID")
+    import_id = _require_ref_segment(parts[1], "Import ID")
     return f"storage://projects/{story_id}/imports/{import_id}/source.bin"
+
+
+def _require_ref_segment(value: str, label: str) -> str:
+    """Require one safe storage-reference segment."""
+    if not value or value in {".", ".."} or "\\" in value:
+        raise ValueError(f"{label} is invalid.")
+    return value

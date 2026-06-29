@@ -92,6 +92,43 @@ def test_storage_service_import_content_store_uses_project_import_path(
     ) == b"Chapter 1\nMira opened the brass gate."
 
 
+def test_storage_service_import_content_store_uses_project_scoped_import_refs(
+    tmp_path: Path,
+) -> None:
+    """New import refs should map to the approved project-scoped storage path."""
+    storage = LocalFilesystemStorage(tmp_path / "storage")
+    store = StorageServiceImportContentStore(storage)
+
+    store.store_import_content(
+        "api_import://projects/project_alpha/stories/story_alpha/imports/import_alpha",
+        b"Chapter 1\nMira opened the brass gate.",
+    )
+
+    assert storage.read_object(
+        "storage://projects/project_alpha/imports/import_alpha/source.bin"
+    ) == b"Chapter 1\nMira opened the brass gate."
+
+
+def test_storage_service_import_content_store_rejects_malformed_project_refs(
+    tmp_path: Path,
+) -> None:
+    """Malformed project-scoped refs should fail before object storage is touched."""
+    storage = LocalFilesystemStorage(tmp_path / "storage")
+    store = StorageServiceImportContentStore(storage)
+
+    with pytest.raises(ValueError, match="Import content storage_ref"):
+        store.store_import_content(
+            "api_import://projects/project_alpha/story/story_alpha/imports/import_alpha",
+            b"source",
+        )
+
+    with pytest.raises(ValueError, match="Project ID"):
+        store.store_import_content(
+            "api_import://projects/../stories/story_alpha/imports/import_alpha",
+            b"source",
+        )
+
+
 class FakeObjectStorageClient:
     """Deterministic object storage client for adapter tests."""
 

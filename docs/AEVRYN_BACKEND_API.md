@@ -196,7 +196,21 @@ AEVRYN_R2_SECRET_ACCESS_KEY=<stored in deployment secrets>
 
 R2 buckets must be private. The frontend must never receive R2 credentials. The API and worker write bytes, and PostgreSQL stores only references and metadata such as `storage_ref`, filename, content type, size, checksum, and timestamps.
 
-Generated export storage service support exists. Generated export API/download routes and large snapshot object storage remain release-candidate work.
+After setting the R2 environment variables, verify the adapter with:
+
+```text
+aevryn storage-smoke
+```
+
+The smoke test writes, reads, and deletes one tiny synthetic private object. It prints metadata-only results and never prints access keys or secret keys.
+
+Newly saved import source bytes use project-scoped object references such as:
+
+```text
+storage://projects/{project_id}/imports/{import_id}/source.bin
+```
+
+Generated export storage service support exists, including generated export API and download routes. Large snapshot object storage remains release-candidate work only if snapshot payload size justifies moving snapshots out of PostgreSQL.
 
 Optional explicit authentication store path:
 

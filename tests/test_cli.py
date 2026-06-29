@@ -365,6 +365,85 @@ def test_project_db_smoke_reads_env_without_printing_url(
     assert database_url not in captured.err
 
 
+def test_storage_smoke_help_describes_r2_storage_check(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Storage smoke help should describe the metadata-only R2 check."""
+    with pytest.raises(SystemExit) as error:
+        main(["storage-smoke", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "metadata-only Cloudflare R2 storage smoke test" in output
+    assert "never prints storage secrets" in output
+
+
+def test_storage_smoke_requires_process_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Storage smoke should fail before connecting when env is missing."""
+    for name in (
+        "AEVRYN_STORAGE_PROVIDER",
+        "AEVRYN_R2_BUCKET",
+        "AEVRYN_R2_ENDPOINT_URL",
+        "AEVRYN_R2_ACCESS_KEY_ID",
+        "AEVRYN_R2_SECRET_ACCESS_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    exit_code = main(["storage-smoke"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_STORAGE_PROVIDER is required" in captured.err
+
+
+def test_storage_smoke_reads_env_without_printing_credentials(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Storage smoke should print metadata only and never echo R2 credentials."""
+    monkeypatch.setenv("AEVRYN_STORAGE_PROVIDER", "r2")
+    monkeypatch.setenv("AEVRYN_R2_BUCKET", "aevryn-dev")
+    monkeypatch.setenv("AEVRYN_R2_ENDPOINT_URL", "https://account.r2.example")
+    monkeypatch.setenv("AEVRYN_R2_ACCESS_KEY_ID", "secret-r2-access-key")
+    monkeypatch.setenv("AEVRYN_R2_SECRET_ACCESS_KEY", "secret-r2-secret-key")
+
+    def fake_smoke(
+        *,
+        bucket: str,
+        endpoint_url: str,
+        access_key_id: str,
+        secret_key: str,
+        region_name: str,
+    ) -> dict[str, object]:
+        assert bucket == "aevryn-dev"
+        assert endpoint_url == "https://account.r2.example"
+        assert access_key_id == "secret-r2-access-key"
+        assert secret_key == "secret-r2-secret-key"
+        assert region_name == "auto"
+        return {
+            "adapter": "r2",
+            "bucket": bucket,
+            "ok": "storage_r2_smoke_completed",
+        }
+
+    monkeypatch.setattr("aevryn.cli._run_r2_storage_smoke", fake_smoke)
+
+    exit_code = main(["storage-smoke"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "adapter=r2" in captured.out
+    assert "bucket=aevryn-dev" in captured.out
+    assert "ok=storage_r2_smoke_completed" in captured.out
+    assert "secret-r2-access-key" not in captured.out
+    assert "secret-r2-secret-key" not in captured.out
+    assert "secret-r2-access-key" not in captured.err
+    assert "secret-r2-secret-key" not in captured.err
+
+
 def test_performance_baseline_help_describes_local_artifact(
     capsys: CaptureFixture[str],
 ) -> None:

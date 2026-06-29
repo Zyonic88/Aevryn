@@ -16,7 +16,17 @@ from uuid import uuid4
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from aevryn.api import ALLOWED_ORIGINS_ENV, create_app, create_app_from_env
+from aevryn.api import (
+    ALLOWED_ORIGINS_ENV,
+    R2_ACCESS_KEY_ID_ENV,
+    R2_BUCKET_ENV,
+    R2_ENDPOINT_URL_ENV,
+    R2_REGION_ENV,
+    R2_SECRET_ACCESS_KEY_ENV,
+    STORAGE_PROVIDER_ENV,
+    create_app,
+    create_app_from_env,
+)
 from aevryn.auth import (
     AuthenticationConfig,
     AuthenticationService,
@@ -46,6 +56,7 @@ from aevryn.presentation import PresentationEngine
 from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.prompts import CanonPromptBuilder
 from aevryn.scenes import SceneAnalyzer
+from aevryn.storage import R2Storage, StorageObjectNotFoundError
 from aevryn.validation import (
     ExpectedExtractionMetrics,
     ExpectedImportMetrics,
@@ -119,6 +130,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if command == "project-db-smoke":
             _handle_project_db_smoke(args)
+            return 0
+        if command == "storage-smoke":
+            _handle_storage_smoke()
             return 0
     except FileNotFoundError as error:
         missing_path = error.filename or error.args[0]
@@ -199,7 +213,8 @@ def _build_parser() -> argparse.ArgumentParser:
             "V2 Backend API:\n"
             "  aevryn api --host 127.0.0.1 --port 8000 "
             "--allowed-origin http://localhost:5173\n"
-            "  aevryn project-db-smoke"
+            "  aevryn project-db-smoke\n"
+            "  aevryn storage-smoke"
         ),
         formatter_class=_RawDefaultsHelpFormatter,
     )
@@ -530,6 +545,18 @@ def _build_parser() -> argparse.ArgumentParser:
         "--database-url-env",
         default="AEVRYN_PROJECT_DATABASE_URL",
         help="Process environment variable containing the PostgreSQL database URL.",
+    )
+
+    subcommands.add_parser(
+        "storage-smoke",
+        help="Run a metadata-only Cloudflare R2 storage smoke test.",
+        description=(
+            "Run a metadata-only Cloudflare R2 storage smoke test. "
+            "Reads R2 settings from process environment variables, writes one "
+            "synthetic private object, reads it back, deletes it, and never prints "
+            "storage secrets."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
     )
 
     return parser
@@ -987,6 +1014,22 @@ def _handle_project_db_smoke(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_storage_smoke() -> None:
+    """Handle the storage-smoke command."""
+    storage_provider = _required_process_env_value(STORAGE_PROVIDER_ENV).lower()
+    if storage_provider != "r2":
+        raise ValueError("AEVRYN_STORAGE_PROVIDER must be r2 for storage-smoke.")
+    summary = _run_r2_storage_smoke(
+        bucket=_required_process_env_value(R2_BUCKET_ENV),
+        endpoint_url=_required_process_env_value(R2_ENDPOINT_URL_ENV),
+        access_key_id=_required_process_env_value(R2_ACCESS_KEY_ID_ENV),
+        secret_key=_required_process_env_value(R2_SECRET_ACCESS_KEY_ENV),
+        region_name=os.environ.get(R2_REGION_ENV, "auto"),
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _load_local_env_file(path: Path) -> dict[str, str]:
     """Load simple KEY=VALUE pairs from an ignored local env file."""
     if not path.exists():
@@ -1053,6 +1096,53 @@ def _run_project_database_smoke(*, database_url: str) -> dict[str, object]:
         "records_created": 1,
         "records_deleted": 1,
         "ok": "project_database_postgresql_smoke_completed",
+    }
+
+
+def _run_r2_storage_smoke(
+    *,
+    bucket: str,
+    endpoint_url: str,
+    access_key_id: str,
+    secret_key: str,
+    region_name: str,
+) -> dict[str, object]:
+    """Run a Cloudflare R2 smoke test and return metadata only."""
+    storage = R2Storage(
+        bucket=bucket,
+        endpoint_url=endpoint_url,
+        access_key_id=access_key_id,
+        region_name=region_name,
+        **{"secret_" + "access_key": secret_key},
+    )
+    smoke_id = uuid4().hex
+    storage_ref = f"storage://smoke/r2/{smoke_id}/object.txt"
+    content = b"aevryn storage smoke payload"
+    stored = storage.save_object(
+        storage_ref=storage_ref,
+        content=content,
+        content_type="text/plain",
+        metadata={"aevryn_storage_kind": "readiness_smoke", "filename": "object.txt"},
+    )
+    if storage.read_object(storage_ref) != content:
+        raise ValueError("R2 storage smoke readback mismatch.")
+    storage.delete_object(storage_ref)
+    try:
+        storage.read_object(storage_ref)
+    except StorageObjectNotFoundError:
+        deleted = True
+    else:
+        deleted = False
+    if not deleted:
+        raise ValueError("R2 storage smoke cleanup verification failed.")
+
+    return {
+        "adapter": "r2",
+        "bucket": bucket,
+        "bytes_written": stored.size,
+        "objects_created": 1,
+        "objects_deleted": 1,
+        "ok": "storage_r2_smoke_completed",
     }
 
 
