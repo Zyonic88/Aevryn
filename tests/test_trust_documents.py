@@ -164,6 +164,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md",
         "docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md",
         "docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md",
+        "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md",
         "Public beta blocked.",
     )
 
@@ -233,7 +234,31 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "local JSON storage",
         "local source-byte storage",
         "production-like deployment smoke test passes",
+        "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md",
         "metadata-only",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_production_infrastructure_decisions_document_records_proposed_architecture() -> None:
+    """Gate 3 decisions should propose a production architecture without claiming implementation."""
+    document = read_doc("docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md")
+
+    required_terms = (
+        "Decision status: Proposed",
+        "Owner approval: Pending",
+        "Implementation status: Not started",
+        "Public beta: Blocked",
+        "managed PostgreSQL",
+        "private S3-compatible object storage",
+        "managed identity provider",
+        "managed deployment secrets",
+        "separate API and worker runtimes",
+        "HTTPS only with HSTS",
+        "Production deployment must fail closed if local-only adapters are selected accidentally.",
+        "Public beta remains blocked.",
     )
 
     for term in required_terms:

@@ -83,6 +83,7 @@ Next expected V2 target:
 - Gate 1 Public-Facing Trust Documentation is tracked in `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`.
 - Public support/contact readiness is tracked in `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`.
 - Production infrastructure readiness is tracked in `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md`.
+- Proposed production infrastructure decisions are tracked in `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md`.
 - Security operations readiness is tracked in `docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md`.
 - Backup, recovery, and audit readiness is tracked in `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`.
 - AI provider and data-use readiness is tracked in `docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md`.

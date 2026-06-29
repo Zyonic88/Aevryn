@@ -144,6 +144,7 @@ Required before public beta:
 Gate tracking:
 
 * `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md`
+* `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md`
 
 Acceptance:
 

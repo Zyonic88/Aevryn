@@ -49,6 +49,8 @@ Public beta remains blocked until these production decisions are selected, docum
 * production log destination
 * production monitoring destination
 
+Proposed decisions are tracked in `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md`.
+
 These decisions must preserve the platform boundaries already documented in `docs/AEVRYN_PROJECT_DATABASE.md`.
 
 The Project Database stores structured records.
@@ -215,6 +217,7 @@ They must not contain full manuscripts, full chapters, full AI responses, creden
 
 Public beta remains blocked until:
 
+* proposed infrastructure decisions are approved or revised by the project owner
 * production database is selected
 * production object storage is selected
 * production identity provider is selected
