@@ -273,6 +273,10 @@ Required before public beta:
 * production-like deployment smoke test passes
 * final manual alpha-to-beta pass is recorded
 
+Gate tracking:
+
+* `docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md`
+
 Acceptance:
 
 ```text

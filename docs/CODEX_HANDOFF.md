@@ -86,6 +86,7 @@ Next expected V2 target:
 - Security operations readiness is tracked in `docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md`.
 - Backup, recovery, and audit readiness is tracked in `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`.
 - AI provider and data-use readiness is tracked in `docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md`.
+- Release candidate test readiness is tracked in `docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md`.
 - Use `docs/AEVRYN_V2_CLOSEOUT.md` as the decision record that separates V2 product completion from public beta approval.
 - Do not treat Phase 11 acceptance as public beta approval; public beta still requires deployment-specific security decisions and production infrastructure choices.
 

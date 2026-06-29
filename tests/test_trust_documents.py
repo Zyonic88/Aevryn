@@ -163,6 +163,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md",
         "docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md",
         "docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md",
+        "docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md",
         "Public beta blocked.",
     )
 
@@ -305,6 +306,30 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "Provider output is not Canon.",
         "metadata-only",
         "provider data-use disclosure",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_release_candidate_test_readiness_document_tracks_gate_eight() -> None:
+    """Gate 8 should define the repeatable release-candidate test pass."""
+    document = read_doc("docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md")
+
+    required_terms = (
+        "Gate: Release Candidate Test Pass",
+        "Status: Not started",
+        "Public beta: Blocked",
+        "Public beta must be repeatable, not lucky.",
+        "backend tests",
+        "frontend tests",
+        "dependency audits",
+        "repository secret scan",
+        "performance regression check",
+        "production-like deployment smoke test",
+        "final manual alpha-to-beta pass",
+        "release-candidate signoff",
+        "metadata-only",
     )
 
     for term in required_terms:
