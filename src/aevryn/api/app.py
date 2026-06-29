@@ -202,6 +202,8 @@ R2_ACCESS_KEY_ID_ENV = "AEVRYN_R2_ACCESS_KEY_ID"
 R2_SECRET_ACCESS_KEY_ENV = "AEVRYN_R2_SECRET_ACCESS_KEY"
 R2_ENDPOINT_URL_ENV = "AEVRYN_R2_ENDPOINT_URL"
 R2_REGION_ENV = "AEVRYN_R2_REGION"
+IDENTITY_PROVIDER_ENV = "AEVRYN_IDENTITY_PROVIDER"
+SESSION_SECRET_ENV = "AEVRYN_SESSION_SECRET"
 EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
 OPENAI_API_KEY_ENV = "AEVRYN_OPENAI_API_KEY"
 OPENAI_MODEL_ENV = "AEVRYN_OPENAI_MODEL"
@@ -1966,6 +1968,21 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
         raise ValueError(
             "AEVRYN_R2_SECRET_ACCESS_KEY is required when AEVRYN_STORAGE_PROVIDER=r2."
         )
+    identity_provider = environ.get(IDENTITY_PROVIDER_ENV, "").strip().lower()
+    if identity_provider != "managed":
+        raise ValueError(
+            "AEVRYN_IDENTITY_PROVIDER=managed is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Local JSON authentication is not "
+            "allowed for production."
+        )
+    if not environ.get(SESSION_SECRET_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_SESSION_SECRET is required when AEVRYN_IDENTITY_PROVIDER=managed."
+        )
+    raise ValueError(
+        "Managed production identity is not implemented yet. Public beta remains "
+        "blocked until the identity provider adapter is selected and wired."
+    )
 
 
 def _platform_services_from_env(
@@ -2035,13 +2052,7 @@ def _production_postgresql_platform_services(
         credential_store=auth_store,
         session_store=auth_store,
     )
-    storage_service = R2Storage(
-        bucket=environ.get(R2_BUCKET_ENV, ""),
-        endpoint_url=environ.get(R2_ENDPOINT_URL_ENV, ""),
-        access_key_id=environ.get(R2_ACCESS_KEY_ID_ENV, ""),
-        secret_access_key=environ.get(R2_SECRET_ACCESS_KEY_ENV, ""),
-        region_name=environ.get(R2_REGION_ENV, "auto"),
-    )
+    storage_service = _r2_storage_from_env(environ)
     import_content_store = StorageServiceImportContentStore(storage_service)
     return (
         authentication_service,
@@ -2072,8 +2083,16 @@ def _local_platform_services(
     StorageService,
 ]:
     """Return browser-ready local platform services for one project repository."""
-    import_content_store = FileSystemImportContentStore(import_storage_path)
-    storage_service = LocalFilesystemStorage(import_storage_path.parent / "storage_objects")
+    if environ.get(STORAGE_PROVIDER_ENV, "").strip().lower() == "r2":
+        storage_service: StorageService = _r2_storage_from_env(environ)
+        import_content_store: ImportContentStore = StorageServiceImportContentStore(
+            storage_service
+        )
+    else:
+        import_content_store = FileSystemImportContentStore(import_storage_path)
+        storage_service = LocalFilesystemStorage(
+            import_storage_path.parent / "storage_objects"
+        )
     auth_store = JsonAuthenticationStore(auth_store_path)
     authentication_service = AuthenticationService(
         repository=repository,
@@ -2091,6 +2110,17 @@ def _local_platform_services(
         ),
         import_content_store,
         storage_service,
+    )
+
+
+def _r2_storage_from_env(environ: Mapping[str, str]) -> R2Storage:
+    """Return Cloudflare R2 storage from environment settings."""
+    return R2Storage(
+        bucket=environ.get(R2_BUCKET_ENV, ""),
+        endpoint_url=environ.get(R2_ENDPOINT_URL_ENV, ""),
+        access_key_id=environ.get(R2_ACCESS_KEY_ID_ENV, ""),
+        secret_access_key=environ.get(R2_SECRET_ACCESS_KEY_ENV, ""),
+        region_name=environ.get(R2_REGION_ENV, "auto"),
     )
 
 

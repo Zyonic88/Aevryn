@@ -250,12 +250,27 @@ Decision 2 progress:
 ```text
 Cloudflare R2 is approved as the production object storage provider.
 General StorageService, LocalFilesystemStorage, and R2Storage adapters are implemented.
-Production source/import byte wiring can use Cloudflare R2.
+Production and non-production PostgreSQL source/import byte wiring can use Cloudflare R2 when AEVRYN_STORAGE_PROVIDER=r2.
 New import source-byte references use project-scoped object paths.
 Generated export storage service writes bytes through StorageService and records database metadata.
 Generated export API and download routes are implemented.
 `aevryn storage-smoke` verifies R2 write/read/delete with metadata-only output.
 Large snapshot storage remains open only if snapshot payload size justifies object storage.
+```
+
+Next Gate 3 target:
+
+```text
+Decision 3 - Identity Provider
+```
+
+Decision 3 progress:
+
+```text
+Production startup now rejects local JSON authentication.
+Production startup requires AEVRYN_IDENTITY_PROVIDER=managed and AEVRYN_SESSION_SECRET.
+Managed identity provider selection and adapter wiring remain open.
+Public beta remains blocked until managed identity is implemented or the owner accepts a documented residual risk.
 ```
 
 ---

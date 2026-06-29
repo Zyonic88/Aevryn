@@ -18,6 +18,7 @@ from aevryn.api import (
     AUTH_STORE_PATH_ENV,
     DEPLOYMENT_ENV,
     EXTRACTION_MODE_ENV,
+    IDENTITY_PROVIDER_ENV,
     IMPORT_STORAGE_PATH_ENV,
     OPENAI_API_KEY_ENV,
     OPENAI_MAX_RESPONSE_BYTES_ENV,
@@ -31,6 +32,7 @@ from aevryn.api import (
     R2_BUCKET_ENV,
     R2_ENDPOINT_URL_ENV,
     R2_SECRET_ACCESS_KEY_ENV,
+    SESSION_SECRET_ENV,
     STORAGE_PROVIDER_ENV,
     create_app,
     create_app_from_env,
@@ -436,10 +438,47 @@ def test_create_app_from_env_requires_r2_provider_credentials() -> None:
         )
 
 
-def test_create_app_from_env_wires_r2_import_storage_for_production(
+def test_create_app_from_env_fails_closed_without_production_identity_provider() -> None:
+    """Production mode should reject local alpha auth after database and R2 are set."""
+    complete_until_identity = {
+        DEPLOYMENT_ENV: "production",
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        API_KEYS_ENV: "production-api-key",
+        STORAGE_PROVIDER_ENV: "r2",
+        R2_BUCKET_ENV: "aevryn-prod",
+        R2_ACCOUNT_ID_ENV: "account-id",
+        R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
+        R2_ACCESS_KEY_ID_ENV: "access-key",
+        R2_SECRET_ACCESS_KEY_ENV: "secret-key",
+    }
+
+    with pytest.raises(ValueError, match=IDENTITY_PROVIDER_ENV):
+        create_app_from_env(complete_until_identity)
+
+    with pytest.raises(ValueError, match=SESSION_SECRET_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+            }
+        )
+
+    with pytest.raises(ValueError, match="Managed production identity is not implemented"):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                SESSION_SECRET_ENV: "session-secret-placeholder",
+            }
+        )
+
+
+def test_create_app_from_env_wires_r2_import_storage_for_postgresql_alpha(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Production mode should use R2 for source bytes instead of local import storage."""
+    """PostgreSQL alpha mode can still use R2 before production identity is implemented."""
 
     class FakePostgresqlProjectRepository(InMemoryProjectRepository):
         """Test double for PostgreSQL repository selection."""
@@ -495,7 +534,6 @@ def test_create_app_from_env_wires_r2_import_storage_for_production(
     client = TestClient(
         create_app_from_env(
             {
-                DEPLOYMENT_ENV: "production",
                 PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
                 PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
                 ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",

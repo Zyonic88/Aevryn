@@ -184,6 +184,7 @@ The smoke test creates, reads, and deletes one temporary user record. It bootstr
 For local browser testing, the PostgreSQL adapter stores project metadata in PostgreSQL while local development auth/session records and uploaded source bytes remain in the configured filesystem paths above. This keeps the alpha workflow browser-ready without pretending that local JSON auth or local file import storage are final production identity or object-storage systems.
 
 The production source-byte object storage boundary uses Cloudflare R2 through a general `StorageService` interface.
+Non-production PostgreSQL environments can also opt into R2 by setting `AEVRYN_STORAGE_PROVIDER=r2`; otherwise they use local filesystem source-byte storage by default.
 
 ```text
 AEVRYN_STORAGE_PROVIDER=r2
@@ -211,6 +212,15 @@ storage://projects/{project_id}/imports/{import_id}/source.bin
 ```
 
 Generated export storage service support exists, including generated export API and download routes. Large snapshot object storage remains release-candidate work only if snapshot payload size justifies moving snapshots out of PostgreSQL.
+
+Production identity is intentionally fail-closed until a managed identity provider is selected and wired:
+
+```text
+AEVRYN_IDENTITY_PROVIDER=managed
+AEVRYN_SESSION_SECRET=<stored in deployment secrets>
+```
+
+These variables document the production identity contract, but public beta remains blocked until the managed identity adapter exists. Local JSON authentication remains private-alpha only.
 
 Optional explicit authentication store path:
 

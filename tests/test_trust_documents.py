@@ -252,8 +252,8 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Decision status: Decisions 1-2 approved",
         "Owner approval: Decisions 1-2 approved",
         (
-            "Implementation status: Decision 1 implemented; "
-            "Decision 2 source/import/export storage wiring started"
+            "Implementation status: Decisions 1-2 implemented; "
+            "Decision 3 fail-closed contract started"
         ),
         "Public beta: Blocked",
         "managed PostgreSQL",
@@ -270,7 +270,9 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Cloudflare R2 storage adapter is implemented",
         "Storage owns bytes. Database owns references. Engine owns meaning.",
         "Generated export storage service writes bytes through StorageService",
-        "Generated export API/download routes are not implemented yet.",
+        "Generated export API/download routes are implemented.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER=managed.",
+        "Managed identity is not implemented yet",
         "Public beta remains blocked.",
     )
 

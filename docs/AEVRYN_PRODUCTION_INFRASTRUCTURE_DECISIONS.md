@@ -16,7 +16,7 @@ They are the recommended public-beta architecture shape to approve, revise, or r
 Gate: Production Infrastructure
 Decision status: Decisions 1-2 approved
 Owner approval: Decisions 1-2 approved
-Implementation status: Decision 1 implemented; Decision 2 source/import/export storage wiring started
+Implementation status: Decisions 1-2 implemented; Decision 3 fail-closed contract started
 Public beta: Blocked
 ```
 
@@ -181,11 +181,12 @@ Current implementation result:
 General StorageService boundary is implemented.
 LocalFilesystemStorage development adapter is implemented.
 Cloudflare R2 storage adapter is implemented behind the optional object-storage dependency.
-Production source/import byte wiring can use Cloudflare R2.
+Production and non-production PostgreSQL source/import byte wiring can use Cloudflare R2 when AEVRYN_STORAGE_PROVIDER=r2.
 Generated export storage service writes bytes through StorageService and records database metadata.
-Generated export API/download routes are not implemented yet.
-Large snapshot object storage is not implemented yet.
-Import storage references still use the existing story/import reference shape until the project-scoped reference migration is implemented.
+Generated export API/download routes are implemented.
+New import storage references use project-scoped object paths.
+`aevryn storage-smoke` verifies R2 write/read/delete with metadata-only output.
+Large snapshot object storage remains open only if snapshot payload size justifies object storage.
 ```
 
 ---
@@ -219,6 +220,15 @@ Open decision:
 ```text
 Provider not selected.
 Session authority not finalized.
+```
+
+Implementation contract:
+
+```text
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER=managed.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SESSION_SECRET.
+Production startup rejects local JSON authentication.
+Managed identity is not implemented yet, so public beta remains blocked.
 ```
 
 ---
