@@ -76,11 +76,14 @@ Every API response includes browser-facing security headers:
 
 When `AEVRYN_DEPLOYMENT_ENV=production`, the app refuses to start unless these are present:
 
-* `AEVRYN_PROJECT_DATABASE_PATH`
+* `AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql`
+* `AEVRYN_PROJECT_DATABASE_URL`
 * `AEVRYN_API_ALLOWED_ORIGINS`
 * `AEVRYN_API_KEYS`
 
 This prevents accidental public startup with stateless storage, missing browser-origin policy, or unprotected workflow routes.
+
+Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because local JSON Project Database storage is not allowed for public deployment.
 
 ---
 

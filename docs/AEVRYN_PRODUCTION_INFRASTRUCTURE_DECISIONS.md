@@ -4,7 +4,7 @@
 
 This document records proposed production infrastructure decisions for V2 Release Candidate Readiness Gate 3.
 
-These decisions are not implemented yet.
+These decisions are implementation-tracked below.
 
 They are the recommended public-beta architecture shape to approve, revise, or replace before implementation.
 
@@ -16,7 +16,7 @@ They are the recommended public-beta architecture shape to approve, revise, or r
 Gate: Production Infrastructure
 Decision status: Decision 1 approved
 Owner approval: Decision 1 approved
-Implementation status: Not started
+Implementation status: Decision 1 implemented; Decision 2 source-byte adapter contract started
 Public beta: Blocked
 ```
 
@@ -94,6 +94,8 @@ Current implementation result:
 
 ```text
 PostgreSQL Project Database adapter is implemented behind the optional postgresql dependency.
+Production startup rejects local JSON Project Database configuration.
+Local PostgreSQL browser/API smoke passed for import processing and canon snapshot creation.
 Public beta remains blocked by the remaining production infrastructure decisions and smoke tests.
 ```
 
@@ -128,6 +130,15 @@ Open decision:
 
 ```text
 Provider not selected.
+```
+
+Current implementation result:
+
+```text
+Provider-neutral source-byte object storage adapter contract is implemented.
+Provider SDK/client selection is not implemented yet.
+Production environment wiring is not implemented yet.
+Generated export object storage is not implemented yet.
 ```
 
 ---

@@ -176,6 +176,8 @@ The smoke test creates, reads, and deletes one temporary user record. It bootstr
 
 For local browser testing, the PostgreSQL adapter stores project metadata in PostgreSQL while local development auth/session records and uploaded source bytes remain in the configured filesystem paths above. This keeps the alpha workflow browser-ready without pretending that local JSON auth or local file import storage are final production identity or object-storage systems.
 
+The source-byte object storage boundary has a provider-neutral adapter contract for production infrastructure work. Public-beta wiring still requires selecting an object-storage provider, configuring private buckets or containers, and replacing local filesystem import storage in production deployment.
+
 Optional explicit authentication store path:
 
 ```text

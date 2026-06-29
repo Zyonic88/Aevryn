@@ -12,7 +12,7 @@ Gate 3 turns local alpha adapters into explicit production infrastructure decisi
 
 ```text
 Gate: Production Infrastructure
-Status: Not started
+Status: Started
 Public beta: Blocked
 ```
 
@@ -235,7 +235,21 @@ Decision 1 result:
 Managed PostgreSQL is approved as the production Project Database target.
 Production startup now rejects local JSON Project Database configuration.
 The PostgreSQL Project Database adapter is implemented.
+Local PostgreSQL browser smoke passed for the import -> run -> snapshot path.
 Gate 3 remains blocked by the remaining infrastructure decisions and production-like smoke test.
+```
+
+Next Gate 3 target:
+
+```text
+Decision 2 - Object Storage
+```
+
+Decision 2 progress:
+
+```text
+Provider-neutral source-byte object storage adapter contract is implemented.
+Provider selection, production environment wiring, and generated export storage remain open.
 ```
 
 ---

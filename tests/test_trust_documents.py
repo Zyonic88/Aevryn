@@ -222,7 +222,7 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
 
     required_terms = (
         "Gate: Production Infrastructure",
-        "Status: Not started",
+        "Status: Started",
         "Public beta: Blocked",
         "Production infrastructure must fail closed and preserve story privacy by default.",
         "production database",
@@ -236,6 +236,8 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "production-like deployment smoke test passes",
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md",
         "metadata-only",
+        "Managed PostgreSQL is approved as the production Project Database target.",
+        "Decision 2 - Object Storage",
     )
 
     for term in required_terms:
@@ -243,13 +245,16 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
 
 
 def test_production_infrastructure_decisions_document_records_proposed_architecture() -> None:
-    """Gate 3 decisions should propose a production architecture without claiming implementation."""
+    """Gate 3 decisions should track approved and remaining production architecture."""
     document = read_doc("docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md")
 
     required_terms = (
         "Decision status: Decision 1 approved",
         "Owner approval: Decision 1 approved",
-        "Implementation status: Not started",
+        (
+            "Implementation status: Decision 1 implemented; "
+            "Decision 2 source-byte adapter contract started"
+        ),
         "Public beta: Blocked",
         "managed PostgreSQL",
         "private S3-compatible object storage",
@@ -261,6 +266,9 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "Production mode rejects AEVRYN_PROJECT_DATABASE_PATH",
         "PostgreSQL Project Database adapter is implemented",
+        "Local PostgreSQL browser/API smoke passed",
+        "Provider-neutral source-byte object storage adapter contract is implemented.",
+        "Generated export object storage is not implemented yet.",
         "Public beta remains blocked.",
     )
 
