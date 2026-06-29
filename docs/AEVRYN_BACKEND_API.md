@@ -161,6 +161,17 @@ AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql
 AEVRYN_PROJECT_DATABASE_URL=postgresql://aevryn_app:<password>@localhost:5432/aevryn_dev
 ```
 
+The database URL must stay local to the machine or deployment secret manager.
+Do not commit it, paste it into issue trackers, or print it in logs.
+
+After setting the environment variable, verify the adapter with:
+
+```text
+aevryn project-db-smoke
+```
+
+The smoke test creates, reads, and deletes one temporary user record. It bootstraps missing schema objects, prints metadata-only results, and never prints the database URL or password.
+
 Optional explicit authentication store path:
 
 ```text

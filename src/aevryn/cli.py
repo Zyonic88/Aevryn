@@ -8,8 +8,10 @@ import json
 import os
 import sys
 from collections.abc import Iterable, Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -37,6 +39,9 @@ from aevryn.performance_runner import (
     write_local_v2_performance_baseline,
 )
 from aevryn.persistence import InMemoryProjectRepository
+from aevryn.persistence.models import UserRecord
+from aevryn.persistence.postgresql import PostgresqlProjectRepository
+from aevryn.persistence.repository import PersistenceError, RecordNotFoundError
 from aevryn.presentation import PresentationEngine
 from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.prompts import CanonPromptBuilder
@@ -112,11 +117,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "provider-smoke":
             _handle_provider_smoke(args)
             return 0
+        if command == "project-db-smoke":
+            _handle_project_db_smoke(args)
+            return 0
     except FileNotFoundError as error:
         missing_path = error.filename or error.args[0]
         print(f"Error: File not found: {missing_path}", file=sys.stderr)
         return 1
-    except (OSError, ValueError, json.JSONDecodeError) as error:
+    except (OSError, ValueError, PersistenceError, json.JSONDecodeError) as error:
         print(_format_cli_error(error), file=sys.stderr)
         return 1
 
@@ -190,7 +198,8 @@ def _build_parser() -> argparse.ArgumentParser:
             "  aevryn performance-baseline\n\n"
             "V2 Backend API:\n"
             "  aevryn api --host 127.0.0.1 --port 8000 "
-            "--allowed-origin http://localhost:5173"
+            "--allowed-origin http://localhost:5173\n"
+            "  aevryn project-db-smoke"
         ),
         formatter_class=_RawDefaultsHelpFormatter,
     )
@@ -506,6 +515,21 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=60.0,
         help="Provider request timeout for each synthetic extraction call.",
+    )
+
+    project_db_smoke_parser = subcommands.add_parser(
+        "project-db-smoke",
+        help="Run a metadata-only PostgreSQL Project Database smoke test.",
+        description=(
+            "Run a metadata-only PostgreSQL Project Database smoke test. "
+            "Reads the database URL from an environment variable and never prints it."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    project_db_smoke_parser.add_argument(
+        "--database-url-env",
+        default="AEVRYN_PROJECT_DATABASE_URL",
+        help="Process environment variable containing the PostgreSQL database URL.",
     )
 
     return parser
@@ -952,6 +976,17 @@ def _handle_provider_smoke(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_project_db_smoke(args: argparse.Namespace) -> None:
+    """Handle the project-db-smoke command."""
+    database_url_env = cast(str, args.database_url_env).strip()
+    if not database_url_env:
+        raise ValueError("--database-url-env cannot be blank.")
+    database_url = _required_process_env_value(database_url_env)
+    summary = _run_project_database_smoke(database_url=database_url)
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _load_local_env_file(path: Path) -> dict[str, str]:
     """Load simple KEY=VALUE pairs from an ignored local env file."""
     if not path.exists():
@@ -974,6 +1009,51 @@ def _required_env_value(values: dict[str, str], key: str) -> str:
     if not value:
         raise ValueError(f"{key} is required in the local env file.")
     return value
+
+
+def _required_process_env_value(key: str) -> str:
+    """Return a required process env value without logging its contents."""
+    value = os.environ.get(key, "").strip()
+    if not value:
+        raise ValueError(f"{key} is required in the process environment.")
+    return value
+
+
+def _run_project_database_smoke(*, database_url: str) -> dict[str, object]:
+    """Run a PostgreSQL Project Database smoke test and return metadata only."""
+    repository = PostgresqlProjectRepository(database_url)
+    smoke_suffix = uuid4().hex
+    user_id = f"user_pg_smoke_{smoke_suffix}"
+    email = f"pg-smoke-{smoke_suffix}@example.invalid"
+    created_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    repository.create_user(
+        UserRecord(
+            user_id=user_id,
+            email=email,
+            display_name="PostgreSQL Smoke Tester",
+            created_at=created_at,
+        )
+    )
+    stored_user = repository.get_user(user_id)
+    if stored_user.email != email:
+        raise PersistenceError("PostgreSQL smoke readback mismatch.")
+    repository.delete_user_for_auth_rollback(user_id)
+    try:
+        repository.get_user(user_id)
+    except RecordNotFoundError:
+        deleted = True
+    else:
+        deleted = False
+    if not deleted:
+        raise PersistenceError("PostgreSQL smoke cleanup verification failed.")
+
+    return {
+        "adapter": "postgresql",
+        "schema": "bootstrapped",
+        "records_created": 1,
+        "records_deleted": 1,
+        "ok": "project_database_postgresql_smoke_completed",
+    }
 
 
 def _run_provider_api_workflow_smoke(

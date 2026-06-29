@@ -307,6 +307,64 @@ def test_provider_smoke_reads_env_file_without_printing_key(
     assert "secret-provider-key" not in captured.err
 
 
+def test_project_db_smoke_help_describes_postgresql_smoke(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Project database smoke help should describe the metadata-only DB check."""
+    with pytest.raises(SystemExit) as error:
+        main(["project-db-smoke", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "metadata-only PostgreSQL Project Database smoke test" in output
+    assert "--database-url-env" in output
+
+
+def test_project_db_smoke_requires_process_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Project database smoke should fail before connecting when env is missing."""
+    monkeypatch.delenv("AEVRYN_PROJECT_DATABASE_URL", raising=False)
+
+    exit_code = main(["project-db-smoke"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_PROJECT_DATABASE_URL is required" in captured.err
+
+
+def test_project_db_smoke_reads_env_without_printing_url(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Project database smoke should print metadata only and never echo the DB URL."""
+    database_url = "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
+    monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", database_url)
+
+    def fake_smoke(*, database_url: str) -> dict[str, object]:
+        assert database_url == (
+            "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
+        )
+        return {
+            "adapter": "postgresql",
+            "ok": "project_database_postgresql_smoke_completed",
+        }
+
+    monkeypatch.setattr("aevryn.cli._run_project_database_smoke", fake_smoke)
+
+    exit_code = main(["project-db-smoke"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "adapter=postgresql" in captured.out
+    assert "ok=project_database_postgresql_smoke_completed" in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "secret-db-password" not in captured.err
+    assert database_url not in captured.out
+    assert database_url not in captured.err
+
+
 def test_performance_baseline_help_describes_local_artifact(
     capsys: CaptureFixture[str],
 ) -> None:
