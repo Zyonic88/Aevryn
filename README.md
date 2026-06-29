@@ -66,7 +66,7 @@ Final V1 acceptance validation:
 
 * V1 Engine Complete
 * Final V1 acceptance sweep passed
-* 759 automated tests passing
+* 760 automated tests passing
 * 146 frontend tests passing
 * Deterministic rebuild validation
 * Cross-genre validation
@@ -87,7 +87,7 @@ snapshots/v1_final_acceptance_20260626_122543
 Current validation digest:
 
 ```text
-ecd12849eeeaf8f9638a6c77b3e3dbb7c4a0dc0cd29fd869983e85dd5e88d69c
+1a04733548822f82afc473a468cf6a6189387cb97eb915cc803d6b6e94b5d749
 ```
 
 ---

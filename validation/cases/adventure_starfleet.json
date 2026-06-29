@@ -4,7 +4,7 @@
   "expected_extraction": {
     "evidence_anchors": 1269,
     "extraction_input_digest": "da6390d0a6ea964af63a05ad2a19540cb5a56be4d0c050f36a29836c4c66efad",
-    "extraction_prompt_digest": "6ec9fd86b85ff951d929713a84d2939a1ca3ce488a034fc770dd3cb3766a7564",
+    "extraction_prompt_digest": "a6451a59c9e54105fffa38eb046eeb2479d36056e3c606b2eeaca7abe364ef56",
     "scene_inputs": 10
   },
   "expected_import": {

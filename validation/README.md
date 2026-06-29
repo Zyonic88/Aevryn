@@ -83,7 +83,7 @@ Validation Totals
 cases=8 passed=8 failed=0 files=80 chapters=80 scenes=80 paragraphs=2294 sentences=8828 anchors=8828 extraction_inputs=80 extraction_anchors=8828
 
 Validation Digest
-ecd12849eeeaf8f9638a6c77b3e3dbb7c4a0dc0cd29fd869983e85dd5e88d69c
+1a04733548822f82afc473a468cf6a6189387cb97eb915cc803d6b6e94b5d749
 ```
 
 For quick repeat checks, suppress per-case output:
