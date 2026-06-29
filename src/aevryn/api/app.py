@@ -277,6 +277,10 @@ def create_app(
         response.headers["X-Aevryn-API-Version"] = API_VERSION
         response.headers["X-Aevryn-Engine"] = "Aevryn"
         response.headers["X-Request-ID"] = request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         return response
 
     @app.exception_handler(StarletteHTTPException)

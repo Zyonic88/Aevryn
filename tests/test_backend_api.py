@@ -89,6 +89,22 @@ def test_api_error_responses_include_identity_headers() -> None:
     assert response.json()["error"] == "request_failed"
 
 
+def test_api_responses_include_security_headers() -> None:
+    """API responses should include stable browser-facing security headers."""
+    client = TestClient(create_app())
+
+    success = client.get("/v2/health")
+    error = client.get("/v2/missing")
+
+    for response in (success, error):
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert response.headers["x-frame-options"] == "DENY"
+        assert response.headers["referrer-policy"] == "no-referrer"
+        assert response.headers["permissions-policy"] == (
+            "camera=(), microphone=(), geolocation=()"
+        )
+
+
 def test_api_echoes_client_request_id() -> None:
     """API should echo a valid client request ID for trace correlation."""
     client = TestClient(create_app())

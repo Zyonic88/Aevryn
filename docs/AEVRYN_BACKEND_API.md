@@ -278,12 +278,18 @@ Every Backend API response includes:
 X-Aevryn-API-Version: v2
 X-Aevryn-Engine: Aevryn
 X-Request-ID: <request-id>
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: no-referrer
+Permissions-Policy: camera=(), microphone=(), geolocation=()
 ```
 
 These headers appear on successful responses and structured error responses.
 
 They exist so clients, logs, and future platform tooling can identify the API
 contract version without parsing response bodies.
+
+The browser-facing security headers reduce MIME sniffing, clickjacking, referrer leakage, and ambient device-permission exposure. They appear on successful responses and structured error responses.
 
 If a client sends a valid `X-Request-ID` header, the API echoes it.
 

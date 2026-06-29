@@ -181,12 +181,46 @@ Yes
 
 ---
 
+# Gate 6 - CORS And Security Header Test
+
+Command:
+
+```text
+python -m pytest tests/test_backend_api.py::test_cors_is_disabled_by_default tests/test_backend_api.py::test_create_app_can_enable_configured_cors_origin tests/test_backend_api.py::test_create_app_from_env_configures_cors_origins tests/test_backend_api.py::test_create_app_from_env_rejects_wildcard_cors_origin tests/test_backend_api.py::test_api_responses_include_security_headers -q
+```
+
+Expected result:
+
+* CORS is disabled by default.
+* explicit browser origins can be configured through app creation and environment settings.
+* wildcard CORS origins fail closed.
+* successful responses and structured error responses include browser-facing security headers.
+
+Latest result:
+
+```text
+5 passed
+```
+
+Known residual risk:
+
+* final production origin list must be selected during deployment.
+* HTTPS-only enforcement and HSTS should be applied at the production edge once domains and TLS termination are known.
+* CSP for the frontend app shell should be defined with the final asset and API domains.
+
+Public beta blocked:
+
+```text
+Yes
+```
+
+---
+
 # Remaining Gates
 
 The following gates still need Phase 11 implementation before public beta:
 
 * API Hardening Test
-* CORS And Security Header Test
 * Audit Ledger Integrity Test
 * Dependency Audit
 * Repository Secret Scan
