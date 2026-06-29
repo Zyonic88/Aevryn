@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 11 accepted - Security & Privacy Hardening**
+Current phase: **V2 product complete for private/internal alpha - Release Candidate Readiness next**
 
 Recent completed V2 work:
 
@@ -77,7 +77,7 @@ Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 ha
 
 Next expected V2 target:
 
-- Plan the next V2 step from the accepted Phase 11 security/privacy baseline.
+- Plan V2 Release Candidate Readiness from `docs/AEVRYN_V2_CLOSEOUT.md`.
 - Do not treat Phase 11 acceptance as public beta approval; public beta still requires deployment-specific security decisions and production infrastructure choices.
 
 Phase 6 Project Storage accepted:
@@ -174,6 +174,7 @@ Phase 10 progress:
 
 Phase 11 accepted security/privacy baseline:
 
+- V2 closeout decision is recorded in `docs/AEVRYN_V2_CLOSEOUT.md`
 - Phase 11 acceptance is governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
 - Security architecture is documented in `docs/AEVRYN_SECURITY.md`
 - Privacy architecture is documented in `docs/AEVRYN_PRIVACY.md`

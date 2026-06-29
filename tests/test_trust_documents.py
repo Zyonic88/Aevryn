@@ -120,3 +120,24 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
         document = read_doc(relative_path)
         for term in terms:
             assert term in document, f"{term!r} missing from {relative_path}"
+
+
+def test_v2_closeout_document_separates_completion_from_public_beta() -> None:
+    """V2 closeout should record product completion without approving public beta."""
+    document = read_doc("docs/AEVRYN_V2_CLOSEOUT.md")
+
+    required_terms = (
+        "Version 2 product development is complete for private/internal alpha.",
+        "Version 2 is not public-beta approved yet.",
+        "without touching the CLI",
+        "V2 Release Candidate Readiness",
+        "production identity provider decision",
+        "production secret manager",
+        "rate limiting at the deployment edge or API gateway",
+        "attorney-reviewed Terms of Service",
+        "V2 Platform: Complete for private/internal alpha.",
+        "Version 3: Not started.",
+    )
+
+    for term in required_terms:
+        assert term in document
