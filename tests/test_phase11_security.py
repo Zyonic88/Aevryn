@@ -77,3 +77,26 @@ def test_static_security_scan_document_covers_required_controls() -> None:
 
     for term in required_terms:
         assert term in document
+
+
+def test_backup_retention_document_covers_deletion_privacy_controls() -> None:
+    """Backup retention docs should separate active deletion from recovery windows."""
+    document = (ROOT / "docs" / "AEVRYN_BACKUP_RETENTION.md").read_text(
+        encoding="utf-8"
+    )
+
+    required_terms = (
+        "Backups are for recovery.",
+        "not hidden story storage",
+        "do not implement a separate backup system",
+        "deleted story data ages out of backups",
+        "Production backups must be encrypted at rest.",
+        "restore access is audited",
+        "maximum backup retention window",
+        "removed from active Aevryn-owned storage",
+        "must not be used to recreate deleted stories except for authorized disaster recovery",
+        "does not use backups for training, analytics, or support browsing",
+    )
+
+    for term in required_terms:
+        assert term in document

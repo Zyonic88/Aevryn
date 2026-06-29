@@ -101,7 +101,7 @@ Latest result:
 
 Known residual risk:
 
-* production backup retention behavior is not yet documented.
+* production backup retention behavior is documented in `docs/AEVRYN_BACKUP_RETENTION.md`, but final deployment-specific retention windows are not selected yet.
 * production object-storage deletion semantics are not yet defined.
 * deletion receipts and account-level deletion remain future privacy work.
 
@@ -345,7 +345,7 @@ Expected result:
 Latest result:
 
 ```text
-Repository secret scan passed: 256 files scanned.
+Repository secret scan passed: 257 files scanned.
 ```
 
 Known residual risk:

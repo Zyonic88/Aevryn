@@ -98,7 +98,9 @@ When a user deletes a story, Aevryn must remove:
 
 Deletion must not create a new hidden manuscript copy in an audit log, monitoring event, error payload, or support artifact.
 
-Phase 11 must document backup retention behavior before public beta. If production backups retain deleted data for a bounded recovery window, that window must be explicit and disclosed.
+Backup retention behavior is defined in `docs/AEVRYN_BACKUP_RETENTION.md`.
+
+If production backups retain deleted data for a bounded recovery window, that window must be explicit and disclosed.
 
 ---
 

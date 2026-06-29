@@ -111,6 +111,8 @@ Dependency auditing is documented in `docs/AEVRYN_DEPENDENCY_AUDIT.md`.
 
 Static security scanning is documented in `docs/AEVRYN_STATIC_SECURITY_SCAN.md`.
 
+Backup retention and deletion recovery boundaries are documented in `docs/AEVRYN_BACKUP_RETENTION.md`.
+
 API hardening includes:
 
 * request validation
