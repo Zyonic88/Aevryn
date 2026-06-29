@@ -175,7 +175,9 @@ logger = logging.getLogger(__name__)
 ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
 API_KEYS_ENV = "AEVRYN_API_KEYS"
 DEPLOYMENT_ENV = "AEVRYN_DEPLOYMENT_ENV"
+PROJECT_DATABASE_ADAPTER_ENV = "AEVRYN_PROJECT_DATABASE_ADAPTER"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
+PROJECT_DATABASE_URL_ENV = "AEVRYN_PROJECT_DATABASE_URL"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
 IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
 EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
@@ -1748,10 +1750,23 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
     if deployment_env not in {"prod", "production"}:
         return
 
-    if not environ.get(PROJECT_DATABASE_PATH_ENV, "").strip():
+    database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
+    if database_adapter != "postgresql":
         raise ValueError(
-            "AEVRYN_PROJECT_DATABASE_PATH is required when "
-            "AEVRYN_DEPLOYMENT_ENV=production."
+            "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Local JSON project storage is not "
+            "allowed for production."
+        )
+    if environ.get(PROJECT_DATABASE_PATH_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_PROJECT_DATABASE_PATH cannot be used when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Use "
+            "AEVRYN_PROJECT_DATABASE_URL with the PostgreSQL adapter."
+        )
+    if not environ.get(PROJECT_DATABASE_URL_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_PROJECT_DATABASE_URL is required when "
+            "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql."
         )
     if not _allowed_origins_from_env(environ):
         raise ValueError(
@@ -1774,6 +1789,17 @@ def _platform_services_from_env(
     ImportContentStore | None,
 ]:
     """Return configured platform services from deployment environment settings."""
+    database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
+    if database_adapter == "postgresql":
+        raise ValueError(
+            "PostgreSQL Project Database adapter is selected but not implemented yet."
+        )
+    if database_adapter and database_adapter != "json":
+        raise ValueError(
+            "AEVRYN_PROJECT_DATABASE_ADAPTER must be 'json' for local adapters "
+            "or 'postgresql' for production."
+        )
+
     database_path = environ.get(PROJECT_DATABASE_PATH_ENV, "").strip()
     if not database_path:
         return None, None, None, None, None

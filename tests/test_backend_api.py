@@ -22,7 +22,9 @@ from aevryn.api import (
     OPENAI_MAX_RESPONSE_BYTES_ENV,
     OPENAI_MODEL_ENV,
     OPENAI_TIMEOUT_SECONDS_ENV,
+    PROJECT_DATABASE_ADAPTER_ENV,
     PROJECT_DATABASE_PATH_ENV,
+    PROJECT_DATABASE_URL_ENV,
     create_app,
     create_app_from_env,
 )
@@ -298,14 +300,41 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
     """Production mode should reject missing security-critical settings."""
     production_env = {DEPLOYMENT_ENV: "production"}
 
-    with pytest.raises(ValueError, match=PROJECT_DATABASE_PATH_ENV):
+    with pytest.raises(ValueError, match=PROJECT_DATABASE_ADAPTER_ENV):
         create_app_from_env(production_env)
+
+    with pytest.raises(ValueError, match="Local JSON project storage"):
+        create_app_from_env(
+            {
+                **production_env,
+                PROJECT_DATABASE_ADAPTER_ENV: "json",
+                PROJECT_DATABASE_PATH_ENV: str(tmp_path / "project_database.json"),
+            }
+        )
+
+    with pytest.raises(ValueError, match=PROJECT_DATABASE_PATH_ENV):
+        create_app_from_env(
+            {
+                **production_env,
+                PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+                PROJECT_DATABASE_PATH_ENV: str(tmp_path / "project_database.json"),
+            }
+        )
+
+    with pytest.raises(ValueError, match=PROJECT_DATABASE_URL_ENV):
+        create_app_from_env(
+            {
+                **production_env,
+                PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+            }
+        )
 
     with pytest.raises(ValueError, match=ALLOWED_ORIGINS_ENV):
         create_app_from_env(
             {
                 **production_env,
-                PROJECT_DATABASE_PATH_ENV: str(tmp_path / "project_database.json"),
+                PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+                PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
             }
         )
 
@@ -313,43 +342,25 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
         create_app_from_env(
             {
                 **production_env,
-                PROJECT_DATABASE_PATH_ENV: str(tmp_path / "project_database.json"),
+                PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+                PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
                 ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
             }
         )
 
 
-def test_create_app_from_env_accepts_explicit_production_security_config(
-    tmp_path: Path,
-) -> None:
-    """Production mode should start only with explicit storage and policies."""
-    client = TestClient(
+def test_create_app_from_env_blocks_production_until_postgresql_adapter_exists() -> None:
+    """Production mode should not silently fall back after Decision 1."""
+    with pytest.raises(ValueError, match="PostgreSQL Project Database adapter"):
         create_app_from_env(
             {
                 DEPLOYMENT_ENV: "production",
-                PROJECT_DATABASE_PATH_ENV: str(tmp_path / "project_database.json"),
+                PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+                PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
                 ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
                 API_KEYS_ENV: "production-api-key",
             }
         )
-    )
-
-    health = client.get("/v2/health")
-    cors = client.options(
-        "/v2/health",
-        headers={
-            "Origin": "https://app.aevryn.ai",
-            "Access-Control-Request-Method": "GET",
-        },
-    )
-
-    assert health.status_code == 200
-    assert health.json()["storage"] == {
-        "project_storage": "configured",
-        "import_content_storage": "configured",
-    }
-    assert cors.status_code == 200
-    assert cors.headers["access-control-allow-origin"] == "https://app.aevryn.ai"
 
 
 def test_api_key_auth_keeps_discovery_routes_public() -> None:

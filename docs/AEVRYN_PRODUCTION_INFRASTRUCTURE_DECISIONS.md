@@ -14,8 +14,8 @@ They are the recommended public-beta architecture shape to approve, revise, or r
 
 ```text
 Gate: Production Infrastructure
-Decision status: Proposed
-Owner approval: Pending
+Decision status: Decision 1 approved
+Owner approval: Decision 1 approved
 Implementation status: Not started
 Public beta: Blocked
 ```
@@ -53,7 +53,7 @@ This architecture keeps the V2 product boundaries intact while replacing local a
 
 # Decision 1 - Production Database
 
-Recommended decision:
+Approved decision:
 
 ```text
 Use managed PostgreSQL for production Project Database storage.
@@ -82,6 +82,19 @@ Provider not selected.
 ```
 
 Examples of acceptable provider classes include managed PostgreSQL from the chosen deployment platform or a dedicated managed database provider.
+
+Implementation contract:
+
+```text
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql and AEVRYN_PROJECT_DATABASE_URL.
+Production mode rejects AEVRYN_PROJECT_DATABASE_PATH because local JSON storage is not allowed for production.
+```
+
+Current implementation result:
+
+```text
+Production startup remains blocked until the PostgreSQL Project Database adapter is implemented.
+```
 
 ---
 

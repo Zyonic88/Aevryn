@@ -217,7 +217,7 @@ They must not contain full manuscripts, full chapters, full AI responses, creden
 
 Public beta remains blocked until:
 
-* proposed infrastructure decisions are approved or revised by the project owner
+* remaining proposed infrastructure decisions are approved or revised by the project owner
 * production database is selected
 * production object storage is selected
 * production identity provider is selected
@@ -228,6 +228,14 @@ Public beta remains blocked until:
 * production worker runtime is documented
 * local adapters are disabled or explicitly unavailable for production deployment
 * production-like deployment smoke test passes
+
+Decision 1 result:
+
+```text
+Managed PostgreSQL is approved as the production Project Database target.
+Production startup now rejects local JSON Project Database configuration.
+The PostgreSQL adapter is not implemented yet, so Gate 3 remains blocked.
+```
 
 ---
 

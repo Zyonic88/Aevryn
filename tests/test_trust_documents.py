@@ -247,8 +247,8 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
     document = read_doc("docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md")
 
     required_terms = (
-        "Decision status: Proposed",
-        "Owner approval: Pending",
+        "Decision status: Decision 1 approved",
+        "Owner approval: Decision 1 approved",
         "Implementation status: Not started",
         "Public beta: Blocked",
         "managed PostgreSQL",
@@ -258,6 +258,10 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "separate API and worker runtimes",
         "HTTPS only with HSTS",
         "Production deployment must fail closed if local-only adapters are selected accidentally.",
+        "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
+        "Production mode rejects AEVRYN_PROJECT_DATABASE_PATH",
+        "Production startup remains blocked until the PostgreSQL Project Database adapter "
+        "is implemented.",
         "Public beta remains blocked.",
     )
 

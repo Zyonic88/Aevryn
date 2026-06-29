@@ -11,7 +11,9 @@ from aevryn.api.app import (
     OPENAI_MAX_RESPONSE_BYTES_ENV,
     OPENAI_MODEL_ENV,
     OPENAI_TIMEOUT_SECONDS_ENV,
+    PROJECT_DATABASE_ADAPTER_ENV,
     PROJECT_DATABASE_PATH_ENV,
+    PROJECT_DATABASE_URL_ENV,
     create_app,
     create_app_from_env,
 )
@@ -27,7 +29,9 @@ __all__ = [
     "OPENAI_MAX_RESPONSE_BYTES_ENV",
     "OPENAI_MODEL_ENV",
     "OPENAI_TIMEOUT_SECONDS_ENV",
+    "PROJECT_DATABASE_ADAPTER_ENV",
     "PROJECT_DATABASE_PATH_ENV",
+    "PROJECT_DATABASE_URL_ENV",
     "create_app",
     "create_app_from_env",
 ]

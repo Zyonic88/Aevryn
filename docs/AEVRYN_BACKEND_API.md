@@ -110,11 +110,16 @@ AEVRYN_DEPLOYMENT_ENV=production
 
 When production mode is enabled, `create_app_from_env` refuses to start unless these security-critical settings are present:
 
-* `AEVRYN_PROJECT_DATABASE_PATH`
+* `AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql`
+* `AEVRYN_PROJECT_DATABASE_URL`
 * `AEVRYN_API_ALLOWED_ORIGINS`
 * `AEVRYN_API_KEYS`
 
 This prevents public deployments from accidentally starting with stateless storage, broad or absent browser-origin policy, or unprotected workflow routes.
+
+Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because that path selects the local JSON adapter.
+
+The PostgreSQL adapter is selected by contract but is not implemented yet, so public-beta production startup remains blocked until the adapter exists.
 
 For local development, the Aevryn CLI can launch the same API:
 
@@ -141,6 +146,12 @@ For local durable project metadata, set:
 
 ```text
 AEVRYN_PROJECT_DATABASE_PATH=C:\Users\enigm\Documents\Aevryn\.local\project_database.json
+```
+
+Optional explicit local adapter selector:
+
+```text
+AEVRYN_PROJECT_DATABASE_ADAPTER=json
 ```
 
 Optional explicit authentication store path:
