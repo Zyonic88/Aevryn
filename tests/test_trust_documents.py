@@ -159,6 +159,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "Gate 6 - AI Provider And Data Use",
         "Gate 7 - Public Beta Support Readiness",
         "Gate 8 - Release Candidate Test Pass",
+        "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md",
         "Public beta blocked.",
     )
 
@@ -204,6 +205,31 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
         "account deletion requests",
         "source-prose redaction guidance",
         "Support should not ask for full source prose by default.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_production_infrastructure_readiness_document_tracks_gate_three() -> None:
+    """Gate 3 should block public beta on concrete production infrastructure decisions."""
+    document = read_doc("docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md")
+
+    required_terms = (
+        "Gate: Production Infrastructure",
+        "Status: Not started",
+        "Public beta: Blocked",
+        "Production infrastructure must fail closed and preserve story privacy by default.",
+        "production database",
+        "production object storage",
+        "production identity provider",
+        "production secret manager",
+        "HTTPS and HSTS edge policy",
+        "domain and DNS strategy",
+        "local JSON storage",
+        "local source-byte storage",
+        "production-like deployment smoke test passes",
+        "metadata-only",
     )
 
     for term in required_terms:

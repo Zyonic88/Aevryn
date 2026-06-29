@@ -141,6 +141,10 @@ Required before public beta:
 * HTTPS and HSTS policy defined
 * domain and DNS strategy selected
 
+Gate tracking:
+
+* `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md`
+
 Acceptance:
 
 ```text
