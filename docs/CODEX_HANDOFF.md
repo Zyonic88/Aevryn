@@ -79,7 +79,8 @@ Future ideas are preserved in `docs/AEVRYN_FUTURE_IDEAS.md`. That document is no
 
 Next expected V2 target:
 
-- Plan V2 Release Candidate Readiness from `docs/AEVRYN_V2_CLOSEOUT.md`.
+- Work V2 Release Candidate Readiness from `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md`.
+- Use `docs/AEVRYN_V2_CLOSEOUT.md` as the decision record that separates V2 product completion from public beta approval.
 - Do not treat Phase 11 acceptance as public beta approval; public beta still requires deployment-specific security decisions and production infrastructure choices.
 
 Phase 6 Project Storage accepted:

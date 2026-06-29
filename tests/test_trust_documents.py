@@ -143,6 +143,29 @@ def test_v2_closeout_document_separates_completion_from_public_beta() -> None:
         assert term in document
 
 
+def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> None:
+    """Release candidate readiness should define non-feature public beta gates."""
+    document = read_doc("docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md")
+
+    required_terms = (
+        "V2 Release Candidate Readiness is the active work track.",
+        "Public beta is not approved yet.",
+        "Release Candidate Readiness is not Version 3.",
+        "Gate 1 - Public-Facing Trust Documentation",
+        "Gate 2 - Legal Review",
+        "Gate 3 - Production Infrastructure",
+        "Gate 4 - Security Operations",
+        "Gate 5 - Backup, Recovery, And Audit",
+        "Gate 6 - AI Provider And Data Use",
+        "Gate 7 - Public Beta Support Readiness",
+        "Gate 8 - Release Candidate Test Pass",
+        "Public beta blocked.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
 def test_future_ideas_document_preserves_scope_boundary() -> None:
     """Future ideas should be preserved without becoming roadmap commitments."""
     document = read_doc("docs/AEVRYN_FUTURE_IDEAS.md")

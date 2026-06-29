@@ -82,6 +82,8 @@ The next work track should be named:
 V2 Release Candidate Readiness
 ```
 
+The readiness contract is defined in `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md`.
+
 That work is not V2 feature development.
 
 It is production readiness:

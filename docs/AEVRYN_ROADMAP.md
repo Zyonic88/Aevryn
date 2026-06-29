@@ -40,6 +40,8 @@ Phase 11 Security & Privacy Hardening is accepted as the V2 trust gate. Public b
 
 V2 closeout is recorded in `docs/AEVRYN_V2_CLOSEOUT.md`.
 
+V2 Release Candidate Readiness is defined in `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md`.
+
 The product path now has durable project identity, storage-backed workspace access, saved imports, queued runs, import source-byte storage, deterministic `canon` snapshots from successful import runs, supported-format import UI hardening, metadata-only workflow observability, performance budgets, metadata-only baseline artifacts, regression comparison, and workspace-load request hardening.
 
 ---
@@ -188,7 +190,7 @@ Everything the CLI can do, the API must be able to do.
 | 10 | Internal Alpha | Accepted | Narrow private alpha path is ready with documented limitations. |
 | 11 | Security & Privacy Hardening | Accepted | Trust-gate docs, tests, scans, deletion/privacy boundaries, and hardening gates are complete; public beta still requires deployment-specific security decisions. |
 
-V2 platform product development is complete for private/internal alpha. The next work track is V2 Release Candidate Readiness, not new V2 feature development.
+V2 platform product development is complete for private/internal alpha. The active work track is V2 Release Candidate Readiness, not new V2 feature development.
 
 ---
 
