@@ -106,7 +106,7 @@ class R2Storage:
         self,
         *,
         bucket: str,
-        prefix: str,
+        prefix: str = "",
         endpoint_url: str,
         access_key_id: str,
         secret_access_key: str,
@@ -171,7 +171,10 @@ class R2Storage:
 
     def _key_for_ref(self, storage_ref: str) -> str:
         """Return the provider object key for one storage reference."""
-        return f"{self._prefix}/{_normalize_storage_key(storage_ref)}"
+        key = _normalize_storage_key(storage_ref)
+        if not self._prefix:
+            return key
+        return f"{self._prefix}/{key}"
 
 
 def _boto3_client(
@@ -236,6 +239,8 @@ def _require_storage_ref(storage_ref: str) -> None:
 
 def _normalize_prefix(prefix: str) -> str:
     """Return a stable object-storage prefix."""
+    if not prefix.strip():
+        return ""
     normalized = _require_token(prefix, "Storage prefix").strip("/")
     if any(segment in {"", ".", ".."} for segment in normalized.split("/")):
         raise ValueError("Storage prefix contains an unsafe path segment.")

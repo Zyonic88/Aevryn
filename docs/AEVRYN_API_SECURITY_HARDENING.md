@@ -80,12 +80,12 @@ When `AEVRYN_DEPLOYMENT_ENV=production`, the app refuses to start unless these a
 * `AEVRYN_PROJECT_DATABASE_URL`
 * `AEVRYN_API_ALLOWED_ORIGINS`
 * `AEVRYN_API_KEYS`
-* `AEVRYN_IMPORT_STORAGE_ADAPTER=object`
-* `AEVRYN_IMPORT_STORAGE_BUCKET`
-* `AEVRYN_IMPORT_STORAGE_ENDPOINT_URL`
-* `AEVRYN_IMPORT_STORAGE_ACCESS_KEY_ID`
-* `AEVRYN_IMPORT_STORAGE_SECRET_ACCESS_KEY`
-* `AEVRYN_IMPORT_STORAGE_PREFIX`
+* `AEVRYN_STORAGE_PROVIDER=r2`
+* `AEVRYN_R2_BUCKET`
+* `AEVRYN_R2_ACCOUNT_ID`
+* `AEVRYN_R2_ENDPOINT_URL`
+* `AEVRYN_R2_ACCESS_KEY_ID`
+* `AEVRYN_R2_SECRET_ACCESS_KEY`
 
 This prevents accidental public startup with stateless storage, local source-byte storage, missing Cloudflare R2 storage credentials, missing browser-origin policy, or unprotected workflow routes.
 

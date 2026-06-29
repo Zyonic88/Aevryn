@@ -18,13 +18,7 @@ from aevryn.api import (
     AUTH_STORE_PATH_ENV,
     DEPLOYMENT_ENV,
     EXTRACTION_MODE_ENV,
-    IMPORT_STORAGE_ACCESS_KEY_ID_ENV,
-    IMPORT_STORAGE_ADAPTER_ENV,
-    IMPORT_STORAGE_BUCKET_ENV,
-    IMPORT_STORAGE_ENDPOINT_URL_ENV,
     IMPORT_STORAGE_PATH_ENV,
-    IMPORT_STORAGE_PREFIX_ENV,
-    IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV,
     OPENAI_API_KEY_ENV,
     OPENAI_MAX_RESPONSE_BYTES_ENV,
     OPENAI_MODEL_ENV,
@@ -32,6 +26,12 @@ from aevryn.api import (
     PROJECT_DATABASE_ADAPTER_ENV,
     PROJECT_DATABASE_PATH_ENV,
     PROJECT_DATABASE_URL_ENV,
+    R2_ACCESS_KEY_ID_ENV,
+    R2_ACCOUNT_ID_ENV,
+    R2_BUCKET_ENV,
+    R2_ENDPOINT_URL_ENV,
+    R2_SECRET_ACCESS_KEY_ENV,
+    STORAGE_PROVIDER_ENV,
     create_app,
     create_app_from_env,
 )
@@ -363,32 +363,32 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
         API_KEYS_ENV: "production-api-key",
     }
 
-    with pytest.raises(ValueError, match=IMPORT_STORAGE_ADAPTER_ENV):
+    with pytest.raises(ValueError, match=STORAGE_PROVIDER_ENV):
         create_app_from_env(complete_until_import_storage)
 
     with pytest.raises(ValueError, match=IMPORT_STORAGE_PATH_ENV):
         create_app_from_env(
             {
                 **complete_until_import_storage,
-                IMPORT_STORAGE_ADAPTER_ENV: "object",
+                STORAGE_PROVIDER_ENV: "r2",
                 IMPORT_STORAGE_PATH_ENV: str(tmp_path / "imports"),
             }
         )
 
-    with pytest.raises(ValueError, match=IMPORT_STORAGE_BUCKET_ENV):
+    with pytest.raises(ValueError, match=R2_BUCKET_ENV):
         create_app_from_env(
             {
                 **complete_until_import_storage,
-                IMPORT_STORAGE_ADAPTER_ENV: "object",
+                STORAGE_PROVIDER_ENV: "r2",
             }
         )
 
-    with pytest.raises(ValueError, match=IMPORT_STORAGE_ENDPOINT_URL_ENV):
+    with pytest.raises(ValueError, match=R2_ACCOUNT_ID_ENV):
         create_app_from_env(
             {
                 **complete_until_import_storage,
-                IMPORT_STORAGE_ADAPTER_ENV: "object",
-                IMPORT_STORAGE_BUCKET_ENV: "aevryn-private-source",
+                STORAGE_PROVIDER_ENV: "r2",
+                R2_BUCKET_ENV: "aevryn-private-source",
             }
         )
 
@@ -401,37 +401,37 @@ def test_create_app_from_env_requires_r2_provider_credentials() -> None:
         PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
         ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
         API_KEYS_ENV: "production-api-key",
-        IMPORT_STORAGE_ADAPTER_ENV: "object",
-        IMPORT_STORAGE_BUCKET_ENV: "aevryn-prod",
+        STORAGE_PROVIDER_ENV: "r2",
+        R2_BUCKET_ENV: "aevryn-prod",
     }
 
-    with pytest.raises(ValueError, match=IMPORT_STORAGE_ENDPOINT_URL_ENV):
+    with pytest.raises(ValueError, match=R2_ACCOUNT_ID_ENV):
         create_app_from_env(complete_until_bucket)
 
-    with pytest.raises(ValueError, match=IMPORT_STORAGE_ACCESS_KEY_ID_ENV):
+    with pytest.raises(ValueError, match=R2_ENDPOINT_URL_ENV):
         create_app_from_env(
             {
                 **complete_until_bucket,
-                IMPORT_STORAGE_ENDPOINT_URL_ENV: "https://example.r2.cloudflarestorage.com",
+                R2_ACCOUNT_ID_ENV: "account-id",
             }
         )
 
-    with pytest.raises(ValueError, match=IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV):
+    with pytest.raises(ValueError, match=R2_ACCESS_KEY_ID_ENV):
         create_app_from_env(
             {
                 **complete_until_bucket,
-                IMPORT_STORAGE_ENDPOINT_URL_ENV: "https://example.r2.cloudflarestorage.com",
-                IMPORT_STORAGE_ACCESS_KEY_ID_ENV: "access-key",
+                R2_ACCOUNT_ID_ENV: "account-id",
+                R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
             }
         )
 
-    with pytest.raises(ValueError, match=IMPORT_STORAGE_PREFIX_ENV):
+    with pytest.raises(ValueError, match=R2_SECRET_ACCESS_KEY_ENV):
         create_app_from_env(
             {
                 **complete_until_bucket,
-                IMPORT_STORAGE_ENDPOINT_URL_ENV: "https://example.r2.cloudflarestorage.com",
-                IMPORT_STORAGE_ACCESS_KEY_ID_ENV: "access-key",
-                IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV: "secret-key",
+                R2_ACCOUNT_ID_ENV: "account-id",
+                R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
+                R2_ACCESS_KEY_ID_ENV: "access-key",
             }
         )
 
@@ -455,7 +455,6 @@ def test_create_app_from_env_wires_r2_import_storage_for_production(
             self,
             *,
             bucket: str,
-            prefix: str,
             endpoint_url: str,
             access_key_id: str,
             secret_access_key: str,
@@ -463,7 +462,6 @@ def test_create_app_from_env_wires_r2_import_storage_for_production(
         ) -> None:
             self.settings = {
                 "bucket": bucket,
-                "prefix": prefix,
                 "endpoint_url": endpoint_url,
                 "access_key_id": access_key_id,
                 "secret_access_key": secret_access_key,
@@ -502,12 +500,12 @@ def test_create_app_from_env_wires_r2_import_storage_for_production(
                 PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
                 ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
                 API_KEYS_ENV: "production-api-key",
-                IMPORT_STORAGE_ADAPTER_ENV: "object",
-                IMPORT_STORAGE_BUCKET_ENV: "aevryn-prod",
-                IMPORT_STORAGE_ENDPOINT_URL_ENV: "https://example.r2.cloudflarestorage.com",
-                IMPORT_STORAGE_ACCESS_KEY_ID_ENV: "access-key",
-                IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV: "secret-key",
-                IMPORT_STORAGE_PREFIX_ENV: "imports/source",
+                STORAGE_PROVIDER_ENV: "r2",
+                R2_BUCKET_ENV: "aevryn-prod",
+                R2_ACCOUNT_ID_ENV: "account-id",
+                R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
+                R2_ACCESS_KEY_ID_ENV: "access-key",
+                R2_SECRET_ACCESS_KEY_ENV: "secret-key",
             }
         )
     )

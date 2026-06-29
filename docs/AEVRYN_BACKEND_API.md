@@ -114,12 +114,12 @@ When production mode is enabled, `create_app_from_env` refuses to start unless t
 * `AEVRYN_PROJECT_DATABASE_URL`
 * `AEVRYN_API_ALLOWED_ORIGINS`
 * `AEVRYN_API_KEYS`
-* `AEVRYN_IMPORT_STORAGE_ADAPTER=object`
-* `AEVRYN_IMPORT_STORAGE_BUCKET`
-* `AEVRYN_IMPORT_STORAGE_ENDPOINT_URL`
-* `AEVRYN_IMPORT_STORAGE_ACCESS_KEY_ID`
-* `AEVRYN_IMPORT_STORAGE_SECRET_ACCESS_KEY`
-* `AEVRYN_IMPORT_STORAGE_PREFIX`
+* `AEVRYN_STORAGE_PROVIDER=r2`
+* `AEVRYN_R2_BUCKET`
+* `AEVRYN_R2_ACCOUNT_ID`
+* `AEVRYN_R2_ENDPOINT_URL`
+* `AEVRYN_R2_ACCESS_KEY_ID`
+* `AEVRYN_R2_SECRET_ACCESS_KEY`
 
 This prevents public deployments from accidentally starting with stateless storage, local source-byte storage, broad or absent browser-origin policy, or unprotected workflow routes.
 
@@ -186,12 +186,12 @@ For local browser testing, the PostgreSQL adapter stores project metadata in Pos
 The production source-byte object storage boundary uses Cloudflare R2 through a general `StorageService` interface.
 
 ```text
-AEVRYN_IMPORT_STORAGE_ADAPTER=object
-AEVRYN_IMPORT_STORAGE_BUCKET=aevryn-alpha
-AEVRYN_IMPORT_STORAGE_ENDPOINT_URL=https://<account-id>.r2.cloudflarestorage.com
-AEVRYN_IMPORT_STORAGE_ACCESS_KEY_ID=<stored in deployment secrets>
-AEVRYN_IMPORT_STORAGE_SECRET_ACCESS_KEY=<stored in deployment secrets>
-AEVRYN_IMPORT_STORAGE_PREFIX=imports/source
+AEVRYN_STORAGE_PROVIDER=r2
+AEVRYN_R2_BUCKET=aevryn-alpha
+AEVRYN_R2_ACCOUNT_ID=<account-id>
+AEVRYN_R2_ENDPOINT_URL=https://<account-id>.r2.cloudflarestorage.com
+AEVRYN_R2_ACCESS_KEY_ID=<stored in deployment secrets>
+AEVRYN_R2_SECRET_ACCESS_KEY=<stored in deployment secrets>
 ```
 
 R2 buckets must be private. The frontend must never receive R2 credentials. The API and worker write bytes, and PostgreSQL stores only references and metadata such as `storage_ref`, filename, content type, size, checksum, and timestamps.

@@ -194,14 +194,14 @@ PROJECT_DATABASE_ADAPTER_ENV = "AEVRYN_PROJECT_DATABASE_ADAPTER"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 PROJECT_DATABASE_URL_ENV = "AEVRYN_PROJECT_DATABASE_URL"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
-IMPORT_STORAGE_ADAPTER_ENV = "AEVRYN_IMPORT_STORAGE_ADAPTER"
-IMPORT_STORAGE_BUCKET_ENV = "AEVRYN_IMPORT_STORAGE_BUCKET"
-IMPORT_STORAGE_ENDPOINT_URL_ENV = "AEVRYN_IMPORT_STORAGE_ENDPOINT_URL"
-IMPORT_STORAGE_ACCESS_KEY_ID_ENV = "AEVRYN_IMPORT_STORAGE_ACCESS_KEY_ID"
-IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV = "AEVRYN_IMPORT_STORAGE_SECRET_ACCESS_KEY"
 IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
-IMPORT_STORAGE_PREFIX_ENV = "AEVRYN_IMPORT_STORAGE_PREFIX"
-IMPORT_STORAGE_REGION_ENV = "AEVRYN_IMPORT_STORAGE_REGION"
+STORAGE_PROVIDER_ENV = "AEVRYN_STORAGE_PROVIDER"
+R2_BUCKET_ENV = "AEVRYN_R2_BUCKET"
+R2_ACCOUNT_ID_ENV = "AEVRYN_R2_ACCOUNT_ID"
+R2_ACCESS_KEY_ID_ENV = "AEVRYN_R2_ACCESS_KEY_ID"
+R2_SECRET_ACCESS_KEY_ENV = "AEVRYN_R2_SECRET_ACCESS_KEY"
+R2_ENDPOINT_URL_ENV = "AEVRYN_R2_ENDPOINT_URL"
+R2_REGION_ENV = "AEVRYN_R2_REGION"
 EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
 OPENAI_API_KEY_ENV = "AEVRYN_OPENAI_API_KEY"
 OPENAI_MODEL_ENV = "AEVRYN_OPENAI_MODEL"
@@ -1933,10 +1933,10 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
         raise ValueError(
             "AEVRYN_API_KEYS is required when AEVRYN_DEPLOYMENT_ENV=production."
         )
-    import_storage_adapter = environ.get(IMPORT_STORAGE_ADAPTER_ENV, "").strip().lower()
-    if import_storage_adapter != "object":
+    storage_provider = environ.get(STORAGE_PROVIDER_ENV, "").strip().lower()
+    if storage_provider != "r2":
         raise ValueError(
-            "AEVRYN_IMPORT_STORAGE_ADAPTER=object is required when "
+            "AEVRYN_STORAGE_PROVIDER=r2 is required when "
             "AEVRYN_DEPLOYMENT_ENV=production. Local source-byte storage is not "
             "allowed for production."
         )
@@ -1945,30 +1945,25 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_IMPORT_STORAGE_PATH cannot be used when "
             "AEVRYN_DEPLOYMENT_ENV=production. Use private object storage."
         )
-    if not environ.get(IMPORT_STORAGE_BUCKET_ENV, "").strip():
+    if not environ.get(R2_BUCKET_ENV, "").strip():
         raise ValueError(
-            "AEVRYN_IMPORT_STORAGE_BUCKET is required when "
-            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+            "AEVRYN_R2_BUCKET is required when AEVRYN_STORAGE_PROVIDER=r2."
         )
-    if not environ.get(IMPORT_STORAGE_ENDPOINT_URL_ENV, "").strip():
+    if not environ.get(R2_ACCOUNT_ID_ENV, "").strip():
         raise ValueError(
-            "AEVRYN_IMPORT_STORAGE_ENDPOINT_URL is required when "
-            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+            "AEVRYN_R2_ACCOUNT_ID is required when AEVRYN_STORAGE_PROVIDER=r2."
         )
-    if not environ.get(IMPORT_STORAGE_ACCESS_KEY_ID_ENV, "").strip():
+    if not environ.get(R2_ENDPOINT_URL_ENV, "").strip():
         raise ValueError(
-            "AEVRYN_IMPORT_STORAGE_ACCESS_KEY_ID is required when "
-            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+            "AEVRYN_R2_ENDPOINT_URL is required when AEVRYN_STORAGE_PROVIDER=r2."
         )
-    if not environ.get(IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV, "").strip():
+    if not environ.get(R2_ACCESS_KEY_ID_ENV, "").strip():
         raise ValueError(
-            "AEVRYN_IMPORT_STORAGE_SECRET_ACCESS_KEY is required when "
-            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+            "AEVRYN_R2_ACCESS_KEY_ID is required when AEVRYN_STORAGE_PROVIDER=r2."
         )
-    if not environ.get(IMPORT_STORAGE_PREFIX_ENV, "").strip():
+    if not environ.get(R2_SECRET_ACCESS_KEY_ENV, "").strip():
         raise ValueError(
-            "AEVRYN_IMPORT_STORAGE_PREFIX is required when "
-            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+            "AEVRYN_R2_SECRET_ACCESS_KEY is required when AEVRYN_STORAGE_PROVIDER=r2."
         )
 
 
@@ -2040,12 +2035,11 @@ def _production_postgresql_platform_services(
         session_store=auth_store,
     )
     storage_service = R2Storage(
-        bucket=environ.get(IMPORT_STORAGE_BUCKET_ENV, ""),
-        prefix=environ.get(IMPORT_STORAGE_PREFIX_ENV, ""),
-        endpoint_url=environ.get(IMPORT_STORAGE_ENDPOINT_URL_ENV, ""),
-        access_key_id=environ.get(IMPORT_STORAGE_ACCESS_KEY_ID_ENV, ""),
-        secret_access_key=environ.get(IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV, ""),
-        region_name=environ.get(IMPORT_STORAGE_REGION_ENV, "auto"),
+        bucket=environ.get(R2_BUCKET_ENV, ""),
+        endpoint_url=environ.get(R2_ENDPOINT_URL_ENV, ""),
+        access_key_id=environ.get(R2_ACCESS_KEY_ID_ENV, ""),
+        secret_access_key=environ.get(R2_SECRET_ACCESS_KEY_ENV, ""),
+        region_name=environ.get(R2_REGION_ENV, "auto"),
     )
     import_content_store = StorageServiceImportContentStore(storage_service)
     return (
