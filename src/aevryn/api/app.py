@@ -180,7 +180,10 @@ PROJECT_DATABASE_ADAPTER_ENV = "AEVRYN_PROJECT_DATABASE_ADAPTER"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 PROJECT_DATABASE_URL_ENV = "AEVRYN_PROJECT_DATABASE_URL"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
+IMPORT_STORAGE_ADAPTER_ENV = "AEVRYN_IMPORT_STORAGE_ADAPTER"
+IMPORT_STORAGE_BUCKET_ENV = "AEVRYN_IMPORT_STORAGE_BUCKET"
 IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
+IMPORT_STORAGE_PREFIX_ENV = "AEVRYN_IMPORT_STORAGE_PREFIX"
 EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
 OPENAI_API_KEY_ENV = "AEVRYN_OPENAI_API_KEY"
 OPENAI_MODEL_ENV = "AEVRYN_OPENAI_MODEL"
@@ -1778,6 +1781,28 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
         raise ValueError(
             "AEVRYN_API_KEYS is required when AEVRYN_DEPLOYMENT_ENV=production."
         )
+    import_storage_adapter = environ.get(IMPORT_STORAGE_ADAPTER_ENV, "").strip().lower()
+    if import_storage_adapter != "object":
+        raise ValueError(
+            "AEVRYN_IMPORT_STORAGE_ADAPTER=object is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Local source-byte storage is not "
+            "allowed for production."
+        )
+    if environ.get(IMPORT_STORAGE_PATH_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_IMPORT_STORAGE_PATH cannot be used when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Use private object storage."
+        )
+    if not environ.get(IMPORT_STORAGE_BUCKET_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_IMPORT_STORAGE_BUCKET is required when "
+            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+        )
+    if not environ.get(IMPORT_STORAGE_PREFIX_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_IMPORT_STORAGE_PREFIX is required when "
+            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+        )
 
 
 def _platform_services_from_env(
@@ -1792,6 +1817,11 @@ def _platform_services_from_env(
     """Return configured platform services from deployment environment settings."""
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
     if database_adapter == "postgresql":
+        if _is_production_environment(environ):
+            raise ValueError(
+                "Production object storage provider wiring is not implemented yet. "
+                "Select and wire a private object storage provider before public deployment."
+            )
         repository: ProjectRepository = PostgresqlProjectRepository(
             environ.get(PROJECT_DATABASE_URL_ENV, "")
         )
@@ -1888,6 +1918,11 @@ def _worker_extractor_from_env(environ: Mapping[str, str]) -> SceneExtractor | N
             ),
         )
     )
+
+
+def _is_production_environment(environ: Mapping[str, str]) -> bool:
+    """Return whether the environment is configured as production."""
+    return environ.get(DEPLOYMENT_ENV, "").strip().lower() in {"prod", "production"}
 
 
 def _auth_store_path_from_env(

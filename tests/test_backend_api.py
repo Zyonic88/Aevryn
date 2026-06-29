@@ -18,7 +18,10 @@ from aevryn.api import (
     AUTH_STORE_PATH_ENV,
     DEPLOYMENT_ENV,
     EXTRACTION_MODE_ENV,
+    IMPORT_STORAGE_ADAPTER_ENV,
+    IMPORT_STORAGE_BUCKET_ENV,
     IMPORT_STORAGE_PATH_ENV,
+    IMPORT_STORAGE_PREFIX_ENV,
     OPENAI_API_KEY_ENV,
     OPENAI_MAX_RESPONSE_BYTES_ENV,
     OPENAI_MODEL_ENV,
@@ -349,25 +352,49 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
             }
         )
 
+    complete_until_import_storage = {
+        **production_env,
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        API_KEYS_ENV: "production-api-key",
+    }
 
-def test_create_app_from_env_selects_postgresql_repository_for_production(
-    monkeypatch: pytest.MonkeyPatch,
+    with pytest.raises(ValueError, match=IMPORT_STORAGE_ADAPTER_ENV):
+        create_app_from_env(complete_until_import_storage)
+
+    with pytest.raises(ValueError, match=IMPORT_STORAGE_PATH_ENV):
+        create_app_from_env(
+            {
+                **complete_until_import_storage,
+                IMPORT_STORAGE_ADAPTER_ENV: "object",
+                IMPORT_STORAGE_PATH_ENV: str(tmp_path / "imports"),
+            }
+        )
+
+    with pytest.raises(ValueError, match=IMPORT_STORAGE_BUCKET_ENV):
+        create_app_from_env(
+            {
+                **complete_until_import_storage,
+                IMPORT_STORAGE_ADAPTER_ENV: "object",
+            }
+        )
+
+    with pytest.raises(ValueError, match=IMPORT_STORAGE_PREFIX_ENV):
+        create_app_from_env(
+            {
+                **complete_until_import_storage,
+                IMPORT_STORAGE_ADAPTER_ENV: "object",
+                IMPORT_STORAGE_BUCKET_ENV: "aevryn-private-source",
+            }
+        )
+
+
+def test_create_app_from_env_blocks_production_until_object_storage_provider_is_wired(
 ) -> None:
-    """Production mode should wire PostgreSQL project storage after Decision 1."""
+    """Production mode should not fall back to local source-byte storage."""
 
-    class FakePostgresqlProjectRepository(InMemoryProjectRepository):
-        """Test double for production repository selection."""
-
-        def __init__(self, database_url: str) -> None:
-            super().__init__()
-            self.database_url = database_url
-
-    monkeypatch.setattr(
-        "aevryn.api.app.PostgresqlProjectRepository",
-        FakePostgresqlProjectRepository,
-    )
-
-    client = TestClient(
+    with pytest.raises(ValueError, match="object storage provider wiring"):
         create_app_from_env(
             {
                 DEPLOYMENT_ENV: "production",
@@ -375,14 +402,11 @@ def test_create_app_from_env_selects_postgresql_repository_for_production(
                 PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
                 ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
                 API_KEYS_ENV: "production-api-key",
+                IMPORT_STORAGE_ADAPTER_ENV: "object",
+                IMPORT_STORAGE_BUCKET_ENV: "aevryn-private-source",
+                IMPORT_STORAGE_PREFIX_ENV: "imports/source",
             }
         )
-    )
-
-    health = client.get("/v2/health")
-
-    assert health.status_code == 200
-    assert health.json()["storage"]["project_storage"] == "configured"
 
 
 def test_create_app_from_env_wires_postgresql_browser_services(

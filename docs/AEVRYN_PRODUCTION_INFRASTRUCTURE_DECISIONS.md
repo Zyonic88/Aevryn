@@ -341,6 +341,8 @@ Before public beta, startup validation should reject production configuration th
 * local JSON Project Database storage
 * local auth storage
 * local source-byte storage
+* missing `AEVRYN_IMPORT_STORAGE_ADAPTER=object`
+* missing private source-byte object-storage bucket or prefix
 * missing explicit CORS origins
 * missing API or worker credentials
 * missing session secret

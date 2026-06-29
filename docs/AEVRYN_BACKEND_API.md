@@ -114,12 +114,16 @@ When production mode is enabled, `create_app_from_env` refuses to start unless t
 * `AEVRYN_PROJECT_DATABASE_URL`
 * `AEVRYN_API_ALLOWED_ORIGINS`
 * `AEVRYN_API_KEYS`
+* `AEVRYN_IMPORT_STORAGE_ADAPTER=object`
+* `AEVRYN_IMPORT_STORAGE_BUCKET`
+* `AEVRYN_IMPORT_STORAGE_PREFIX`
 
-This prevents public deployments from accidentally starting with stateless storage, broad or absent browser-origin policy, or unprotected workflow routes.
+This prevents public deployments from accidentally starting with stateless storage, local source-byte storage, broad or absent browser-origin policy, or unprotected workflow routes.
 
 Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because that path selects the local JSON adapter.
+Production mode rejects `AEVRYN_IMPORT_STORAGE_PATH` because that path selects local filesystem source-byte storage.
 
-The PostgreSQL Project Database adapter is available through the optional `postgresql` dependencies. Public-beta production startup still remains blocked by the remaining infrastructure decisions, including production object storage for uploaded source bytes and exports.
+The PostgreSQL Project Database adapter is available through the optional `postgresql` dependencies. Public-beta production startup still remains blocked until a private object-storage provider client is selected and wired for uploaded source bytes and generated exports.
 
 For local development, the Aevryn CLI can launch the same API:
 

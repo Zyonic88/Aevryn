@@ -221,7 +221,7 @@ Yes
 Command:
 
 ```text
-python -m pytest tests/test_backend_api.py::test_create_app_from_env_fails_closed_for_incomplete_production_config tests/test_backend_api.py::test_create_app_from_env_accepts_explicit_production_security_config -q
+python -m pytest tests/test_backend_api.py::test_create_app_from_env_fails_closed_for_incomplete_production_config tests/test_backend_api.py::test_create_app_from_env_blocks_production_until_object_storage_provider_is_wired -q
 ```
 
 Expected result:
@@ -229,7 +229,8 @@ Expected result:
 * `AEVRYN_DEPLOYMENT_ENV=production` refuses to start without explicit project storage.
 * production mode refuses to start without explicit CORS origins.
 * production mode refuses to start without API keys for workflow routes.
-* complete production security config starts successfully and reports configured storage.
+* production mode refuses to start without explicit object-storage configuration.
+* complete production security config still blocks until private object-storage provider wiring is implemented.
 
 Latest result:
 
