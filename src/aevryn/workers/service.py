@@ -15,8 +15,9 @@ from aevryn.extraction import SceneExtractor
 from aevryn.import_storage import ImportContentStore
 from aevryn.persistence import EngineRunRecord, ProjectRepository, SnapshotRecord
 from aevryn.presentation import PresentationEngine, PresentationSection
-from aevryn.presentation.models import CharacterProfileView, WorldSheetView
+from aevryn.presentation.models import CharacterProfileView, SceneSheetView, WorldSheetView
 from aevryn.projects import AevrynProjectRunner, ProjectRunResult
+from aevryn.prompts import CanonPromptBuilder
 from aevryn.workers.models import BackgroundJob, BackgroundWorkerRunSummary
 from aevryn.workers.queue import BackgroundJobQueue, DuplicateJobError
 
@@ -25,6 +26,7 @@ _TIMELINE_OMITTED_ATTRIBUTES = frozenset(
 )
 _SOURCE_BACKED_PLACEHOLDER = "Source-backed detail available through evidence controls."
 _MAX_TIMELINE_CHANGES_PER_SCENE = 8
+_MAX_PROJECT_SCENE_SHEETS = 12
 
 logger = logging.getLogger(__name__)
 
@@ -499,6 +501,12 @@ def _presentation_snapshot_payload(result: ProjectRunResult) -> dict[str, object
     scene_id = runner.latest_scene_id(result)
     source_quotes = _source_quotes(result)
     return {
+        "scenes": _scene_sheets_payload(
+            result=result,
+            runner=runner,
+            presenter=presenter,
+            source_quotes=source_quotes,
+        ),
         "characters": tuple(
             _character_profile_payload(
                 presenter.character_profile(
@@ -522,6 +530,62 @@ def _presentation_snapshot_payload(result: ProjectRunResult) -> dict[str, object
             ),
             source_quotes=source_quotes,
         ),
+    }
+
+
+def _scene_sheets_payload(
+    *,
+    result: ProjectRunResult,
+    runner: AevrynProjectRunner,
+    presenter: PresentationEngine,
+    source_quotes: tuple[str, ...],
+) -> tuple[dict[str, object], ...]:
+    """Return a capped set of persisted scene sheets in story order."""
+    prompt_builder = CanonPromptBuilder()
+    character_ids_by_scene = _accepted_character_ids_by_scene(result)
+    scene_payloads: list[dict[str, object]] = []
+    for chapter in result.imported_source.story.chapters:
+        for scene in chapter.scenes:
+            if len(scene_payloads) >= _MAX_PROJECT_SCENE_SHEETS:
+                return tuple(scene_payloads)
+            character_ids = character_ids_by_scene.get(scene.scene_id, ())
+            if not character_ids:
+                continue
+            context = runner.build_scene_context(
+                result=result,
+                scene_id=scene.scene_id,
+                character_ids=character_ids,
+            )
+            pack = prompt_builder.build_production_pack(context)
+            scene_sheet = presenter.scene_sheet(context=context, analysis=pack.analysis)
+            scene_payloads.append(
+                _scene_sheet_payload(
+                    scene_sheet,
+                    chapter_label=f"Chapter {chapter.chapter_index}",
+                    source_quotes=source_quotes,
+                )
+            )
+
+    return tuple(scene_payloads)
+
+
+def _accepted_character_ids_by_scene(
+    result: ProjectRunResult,
+) -> dict[str, tuple[str, ...]]:
+    """Return accepted character IDs keyed by first-seen scene."""
+    characters_by_scene: dict[str, dict[str, None]] = {}
+    for extraction_result, summary in zip(
+        result.extraction_results,
+        result.update_summaries,
+        strict=True,
+    ):
+        for entity_id in summary.accepted_entities:
+            if result.database.retrieve_character(entity_id) is not None:
+                characters_by_scene.setdefault(extraction_result.scene_id, {})[entity_id] = None
+
+    return {
+        scene_id: tuple(character_ids)
+        for scene_id, character_ids in characters_by_scene.items()
     }
 
 
@@ -588,6 +652,37 @@ def _character_profile_payload(
         ),
         "recent_changes": _section_payload(profile.recent_changes, source_quotes=source_quotes),
         "evidence_summary": profile.evidence_summary,
+    }
+
+
+def _scene_sheet_payload(
+    scene: SceneSheetView,
+    *,
+    chapter_label: str,
+    source_quotes: tuple[str, ...],
+) -> dict[str, object]:
+    """Return a JSON-ready scene sheet panel."""
+    return {
+        "scene_id": scene.scene_id,
+        "title": _safe_display_text(scene.title, source_quotes),
+        "chapter_label": chapter_label,
+        "location": _section_payload(scene.location, source_quotes=source_quotes),
+        "characters_present": _section_payload(
+            scene.characters_present,
+            source_quotes=source_quotes,
+        ),
+        "mood": _section_payload(scene.mood, source_quotes=source_quotes),
+        "purpose": _section_payload(scene.purpose, source_quotes=source_quotes),
+        "visual_highlights": _section_payload(
+            scene.visual_highlights,
+            source_quotes=source_quotes,
+        ),
+        "continuity_changes": _section_payload(
+            scene.continuity_changes,
+            source_quotes=source_quotes,
+        ),
+        "environment": _section_payload(scene.environment, source_quotes=source_quotes),
+        "evidence_summary": scene.evidence_summary,
     }
 
 

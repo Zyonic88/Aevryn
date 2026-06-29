@@ -279,7 +279,9 @@ class EvidenceBoundedAIExtractor:
                     "species labels such as Half-Beastman are explicit race/species "
                     "evidence only for the character being described. Do not infer "
                     "gender or race from another character, from a group merely being "
-                    "discussed, or from a chapter title/question."
+                    "discussed, or from a chapter title/question. Gendered group "
+                    "phrases such as female soldiers or male recruits describe the "
+                    "group, not a separate named character."
                 ),
                 (
                     "Use stable character fact attributes such as gender, race, species, "

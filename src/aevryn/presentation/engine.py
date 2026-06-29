@@ -94,6 +94,38 @@ _EXPLICIT_GENDER_TERMS = (
     ),
     ("Male", ("brother", "father", "son", "husband", "fiance", "fiancé", "prince", "emperor")),
 )
+_EVIDENCE_GENDER_TERMS = (
+    (
+        "Female",
+        (
+            "female",
+            "woman",
+            "girl",
+            "sister",
+            "mother",
+            "daughter",
+            "wife",
+            "fiancee",
+            "princess",
+            "empress",
+        ),
+    ),
+    (
+        "Male",
+        (
+            "male",
+            "man",
+            "boy",
+            "brother",
+            "father",
+            "son",
+            "husband",
+            "fiance",
+            "prince",
+            "emperor",
+        ),
+    ),
+)
 _EXPLICIT_RACE_TERMS = (
     ("Half-Beastman", ("half-beastman", "half beastman")),
     ("Beastman", ("beastman", "beast man")),
@@ -345,15 +377,19 @@ class PresentationEngine:
             character_label=character_label,
             facts_by_attribute=facts_by_attribute,
         )
+        direct_facts = tuple(
+            fact
+            for attribute in attributes
+            for fact in facts_by_attribute.get(attribute, ())
+        )
         direct_items = PresentationEngine._supported_identity_items(
-            (
-                fact.value
-                for attribute in attributes
-                for fact in facts_by_attribute.get(attribute, ())
-            ),
+            direct_facts,
+            character_label=character_label,
             support_haystacks=support_haystacks,
             term_groups=term_groups,
         )
+        if title == "Gender":
+            direct_items = PresentationEngine._resolved_gender_items(direct_items)
         return PresentationSection(
             title=title,
             items=PresentationEngine._items_or_unknown(
@@ -479,8 +515,9 @@ class PresentationEngine:
 
     @staticmethod
     def _supported_identity_items(
-        values: Iterable[str],
+        facts: Iterable[CanonCharacterFact],
         *,
+        character_label: str,
         support_haystacks: tuple[str, ...],
         term_groups: tuple[tuple[str, tuple[str, ...]], ...],
     ) -> tuple[str, ...]:
@@ -490,28 +527,149 @@ class PresentationEngine:
         )
         return tuple(
             PresentationEngine._unique_values(
-                value
-                for value in values
-                if value in supported_labels
-                or PresentationEngine._identity_value_has_support(
-                    value,
+                fact.value
+                for fact in facts
+                if fact.value in supported_labels
+                or PresentationEngine._identity_fact_has_support(
+                    fact,
+                    character_label=character_label,
                     support_haystacks=support_haystacks,
+                    term_groups=term_groups,
                 )
             )
         )
 
     @staticmethod
+    def _identity_fact_has_support(
+        fact: CanonCharacterFact,
+        *,
+        character_label: str,
+        support_haystacks: tuple[str, ...],
+        term_groups: tuple[tuple[str, tuple[str, ...]], ...],
+    ) -> bool:
+        """Return whether a direct identity fact is supported by self-describing text."""
+        normalized_value = fact.value.lower()
+        if PresentationEngine._identity_value_has_support(
+            normalized_value,
+            support_haystacks=support_haystacks,
+        ):
+            return True
+
+        quote = fact.evidence.quote.lower()
+        return PresentationEngine._quote_links_identity_to_character(
+            quote=quote,
+            character_label=character_label,
+            identity_value=normalized_value,
+            term_groups=term_groups,
+        )
+
+    @staticmethod
     def _identity_value_has_support(
-        value: str,
+        normalized_value: str,
         *,
         support_haystacks: tuple[str, ...],
     ) -> bool:
         """Return whether a direct identity value appears in self-describing text."""
-        normalized_value = value.lower()
         return any(
             PresentationEngine._contains_identity_term(haystack, normalized_value)
             for haystack in support_haystacks
         )
+
+    @staticmethod
+    def _quote_links_identity_to_character(
+        *,
+        quote: str,
+        character_label: str,
+        identity_value: str,
+        term_groups: tuple[tuple[str, tuple[str, ...]], ...],
+    ) -> bool:
+        """Return whether a quote connects an identity term to this character."""
+        character_terms = PresentationEngine._character_label_terms(character_label)
+        if not character_terms or not any(
+            PresentationEngine._contains_identity_term(quote, term)
+            for term in character_terms
+        ):
+            return False
+
+        identity_terms: tuple[str, ...] = (identity_value,)
+        evidence_term_groups = (
+            _EVIDENCE_GENDER_TERMS if term_groups == _EXPLICIT_GENDER_TERMS else term_groups
+        )
+        for label, terms in evidence_term_groups:
+            if identity_value == label.lower():
+                identity_terms = terms
+                break
+
+        is_gender_terms = evidence_term_groups == _EVIDENCE_GENDER_TERMS
+        return any(
+            PresentationEngine._quote_contains_supported_identity_term(
+                quote,
+                term,
+                is_gender_term=is_gender_terms,
+            )
+            for term in identity_terms
+        )
+
+    @staticmethod
+    def _quote_contains_supported_identity_term(
+        quote: str,
+        term: str,
+        *,
+        is_gender_term: bool,
+    ) -> bool:
+        """Return whether an identity term in a quote can support a character."""
+        if not PresentationEngine._contains_identity_term(quote, term):
+            return False
+        if not is_gender_term:
+            return True
+
+        escaped_term = re.escape(term).replace(r"\ ", r"[\s_-]+")
+        group_pattern = (
+            rf"(?<![a-z0-9]){escaped_term}(?![a-z0-9])"
+            r"(?:\s+[a-z0-9-]+){0,2}\s+"
+            r"(soldiers|slaves|crew|members|recruits|troops|guards|students)\b"
+        )
+        return re.search(group_pattern, quote) is None
+
+    @staticmethod
+    def _character_label_terms(character_label: str) -> tuple[str, ...]:
+        """Return useful non-generic terms that can link evidence to a character."""
+        normalized_label = character_label.lower()
+        terms = [normalized_label]
+        generic_terms = {
+            "female",
+            "male",
+            "human",
+            "woman",
+            "man",
+            "girl",
+            "boy",
+            "unnamed",
+            "unknown",
+            "character",
+            "crew",
+            "member",
+            "slave",
+            "soldier",
+            "commander",
+            "captain",
+        }
+        terms.extend(
+            part
+            for part in re.findall(r"[a-z0-9]+", normalized_label)
+            if len(part) >= 3 and part not in generic_terms
+        )
+        return tuple(PresentationEngine._unique_values(terms))
+
+    @staticmethod
+    def _resolved_gender_items(items: Iterable[str]) -> tuple[str, ...]:
+        """Return gender only when supported values do not conflict."""
+        unique_items = tuple(PresentationEngine._unique_values(items))
+        normalized_items = {item.lower() for item in unique_items}
+        if {"male", "female"}.issubset(normalized_items):
+            return ()
+
+        return unique_items
 
     @staticmethod
     def _explicit_identity_items(

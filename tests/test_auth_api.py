@@ -1170,6 +1170,9 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     assert payload["character_profiles"][0]["gender"]["items"] == ["Unknown"]
     assert payload["character_profiles"][0]["status"]["items"] == ["Unknown"]
     assert payload["world_sheet"]["entity_sections"] == []
+    assert payload["scene_sheets"][0]["title"] == "Scene 1"
+    assert payload["scene_sheets"][0]["chapter_label"] == "Chapter 1"
+    assert payload["scene_sheets"][0]["characters_present"]["items"] == ["Mark"]
     assert payload["timeline_changes"] == []
     assert "Mark carried a rusty dagger" not in response.text
     assert "serialized_output" not in response.text

@@ -77,9 +77,13 @@ Character profile grouping must use genre-neutral attribute categories such as i
 
 Race and gender are conservative presentation fields. They should display only when
 the character's own name, role, status, family/relationship context, origin context,
-or direct identity fact clearly supports the value. Broad story context such as goals,
-chapter titles, or groups merely being discussed must not assign identity to the
-character.
+or direct identity fact clearly supports the value. A direct identity fact may also
+use its evidence quote when the quote links the identity term to that character's
+label. Broad story context such as goals, chapter titles, or groups merely being
+discussed must not assign identity to the character. Gendered group phrases such as
+female soldiers or male recruits must not assign gender to a separate character.
+Conflicting supported gender values should display as Unknown rather than showing
+both values.
 
 Recent Changes must not become a dumping ground for profile facts. Facts that already belong to identity, status, goals, equipment, abilities, assets, territory, relationships, or limitations should appear in those sections. Recent Changes should emphasize actual changed state or facts that have no better home yet.
 

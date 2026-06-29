@@ -805,6 +805,11 @@ def test_project_import_snapshot_handler_uses_injected_extractor() -> None:
     snapshot_payload = json.loads(snapshots[0].serialized_output)
     assert snapshot_payload["accepted_entity_count"] == 1
     assert snapshot_payload["accepted_fact_count"] == 2
+    assert snapshot_payload["presentation"]["scenes"][0]["title"] == "Scene 1"
+    assert snapshot_payload["presentation"]["scenes"][0]["chapter_label"] == "Chapter 1"
+    assert snapshot_payload["presentation"]["scenes"][0]["characters_present"]["items"] == [
+        "Lyra"
+    ]
     assert snapshot_payload["presentation"]["characters"][0]["display_name"] == "Lyra"
     assert snapshot_payload["timeline_changes"][0]["change_id"] == "state_fact_character_lyra_role"
     assert snapshot_payload["timeline_changes"][0] | {"change_id": ""} == {

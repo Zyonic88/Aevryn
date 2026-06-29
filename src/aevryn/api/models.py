@@ -497,6 +497,7 @@ class ProjectOutputsResponse(BaseModel):
     character_profiles: tuple[CharacterProfileOutput, ...] = ()
     world_sheet: WorldSheetOutput | None = None
     timeline_changes: tuple[ProjectTimelineChangeOutput, ...] = ()
+    scene_sheets: tuple[SceneSheetOutput, ...] = ()
 
 
 class SnapshotStoreRequest(BaseModel):

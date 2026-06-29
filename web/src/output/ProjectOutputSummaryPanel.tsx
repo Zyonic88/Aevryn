@@ -8,6 +8,7 @@ import type {
   ProjectOutputs,
   ProjectOutputSurface,
   ProjectTimelineChange,
+  SceneSheet,
   WorldSheet,
 } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
@@ -157,6 +158,9 @@ function ReadableSurfacePanels({
   if (surface === "timeline" && outputs.timeline_changes.length > 0) {
     return <TimelinePanel changes={outputs.timeline_changes} />;
   }
+  if (surface === "scenes" && outputs.scene_sheets.length > 0) {
+    return <SceneSheetsPanel scenes={outputs.scene_sheets} />;
+  }
   return null;
 }
 
@@ -296,6 +300,31 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
             ))}
           </ul>
         </section>
+      ))}
+    </div>
+  );
+}
+
+function SceneSheetsPanel({ scenes }: { scenes: SceneSheet[] }) {
+  return (
+    <div className="profile-grid" aria-label="Scene sheets">
+      {scenes.map((scene) => (
+        <article className="profile-card" key={scene.scene_id}>
+          <header>
+            <h3>{scene.title}</h3>
+            <p>{scene.chapter_label}</p>
+          </header>
+          <div className="profile-section-grid">
+            <PanelSection section={scene.characters_present} />
+            <PanelSection section={scene.location} />
+            <PanelSection section={scene.mood} />
+            <PanelSection section={scene.purpose} />
+            <PanelSection section={scene.visual_highlights} />
+            <PanelSection section={scene.continuity_changes} />
+            <PanelSection section={scene.environment} />
+          </div>
+          <p className="evidence-note">{scene.evidence_summary}</p>
+        </article>
       ))}
     </div>
   );

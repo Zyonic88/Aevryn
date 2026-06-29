@@ -801,6 +801,25 @@ canon snapshot. Each row is metadata-only:
 The frontend may group and render these rows, but it must not infer Timeline
 state or reconstruct continuity from raw snapshot payloads.
 
+Scene output must include API-provided `scene_sheets` from the latest canon
+snapshot. Each sheet is a human-readable scene panel with:
+
+* scene ID
+* scene title
+* chapter label
+* location
+* characters present
+* mood
+* purpose
+* visual highlights
+* continuity changes
+* environment
+* evidence summary
+
+For alpha, project output responses may cap the number of rendered scene sheets
+to keep large imports usable. The frontend renders the API-provided sheets; it
+does not reconstruct scene context from raw Canon or source prose.
+
 ## `POST /v2/exports/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns

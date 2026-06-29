@@ -2144,6 +2144,7 @@ def _project_outputs_response(
         character_profiles=_snapshot_character_profiles(canon_payload),
         world_sheet=_snapshot_world_sheet(canon_payload),
         timeline_changes=_snapshot_timeline_changes(canon_payload),
+        scene_sheets=_snapshot_scene_sheets(canon_payload),
     )
 
 
@@ -2354,6 +2355,40 @@ def _snapshot_world_sheet(payload: Mapping[str, object]) -> WorldSheetOutput | N
         )
     except (ValueError, ValidationError):
         return None
+
+
+def _snapshot_scene_sheets(
+    payload: Mapping[str, object],
+) -> tuple[SceneSheetOutput, ...]:
+    """Return persisted scene sheet panels from snapshot metadata."""
+    presentation = _mapping_payload_value(payload, "presentation")
+    scenes = presentation.get("scenes")
+    if not isinstance(scenes, list):
+        return ()
+    scene_sheets: list[SceneSheetOutput] = []
+    for scene in scenes:
+        if not isinstance(scene, dict):
+            continue
+        try:
+            scene_sheets.append(
+                SceneSheetOutput(
+                    scene_id=_string_payload_value(scene, "scene_id"),
+                    title=_string_payload_value(scene, "title"),
+                    chapter_label=_string_payload_value(scene, "chapter_label"),
+                    location=_snapshot_section(scene, "location"),
+                    characters_present=_snapshot_section(scene, "characters_present"),
+                    mood=_snapshot_section(scene, "mood"),
+                    purpose=_snapshot_section(scene, "purpose"),
+                    visual_highlights=_snapshot_section(scene, "visual_highlights"),
+                    continuity_changes=_snapshot_section(scene, "continuity_changes"),
+                    environment=_snapshot_section(scene, "environment"),
+                    evidence_summary=_string_payload_value(scene, "evidence_summary"),
+                )
+            )
+        except (ValueError, ValidationError):
+            continue
+
+    return tuple(scene_sheets)
 
 
 def _snapshot_timeline_changes(

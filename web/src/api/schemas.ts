@@ -251,6 +251,7 @@ export const projectOutputsSchema = z.object({
   character_profiles: z.array(z.lazy(() => characterProfileSchema)),
   world_sheet: z.lazy(() => worldSheetSchema).nullable(),
   timeline_changes: z.array(projectTimelineChangeSchema).default([]),
+  scene_sheets: z.array(z.lazy(() => sceneSheetSchema)).default([]),
 });
 
 export const snapshotSchema = z.object({

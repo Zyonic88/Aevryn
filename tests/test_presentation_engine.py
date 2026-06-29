@@ -284,6 +284,126 @@ def test_presentation_engine_uses_explicit_identity_language() -> None:
     )
 
 
+def test_presentation_engine_uses_character_linked_gender_evidence() -> None:
+    """Direct gender facts can be shown when the evidence quote names the character."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = replace(
+        card.facts[0].evidence,
+        quote="Jiang Shasha is Zhao Chen's fiancee and treats him coldly.",
+    )
+    identity_card = replace(
+        card,
+        display_name="Jiang Shasha",
+        facts=(
+            CanonCharacterFact(
+                attribute="gender",
+                value="Female",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.gender.items == ("Female",)
+
+
+def test_presentation_engine_rejects_borrowed_group_gender_evidence() -> None:
+    """A nearby gendered group should not assign gender to another character."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = replace(
+        card.facts[0].evidence,
+        quote="The Starfleet Commander said the fleet could only recruit female soldiers.",
+    )
+    identity_card = replace(
+        card,
+        display_name="Starfleet Commander",
+        facts=(
+            CanonCharacterFact(
+                attribute="gender",
+                value="Female",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.gender.items == ("Unknown",)
+
+
+def test_presentation_engine_does_not_read_male_inside_female() -> None:
+    """Female labels should not accidentally satisfy Male support."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = replace(
+        card.facts[0].evidence,
+        quote="The female half-beastman crew member watched Zhao Chen.",
+    )
+    identity_card = replace(
+        card,
+        display_name="Female Half-Beastman crew member",
+        facts=(
+            CanonCharacterFact(
+                attribute="gender",
+                value="Male",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.gender.items == ("Unknown",)
+
+
+def test_presentation_engine_hides_conflicting_gender_values() -> None:
+    """Character profiles should never show Male and Female at the same time."""
+    card, _context, _analysis, _pack = build_outputs()
+    male_evidence = replace(
+        card.facts[0].evidence,
+        quote="Zhao Chen is a male student in the captaincy department.",
+    )
+    female_evidence = replace(
+        card.facts[0].evidence,
+        quote="Zhao Chen is called a female soldier by mistake.",
+    )
+    identity_card = replace(
+        card,
+        display_name="Zhao Chen",
+        facts=(
+            CanonCharacterFact(
+                attribute="gender",
+                value="Male",
+                previous_value=None,
+                evidence=male_evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="gender",
+                value="Female",
+                previous_value=None,
+                evidence=female_evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.gender.items == ("Unknown",)
+
+
 def test_presentation_engine_builds_scene_sheet() -> None:
     """Presentation Engine builds a scan-friendly scene sheet."""
     _card, context, analysis, _pack = build_outputs()

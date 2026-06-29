@@ -180,6 +180,11 @@ class ExtractionResult:
             tuple(fact.fact_id for fact in self.facts),
             "fact IDs",
         )
+        object.__setattr__(
+            self,
+            "relationships",
+            _deduped_relationship_candidates(self.relationships),
+        )
         _require_unique_candidate_values(
             tuple(
                 (
@@ -248,3 +253,24 @@ def _require_unique_candidate_values(
     """Validate that extraction result candidate identities are unique."""
     if len(values) != len(set(values)):
         raise ValueError(f"Extraction result contains duplicate {field_name}.")
+
+
+def _deduped_relationship_candidates(
+    relationships: tuple[ExtractedRelationship, ...],
+) -> tuple[ExtractedRelationship, ...]:
+    """Return one relationship candidate per semantic relationship."""
+    relationships_by_key: dict[
+        tuple[str, str, str],
+        ExtractedRelationship,
+    ] = {}
+    for relationship in relationships:
+        key = (
+            relationship.source_entity_id,
+            relationship.relationship_type,
+            relationship.target_entity_id,
+        )
+        current = relationships_by_key.get(key)
+        if current is None or relationship.confidence > current.confidence:
+            relationships_by_key[key] = relationship
+
+    return tuple(relationships_by_key.values())

@@ -408,7 +408,6 @@ def test_extraction_rejects_wrong_result_scene_id() -> None:
     (
         ("entity", "duplicate entity IDs"),
         ("fact", "duplicate fact IDs"),
-        ("relationship", "duplicate relationship candidates"),
         ("state_change", "duplicate state-change candidates"),
     ),
 )
@@ -428,6 +427,23 @@ def test_extraction_rejects_duplicate_candidates(
 
     with pytest.raises(ValueError, match=message):
         engine.extract_imported_source(imported)
+
+
+def test_extraction_dedupes_duplicate_relationship_candidates() -> None:
+    """Repeated semantic relationships should not fail an AI-backed run."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(
+        extractor=DuplicateCandidateExtractor("relationship")
+    )
+
+    results = engine.extract_imported_source(imported)
+
+    assert len(results[0].relationships) == 1
+    assert results[0].relationships[0].relationship_type == "owns"
 
 
 def test_extraction_models_reject_invalid_machine_fields() -> None:

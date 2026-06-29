@@ -568,6 +568,12 @@ const projectOutputsPayload = {
       value: "Injured",
     },
   ],
+  scene_sheets: [
+    {
+      ...scenePreviewPayload.scene_sheet,
+      title: "Processed Scene 7",
+    },
+  ],
 };
 
 function storeAuthenticatedProject() {
@@ -1241,6 +1247,12 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("link", { name: "Scenes" }));
     expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "8 processed scenes",
+    );
+    expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
+      "Processed Scene 7",
+    );
+    expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
+      "Characters Present",
     );
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview scene" }));
@@ -2551,10 +2563,10 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
     expect(screen.getByText("Chapter 1 for source_alpha_chapter_001_scene_001.")).toBeInTheDocument();
-    expect(screen.getByText("Hangar")).toBeInTheDocument();
-    expect(screen.getByText("Mark")).toBeInTheDocument();
+    expect(screen.getAllByText("Hangar").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Mark").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Mark equipped Rusty Dagger")).toBeInTheDocument();
-    expect(screen.getByText("1 verified evidence reference")).toBeInTheDocument();
+    expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);
   });
 
   it("previews continuity reports from the continuity workspace tab", async () => {

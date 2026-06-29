@@ -347,19 +347,6 @@ class EntityExtractionEngine:
         fact_ids = tuple(fact.fact_id for fact in result.facts)
         EntityExtractionEngine._require_unique_values(fact_ids, "fact IDs")
 
-        relationship_keys = tuple(
-            (
-                relationship.source_entity_id,
-                relationship.relationship_type,
-                relationship.target_entity_id,
-            )
-            for relationship in result.relationships
-        )
-        EntityExtractionEngine._require_unique_values(
-            relationship_keys,
-            "relationship candidates",
-        )
-
         state_change_keys = tuple(
             (
                 state_change.entity_id,
