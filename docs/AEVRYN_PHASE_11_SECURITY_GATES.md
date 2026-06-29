@@ -113,11 +113,43 @@ Yes
 
 ---
 
+# Gate 4 - Privacy Logging Test
+
+Command:
+
+```text
+python -m pytest tests/test_auth_api.py::test_phase11_privacy_logging_gate_excludes_private_story_payloads -q
+```
+
+Expected result:
+
+* API, worker, and persistence workflow logs do not preserve source prose.
+* logs do not preserve full AI-response-shaped text, credentials, tokens, source payload bytes, machine-local paths, or hostnames.
+* logs do not expose serialized snapshot output as a hidden copy of processed story data.
+
+Latest result:
+
+```text
+1 passed
+```
+
+Known residual risk:
+
+* this gate currently covers the storage-backed product path; standalone CLI logging and future provider integrations must be included before public beta.
+* production log aggregation, retention, and access controls are not yet documented.
+
+Public beta blocked:
+
+```text
+Yes
+```
+
+---
+
 # Remaining Gates
 
 The following gates still need Phase 11 implementation before public beta:
 
-* Privacy Logging Test
 * Upload Validation Test
 * API Hardening Test
 * CORS And Security Header Test

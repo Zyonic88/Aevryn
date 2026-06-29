@@ -880,6 +880,87 @@ def test_phase11_project_surfaces_fail_closed_across_users() -> None:
         assert "storage://exports/canon.md" not in response.text
 
 
+def test_phase11_privacy_logging_gate_excludes_private_story_payloads(
+    caplog: LogCaptureFixture,
+) -> None:
+    """Workflow logs should never preserve source prose or sensitive payload text."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=content_store,
+            ),
+            import_content_store=content_store,
+        )
+    )
+    private_markers = (
+        "PRIVATE_MANUSCRIPT_SENTENCE_DO_NOT_LOG",
+        "RAW_AI_RESPONSE_SECRET_DO_NOT_LOG",
+        "sk-aevryn-test-secret-do-not-log",
+        "C:\\Users\\creator\\private_story.txt",
+        "creator-laptop.local",
+    )
+    private_source = "\n".join(
+        (
+            "Chapter 1",
+            "Mark carried a dagger.",
+            *private_markers,
+        )
+    )
+    private_import_payload = {
+        **import_create_payload(),
+        "content_base64": base64.b64encode(private_source.encode("utf-8")).decode(
+            "ascii"
+        ),
+    }
+
+    with caplog.at_level(logging.DEBUG):
+        register_user(client, user_id="user_owner", email="owner@example.com")
+        create_project_and_story(client)
+        created_import = client.post(
+            "/v2/projects/project_alpha/stories/story_alpha/imports",
+            headers=auth_headers("token_001"),
+            json=private_import_payload,
+        )
+        assert created_import.status_code == 200
+        submitted = client.post(
+            "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+            headers=auth_headers("token_001"),
+            json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+        )
+        assert submitted.status_code == 200
+        processed = client.post(
+            "/v2/workers/process",
+            json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+        )
+        assert processed.status_code == 200
+        status = client.get(
+            "/v2/projects/project_alpha/status",
+            headers=auth_headers("token_001"),
+        )
+        assert status.status_code == 200
+        deleted = client.delete(
+            "/v2/projects/project_alpha/stories/story_alpha",
+            headers=auth_headers("token_001"),
+        )
+        assert deleted.status_code == 204
+
+    log_text = caplog_record_text(caplog)
+    for marker in private_markers:
+        assert marker not in log_text
+    assert private_import_payload["content_base64"] not in log_text
+    assert "serialized_output" not in log_text
+    assert "session_token" not in log_text
+    assert "token_001" not in log_text
+    assert "token_002" not in log_text
+
+
 def test_import_runs_api_allows_retry_after_stale_active_run() -> None:
     """Old alpha runs should not block retry forever."""
     repository = InMemoryProjectRepository()
