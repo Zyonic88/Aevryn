@@ -18,6 +18,7 @@ from aevryn.api import (
     AUTH_STORE_PATH_ENV,
     DEPLOYMENT_ENV,
     EXTRACTION_MODE_ENV,
+    IMPORT_STORAGE_PATH_ENV,
     OPENAI_API_KEY_ENV,
     OPENAI_MAX_RESPONSE_BYTES_ENV,
     OPENAI_MODEL_ENV,
@@ -382,6 +383,95 @@ def test_create_app_from_env_selects_postgresql_repository_for_production(
 
     assert health.status_code == 200
     assert health.json()["storage"]["project_storage"] == "configured"
+
+
+def test_create_app_from_env_wires_postgresql_browser_services(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """PostgreSQL metadata should still get local auth, import storage, and worker wiring."""
+
+    class FakePostgresqlProjectRepository(InMemoryProjectRepository):
+        """Test double for PostgreSQL repository selection."""
+
+        def __init__(self, database_url: str) -> None:
+            super().__init__()
+            self.database_url = database_url
+
+    monkeypatch.setattr(
+        "aevryn.api.app.PostgresqlProjectRepository",
+        FakePostgresqlProjectRepository,
+    )
+    auth_store_path = tmp_path / "postgresql_auth.json"
+    import_storage_path = tmp_path / "postgresql_imports"
+    client = TestClient(
+        create_app_from_env(
+            {
+                PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+                PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+                AUTH_STORE_PATH_ENV: str(auth_store_path),
+                IMPORT_STORAGE_PATH_ENV: str(import_storage_path),
+            }
+        )
+    )
+    now = "2026-06-27T00:00:00Z"
+
+    health = client.get("/v2/health")
+
+    assert health.status_code == 200
+    assert health.json()["storage"] == {
+        "project_storage": "configured",
+        "import_content_storage": "configured",
+    }
+
+    register = client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": "user_postgresql",
+            "email": "postgresql@example.com",
+            "display_name": "PostgreSQL User",
+            "password": "StrongPass123",
+            "now": now,
+        },
+    )
+    assert register.status_code == 200
+    headers = {
+        "Authorization": f"Bearer {register.json()['session_token']}",
+        "X-Aevryn-Now": now,
+    }
+
+    created = client.post(
+        "/v2/projects",
+        headers=headers,
+        json={"project_id": "project_postgresql", "name": "PostgreSQL Story", "now": now},
+    )
+    assert created.status_code == 200
+    story = client.post(
+        "/v2/projects/project_postgresql/stories",
+        headers=headers,
+        json={"story_id": "story_postgresql", "title": "PostgreSQL Story", "now": now},
+    )
+    assert story.status_code == 200
+    imported = client.post(
+        "/v2/projects/project_postgresql/stories/story_postgresql/imports",
+        headers=headers,
+        json={
+            "import_id": "import_postgresql",
+            "source_id": "source_postgresql",
+            "filename": "chapter.txt",
+            "content_base64": _b64("Chapter 1\nMira opened the gate."),
+            "now": now,
+        },
+    )
+    assert imported.status_code == 200
+    assert auth_store_path.exists()
+    assert any(import_storage_path.iterdir())
+
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": now, "finished_at": now, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
 
 
 def test_api_key_auth_keeps_discovery_routes_public() -> None:

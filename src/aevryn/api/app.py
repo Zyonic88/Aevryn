@@ -1795,12 +1795,11 @@ def _platform_services_from_env(
         repository: ProjectRepository = PostgresqlProjectRepository(
             environ.get(PROJECT_DATABASE_URL_ENV, "")
         )
-        return (
-            None,
-            repository,
-            InMemoryJobQueue(),
-            None,
-            None,
+        return _local_platform_services(
+            repository=repository,
+            auth_store_path=_postgresql_auth_store_path_from_env(environ),
+            import_storage_path=_postgresql_import_storage_path_from_env(environ),
+            environ=environ,
         )
     if database_adapter and database_adapter != "json":
         raise ValueError(
@@ -1814,12 +1813,30 @@ def _platform_services_from_env(
 
     project_database_path = Path(database_path)
     repository = JsonProjectRepository(project_database_path)
-    import_content_store = FileSystemImportContentStore(
-        _import_storage_path_from_env(environ, project_database_path)
+    return _local_platform_services(
+        repository=repository,
+        auth_store_path=_auth_store_path_from_env(environ, project_database_path),
+        import_storage_path=_import_storage_path_from_env(environ, project_database_path),
+        environ=environ,
     )
-    auth_store = JsonAuthenticationStore(
-        _auth_store_path_from_env(environ, project_database_path)
-    )
+
+
+def _local_platform_services(
+    *,
+    repository: ProjectRepository,
+    auth_store_path: Path,
+    import_storage_path: Path,
+    environ: Mapping[str, str],
+) -> tuple[
+    AuthenticationService,
+    ProjectRepository,
+    BackgroundJobQueue,
+    BackgroundJobHandler,
+    ImportContentStore,
+]:
+    """Return browser-ready local platform services for one project repository."""
+    import_content_store = FileSystemImportContentStore(import_storage_path)
+    auth_store = JsonAuthenticationStore(auth_store_path)
     authentication_service = AuthenticationService(
         repository=repository,
         credential_store=auth_store,
@@ -1893,6 +1910,22 @@ def _import_storage_path_from_env(
     if configured_path:
         return Path(configured_path)
     return project_database_path.with_name(f"{project_database_path.stem}_imports")
+
+
+def _postgresql_auth_store_path_from_env(environ: Mapping[str, str]) -> Path:
+    """Return the local auth store path used with PostgreSQL-backed metadata."""
+    configured_path = environ.get(AUTH_STORE_PATH_ENV, "").strip()
+    if configured_path:
+        return Path(configured_path)
+    return Path(".local") / "postgresql_auth.json"
+
+
+def _postgresql_import_storage_path_from_env(environ: Mapping[str, str]) -> Path:
+    """Return the local import content store path used with PostgreSQL-backed metadata."""
+    configured_path = environ.get(IMPORT_STORAGE_PATH_ENV, "").strip()
+    if configured_path:
+        return Path(configured_path)
+    return Path(".local") / "postgresql_imports"
 
 
 def _optional_env_text(environ: Mapping[str, str], key: str) -> str:

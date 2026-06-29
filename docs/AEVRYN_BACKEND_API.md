@@ -159,6 +159,8 @@ For PostgreSQL-backed project metadata, install the optional PostgreSQL dependen
 ```text
 AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql
 AEVRYN_PROJECT_DATABASE_URL=postgresql://aevryn_app:<password>@localhost:5432/aevryn_dev
+AEVRYN_AUTH_STORE_PATH=C:\Users\enigm\Documents\Aevryn\.local\postgresql_auth.json
+AEVRYN_IMPORT_STORAGE_PATH=C:\Users\enigm\Documents\Aevryn\.local\postgresql_imports
 ```
 
 The database URL must stay local to the machine or deployment secret manager.
@@ -171,6 +173,8 @@ aevryn project-db-smoke
 ```
 
 The smoke test creates, reads, and deletes one temporary user record. It bootstraps missing schema objects, prints metadata-only results, and never prints the database URL or password.
+
+For local browser testing, the PostgreSQL adapter stores project metadata in PostgreSQL while local development auth/session records and uploaded source bytes remain in the configured filesystem paths above. This keeps the alpha workflow browser-ready without pretending that local JSON auth or local file import storage are final production identity or object-storage systems.
 
 Optional explicit authentication store path:
 
