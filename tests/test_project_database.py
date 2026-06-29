@@ -21,6 +21,7 @@ from aevryn.persistence import (
     InMemoryProjectRepository,
     JsonProjectRepository,
     PersistenceError,
+    PostgresqlProjectRepository,
     ProjectRecord,
     ProjectRepository,
     ProjectSettingsRecord,
@@ -308,6 +309,34 @@ def test_json_project_repository_persists_records_across_instances(
     assert '"schema_version": "v2_phase_2_001"' in database_path.read_text(
         encoding="utf-8"
     )
+
+
+def test_postgresql_project_repository_rejects_blank_database_url() -> None:
+    """PostgreSQL adapter should fail before attempting a connection with bad config."""
+    with pytest.raises(ValueError, match="database URL cannot be blank"):
+        PostgresqlProjectRepository("", connect_factory=lambda _: None)
+
+
+def test_postgresql_project_repository_rejects_non_postgresql_database_url() -> None:
+    """PostgreSQL adapter should require an explicit PostgreSQL URL."""
+    with pytest.raises(ValueError, match="must use postgresql:// or postgres://"):
+        PostgresqlProjectRepository("sqlite:///aevryn.db", connect_factory=lambda _: None)
+
+
+def test_postgresql_project_repository_requires_psycopg_when_no_factory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PostgreSQL adapter should explain the optional production dependency."""
+
+    def missing_psycopg(module_name: str) -> object:
+        if module_name == "psycopg":
+            raise ModuleNotFoundError(module_name)
+        raise AssertionError(f"Unexpected import: {module_name}")
+
+    monkeypatch.setattr("aevryn.persistence.postgresql.importlib.import_module", missing_psycopg)
+
+    with pytest.raises(PersistenceError, match="psycopg is required"):
+        PostgresqlProjectRepository("postgresql://example.invalid/aevryn")
 
 
 def test_json_project_repository_rolls_back_failed_writes(tmp_path: Path) -> None:

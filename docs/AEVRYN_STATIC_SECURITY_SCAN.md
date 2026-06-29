@@ -38,6 +38,7 @@ Current accepted suppressions:
 
 * `B310` on the OpenAI HTTPS transport after endpoint scheme validation.
 * `B404`, `B603`, and `B607` on the repository secret scanner's fixed `git ls-files` command, with `shell=False`.
+* `B608` on the PostgreSQL Project Database adapter's schema-generated table and column statements. Table and column identifiers come only from the fixed Project Database schema manifest; record values remain parameterized.
 
 ---
 
@@ -54,7 +55,7 @@ Expected result:
 
 ```text
 All checks passed!
-Success: no issues found in 78 source files
+Success: no issues found in 79 source files
 ```
 
 These checks are not a substitute for Bandit, but they harden the same release surface by catching unsafe drift, typing gaps, and lint regressions before runtime.

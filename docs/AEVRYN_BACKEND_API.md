@@ -119,7 +119,7 @@ This prevents public deployments from accidentally starting with stateless stora
 
 Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because that path selects the local JSON adapter.
 
-The PostgreSQL adapter is selected by contract but is not implemented yet, so public-beta production startup remains blocked until the adapter exists.
+The PostgreSQL Project Database adapter is available through the optional `postgresql` dependencies. Public-beta production startup still remains blocked by the remaining infrastructure decisions, including production object storage for uploaded source bytes and exports.
 
 For local development, the Aevryn CLI can launch the same API:
 
@@ -152,6 +152,13 @@ Optional explicit local adapter selector:
 
 ```text
 AEVRYN_PROJECT_DATABASE_ADAPTER=json
+```
+
+For PostgreSQL-backed project metadata, install the optional PostgreSQL dependency and set:
+
+```text
+AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql
+AEVRYN_PROJECT_DATABASE_URL=postgresql://aevryn_app:<password>@localhost:5432/aevryn_dev
 ```
 
 Optional explicit authentication store path:

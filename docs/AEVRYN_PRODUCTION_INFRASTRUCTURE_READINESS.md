@@ -234,7 +234,8 @@ Decision 1 result:
 ```text
 Managed PostgreSQL is approved as the production Project Database target.
 Production startup now rejects local JSON Project Database configuration.
-The PostgreSQL adapter is not implemented yet, so Gate 3 remains blocked.
+The PostgreSQL Project Database adapter is implemented.
+Gate 3 remains blocked by the remaining infrastructure decisions and production-like smoke test.
 ```
 
 ---

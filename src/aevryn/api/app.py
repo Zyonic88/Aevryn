@@ -138,6 +138,7 @@ from aevryn.persistence import (
     ImportRecord,
     JsonProjectRepository,
     PersistenceError,
+    PostgresqlProjectRepository,
     ProjectRecord,
     ProjectRepository,
     ProjectSettingsRecord,
@@ -1791,8 +1792,15 @@ def _platform_services_from_env(
     """Return configured platform services from deployment environment settings."""
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
     if database_adapter == "postgresql":
-        raise ValueError(
-            "PostgreSQL Project Database adapter is selected but not implemented yet."
+        repository: ProjectRepository = PostgresqlProjectRepository(
+            environ.get(PROJECT_DATABASE_URL_ENV, "")
+        )
+        return (
+            None,
+            repository,
+            InMemoryJobQueue(),
+            None,
+            None,
         )
     if database_adapter and database_adapter != "json":
         raise ValueError(

@@ -93,7 +93,8 @@ Production mode rejects AEVRYN_PROJECT_DATABASE_PATH because local JSON storage 
 Current implementation result:
 
 ```text
-Production startup remains blocked until the PostgreSQL Project Database adapter is implemented.
+PostgreSQL Project Database adapter is implemented behind the optional postgresql dependency.
+Public beta remains blocked by the remaining production infrastructure decisions and smoke tests.
 ```
 
 ---

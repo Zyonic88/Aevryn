@@ -14,6 +14,7 @@ from aevryn.persistence.models import (
     StoryRecord,
     UserRecord,
 )
+from aevryn.persistence.postgresql import PostgresqlProjectRepository
 from aevryn.persistence.repository import (
     AccessDeniedError,
     DuplicateRecordError,
@@ -49,6 +50,7 @@ __all__ = [
     "JsonProjectRepository",
     "PersistenceError",
     "PROJECT_DATABASE_SCHEMA",
+    "PostgresqlProjectRepository",
     "ProjectRecord",
     "ProjectRepository",
     "ProjectSettingsRecord",

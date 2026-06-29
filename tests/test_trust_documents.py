@@ -260,8 +260,7 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Production deployment must fail closed if local-only adapters are selected accidentally.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "Production mode rejects AEVRYN_PROJECT_DATABASE_PATH",
-        "Production startup remains blocked until the PostgreSQL Project Database adapter "
-        "is implemented.",
+        "PostgreSQL Project Database adapter is implemented",
         "Public beta remains blocked.",
     )
 

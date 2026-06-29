@@ -44,6 +44,9 @@ dev = [
 platform = [
     "uvicorn>=0.30",
 ]
+postgresql = [
+    "psycopg[binary]>=3.2",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

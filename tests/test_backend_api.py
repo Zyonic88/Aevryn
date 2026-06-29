@@ -349,9 +349,24 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
         )
 
 
-def test_create_app_from_env_blocks_production_until_postgresql_adapter_exists() -> None:
-    """Production mode should not silently fall back after Decision 1."""
-    with pytest.raises(ValueError, match="PostgreSQL Project Database adapter"):
+def test_create_app_from_env_selects_postgresql_repository_for_production(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Production mode should wire PostgreSQL project storage after Decision 1."""
+
+    class FakePostgresqlProjectRepository(InMemoryProjectRepository):
+        """Test double for production repository selection."""
+
+        def __init__(self, database_url: str) -> None:
+            super().__init__()
+            self.database_url = database_url
+
+    monkeypatch.setattr(
+        "aevryn.api.app.PostgresqlProjectRepository",
+        FakePostgresqlProjectRepository,
+    )
+
+    client = TestClient(
         create_app_from_env(
             {
                 DEPLOYMENT_ENV: "production",
@@ -361,6 +376,12 @@ def test_create_app_from_env_blocks_production_until_postgresql_adapter_exists()
                 API_KEYS_ENV: "production-api-key",
             }
         )
+    )
+
+    health = client.get("/v2/health")
+
+    assert health.status_code == 200
+    assert health.json()["storage"]["project_storage"] == "configured"
 
 
 def test_api_key_auth_keeps_discovery_routes_public() -> None:
