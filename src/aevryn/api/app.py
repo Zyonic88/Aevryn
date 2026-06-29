@@ -68,6 +68,7 @@ from aevryn.api.models import (
     OutputSection,
     ProductionPackOutput,
     ProjectCreateRequest,
+    ProjectExportOptionOutput,
     ProjectListResponse,
     ProjectOutput,
     ProjectOutputCanonSummary,
@@ -2145,6 +2146,9 @@ def _project_outputs_response(
         world_sheet=_snapshot_world_sheet(canon_payload),
         timeline_changes=_snapshot_timeline_changes(canon_payload),
         scene_sheets=_snapshot_scene_sheets(canon_payload),
+        prompt_packs=_snapshot_prompt_packs(canon_payload),
+        continuity_report=_snapshot_continuity_report(canon_payload),
+        export_options=_snapshot_export_options(canon_payload),
     )
 
 
@@ -2389,6 +2393,145 @@ def _snapshot_scene_sheets(
             continue
 
     return tuple(scene_sheets)
+
+
+def _snapshot_prompt_packs(
+    payload: Mapping[str, object],
+) -> tuple[ProductionPackOutput, ...]:
+    """Return persisted prompt-pack panels from snapshot metadata."""
+    presentation = _mapping_payload_value(payload, "presentation")
+    prompt_packs = presentation.get("prompt_packs")
+    if not isinstance(prompt_packs, list):
+        return ()
+    packs: list[ProductionPackOutput] = []
+    for pack in prompt_packs:
+        if not isinstance(pack, dict):
+            continue
+        try:
+            packs.append(
+                ProductionPackOutput(
+                    scene=_snapshot_scene_sheet_from_payload(
+                        _mapping_payload_value(pack, "scene")
+                    ),
+                    image_prompt=_snapshot_section(pack, "image_prompt"),
+                    narration_prompt=_snapshot_section(pack, "narration_prompt"),
+                    camera_prompt=_snapshot_section(pack, "camera_prompt"),
+                    animation_prompt=_snapshot_section(pack, "animation_prompt"),
+                )
+            )
+        except (ValueError, ValidationError):
+            continue
+
+    return tuple(packs)
+
+
+def _snapshot_scene_sheet_from_payload(
+    scene: Mapping[str, object],
+) -> SceneSheetOutput:
+    """Return one scene sheet from persisted metadata."""
+    return SceneSheetOutput(
+        scene_id=_string_payload_value(scene, "scene_id"),
+        title=_string_payload_value(scene, "title"),
+        chapter_label=_string_payload_value(scene, "chapter_label"),
+        location=_snapshot_section(scene, "location"),
+        characters_present=_snapshot_section(scene, "characters_present"),
+        mood=_snapshot_section(scene, "mood"),
+        purpose=_snapshot_section(scene, "purpose"),
+        visual_highlights=_snapshot_section(scene, "visual_highlights"),
+        continuity_changes=_snapshot_section(scene, "continuity_changes"),
+        environment=_snapshot_section(scene, "environment"),
+        evidence_summary=_string_payload_value(scene, "evidence_summary"),
+    )
+
+
+def _snapshot_continuity_report(
+    payload: Mapping[str, object],
+) -> ContinuityReportOutput | None:
+    """Return persisted continuity report metadata from snapshot output."""
+    presentation = _mapping_payload_value(payload, "presentation")
+    report = presentation.get("continuity_report")
+    if not isinstance(report, dict):
+        return None
+    scenes = report.get("scenes")
+    if not isinstance(scenes, list):
+        scenes = []
+    try:
+        return ContinuityReportOutput(
+            source_id=_string_payload_value(report, "source_id"),
+            scenes=tuple(
+                _snapshot_continuity_scene(scene)
+                for scene in scenes
+                if isinstance(scene, dict)
+            ),
+        )
+    except (ValueError, ValidationError):
+        return None
+
+
+def _snapshot_continuity_scene(
+    scene: Mapping[str, object],
+) -> ContinuitySceneOutput:
+    """Return one continuity scene from persisted metadata."""
+    return ContinuitySceneOutput(
+        scene_id=_string_payload_value(scene, "scene_id"),
+        new=_snapshot_continuity_records(scene, "new"),
+        updated=_snapshot_continuity_records(scene, "updated"),
+        still_known=_snapshot_continuity_records(scene, "still_known"),
+        invalidated=_snapshot_continuity_records(scene, "invalidated"),
+    )
+
+
+def _snapshot_continuity_records(
+    scene: Mapping[str, object],
+    key: str,
+) -> tuple[ContinuityRecordOutput, ...]:
+    """Return continuity records from one persisted bucket."""
+    records = scene.get(key)
+    if not isinstance(records, list):
+        return ()
+    output: list[ContinuityRecordOutput] = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        output.append(
+            ContinuityRecordOutput(
+                record_id=_string_payload_value(record, "record_id"),
+                record_type=_string_payload_value(record, "record_type"),
+                description=_string_payload_value(record, "description"),
+                evidence_id=_string_payload_value(record, "evidence_id"),
+                chapter_id=_string_payload_value(record, "chapter_id"),
+                scene_id=_string_payload_value(record, "scene_id"),
+            )
+        )
+    return tuple(output)
+
+
+def _snapshot_export_options(
+    payload: Mapping[str, object],
+) -> tuple[ProjectExportOptionOutput, ...]:
+    """Return persisted export options without serialized export content."""
+    presentation = _mapping_payload_value(payload, "presentation")
+    options = presentation.get("export_options")
+    if not isinstance(options, list):
+        return ()
+    output: list[ProjectExportOptionOutput] = []
+    for option in options:
+        if not isinstance(option, dict):
+            continue
+        formats = option.get("formats")
+        if not isinstance(formats, list):
+            formats = []
+        try:
+            output.append(
+                ProjectExportOptionOutput(
+                    export_kind=_string_payload_value(option, "export_kind"),
+                    formats=tuple(str(item) for item in formats if isinstance(item, str)),
+                    label=_string_payload_value(option, "label"),
+                )
+            )
+        except (ValueError, ValidationError):
+            continue
+    return tuple(output)
 
 
 def _snapshot_timeline_changes(
@@ -4088,9 +4231,10 @@ def _safe_section(
     source_quotes: Sequence[str],
 ) -> PresentationSection:
     """Return a presentation section with exact source prose redacted."""
+    redacted_items = tuple(_redact_source_quote(item, source_quotes) for item in section.items)
     return PresentationSection(
         title=section.title,
-        items=tuple(_redact_source_quote(item, source_quotes) for item in section.items),
+        items=tuple(dict.fromkeys(redacted_items)),
     )
 
 

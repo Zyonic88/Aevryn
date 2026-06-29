@@ -15,8 +15,19 @@ from aevryn.extraction import SceneExtractor
 from aevryn.import_storage import ImportContentStore
 from aevryn.persistence import EngineRunRecord, ProjectRepository, SnapshotRecord
 from aevryn.presentation import PresentationEngine, PresentationSection
-from aevryn.presentation.models import CharacterProfileView, SceneSheetView, WorldSheetView
-from aevryn.projects import AevrynProjectRunner, ProjectRunResult
+from aevryn.presentation.models import (
+    CharacterProfileView,
+    ProductionPackView,
+    SceneSheetView,
+    WorldSheetView,
+)
+from aevryn.projects import (
+    AevrynProjectRunner,
+    ContinuityRecord,
+    ContinuityReport,
+    ContinuitySceneReport,
+    ProjectRunResult,
+)
 from aevryn.prompts import CanonPromptBuilder
 from aevryn.workers.models import BackgroundJob, BackgroundWorkerRunSummary
 from aevryn.workers.queue import BackgroundJobQueue, DuplicateJobError
@@ -27,6 +38,7 @@ _TIMELINE_OMITTED_ATTRIBUTES = frozenset(
 _SOURCE_BACKED_PLACEHOLDER = "Source-backed detail available through evidence controls."
 _MAX_TIMELINE_CHANGES_PER_SCENE = 8
 _MAX_PROJECT_SCENE_SHEETS = 12
+_MAX_PROJECT_PROMPT_PACKS = 6
 
 logger = logging.getLogger(__name__)
 
@@ -507,6 +519,16 @@ def _presentation_snapshot_payload(result: ProjectRunResult) -> dict[str, object
             presenter=presenter,
             source_quotes=source_quotes,
         ),
+        "prompt_packs": _production_packs_payload(
+            result=result,
+            runner=runner,
+            presenter=presenter,
+            source_quotes=source_quotes,
+        ),
+        "continuity_report": _continuity_report_payload(
+            runner.build_continuity_report(result)
+        ),
+        "export_options": _export_options_payload(),
         "characters": tuple(
             _character_profile_payload(
                 presenter.character_profile(
@@ -567,6 +589,42 @@ def _scene_sheets_payload(
             )
 
     return tuple(scene_payloads)
+
+
+def _production_packs_payload(
+    *,
+    result: ProjectRunResult,
+    runner: AevrynProjectRunner,
+    presenter: PresentationEngine,
+    source_quotes: tuple[str, ...],
+) -> tuple[dict[str, object], ...]:
+    """Return a capped set of persisted prompt packs in story order."""
+    prompt_builder = CanonPromptBuilder()
+    character_ids_by_scene = _accepted_character_ids_by_scene(result)
+    prompt_payloads: list[dict[str, object]] = []
+    for chapter in result.imported_source.story.chapters:
+        for scene in chapter.scenes:
+            if len(prompt_payloads) >= _MAX_PROJECT_PROMPT_PACKS:
+                return tuple(prompt_payloads)
+            character_ids = character_ids_by_scene.get(scene.scene_id, ())
+            if not character_ids:
+                continue
+            context = runner.build_scene_context(
+                result=result,
+                scene_id=scene.scene_id,
+                character_ids=character_ids,
+            )
+            pack = prompt_builder.build_production_pack(context)
+            scene_sheet = presenter.scene_sheet(context=context, analysis=pack.analysis)
+            prompt_payloads.append(
+                _production_pack_payload(
+                    presenter.production_pack(pack=pack, scene=scene_sheet),
+                    chapter_label=f"Chapter {chapter.chapter_index}",
+                    source_quotes=source_quotes,
+                )
+            )
+
+    return tuple(prompt_payloads)
 
 
 def _accepted_character_ids_by_scene(
@@ -684,6 +742,101 @@ def _scene_sheet_payload(
         "environment": _section_payload(scene.environment, source_quotes=source_quotes),
         "evidence_summary": scene.evidence_summary,
     }
+
+
+def _production_pack_payload(
+    pack: ProductionPackView,
+    *,
+    chapter_label: str,
+    source_quotes: tuple[str, ...],
+) -> dict[str, object]:
+    """Return a JSON-ready production pack panel."""
+    return {
+        "scene": _scene_sheet_payload(
+            pack.scene,
+            chapter_label=chapter_label,
+            source_quotes=source_quotes,
+        ),
+        "image_prompt": _section_payload(pack.image_prompt, source_quotes=source_quotes),
+        "narration_prompt": _section_payload(
+            pack.narration_prompt,
+            source_quotes=source_quotes,
+        ),
+        "camera_prompt": _section_payload(pack.camera_prompt, source_quotes=source_quotes),
+        "animation_prompt": _section_payload(
+            pack.animation_prompt,
+            source_quotes=source_quotes,
+        ),
+    }
+
+
+def _continuity_report_payload(report: ContinuityReport) -> dict[str, object]:
+    """Return a JSON-ready continuity report without exact source prose."""
+    return {
+        "source_id": report.source_id,
+        "scenes": tuple(
+            _continuity_scene_payload(scene)
+            for scene in report.scenes
+        ),
+    }
+
+
+def _continuity_scene_payload(scene: ContinuitySceneReport) -> dict[str, object]:
+    """Return one JSON-ready continuity scene."""
+    return {
+        "scene_id": scene.scene_id,
+        "new": tuple(_continuity_record_payload(record) for record in scene.new),
+        "updated": tuple(_continuity_record_payload(record) for record in scene.updated),
+        "still_known": tuple(
+            _continuity_record_payload(record) for record in scene.still_known[:8]
+        ),
+        "invalidated": tuple(
+            _continuity_record_payload(record) for record in scene.invalidated
+        ),
+    }
+
+
+def _continuity_record_payload(record: ContinuityRecord) -> dict[str, object]:
+    """Return one JSON-ready continuity record without source prose."""
+    return {
+        "record_id": record.record_id,
+        "record_type": record.record_type,
+        "description": record.description,
+        "evidence_id": record.evidence_id,
+        "chapter_id": record.chapter_id,
+        "scene_id": record.scene_id,
+    }
+
+
+def _export_options_payload() -> tuple[dict[str, object], ...]:
+    """Return alpha-safe export availability without serialized export content."""
+    return (
+        {
+            "export_kind": "character_profile",
+            "formats": ("markdown",),
+            "label": "Character Profile",
+        },
+        {
+            "export_kind": "scene_sheet",
+            "formats": ("markdown",),
+            "label": "Scene Sheet",
+        },
+        {
+            "export_kind": "production_pack",
+            "formats": ("markdown",),
+            "label": "Production Pack",
+        },
+        {
+            "export_kind": "prompt_bundle",
+            "formats": ("markdown", "json", "csv"),
+            "label": "Prompt Bundle",
+        },
+        {
+            "export_kind": "continuity_report",
+            "formats": ("markdown", "json"),
+            "label": "Continuity Report",
+        },
+    )
 
 
 def _world_sheet_payload(

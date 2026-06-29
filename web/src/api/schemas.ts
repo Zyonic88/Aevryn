@@ -241,6 +241,12 @@ export const projectTimelineChangeSchema = z.object({
   value: z.string(),
 });
 
+export const projectExportOptionSchema = z.object({
+  export_kind: z.string(),
+  formats: z.array(z.string()),
+  label: z.string(),
+});
+
 export const projectOutputsSchema = z.object({
   project_id: z.string(),
   status: z.string(),
@@ -252,6 +258,9 @@ export const projectOutputsSchema = z.object({
   world_sheet: z.lazy(() => worldSheetSchema).nullable(),
   timeline_changes: z.array(projectTimelineChangeSchema).default([]),
   scene_sheets: z.array(z.lazy(() => sceneSheetSchema)).default([]),
+  prompt_packs: z.array(z.lazy(() => productionPackSchema)).default([]),
+  continuity_report: z.lazy(() => continuityReportSchema).nullable().default(null),
+  export_options: z.array(projectExportOptionSchema).default([]),
 });
 
 export const snapshotSchema = z.object({
@@ -471,6 +480,7 @@ export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 export type ProjectOutputCanonSummary = z.infer<typeof projectOutputCanonSummarySchema>;
 export type ProjectOutputSurface = z.infer<typeof projectOutputSurfaceSchema>;
 export type ProjectTimelineChange = z.infer<typeof projectTimelineChangeSchema>;
+export type ProjectExportOption = z.infer<typeof projectExportOptionSchema>;
 export type ProjectOutputs = z.infer<typeof projectOutputsSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type SnapshotList = z.infer<typeof snapshotListSchema>;

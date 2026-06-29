@@ -4,7 +4,10 @@ import type { ReactNode } from "react";
 import { apiClient } from "../api/client";
 import type {
   CharacterProfile,
+  ContinuityReport,
   OutputSection,
+  ProductionPack,
+  ProjectExportOption,
   ProjectOutputs,
   ProjectOutputSurface,
   ProjectTimelineChange,
@@ -15,7 +18,7 @@ import { useAuth } from "../auth/useAuth";
 import { EmptyState, LoadingMessage } from "../components/Feedback";
 import { formatDateTime, formatRunStatus } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
-import { readableOutputItems } from "./readableOutput";
+import { readableOutputItems, readablePromptText } from "./readableOutput";
 
 type OutputSurface =
   | "characters"
@@ -160,6 +163,15 @@ function ReadableSurfacePanels({
   }
   if (surface === "scenes" && outputs.scene_sheets.length > 0) {
     return <SceneSheetsPanel scenes={outputs.scene_sheets} />;
+  }
+  if (surface === "continuity" && outputs.continuity_report) {
+    return <ContinuityPanel report={outputs.continuity_report} />;
+  }
+  if (surface === "prompts" && outputs.prompt_packs.length > 0) {
+    return <PromptPacksPanel packs={outputs.prompt_packs} />;
+  }
+  if (surface === "exports" && outputs.export_options.length > 0) {
+    return <ExportOptionsPanel options={outputs.export_options} />;
   }
   return null;
 }
@@ -330,6 +342,106 @@ function SceneSheetsPanel({ scenes }: { scenes: SceneSheet[] }) {
   );
 }
 
+function ContinuityPanel({ report }: { report: ContinuityReport }) {
+  const visibleScenes = report.scenes.filter(
+    (scene) =>
+      scene.new.length > 0 ||
+      scene.updated.length > 0 ||
+      scene.still_known.length > 0 ||
+      scene.invalidated.length > 0,
+  ).slice(0, 12);
+  if (visibleScenes.length === 0) {
+    return (
+      <EmptyState title="No continuity changes">
+        Aevryn did not find continuity changes in the latest processed snapshot.
+      </EmptyState>
+    );
+  }
+  return (
+    <div className="compact-list timeline-change-list" aria-label="Continuity report">
+      {visibleScenes.map((scene, index) => (
+        <section className="compact-row timeline-change-group" key={scene.scene_id}>
+          <div>
+            <strong>{`Scene ${index + 1}`}</strong>
+            <span>{continuitySceneSummary(scene)}</span>
+          </div>
+          <ContinuityBucket title="New" records={scene.new} />
+          <ContinuityBucket title="Updated" records={scene.updated} />
+          <ContinuityBucket title="Still Known" records={scene.still_known} />
+          <ContinuityBucket title="Invalidated" records={scene.invalidated} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function ContinuityBucket({
+  title,
+  records,
+}: {
+  title: string;
+  records: ContinuityReport["scenes"][number]["new"];
+}) {
+  if (records.length === 0) {
+    return null;
+  }
+  return (
+    <div>
+      <strong>{title}</strong>
+      <ul>
+        {records.slice(0, 8).map((record) => (
+          <li key={record.record_id}>
+            <span>{readableOutputItems([record.description])[0] ?? "Unknown"}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
+  return (
+    <div className="profile-grid" aria-label="Prompt packs">
+      {packs.map((pack) => (
+        <article className="profile-card" key={pack.scene.scene_id}>
+          <header>
+            <h3>{pack.scene.title}</h3>
+            <p>{pack.scene.chapter_label}</p>
+          </header>
+          <div className="profile-section-grid">
+            <PromptTextSection section={pack.image_prompt} />
+            <PromptTextSection section={pack.narration_prompt} />
+            <PromptTextSection section={pack.camera_prompt} />
+            <PromptTextSection section={pack.animation_prompt} />
+          </div>
+          <p className="evidence-note">{pack.scene.evidence_summary}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): string {
+  const changeCount = scene.new.length + scene.updated.length + scene.invalidated.length;
+  const stableCount = scene.still_known.length;
+  const changeLabel = `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
+  const stableLabel = `${stableCount.toLocaleString()} still known`;
+  return `${changeLabel}; ${stableLabel}`;
+}
+
+function ExportOptionsPanel({ options }: { options: ProjectExportOption[] }) {
+  return (
+    <div className="compact-list" aria-label="Export options">
+      {options.map((option) => (
+        <div className="compact-row" key={option.export_kind}>
+          <strong>{option.label}</strong>
+          <span>{option.formats.map((format) => format.toUpperCase()).join(", ")}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function groupedTimelineChanges(changes: ProjectTimelineChange[]): Array<{
   chapterIndex: number;
   sceneIndex: number;
@@ -381,6 +493,15 @@ function PanelSection({ section }: { section: OutputSection }) {
           <li key={item}>{item}</li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+function PromptTextSection({ section }: { section: OutputSection }) {
+  return (
+    <section className="profile-section prompt-text-section">
+      <h4>{section.title}</h4>
+      <p>{readablePromptText(section)}</p>
     </section>
   );
 }

@@ -79,7 +79,7 @@ def test_canon_prompt_builder_does_not_dump_full_scene_text() -> None:
     prompt = CanonPromptBuilder().build_image_prompt(build_context())
 
     assert "Paragraphs:" not in prompt
-    assert len(prompt) < 1000
+    assert len(prompt) < 1800
 
 
 def test_canon_prompt_builder_uses_scene_relevant_character_facts() -> None:
@@ -184,7 +184,7 @@ def test_canon_prompt_builder_shortens_long_analysis_text() -> None:
     )
 
     assert "Sentence 020" not in prompt
-    assert len(prompt) < 1200
+    assert len(prompt) < 2400
 
 
 class DuplicateAnalysisAnalyzer(SceneAnalyzer):

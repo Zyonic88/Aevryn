@@ -770,6 +770,12 @@ select:focus {
   overflow-wrap: anywhere;
 }
 
+.prompt-text-section p {
+  white-space: pre-line;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
 .prompt-scene-context {
   margin-top: 16px;
 }

@@ -8,6 +8,7 @@ import {
   DeveloperPreviewToggle,
   ProjectOutputSummaryPanel,
 } from "../output/ProjectOutputSummaryPanel";
+import { readableOutputItems } from "../output/readableOutput";
 import {
   buildContinuityPreviewPayload,
   canSubmitContinuityPreviewInput,
@@ -216,7 +217,8 @@ function ContinuityBucket({
         <ul>
           {records.map((record) => (
             <li key={record.record_id}>
-              <strong>{record.record_type}</strong>: {record.description}
+              <strong>{record.record_type}</strong>:{" "}
+              {readableOutputItems([record.description])[0] ?? "Unknown"}
               <span className="continuity-evidence">
                 {record.chapter_id} / {record.scene_id} / {record.evidence_id}
               </span>

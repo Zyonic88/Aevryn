@@ -810,6 +810,11 @@ def test_project_import_snapshot_handler_uses_injected_extractor() -> None:
     assert snapshot_payload["presentation"]["scenes"][0]["characters_present"]["items"] == [
         "Lyra"
     ]
+    assert snapshot_payload["presentation"]["prompt_packs"][0]["scene"]["title"] == "Scene 1"
+    assert snapshot_payload["presentation"]["continuity_report"]["source_id"] == "source_demo"
+    assert snapshot_payload["presentation"]["export_options"][0]["export_kind"] == (
+        "character_profile"
+    )
     assert snapshot_payload["presentation"]["characters"][0]["display_name"] == "Lyra"
     assert snapshot_payload["timeline_changes"][0]["change_id"] == "state_fact_character_lyra_role"
     assert snapshot_payload["timeline_changes"][0] | {"change_id": ""} == {

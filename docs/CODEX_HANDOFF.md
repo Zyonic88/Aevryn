@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 10 planned - Internal Alpha**
+Current phase: **Phase 10 in progress - Internal Alpha**
 
 Recent completed V2 work:
 
@@ -75,7 +75,7 @@ Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 ha
 
 Next expected V2 target:
 
-- Phase 10 Internal Alpha planning and implementation, governed by `docs/AEVRYN_ROADMAP.md`
+- Continue Phase 10 Internal Alpha release-candidate hardening, governed by `docs/AEVRYN_ROADMAP.md`
 - Phase 11 Security & Privacy Hardening is now planned after private internal alpha and before public beta, governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
 
 Phase 6 Project Storage accepted:
@@ -157,6 +157,15 @@ Phase 10 starting point:
 - Version readiness through Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test gates
 - Preserve all Phase 6-9 boundaries: durable storage, import workflow, monitoring observability, metadata-only performance measurement, and no frontend inference of backend workflow state
 - Do not add payments, public launch flows, broad redesign, image generation, video generation, or chatbot behavior in Phase 10 unless explicitly scoped later
+
+Phase 10 progress:
+
+- Internal alpha docs and readiness checklist exist.
+- Automated gates are green after alpha hardening through commit `44504dd`.
+- Import, processing, monitoring, refresh recovery, project deletion, and retry after extraction failures have been manually exercised through the browser.
+- Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports now render processed project output from persisted backend snapshots instead of requiring testers to use developer preview inputs.
+- Alpha extraction now dedupes duplicate relationship candidates and presentation hides conflicting gender values instead of showing both.
+- Remaining release-candidate slice: browser sanity-pass the newly completed output panels before broad trusted tester invitation.
 
 Phase 11 planned security/privacy gate:
 

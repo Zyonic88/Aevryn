@@ -24,7 +24,7 @@ Codex / Aetherra Labs
 
 Build or Commit:
 
-bc8224e
+44504dd
 
 Environment:
 
@@ -32,7 +32,7 @@ Local Windows workspace at `C:\Users\enigm\Documents\Aevryn`; validation source 
 
 Result:
 
-Automated readiness gates passed. Manual alpha UX pass started and found a release-candidate blocker.
+Automated readiness gates passed. Manual alpha UX pass found a release-candidate blocker, and follow-up alpha hardening resolved the broad output-surface gap at the contract level. Import, processing, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports now have API-backed processed project output surfaces. A browser sanity pass is still needed before broad trusted tester invitation.
 
 Known Limitations:
 
@@ -40,7 +40,7 @@ Production database, identity provider, object storage, deployment, public launc
 
 Can the tester continue?
 
-Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, and worker interruption observability. No for trusted tester invitation until output views render processed-story results without requiring tester-supplied source text and AI JSON.
+Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, worker interruption observability, import retries, and processed output review. Not yet for broad trusted tester invitation until the new Continuity, Prompt Packs, and Exports processed panels receive a browser sanity pass.
 
 ---
 
@@ -157,7 +157,7 @@ Required checks:
 
 Result:
 
-BLOCKED. Automated gates passed, and the manual browser pass proved registration, project creation, story creation, supported text import, import save, run submission, local worker processing, Monitoring, snapshot availability, and refresh recovery. The pass found that Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports still behave as preview workbenches requiring source text and AI response JSON instead of rendering processed-story output after a successful run.
+PARTIAL PASS. Automated gates passed, and manual browser passes proved registration, project creation, story creation, supported multi-file import, import save, run submission, local worker processing, Monitoring, snapshot availability, refresh recovery, project deletion, import retry after failures, and processed-output review for Characters, World, Timeline, and Scenes. Follow-up contract hardening added processed Continuity, Prompt Packs, and Exports panels from persisted backend snapshots. A final browser sanity pass is still needed before trusted tester invitation.
 
 Known Limitations:
 
@@ -170,8 +170,10 @@ Manual browser pass findings:
 * The initial Project Runs panel showed "Failed to fetch" before a run existed, then recovered after run submission.
 * The Source text control is visible but was not reachable through the label API during browser automation.
 * Web Import is clearly unavailable, as expected for Phase 10.
-* Output views do not yet satisfy the creator promise of viewing generated character cards, world, timeline, scene sheets, continuity, prompt packs, and exports after processing.
+* Character Cards, World, Timeline, Scene Sheets, Continuity, Prompt Packs, and Exports now render processed project output from backend snapshots.
+* Export output intentionally lists available export kinds and formats; full serialized export content remains behind explicit export preview.
+* Alpha AI extraction can still misclassify sparse race/gender evidence when source language is indirect; presentation now hides conflicting gender values instead of showing both.
 
 Can the tester continue?
 
-Not yet for tester invitation. The codebase is automated-gate green and the import/monitoring path is strong, but Phase 10 release-candidate acceptance should wait until output views consume processed project results or otherwise present a clear alpha-safe generated-output path.
+Yes for continued internal alpha development and narrow operator-led testing of the full output path. Not yet for broad trusted tester invitation until the newly completed output panels pass a browser sanity pass.

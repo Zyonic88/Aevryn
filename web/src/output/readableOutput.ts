@@ -1,0 +1,122 @@
+export function readableOutputItems(items: string[]): string[] {
+  const readableItems = items
+    .map(readableOutputItem)
+    .filter((item, index, allItems) => allItems.indexOf(item) === index);
+  if (readableItems.length > 1) {
+    return readableItems.filter((item) => item !== "Unknown");
+  }
+  return readableItems;
+}
+
+export function readableOutputItem(item: string): string {
+  if (item === "Source-backed detail available through evidence controls.") {
+    return item;
+  }
+  const withoutAnchorPrefix = item.replace(/^aevryn_import_bundle_chapter_\d{3}:\s*/i, "");
+  const acceptedEntity = withoutAnchorPrefix.match(/^Entity accepted:\s*(.+)$/i);
+  if (acceptedEntity) {
+    return `New ${readableEntity(acceptedEntity[1])}`;
+  }
+  const assignment = withoutAnchorPrefix.match(/^([a-z0-9_]+)\s+([a-z0-9_]+)\s*=\s*(.+)$/i);
+  if (assignment) {
+    return `${readableLabel(assignment[2])}: ${readableFactValue(assignment[3])}`;
+  }
+  const stateChange = withoutAnchorPrefix.match(/^([a-z0-9_]+)\s*->\s*(.+)$/i);
+  if (stateChange) {
+    return `${readableLabel(stateChange[1])}: ${readableFactValue(stateChange[2])}`;
+  }
+  const fact = withoutAnchorPrefix.match(/^([a-z0-9_]+):\s*(.+)$/i);
+  if (fact) {
+    return `${readableLabel(fact[1])}: ${readableFactValue(fact[2])}`;
+  }
+  const relationship = readableRelationship(withoutAnchorPrefix);
+  return relationship ?? readableFreeText(withoutAnchorPrefix);
+}
+
+export function readablePromptText(section: { items: string[] }): string {
+  const items = readableOutputItems(section.items)
+    .filter((item) => item !== "Source-backed detail available through evidence controls.")
+    .filter((item) => !/^Scene ID:/iu.test(item));
+  if (items.length === 0) {
+    return "Unknown.";
+  }
+  return items.map(toSentence).join("\n\n");
+}
+
+function toSentence(value: string): string {
+  const trimmed = value.trim();
+  if (/[\d).!?]$/u.test(trimmed)) {
+    return trimmed;
+  }
+  return `${trimmed}.`;
+}
+
+function readableEntity(value: string): string {
+  const kindMatch = value.match(/^(character|entity|location|organization|building|item|skill|vehicle)_(.+)$/i);
+  if (!kindMatch) {
+    return readableValue(value);
+  }
+  const [, kind, name] = kindMatch;
+  if (/^\d+$/u.test(name)) {
+    return readableLabel(kind);
+  }
+  return `${readableLabel(kind)}: ${readableValue(name)}`;
+}
+
+function readableFreeText(value: string): string {
+  if (/[ _]/u.test(value) && /_/u.test(value)) {
+    return readableValue(value);
+  }
+  return fixApostropheCapitalization(value);
+}
+
+function readableRelationship(value: string): string | null {
+  const match = value.match(/^([a-z0-9_]+)\s+([a-z0-9_]+)\s+([a-z0-9_]+)$/i);
+  if (!match) {
+    return null;
+  }
+  const [, source, relationship, target] = match;
+  return `${readableValue(source)} ${readableLabel(relationship).toLowerCase()} ${readableValue(target)}`;
+}
+
+function readableLabel(value: string): string {
+  const labelOverrides: Record<string, string> = {
+    display_name: "Name",
+    under_entity: "under",
+    bound_to_system: "bound to",
+    owns_vehicle: "owns",
+    member_of: "member of",
+    has_item: "has",
+  };
+  const normalizedValue = value.toLowerCase();
+  if (labelOverrides[normalizedValue]) {
+    return labelOverrides[normalizedValue];
+  }
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+    .replace(/'([A-Z])/g, (_, character: string) => `'${character.toLowerCase()}`);
+}
+
+function readableValue(value: string): string {
+  return value
+    .replace(/\b(entity|character|location|organization|building|item|skill|vehicle)_/gi, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+    .replace(/'([A-Z])/g, (_, character: string) => `'${character.toLowerCase()}`);
+}
+
+function readableFactValue(value: string): string {
+  const trimmed = value.trim();
+  if (/_/u.test(trimmed) || /^[a-z]+$/u.test(trimmed)) {
+    return readableValue(trimmed);
+  }
+  if (/^[a-z]+(?:\s+[a-z]+){0,3}$/u.test(trimmed)) {
+    return readableValue(trimmed);
+  }
+  return fixApostropheCapitalization(trimmed);
+}
+
+function fixApostropheCapitalization(value: string): string {
+  return value.replace(/'([A-Z])/g, (_, character: string) => `'${character.toLowerCase()}`);
+}

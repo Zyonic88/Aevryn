@@ -728,7 +728,7 @@ class PresentationEngine:
             for line in prompt.splitlines()
             if (display_line := PresentationEngine._prompt_display_line(line)) is not None
         )
-        return tuple(PresentationEngine._unique_values(lines)[:15])
+        return tuple(PresentationEngine._unique_values(lines)[:24])
 
     @staticmethod
     def _prompt_display_line(line: str) -> str | None:

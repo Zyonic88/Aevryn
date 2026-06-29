@@ -12,6 +12,7 @@ import {
   buildPromptPreviewPayload,
   canSubmitPromptPreviewInput,
 } from "../previewing/previewPayload";
+import { readablePromptText } from "../output/readableOutput";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
@@ -179,17 +180,9 @@ function PromptPreviewResult({ result }: { result: PromptPreview }) {
 
 function PromptSection({ section }: { section: OutputSection }) {
   return (
-    <section className="profile-section prompt-section">
+    <section className="profile-section prompt-text-section">
       <h4>{section.title}</h4>
-      {section.items.length > 0 ? (
-        <ul>
-          {section.items.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      ) : (
-        <p>Unknown</p>
-      )}
+      <p>{readablePromptText(section)}</p>
     </section>
   );
 }

@@ -178,8 +178,8 @@ Everything the CLI can do, the API must be able to do.
 | 6 | Project Storage | Accepted | Durable project workflows, saved imports, runs, import content storage, and snapshots exist. |
 | 7 | Import UI | Accepted | Supported import formats, deferred-format failures, refresh visibility, snapshots, failed runs, and Web Import boundary are hardened. |
 | 8 | Monitoring | Accepted | Metadata-only project status, workflow observability, health/storage status, and restrained monitoring UI exist. |
-| 9 | Performance | In Progress | Define budgets, baseline measurements, regression checks, and measured optimizations. |
-| 10 | Internal Alpha | Planned | Private alpha after import, monitoring, and performance are stable. |
+| 9 | Performance | Accepted | Budgets, baseline measurements, regression checks, and measured optimizations are in place. |
+| 10 | Internal Alpha | In Progress | Private alpha after import, monitoring, and performance are stable. |
 
 ---
 
@@ -528,7 +528,7 @@ Accepted performance scope:
 
 ## Phase 10 - Internal Alpha
 
-Status: **Planned**
+Status: **In Progress**
 
 Version 2 ends with a private alpha, not a public launch.
 
@@ -545,6 +545,13 @@ Internal alpha readiness is defined in `docs/AEVRYN_INTERNAL_ALPHA.md`.
 Phase 10 includes recovery as a first-class readiness concern: after refresh, session expiry, worker interruption, failed runs, or network/API interruption, the question is whether the user can continue.
 
 Phase 10 readiness should be versioned through Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test gates.
+
+Current alpha status:
+
+* Automated backend and frontend gates are passing.
+* Manual alpha testing has validated import, processing, monitoring, refresh recovery, and processed-output review for Characters, World, Timeline, and Scenes.
+* Processed Continuity, Prompt Packs, and Exports panels now consume persisted backend snapshot output at the API/frontend contract level.
+* Release-candidate readiness remains partial until the newly completed output panels receive a browser sanity pass.
 
 ---
 

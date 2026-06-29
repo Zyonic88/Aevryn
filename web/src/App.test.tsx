@@ -574,6 +574,20 @@ const projectOutputsPayload = {
       title: "Processed Scene 7",
     },
   ],
+  prompt_packs: [promptPreviewPayload.production_pack],
+  continuity_report: continuityPreviewPayload.continuity_report,
+  export_options: [
+    {
+      export_kind: "production_pack",
+      formats: ["markdown"],
+      label: "Production Pack",
+    },
+    {
+      export_kind: "continuity_report",
+      formats: ["markdown", "json"],
+      label: "Continuity Report",
+    },
+  ],
 };
 
 function storeAuthenticatedProject() {
@@ -1262,6 +1276,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "4 accepted facts",
     );
+    expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
+      "Current Weapon: Rusty Dagger.",
+    );
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview continuity" }));
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
@@ -1270,6 +1287,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "1 extraction result",
     );
+    expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
+      "Image Prompt",
+    );
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview prompt pack" }));
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
@@ -1277,6 +1297,12 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("link", { name: "Exports" }));
     expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "8 processed scenes",
+    );
+    expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
+      "Production Pack",
+    );
+    expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
+      "MARKDOWN",
     );
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview export" }));
@@ -2511,9 +2537,9 @@ describe("App shell routing", () => {
     expect(
       screen.getAllByRole("heading", { name: "Hangar (location)" }).length,
     ).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Condition: Alarm Active").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Condition: Alarm active").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Ownership: Academy").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Owner: Zhao Chen's Starship").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Owner: Zhao Chen's starship").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/Chen'S/)).not.toBeInTheDocument();
     expect(screen.getAllByText("2 verified world facts").length).toBeGreaterThanOrEqual(1);
   });
@@ -2565,7 +2591,7 @@ describe("App shell routing", () => {
     expect(screen.getByText("Chapter 1 for source_alpha_chapter_001_scene_001.")).toBeInTheDocument();
     expect(screen.getAllByText("Hangar").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Mark").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Mark equipped Rusty Dagger")).toBeInTheDocument();
+    expect(screen.getAllByText("Mark equipped Rusty Dagger").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);
   });
 
@@ -2590,14 +2616,14 @@ describe("App shell routing", () => {
     expect(screen.getByRole("heading", { name: "source_alpha_chapter_002_scene_001" })).toBeInTheDocument();
     expect(
       screen.getAllByText((_content, element) => {
-        return element?.tagName === "LI" && element.textContent?.includes("character_mark current_weapon = Rusty Dagger.");
-      }),
-    ).toHaveLength(2);
+        return element?.tagName === "LI" && element.textContent?.includes("Current Weapon: Rusty Dagger.");
+      }).length,
+    ).toBeGreaterThanOrEqual(2);
     expect(
-      screen.getByText((_content, element) => {
-        return element?.tagName === "LI" && element.textContent?.includes("character_mark current_weapon = Iron Sword.");
-      }),
-    ).toBeInTheDocument();
+      screen.getAllByText((_content, element) => {
+        return element?.tagName === "LI" && element.textContent?.includes("Current Weapon: Iron Sword.");
+      }).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/source_alpha_anchor_002/u)).toBeInTheDocument();
   });
 
@@ -2620,12 +2646,12 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Image Prompt" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Narration Prompt" })).toBeInTheDocument();
-    expect(screen.getByText("Generate this image using only accepted Aevryn canon.")).toBeInTheDocument();
-    expect(screen.getByText("Scene Summary: Mark prepares in the hangar.")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Image Prompt" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("heading", { name: "Narration Prompt" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Generate this image using only accepted Aevryn canon/u).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Scene Summary: Mark prepares in the hangar/u).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Chapter 1 / source_alpha_chapter_001_scene_001")).toBeInTheDocument();
-    expect(screen.getByText("1 verified evidence reference")).toBeInTheDocument();
+    expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders unknown prompt sections when the production pack has empty sections", async () => {
@@ -2672,7 +2698,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
-    expect(screen.getByText("Unknown")).toBeInTheDocument();
+    expect(screen.getByText("Unknown.")).toBeInTheDocument();
   });
 
   it("clears stale production packs when local AI JSON validation fails", async () => {
@@ -2771,7 +2797,7 @@ describe("App shell routing", () => {
     expect(screen.getByText("production_pack")).toBeInTheDocument();
     expect(screen.getByText("markdown")).toBeInTheDocument();
     expect(screen.getByText("text/markdown; charset=utf-8")).toBeInTheDocument();
-    expect(screen.getByText(/Generate this image using only accepted Aevryn canon/u)).toBeInTheDocument();
+    expect(screen.getAllByText(/Generate this image using only accepted Aevryn canon/u).length).toBeGreaterThanOrEqual(1);
   });
 
   it("clears stale export previews when local AI JSON validation fails", async () => {

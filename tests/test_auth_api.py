@@ -1173,6 +1173,11 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     assert payload["scene_sheets"][0]["title"] == "Scene 1"
     assert payload["scene_sheets"][0]["chapter_label"] == "Chapter 1"
     assert payload["scene_sheets"][0]["characters_present"]["items"] == ["Mark"]
+    assert payload["prompt_packs"][0]["scene"]["title"] == "Scene 1"
+    assert payload["prompt_packs"][0]["image_prompt"]["title"] == "Image Prompt"
+    assert payload["continuity_report"]["source_id"] == "source_alpha"
+    assert payload["continuity_report"]["scenes"][0]["new"]
+    assert payload["export_options"][0]["export_kind"] == "character_profile"
     assert payload["timeline_changes"] == []
     assert "Mark carried a rusty dagger" not in response.text
     assert "serialized_output" not in response.text

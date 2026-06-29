@@ -820,6 +820,24 @@ For alpha, project output responses may cap the number of rendered scene sheets
 to keep large imports usable. The frontend renders the API-provided sheets; it
 does not reconstruct scene context from raw Canon or source prose.
 
+Prompt Pack output must include API-provided `prompt_packs` from the latest
+canon snapshot. Each prompt pack reuses the production-pack view contract:
+
+* scene
+* image prompt
+* narration prompt
+* camera prompt
+* animation prompt
+
+Continuity output must include an API-provided `continuity_report` when the
+latest canon snapshot contains continuity records. The report is metadata-only:
+it includes record descriptions and evidence IDs, but not source quotes.
+
+Export output must include API-provided `export_options` that describe available
+export kinds and formats. Project output summaries must not include full
+serialized export content; full export content remains behind the explicit
+export preview route.
+
 ## `POST /v2/exports/preview`
 
 Accepts source content plus an evidence-bounded AI response payload and returns

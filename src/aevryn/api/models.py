@@ -498,6 +498,9 @@ class ProjectOutputsResponse(BaseModel):
     world_sheet: WorldSheetOutput | None = None
     timeline_changes: tuple[ProjectTimelineChangeOutput, ...] = ()
     scene_sheets: tuple[SceneSheetOutput, ...] = ()
+    prompt_packs: tuple[ProductionPackOutput, ...] = ()
+    continuity_report: ContinuityReportOutput | None = None
+    export_options: tuple[ProjectExportOptionOutput, ...] = ()
 
 
 class SnapshotStoreRequest(BaseModel):
@@ -774,6 +777,16 @@ class OutputSection(BaseModel):
 
     title: str
     items: tuple[str, ...]
+
+
+class ProjectExportOptionOutput(BaseModel):
+    """One alpha-safe export option available from processed output."""
+
+    model_config = ConfigDict(frozen=True)
+
+    export_kind: str
+    formats: tuple[str, ...]
+    label: str
 
 
 class CharacterProfileOutput(BaseModel):
