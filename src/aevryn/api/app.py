@@ -174,6 +174,7 @@ API_VERSION = "v2"
 logger = logging.getLogger(__name__)
 ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
 API_KEYS_ENV = "AEVRYN_API_KEYS"
+DEPLOYMENT_ENV = "AEVRYN_DEPLOYMENT_ENV"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
 IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
@@ -202,6 +203,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         ValueError: If configured CORS origins are unsafe or invalid.
     """
     active_environ = environ or os.environ
+    _require_production_security_config(active_environ)
     (
         authentication_service,
         project_repository,
@@ -1738,6 +1740,28 @@ def _allowed_origins_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
 def _api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
     """Return workflow API keys from deployment environment settings."""
     return _normalize_api_keys(environ.get(API_KEYS_ENV, "").split(","))
+
+
+def _require_production_security_config(environ: Mapping[str, str]) -> None:
+    """Reject production startup when required security config is missing."""
+    deployment_env = environ.get(DEPLOYMENT_ENV, "").strip().lower()
+    if deployment_env not in {"prod", "production"}:
+        return
+
+    if not environ.get(PROJECT_DATABASE_PATH_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_PROJECT_DATABASE_PATH is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production."
+        )
+    if not _allowed_origins_from_env(environ):
+        raise ValueError(
+            "AEVRYN_API_ALLOWED_ORIGINS is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production."
+        )
+    if not _api_keys_from_env(environ):
+        raise ValueError(
+            "AEVRYN_API_KEYS is required when AEVRYN_DEPLOYMENT_ENV=production."
+        )
 
 
 def _platform_services_from_env(

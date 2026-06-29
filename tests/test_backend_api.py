@@ -8,11 +8,15 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import pytest
 from _pytest.logging import LogCaptureFixture
 from fastapi.testclient import TestClient
 
 from aevryn.api import (
+    ALLOWED_ORIGINS_ENV,
+    API_KEYS_ENV,
     AUTH_STORE_PATH_ENV,
+    DEPLOYMENT_ENV,
     EXTRACTION_MODE_ENV,
     OPENAI_API_KEY_ENV,
     OPENAI_MAX_RESPONSE_BYTES_ENV,
@@ -286,6 +290,66 @@ def test_create_app_from_env_rejects_wildcard_cors_origin() -> None:
         assert "cannot include '*'" in str(error)
     else:
         raise AssertionError("Expected wildcard CORS origin to be rejected.")
+
+
+def test_create_app_from_env_fails_closed_for_incomplete_production_config(
+    tmp_path: Path,
+) -> None:
+    """Production mode should reject missing security-critical settings."""
+    production_env = {DEPLOYMENT_ENV: "production"}
+
+    with pytest.raises(ValueError, match=PROJECT_DATABASE_PATH_ENV):
+        create_app_from_env(production_env)
+
+    with pytest.raises(ValueError, match=ALLOWED_ORIGINS_ENV):
+        create_app_from_env(
+            {
+                **production_env,
+                PROJECT_DATABASE_PATH_ENV: str(tmp_path / "project_database.json"),
+            }
+        )
+
+    with pytest.raises(ValueError, match=API_KEYS_ENV):
+        create_app_from_env(
+            {
+                **production_env,
+                PROJECT_DATABASE_PATH_ENV: str(tmp_path / "project_database.json"),
+                ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+            }
+        )
+
+
+def test_create_app_from_env_accepts_explicit_production_security_config(
+    tmp_path: Path,
+) -> None:
+    """Production mode should start only with explicit storage and policies."""
+    client = TestClient(
+        create_app_from_env(
+            {
+                DEPLOYMENT_ENV: "production",
+                PROJECT_DATABASE_PATH_ENV: str(tmp_path / "project_database.json"),
+                ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+                API_KEYS_ENV: "production-api-key",
+            }
+        )
+    )
+
+    health = client.get("/v2/health")
+    cors = client.options(
+        "/v2/health",
+        headers={
+            "Origin": "https://app.aevryn.ai",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+
+    assert health.status_code == 200
+    assert health.json()["storage"] == {
+        "project_storage": "configured",
+        "import_content_storage": "configured",
+    }
+    assert cors.status_code == 200
+    assert cors.headers["access-control-allow-origin"] == "https://app.aevryn.ai"
 
 
 def test_api_key_auth_keeps_discovery_routes_public() -> None:

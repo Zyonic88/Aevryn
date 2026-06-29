@@ -216,6 +216,41 @@ Yes
 
 ---
 
+# Gate 7 - Production Configuration Fail-Closed Test
+
+Command:
+
+```text
+python -m pytest tests/test_backend_api.py::test_create_app_from_env_fails_closed_for_incomplete_production_config tests/test_backend_api.py::test_create_app_from_env_accepts_explicit_production_security_config -q
+```
+
+Expected result:
+
+* `AEVRYN_DEPLOYMENT_ENV=production` refuses to start without explicit project storage.
+* production mode refuses to start without explicit CORS origins.
+* production mode refuses to start without API keys for workflow routes.
+* complete production security config starts successfully and reports configured storage.
+
+Latest result:
+
+```text
+2 passed
+```
+
+Known residual risk:
+
+* production database, identity provider, worker queue, object storage, secret manager, HTTPS/HSTS edge policy, and observability retention choices are still deployment architecture decisions.
+* API keys are a deployment boundary, not the final public-user authorization model.
+* final production extraction mode and provider-retention policy still need public-beta review.
+
+Public beta blocked:
+
+```text
+Yes
+```
+
+---
+
 # Remaining Gates
 
 The following gates still need Phase 11 implementation before public beta:
@@ -225,4 +260,3 @@ The following gates still need Phase 11 implementation before public beta:
 * Dependency Audit
 * Repository Secret Scan
 * Static Security Scan
-* Production Configuration Fail-Closed Test

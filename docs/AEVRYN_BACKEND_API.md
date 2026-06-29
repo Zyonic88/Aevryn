@@ -100,6 +100,22 @@ The module-level ASGI app reads that environment variable:
 uvicorn aevryn.api.app:app
 ```
 
+## Production Fail-Closed Mode
+
+Production mode is explicit:
+
+```text
+AEVRYN_DEPLOYMENT_ENV=production
+```
+
+When production mode is enabled, `create_app_from_env` refuses to start unless these security-critical settings are present:
+
+* `AEVRYN_PROJECT_DATABASE_PATH`
+* `AEVRYN_API_ALLOWED_ORIGINS`
+* `AEVRYN_API_KEYS`
+
+This prevents public deployments from accidentally starting with stateless storage, broad or absent browser-origin policy, or unprotected workflow routes.
+
 For local development, the Aevryn CLI can launch the same API:
 
 ```text
