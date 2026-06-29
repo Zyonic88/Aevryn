@@ -46,7 +46,7 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 11 in progress - Security & Privacy Hardening**
+Current phase: **Phase 11 accepted - Security & Privacy Hardening**
 
 Recent completed V2 work:
 
@@ -61,6 +61,7 @@ Recent completed V2 work:
 - Phase 8: Monitoring
 - Phase 9: Performance
 - Phase 10: Internal Alpha
+- Phase 11: Security & Privacy Hardening
 - Import workspace view completed
 - Character workspace view completed
 - World workspace view completed
@@ -76,8 +77,8 @@ Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 ha
 
 Next expected V2 target:
 
-- Continue Phase 11 Security & Privacy Hardening, governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
-- Treat Phase 11 as the trust gate before public beta or untrusted manuscript intake, not as a product expansion phase
+- Plan the next V2 step from the accepted Phase 11 security/privacy baseline.
+- Do not treat Phase 11 acceptance as public beta approval; public beta still requires deployment-specific security decisions and production infrastructure choices.
 
 Phase 6 Project Storage accepted:
 
@@ -169,9 +170,9 @@ Phase 10 progress:
 - Browser sanity testing validated Continuity, Prompt Packs, and Exports against persisted backend snapshots.
 - Browser sanity testing found and fixed the local/demo prompt-pack fallback so scene and prompt panels stay available even when extraction accepts no canon facts.
 - Private tester instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
-- Phase 10 is ready for narrow private alpha testing with documented limitations; Phase 11 Security & Privacy Hardening is still required before public beta or untrusted manuscript intake.
+- Phase 10 is ready for narrow private alpha testing with documented limitations; Phase 11 Security & Privacy Hardening is accepted, and public beta now depends on deployment-specific security follow-through.
 
-Phase 11 active security/privacy gate:
+Phase 11 accepted security/privacy baseline:
 
 - Phase 11 acceptance is governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
 - Security architecture is documented in `docs/AEVRYN_SECURITY.md`
@@ -183,14 +184,15 @@ Phase 11 active security/privacy gate:
 - Static security scanning is documented in `docs/AEVRYN_STATIC_SECURITY_SCAN.md`
 - Backup retention boundaries are documented in `docs/AEVRYN_BACKUP_RETENTION.md`
 - Repeatable Phase 11 gates are tracked in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`
-- Treat Phase 11 as a trust gate before public beta, not as a product expansion phase
+- Phase 11 gates currently list no remaining implementation gates
+- Treat Phase 11 as the accepted trust baseline before public beta, not as a product expansion phase
 - Opening slice: explicit authorization-boundary verification across project, story, import, run, snapshot, export/status, settings, output, and deletion access
 - Core principle: security is architecture, not a feature
 - Core privacy principle: uploaded stories, generated canon, and generated exports belong to the creator
 - Aetherra Labs must not train on user stories without explicit opt-in
 - Deleted stories must be removed from Aevryn-owned active metadata/source storage, and deletion must not create hidden copies in logs, monitoring, audit records, or diagnostics
 - Audit ledger work should be metadata-only, tamper-evident, and free of source prose/full AI payloads
-- Do not add public launch, payments, collaboration, publishing, media generation, chatbot behavior, or broad redesign under Phase 11
+- Do not add public launch, payments, collaboration, publishing, media generation, chatbot behavior, or broad redesign as retroactive Phase 11 work
 
 ---
 
