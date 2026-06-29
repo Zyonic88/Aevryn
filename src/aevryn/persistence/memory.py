@@ -273,7 +273,10 @@ class InMemoryProjectRepository:
         allowed_transitions = {
             "pending": {"running", "succeeded", "failed"},
             "running": {"succeeded", "failed"},
-            "succeeded": set(),
+            # Worker output persistence happens immediately after the engine
+            # run succeeds. If that final persistence step fails, the run must
+            # be compensated to failed so the queue cannot remain stuck.
+            "succeeded": {"failed"},
             "failed": set(),
         }
         if run.status != existing.status and run.status not in allowed_transitions[existing.status]:

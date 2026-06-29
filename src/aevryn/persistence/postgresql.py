@@ -418,5 +418,17 @@ def _json_compatible_value(column_name: str, value: Any) -> Any:
 def _db_value(column_name: str, value: Any) -> Any:
     """Return a value suitable for PostgreSQL parameters."""
     if column_name == "serialized_output" and isinstance(value, str):
-        return json.loads(value)
+        return _postgresql_jsonb(json.loads(value))
     return value
+
+
+def _postgresql_jsonb(value: Any) -> Any:
+    """Return a psycopg JSONB wrapper when available."""
+    try:
+        json_module = importlib.import_module("psycopg.types.json")
+    except ModuleNotFoundError:
+        return value
+    jsonb_type = getattr(json_module, "Jsonb", None)
+    if jsonb_type is None:
+        return value
+    return jsonb_type(value)

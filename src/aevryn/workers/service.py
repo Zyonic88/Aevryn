@@ -277,22 +277,48 @@ class BackgroundWorker:
             )
             return failed_job
 
-        latest_run = self._repository.get_engine_run_for_worker(job.run_id)
-        self._repository.update_engine_run(
-            replace(
-                latest_run,
-                status="succeeded",
-                status_updated_at=finished_at,
-                finished_at=finished_at,
+        try:
+            latest_run = self._repository.get_engine_run_for_worker(job.run_id)
+            self._repository.update_engine_run(
+                replace(
+                    latest_run,
+                    status="succeeded",
+                    status_updated_at=finished_at,
+                    finished_at=finished_at,
+                )
             )
-        )
-        for snapshot in snapshots:
-            snapshot_started_at = time.perf_counter()
-            self._repository.store_snapshot(snapshot)
-            _log_snapshot_event(
-                snapshot=snapshot,
-                duration_ms=_elapsed_ms(snapshot_started_at),
+            for snapshot in snapshots:
+                snapshot_started_at = time.perf_counter()
+                self._repository.store_snapshot(snapshot)
+                _log_snapshot_event(
+                    snapshot=snapshot,
+                    duration_ms=_elapsed_ms(snapshot_started_at),
+                )
+        except Exception as error:
+            summary = _error_summary(error)
+            latest_run = self._repository.get_engine_run_for_worker(job.run_id)
+            self._repository.update_engine_run(
+                replace(
+                    latest_run,
+                    status="failed",
+                    status_updated_at=finished_at,
+                    finished_at=finished_at,
+                    error_summary=summary,
+                )
             )
+            failed_job = self._queue.fail(
+                job_id=job.job_id,
+                failed_at=finished_at,
+                error_summary=summary,
+            )
+            _log_worker_job_event(
+                job=failed_job,
+                status="failed",
+                duration_ms=_elapsed_ms(perf_started_at),
+                error_summary=summary,
+                snapshot_count=0,
+            )
+            return failed_job
         completed_job = self._queue.complete(job_id=job.job_id, completed_at=finished_at)
         _log_worker_job_event(
             job=completed_job,

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import aevryn.persistence.postgresql as postgresql
 from aevryn.persistence import (
     PROJECT_DATABASE_SCHEMA,
     AccessDeniedError,
@@ -337,6 +338,35 @@ def test_postgresql_project_repository_requires_psycopg_when_no_factory(
 
     with pytest.raises(PersistenceError, match="psycopg is required"):
         PostgresqlProjectRepository("postgresql://example.invalid/aevryn")
+
+
+def test_postgresql_jsonb_values_are_wrapped_for_psycopg(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PostgreSQL JSONB values should be adapted before parameter binding."""
+
+    class FakeJsonb:
+        """Minimal stand-in for psycopg.types.json.Jsonb."""
+
+        def __init__(self, value: object) -> None:
+            self.value = value
+
+    class FakeJsonModule:
+        """Minimal module exposing Jsonb."""
+
+        Jsonb = FakeJsonb
+
+    def fake_import_module(module_name: str) -> object:
+        if module_name == "psycopg.types.json":
+            return FakeJsonModule
+        raise AssertionError(f"Unexpected import: {module_name}")
+
+    monkeypatch.setattr(postgresql.importlib, "import_module", fake_import_module)
+
+    adapted = postgresql._db_value("serialized_output", '{"accepted_fact_count":2}')
+
+    assert isinstance(adapted, FakeJsonb)
+    assert adapted.value == {"accepted_fact_count": 2}
 
 
 def test_json_project_repository_rolls_back_failed_writes(tmp_path: Path) -> None:

@@ -479,6 +479,36 @@ def test_background_worker_logs_success_duration_without_payload(
     assert "serialized_output" not in caplog_record_text(caplog)
 
 
+def test_background_worker_marks_run_failed_after_snapshot_store_error() -> None:
+    """Snapshot persistence failures should not strand running queue jobs."""
+    repository = SnapshotStoreFailingRepository()
+    seed_repository(repository)
+    queue = InMemoryJobQueue()
+    BackgroundJobService(repository, queue, "0.1.0").submit_import_processing_job(
+        job_id="job_demo",
+        run_id="run_demo",
+        project_id="project_demo",
+        story_id="story_demo",
+        import_id="import_demo",
+        queued_at=NOW,
+    )
+
+    final_job = BackgroundWorker(
+        repository,
+        queue,
+        SnapshotReturningHandler(),
+    ).process_next(started_at=STARTED, finished_at=FINISHED)
+
+    assert final_job is not None
+    assert final_job.status == "failed"
+    assert final_job.error_summary == "Snapshot write failed."
+    run = repository.get_engine_run_for_worker("run_demo")
+    assert run.status == "failed"
+    assert run.error_summary == "Snapshot write failed."
+    assert queue.snapshot().running_jobs == 0
+    assert queue.snapshot().failed_jobs == 1
+
+
 def test_background_worker_marks_run_failed_after_handler_error() -> None:
     """Worker failures should be visible in queue and run records."""
     repository = seeded_repository()
@@ -905,6 +935,14 @@ class SnapshotReturningHandler:
                 created_at=FINISHED,
             ),
         )
+
+
+class SnapshotStoreFailingRepository(InMemoryProjectRepository):
+    """Repository test double that fails only when storing snapshots."""
+
+    def store_snapshot(self, _snapshot: SnapshotRecord) -> None:
+        """Raise a deterministic snapshot write failure."""
+        raise RuntimeError("Snapshot write failed.")
 
 
 class FailingHandler:
