@@ -14,9 +14,9 @@ They are the recommended public-beta architecture shape to approve, revise, or r
 
 ```text
 Gate: Production Infrastructure
-Decision status: Decision 1 approved
-Owner approval: Decision 1 approved
-Implementation status: Decision 1 implemented; Decision 2 source-byte adapter contract started
+Decision status: Decisions 1-2 approved
+Owner approval: Decisions 1-2 approved
+Implementation status: Decision 1 implemented; Decision 2 source/import R2 adapter wiring started
 Public beta: Blocked
 ```
 
@@ -103,21 +103,21 @@ Public beta remains blocked by the remaining production infrastructure decisions
 
 # Decision 2 - Object Storage
 
-Recommended decision:
+Approved decision:
 
 ```text
-Use private S3-compatible object storage for uploaded source files and generated exports.
+Use private Cloudflare R2 object storage for uploaded source files, generated exports, large snapshots when needed, and future media assets.
 ```
 
 Rationale:
 
 * Uploaded manuscripts and generated exports are file-like content.
 * Large binary or text blobs should not live directly in the Project Database.
-* S3-compatible storage gives Aevryn a portable storage-reference model.
+* Cloudflare R2 gives Aevryn a private S3-compatible storage-reference model.
 
 Requirements:
 
-* private buckets or containers
+* private buckets
 * encryption at rest
 * separate source-upload and export prefixes or containers
 * storage references scoped by user, project, story, and object kind
@@ -126,19 +126,65 @@ Requirements:
 * deletion operation for active-storage objects
 * lifecycle and backup behavior documented before public beta
 
-Open decision:
+Approved provider:
 
 ```text
-Provider not selected.
+Cloudflare R2.
 ```
+
+Recommended bucket split:
+
+```text
+aevryn-dev
+aevryn-alpha
+aevryn-prod
+```
+
+Recommended object paths:
+
+```text
+projects/{project_id}/imports/{import_id}/source.epub
+projects/{project_id}/exports/{export_id}/character_sheet.md
+projects/{project_id}/snapshots/{snapshot_id}.json
+```
+
+Storage rule:
+
+```text
+Storage owns bytes. Database owns references. Engine owns meaning.
+```
+
+Database reference metadata:
+
+* project_id
+* story_id
+* import_id
+* export_id
+* storage_ref
+* filename
+* content_type
+* size
+* checksum
+* created_at
+
+Private access rules:
+
+* never make manuscript buckets public
+* frontend must not know R2 credentials
+* API and worker write files
+* database stores only references and metadata
+* signed URLs are future-only and deliberate
 
 Current implementation result:
 
 ```text
-Provider-neutral source-byte object storage adapter contract is implemented.
-Provider SDK/client selection is not implemented yet.
-Production environment wiring is not implemented yet.
+General StorageService boundary is implemented.
+LocalFilesystemStorage development adapter is implemented.
+Cloudflare R2 storage adapter is implemented behind the optional object-storage dependency.
+Production source/import byte wiring can use Cloudflare R2.
 Generated export object storage is not implemented yet.
+Large snapshot object storage is not implemented yet.
+Import storage references still use the existing story/import reference shape until the project-scoped reference migration is implemented.
 ```
 
 ---
@@ -343,6 +389,7 @@ Before public beta, startup validation should reject production configuration th
 * local source-byte storage
 * missing `AEVRYN_IMPORT_STORAGE_ADAPTER=object`
 * missing private source-byte object-storage bucket or prefix
+* missing Cloudflare R2 endpoint or credentials
 * missing explicit CORS origins
 * missing API or worker credentials
 * missing session secret

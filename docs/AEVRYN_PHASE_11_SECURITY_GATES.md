@@ -221,7 +221,7 @@ Yes
 Command:
 
 ```text
-python -m pytest tests/test_backend_api.py::test_create_app_from_env_fails_closed_for_incomplete_production_config tests/test_backend_api.py::test_create_app_from_env_blocks_production_until_object_storage_provider_is_wired -q
+python -m pytest tests/test_backend_api.py::test_create_app_from_env_fails_closed_for_incomplete_production_config tests/test_backend_api.py::test_create_app_from_env_requires_r2_provider_credentials tests/test_backend_api.py::test_create_app_from_env_wires_r2_import_storage_for_production -q
 ```
 
 Expected result:
@@ -230,12 +230,13 @@ Expected result:
 * production mode refuses to start without explicit CORS origins.
 * production mode refuses to start without API keys for workflow routes.
 * production mode refuses to start without explicit object-storage configuration.
-* complete production security config still blocks until private object-storage provider wiring is implemented.
+* production mode refuses to start without Cloudflare R2 endpoint and credentials.
+* complete production storage config wires source/import bytes to Cloudflare R2.
 
 Latest result:
 
 ```text
-2 passed
+3 passed
 ```
 
 Known residual risk:

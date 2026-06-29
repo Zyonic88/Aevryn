@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import base64
 import logging
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 from _pytest.logging import LogCaptureFixture
@@ -813,7 +815,7 @@ def test_phase11_project_surfaces_fail_closed_across_users() -> None:
     assert owner_status.status_code == 200
     assert owner_status.json()["exports"]["latest_export_id"] == "export_alpha"
 
-    cross_user_requests = [
+    cross_user_requests: list[tuple[Callable[..., Any], str, dict[str, str] | None, str]] = [
         (
             client.get,
             "/v2/projects/project_alpha",

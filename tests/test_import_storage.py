@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 
 import pytest
 
 from aevryn.import_storage import (
     ImportContentNotFoundError,
     ObjectStorageImportContentStore,
+    StorageServiceImportContentStore,
 )
+from aevryn.storage import LocalFilesystemStorage
 
 
 def test_object_storage_import_content_store_round_trips_private_bytes() -> None:
@@ -67,6 +70,26 @@ def test_object_storage_import_content_store_validates_configuration() -> None:
             bucket="aevryn-private-source",
             prefix="../imports",
         )
+
+
+def test_storage_service_import_content_store_uses_project_import_path(
+    tmp_path: Path,
+) -> None:
+    """Import content should be movable onto the shared storage service boundary."""
+    storage = LocalFilesystemStorage(tmp_path / "storage")
+    store = StorageServiceImportContentStore(storage)
+
+    store.store_import_content(
+        "api_import://story_alpha/import_alpha",
+        b"Chapter 1\nMira opened the brass gate.",
+    )
+
+    assert store.read_import_content("api_import://story_alpha/import_alpha") == (
+        b"Chapter 1\nMira opened the brass gate."
+    )
+    assert storage.read_object(
+        "storage://projects/story_alpha/imports/import_alpha/source.bin"
+    ) == b"Chapter 1\nMira opened the brass gate."
 
 
 class FakeObjectStorageClient:

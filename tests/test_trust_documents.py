@@ -249,15 +249,15 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
     document = read_doc("docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md")
 
     required_terms = (
-        "Decision status: Decision 1 approved",
-        "Owner approval: Decision 1 approved",
+        "Decision status: Decisions 1-2 approved",
+        "Owner approval: Decisions 1-2 approved",
         (
             "Implementation status: Decision 1 implemented; "
-            "Decision 2 source-byte adapter contract started"
+            "Decision 2 source/import R2 adapter wiring started"
         ),
         "Public beta: Blocked",
         "managed PostgreSQL",
-        "private S3-compatible object storage",
+        "private S3-compatible storage-reference model",
         "managed identity provider",
         "managed deployment secrets",
         "separate API and worker runtimes",
@@ -267,7 +267,8 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Production mode rejects AEVRYN_PROJECT_DATABASE_PATH",
         "PostgreSQL Project Database adapter is implemented",
         "Local PostgreSQL browser/API smoke passed",
-        "Provider-neutral source-byte object storage adapter contract is implemented.",
+        "Cloudflare R2 storage adapter is implemented",
+        "Storage owns bytes. Database owns references. Engine owns meaning.",
         "Generated export object storage is not implemented yet.",
         "Public beta remains blocked.",
     )

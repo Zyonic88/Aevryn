@@ -361,7 +361,10 @@ def test_postgresql_jsonb_values_are_wrapped_for_psycopg(
             return FakeJsonModule
         raise AssertionError(f"Unexpected import: {module_name}")
 
-    monkeypatch.setattr(postgresql.importlib, "import_module", fake_import_module)
+    monkeypatch.setattr(
+        "aevryn.persistence.postgresql.importlib.import_module",
+        fake_import_module,
+    )
 
     adapted = postgresql._db_value("serialized_output", '{"accepted_fact_count":2}')
 

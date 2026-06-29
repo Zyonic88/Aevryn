@@ -248,8 +248,10 @@ Decision 2 - Object Storage
 Decision 2 progress:
 
 ```text
-Provider-neutral source-byte object storage adapter contract is implemented.
-Provider selection, production environment wiring, and generated export storage remain open.
+Cloudflare R2 is approved as the production object storage provider.
+General StorageService, LocalFilesystemStorage, and R2Storage adapters are implemented.
+Production source/import byte wiring can use Cloudflare R2.
+Generated export storage, large snapshot storage, and project-scoped storage reference migration remain open.
 ```
 
 ---

@@ -82,9 +82,12 @@ When `AEVRYN_DEPLOYMENT_ENV=production`, the app refuses to start unless these a
 * `AEVRYN_API_KEYS`
 * `AEVRYN_IMPORT_STORAGE_ADAPTER=object`
 * `AEVRYN_IMPORT_STORAGE_BUCKET`
+* `AEVRYN_IMPORT_STORAGE_ENDPOINT_URL`
+* `AEVRYN_IMPORT_STORAGE_ACCESS_KEY_ID`
+* `AEVRYN_IMPORT_STORAGE_SECRET_ACCESS_KEY`
 * `AEVRYN_IMPORT_STORAGE_PREFIX`
 
-This prevents accidental public startup with stateless storage, local source-byte storage, missing browser-origin policy, or unprotected workflow routes.
+This prevents accidental public startup with stateless storage, local source-byte storage, missing Cloudflare R2 storage credentials, missing browser-origin policy, or unprotected workflow routes.
 
 Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because local JSON Project Database storage is not allowed for public deployment.
 Production mode rejects `AEVRYN_IMPORT_STORAGE_PATH` because local filesystem source-byte storage is not allowed for public deployment.

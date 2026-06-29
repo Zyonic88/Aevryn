@@ -18,10 +18,13 @@ from aevryn.api import (
     AUTH_STORE_PATH_ENV,
     DEPLOYMENT_ENV,
     EXTRACTION_MODE_ENV,
+    IMPORT_STORAGE_ACCESS_KEY_ID_ENV,
     IMPORT_STORAGE_ADAPTER_ENV,
     IMPORT_STORAGE_BUCKET_ENV,
+    IMPORT_STORAGE_ENDPOINT_URL_ENV,
     IMPORT_STORAGE_PATH_ENV,
     IMPORT_STORAGE_PREFIX_ENV,
+    IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV,
     OPENAI_API_KEY_ENV,
     OPENAI_MAX_RESPONSE_BYTES_ENV,
     OPENAI_MODEL_ENV,
@@ -380,7 +383,7 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
             }
         )
 
-    with pytest.raises(ValueError, match=IMPORT_STORAGE_PREFIX_ENV):
+    with pytest.raises(ValueError, match=IMPORT_STORAGE_ENDPOINT_URL_ENV):
         create_app_from_env(
             {
                 **complete_until_import_storage,
@@ -390,11 +393,108 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
         )
 
 
-def test_create_app_from_env_blocks_production_until_object_storage_provider_is_wired(
-) -> None:
-    """Production mode should not fall back to local source-byte storage."""
+def test_create_app_from_env_requires_r2_provider_credentials() -> None:
+    """Production mode should fail closed without R2 provider credentials."""
+    complete_until_bucket = {
+        DEPLOYMENT_ENV: "production",
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        API_KEYS_ENV: "production-api-key",
+        IMPORT_STORAGE_ADAPTER_ENV: "object",
+        IMPORT_STORAGE_BUCKET_ENV: "aevryn-prod",
+    }
 
-    with pytest.raises(ValueError, match="object storage provider wiring"):
+    with pytest.raises(ValueError, match=IMPORT_STORAGE_ENDPOINT_URL_ENV):
+        create_app_from_env(complete_until_bucket)
+
+    with pytest.raises(ValueError, match=IMPORT_STORAGE_ACCESS_KEY_ID_ENV):
+        create_app_from_env(
+            {
+                **complete_until_bucket,
+                IMPORT_STORAGE_ENDPOINT_URL_ENV: "https://example.r2.cloudflarestorage.com",
+            }
+        )
+
+    with pytest.raises(ValueError, match=IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV):
+        create_app_from_env(
+            {
+                **complete_until_bucket,
+                IMPORT_STORAGE_ENDPOINT_URL_ENV: "https://example.r2.cloudflarestorage.com",
+                IMPORT_STORAGE_ACCESS_KEY_ID_ENV: "access-key",
+            }
+        )
+
+    with pytest.raises(ValueError, match=IMPORT_STORAGE_PREFIX_ENV):
+        create_app_from_env(
+            {
+                **complete_until_bucket,
+                IMPORT_STORAGE_ENDPOINT_URL_ENV: "https://example.r2.cloudflarestorage.com",
+                IMPORT_STORAGE_ACCESS_KEY_ID_ENV: "access-key",
+                IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV: "secret-key",
+            }
+        )
+
+
+def test_create_app_from_env_wires_r2_import_storage_for_production(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Production mode should use R2 for source bytes instead of local import storage."""
+
+    class FakePostgresqlProjectRepository(InMemoryProjectRepository):
+        """Test double for PostgreSQL repository selection."""
+
+        def __init__(self, database_url: str) -> None:
+            super().__init__()
+            self.database_url = database_url
+
+    class FakeR2Storage:
+        """Test double for R2 storage selection."""
+
+        def __init__(
+            self,
+            *,
+            bucket: str,
+            prefix: str,
+            endpoint_url: str,
+            access_key_id: str,
+            secret_access_key: str,
+            region_name: str,
+        ) -> None:
+            self.settings = {
+                "bucket": bucket,
+                "prefix": prefix,
+                "endpoint_url": endpoint_url,
+                "access_key_id": access_key_id,
+                "secret_access_key": secret_access_key,
+                "region_name": region_name,
+            }
+            self.objects: dict[str, bytes] = {}
+
+        def save_object(
+            self,
+            *,
+            storage_ref: str,
+            content: bytes,
+            content_type: str,
+            metadata: dict[str, str],
+        ) -> object:
+            self.objects[storage_ref] = content
+            return object()
+
+        def read_object(self, storage_ref: str) -> bytes:
+            return self.objects[storage_ref]
+
+        def delete_object(self, storage_ref: str) -> None:
+            self.objects.pop(storage_ref, None)
+
+    monkeypatch.setattr(
+        "aevryn.api.app.PostgresqlProjectRepository",
+        FakePostgresqlProjectRepository,
+    )
+    monkeypatch.setattr("aevryn.api.app.R2Storage", FakeR2Storage)
+
+    client = TestClient(
         create_app_from_env(
             {
                 DEPLOYMENT_ENV: "production",
@@ -403,10 +503,21 @@ def test_create_app_from_env_blocks_production_until_object_storage_provider_is_
                 ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
                 API_KEYS_ENV: "production-api-key",
                 IMPORT_STORAGE_ADAPTER_ENV: "object",
-                IMPORT_STORAGE_BUCKET_ENV: "aevryn-private-source",
+                IMPORT_STORAGE_BUCKET_ENV: "aevryn-prod",
+                IMPORT_STORAGE_ENDPOINT_URL_ENV: "https://example.r2.cloudflarestorage.com",
+                IMPORT_STORAGE_ACCESS_KEY_ID_ENV: "access-key",
+                IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV: "secret-key",
                 IMPORT_STORAGE_PREFIX_ENV: "imports/source",
             }
         )
+    )
+    response = client.get("/v2/health")
+
+    assert response.status_code == 200
+    assert response.json()["storage"] == {
+        "project_storage": "configured",
+        "import_content_storage": "configured",
+    }
 
 
 def test_create_app_from_env_wires_postgresql_browser_services(

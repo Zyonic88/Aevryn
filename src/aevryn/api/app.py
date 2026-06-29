@@ -128,7 +128,11 @@ from aevryn.extraction import (
     SceneExtractor,
     StaticAIExtractionClient,
 )
-from aevryn.import_storage import FileSystemImportContentStore, ImportContentStore
+from aevryn.import_storage import (
+    FileSystemImportContentStore,
+    ImportContentStore,
+    StorageServiceImportContentStore,
+)
 from aevryn.importing import ImportedSource, SourceFileTextExtractor
 from aevryn.persistence import (
     AccessDeniedError,
@@ -159,6 +163,7 @@ from aevryn.presentation import (
 from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.projects.runner import ContinuityRecord, ContinuityReport, ContinuitySceneReport
 from aevryn.prompts import CanonPromptBuilder, ProductionPack
+from aevryn.storage import R2Storage
 from aevryn.workers import (
     BackgroundJob,
     BackgroundJobHandler,
@@ -182,8 +187,12 @@ PROJECT_DATABASE_URL_ENV = "AEVRYN_PROJECT_DATABASE_URL"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
 IMPORT_STORAGE_ADAPTER_ENV = "AEVRYN_IMPORT_STORAGE_ADAPTER"
 IMPORT_STORAGE_BUCKET_ENV = "AEVRYN_IMPORT_STORAGE_BUCKET"
+IMPORT_STORAGE_ENDPOINT_URL_ENV = "AEVRYN_IMPORT_STORAGE_ENDPOINT_URL"
+IMPORT_STORAGE_ACCESS_KEY_ID_ENV = "AEVRYN_IMPORT_STORAGE_ACCESS_KEY_ID"
+IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV = "AEVRYN_IMPORT_STORAGE_SECRET_ACCESS_KEY"
 IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
 IMPORT_STORAGE_PREFIX_ENV = "AEVRYN_IMPORT_STORAGE_PREFIX"
+IMPORT_STORAGE_REGION_ENV = "AEVRYN_IMPORT_STORAGE_REGION"
 EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
 OPENAI_API_KEY_ENV = "AEVRYN_OPENAI_API_KEY"
 OPENAI_MODEL_ENV = "AEVRYN_OPENAI_MODEL"
@@ -1798,6 +1807,21 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_IMPORT_STORAGE_BUCKET is required when "
             "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
         )
+    if not environ.get(IMPORT_STORAGE_ENDPOINT_URL_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_IMPORT_STORAGE_ENDPOINT_URL is required when "
+            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+        )
+    if not environ.get(IMPORT_STORAGE_ACCESS_KEY_ID_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_IMPORT_STORAGE_ACCESS_KEY_ID is required when "
+            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+        )
+    if not environ.get(IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_IMPORT_STORAGE_SECRET_ACCESS_KEY is required when "
+            "AEVRYN_IMPORT_STORAGE_ADAPTER=object."
+        )
     if not environ.get(IMPORT_STORAGE_PREFIX_ENV, "").strip():
         raise ValueError(
             "AEVRYN_IMPORT_STORAGE_PREFIX is required when "
@@ -1817,14 +1841,14 @@ def _platform_services_from_env(
     """Return configured platform services from deployment environment settings."""
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
     if database_adapter == "postgresql":
-        if _is_production_environment(environ):
-            raise ValueError(
-                "Production object storage provider wiring is not implemented yet. "
-                "Select and wire a private object storage provider before public deployment."
-            )
         repository: ProjectRepository = PostgresqlProjectRepository(
             environ.get(PROJECT_DATABASE_URL_ENV, "")
         )
+        if _is_production_environment(environ):
+            return _production_postgresql_platform_services(
+                repository=repository,
+                environ=environ,
+            )
         return _local_platform_services(
             repository=repository,
             auth_store_path=_postgresql_auth_store_path_from_env(environ),
@@ -1848,6 +1872,48 @@ def _platform_services_from_env(
         auth_store_path=_auth_store_path_from_env(environ, project_database_path),
         import_storage_path=_import_storage_path_from_env(environ, project_database_path),
         environ=environ,
+    )
+
+
+def _production_postgresql_platform_services(
+    *,
+    repository: ProjectRepository,
+    environ: Mapping[str, str],
+) -> tuple[
+    AuthenticationService,
+    ProjectRepository,
+    BackgroundJobQueue,
+    BackgroundJobHandler,
+    ImportContentStore,
+]:
+    """Return production storage services after fail-closed environment validation."""
+    auth_store_path = _postgresql_auth_store_path_from_env(environ)
+    auth_store = JsonAuthenticationStore(auth_store_path)
+    authentication_service = AuthenticationService(
+        repository=repository,
+        credential_store=auth_store,
+        session_store=auth_store,
+    )
+    import_content_store = StorageServiceImportContentStore(
+        R2Storage(
+            bucket=environ.get(IMPORT_STORAGE_BUCKET_ENV, ""),
+            prefix=environ.get(IMPORT_STORAGE_PREFIX_ENV, ""),
+            endpoint_url=environ.get(IMPORT_STORAGE_ENDPOINT_URL_ENV, ""),
+            access_key_id=environ.get(IMPORT_STORAGE_ACCESS_KEY_ID_ENV, ""),
+            secret_access_key=environ.get(IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV, ""),
+            region_name=environ.get(IMPORT_STORAGE_REGION_ENV, "auto"),
+        )
+    )
+    return (
+        authentication_service,
+        repository,
+        InMemoryJobQueue(),
+        ProjectImportSnapshotHandler(
+            repository,
+            import_content_store,
+            extractor=_worker_extractor_from_env(environ),
+        ),
+        import_content_store,
     )
 
 

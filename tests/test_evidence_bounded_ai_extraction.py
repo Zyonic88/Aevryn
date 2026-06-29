@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Mapping
+from typing import Any, cast
 
 import pytest
 
@@ -190,12 +191,15 @@ def test_openai_responses_client_returns_output_text_without_network() -> None:
     }
     assert transport.url == "https://api.openai.com/v1/responses"
     assert transport.headers["Authorization"] == "Bearer test-key"
-    assert transport.payload["model"] == "test-model"
-    assert transport.payload["input"] == "extract this scene"
-    assert transport.payload["text"]["format"]["type"] == "json_schema"
-    assert transport.payload["text"]["format"]["name"] == "aevryn_scene_extraction"
-    assert transport.payload["text"]["format"]["strict"] is True
-    schema = transport.payload["text"]["format"]["schema"]
+    payload = cast(dict[str, Any], transport.payload)
+    text_config = cast(dict[str, Any], payload["text"])
+    format_config = cast(dict[str, Any], text_config["format"])
+    assert payload["model"] == "test-model"
+    assert payload["input"] == "extract this scene"
+    assert format_config["type"] == "json_schema"
+    assert format_config["name"] == "aevryn_scene_extraction"
+    assert format_config["strict"] is True
+    schema = format_config["schema"]
     relationship_schema = schema["properties"]["relationships"]["items"]
     assert relationship_schema["properties"]["relationship_type"] == {
         "type": "string",

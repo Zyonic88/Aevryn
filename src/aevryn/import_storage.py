@@ -8,6 +8,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Protocol
 
+from aevryn.storage import StorageObjectNotFoundError, StorageService
+
 
 class ImportContentNotFoundError(Exception):
     """Raised when imported source bytes are missing from storage."""
@@ -170,6 +172,41 @@ class ObjectStorageImportContentStore:
         return f"{self._prefix}/{digest}.bin"
 
 
+class StorageServiceImportContentStore:
+    """Import content store backed by the general Aevryn storage service."""
+
+    def __init__(self, storage: StorageService) -> None:
+        """Create a storage-service-backed import content store."""
+        self._storage = storage
+
+    def store_import_content(self, storage_ref: str, content: bytes) -> None:
+        """Store source bytes through the shared storage boundary."""
+        _require_storage_ref(storage_ref)
+        if not isinstance(content, bytes) or not content:
+            raise ValueError("Import content cannot be empty.")
+        self._storage.save_object(
+            storage_ref=_object_storage_ref_for_import_ref(storage_ref),
+            content=content,
+            content_type="application/octet-stream",
+            metadata={"aevryn_storage_kind": "source_import", "filename": "source.bin"},
+        )
+
+    def read_import_content(self, storage_ref: str) -> bytes:
+        """Read source bytes through the shared storage boundary."""
+        _require_storage_ref(storage_ref)
+        try:
+            return self._storage.read_object(_object_storage_ref_for_import_ref(storage_ref))
+        except StorageObjectNotFoundError as error:
+            raise ImportContentNotFoundError(
+                f"Missing import content: {storage_ref}"
+            ) from error
+
+    def delete_import_content(self, storage_ref: str) -> None:
+        """Delete source bytes through the shared storage boundary."""
+        _require_storage_ref(storage_ref)
+        self._storage.delete_object(_object_storage_ref_for_import_ref(storage_ref))
+
+
 def _require_storage_ref(storage_ref: str) -> None:
     """Require an Aevryn API import storage reference."""
     if not isinstance(storage_ref, str) or not storage_ref.startswith("api_import://"):
@@ -196,3 +233,13 @@ def _normalize_object_prefix(prefix: str) -> str:
     if ".." in normalized.split("/"):
         raise ValueError("Object storage prefix cannot contain traversal segments.")
     return normalized
+
+
+def _object_storage_ref_for_import_ref(storage_ref: str) -> str:
+    """Return the storage-service reference for one API import reference."""
+    _require_storage_ref(storage_ref)
+    without_scheme = storage_ref.removeprefix("api_import://")
+    if "/" not in without_scheme:
+        raise ValueError("Import content storage_ref is missing an import ID.")
+    story_id, import_id = without_scheme.split("/", maxsplit=1)
+    return f"storage://projects/{story_id}/imports/{import_id}/source.bin"
