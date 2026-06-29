@@ -178,10 +178,32 @@ def test_public_trust_readiness_document_tracks_gate_one_blockers() -> None:
         "Draft exists. Legal review required.",
         "Blocked by public contact information.",
         "Support Contact",
-        "Missing.",
+        "Started. Contact paths not selected.",
         "Plain-Language Requirements",
         "Truthfulness Requirements",
         "Not accepted.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_support_readiness_document_tracks_contact_paths() -> None:
+    """Public support readiness should define privacy-preserving contact paths."""
+    document = read_doc("docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md")
+
+    required_terms = (
+        "Gate: Public support and contact readiness",
+        "Status: Started",
+        "Public beta: Blocked",
+        "Users must be able to get help without exposing manuscripts unnecessarily.",
+        "general support",
+        "privacy questions",
+        "security vulnerability reports",
+        "abuse reports",
+        "account deletion requests",
+        "source-prose redaction guidance",
+        "Support should not ask for full source prose by default.",
     )
 
     for term in required_terms:

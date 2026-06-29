@@ -12,6 +12,8 @@ Security researchers should report suspected vulnerabilities privately to Aether
 
 Public contact information must be added before launch.
 
+Public security contact readiness is tracked in `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`.
+
 Reports should include:
 
 * affected component

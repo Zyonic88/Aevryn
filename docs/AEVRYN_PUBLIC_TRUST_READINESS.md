@@ -150,12 +150,12 @@ Required before public beta:
 
 Source:
 
-* to be created during Release Candidate Readiness
+* `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`
 
 Readiness:
 
 ```text
-Missing.
+Started. Contact paths not selected.
 ```
 
 Required before public beta:

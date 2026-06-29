@@ -79,3 +79,5 @@ Future public policy must describe rights to access, export, correct, delete, ob
 # Contact Information
 
 Public privacy contact information must be added before public launch.
+
+Public privacy contact readiness is tracked in `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`.

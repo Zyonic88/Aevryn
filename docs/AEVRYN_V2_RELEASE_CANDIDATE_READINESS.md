@@ -91,6 +91,7 @@ Source drafts:
 Gate tracking:
 
 * `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`
+* `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`
 
 Acceptance:
 
@@ -229,6 +230,10 @@ Required before public beta:
 * abuse-report process
 * account deletion request path
 * project deletion support path
+
+Gate tracking:
+
+* `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`
 
 Acceptance:
 
