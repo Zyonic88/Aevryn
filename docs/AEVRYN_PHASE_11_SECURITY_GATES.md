@@ -251,11 +251,48 @@ Yes
 
 ---
 
+# Gate 8 - API Hardening Test
+
+Command:
+
+```text
+python -m pytest tests/test_phase11_security.py::test_api_security_hardening_document_covers_required_controls tests/test_backend_api.py::test_import_inspect_endpoint_rejects_invalid_base64 tests/test_backend_api.py::test_import_inspect_endpoint_rejects_oversized_upload tests/test_backend_api.py::test_import_inspect_endpoint_returns_stable_validation_error tests/test_backend_api.py::test_api_echoes_client_request_id tests/test_backend_api.py::test_api_generates_request_id_when_client_value_is_invalid tests/test_backend_api.py::test_api_key_auth_rejects_missing_key_for_workflow_routes tests/test_backend_api.py::test_api_key_auth_rejects_invalid_key_for_workflow_routes tests/test_backend_api.py::test_create_app_rejects_duplicate_api_keys tests/test_backend_api.py::test_create_app_from_env_fails_closed_for_incomplete_production_config -q
+```
+
+Expected result:
+
+* API hardening documentation covers stable errors, request IDs, workflow route protection, upload/request-size boundaries, CORS/security headers, production fail-closed config, rate limiting strategy, CSRF posture, timeout policy, and public-beta blockers.
+* malformed source payloads and malformed API requests fail with stable machine-readable errors.
+* oversized import payloads fail before parsing or storage.
+* request IDs are echoed only when valid.
+* workflow routes are protected when API keys are configured.
+* duplicate API keys fail at app creation.
+* incomplete production configuration fails closed.
+
+Latest result:
+
+```text
+10 passed
+```
+
+Known residual risk:
+
+* production rate limiting is documented but still belongs to the deployment edge or API gateway.
+* production request-body limits and timeout enforcement still need deployment-layer tests.
+* CSRF protection is not required while bearer headers remain the session authority, but must be added before cookie-backed sessions become authoritative.
+
+Public beta blocked:
+
+```text
+Yes
+```
+
+---
+
 # Remaining Gates
 
 The following gates still need Phase 11 implementation before public beta:
 
-* API Hardening Test
 * Audit Ledger Integrity Test
 * Dependency Audit
 * Repository Secret Scan

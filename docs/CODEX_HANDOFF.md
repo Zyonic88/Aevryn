@@ -176,6 +176,7 @@ Phase 11 active security/privacy gate:
 - Phase 11 acceptance is governed by `docs/AEVRYN_V2_PHASE_11_ACCEPTANCE.md`
 - Security architecture is documented in `docs/AEVRYN_SECURITY.md`
 - Privacy architecture is documented in `docs/AEVRYN_PRIVACY.md`
+- API security hardening is documented in `docs/AEVRYN_API_SECURITY_HARDENING.md`
 - Repeatable Phase 11 gates are tracked in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`
 - Treat Phase 11 as a trust gate before public beta, not as a product expansion phase
 - Opening slice: explicit authorization-boundary verification across project, story, import, run, snapshot, export/status, settings, output, and deletion access
