@@ -253,7 +253,7 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Owner approval: Decisions 1-2 approved",
         (
             "Implementation status: Decisions 1-2 implemented; "
-            "Decision 3 fail-closed contract started"
+            "Decisions 3-5 fail-closed contract started"
         ),
         "Public beta: Blocked",
         "managed PostgreSQL",
@@ -272,6 +272,8 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Generated export storage service writes bytes through StorageService",
         "Generated export API/download routes are implemented.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER=managed.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SECRET_MANAGER=deployment.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_ENVIRONMENT_NAME=production.",
         "Managed identity is not implemented yet",
         "Public beta remains blocked.",
     )

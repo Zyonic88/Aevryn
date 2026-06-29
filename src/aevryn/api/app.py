@@ -204,6 +204,8 @@ R2_ENDPOINT_URL_ENV = "AEVRYN_R2_ENDPOINT_URL"
 R2_REGION_ENV = "AEVRYN_R2_REGION"
 IDENTITY_PROVIDER_ENV = "AEVRYN_IDENTITY_PROVIDER"
 SESSION_SECRET_ENV = "AEVRYN_SESSION_SECRET"
+SECRET_MANAGER_ENV = "AEVRYN_SECRET_MANAGER"
+ENVIRONMENT_NAME_ENV = "AEVRYN_ENVIRONMENT_NAME"
 EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
 OPENAI_API_KEY_ENV = "AEVRYN_OPENAI_API_KEY"
 OPENAI_MODEL_ENV = "AEVRYN_OPENAI_MODEL"
@@ -1967,6 +1969,20 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
     if not environ.get(R2_SECRET_ACCESS_KEY_ENV, "").strip():
         raise ValueError(
             "AEVRYN_R2_SECRET_ACCESS_KEY is required when AEVRYN_STORAGE_PROVIDER=r2."
+        )
+    secret_manager = environ.get(SECRET_MANAGER_ENV, "").strip().lower()
+    if secret_manager != "deployment":
+        raise ValueError(
+            "AEVRYN_SECRET_MANAGER=deployment is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Local-only secrets are not allowed "
+            "for production."
+        )
+    environment_name = environ.get(ENVIRONMENT_NAME_ENV, "").strip().lower()
+    if environment_name != "production":
+        raise ValueError(
+            "AEVRYN_ENVIRONMENT_NAME=production is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Production must be separated from "
+            "local, test, and staging environments."
         )
     identity_provider = environ.get(IDENTITY_PROVIDER_ENV, "").strip().lower()
     if identity_provider != "managed":

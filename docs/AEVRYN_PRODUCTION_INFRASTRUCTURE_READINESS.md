@@ -273,6 +273,22 @@ Managed identity provider selection and adapter wiring remain open.
 Public beta remains blocked until managed identity is implemented or the owner accepts a documented residual risk.
 ```
 
+Next Gate 3 target:
+
+```text
+Decision 4 - Secret Management
+Decision 5 - Environment Separation
+```
+
+Decision 4-5 progress:
+
+```text
+Production startup now requires AEVRYN_SECRET_MANAGER=deployment.
+Production startup now requires AEVRYN_ENVIRONMENT_NAME=production.
+This prevents production from silently using local-only secrets or an ambiguous environment label.
+Specific hosted secret manager and staging/production deployment targets remain open.
+```
+
 ---
 
 # Acceptance

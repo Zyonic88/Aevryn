@@ -16,7 +16,7 @@ They are the recommended public-beta architecture shape to approve, revise, or r
 Gate: Production Infrastructure
 Decision status: Decisions 1-2 approved
 Owner approval: Decisions 1-2 approved
-Implementation status: Decisions 1-2 implemented; Decision 3 fail-closed contract started
+Implementation status: Decisions 1-2 implemented; Decisions 3-5 fail-closed contract started
 Public beta: Blocked
 ```
 
@@ -271,6 +271,14 @@ Open decision:
 Secret manager provider not selected.
 ```
 
+Implementation contract:
+
+```text
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SECRET_MANAGER=deployment.
+Production startup rejects local-only or ambiguous secret posture.
+Specific hosted secret manager provider remains open.
+```
+
 ---
 
 # Decision 5 - Environment Separation
@@ -296,6 +304,14 @@ Public beta must include at least:
 * local development
 * staging or release-candidate environment
 * production
+
+Implementation contract:
+
+```text
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_ENVIRONMENT_NAME=production.
+Production startup rejects ambiguous environment separation.
+Staging or release-candidate deployment target remains open.
+```
 
 ---
 

@@ -216,11 +216,13 @@ Generated export storage service support exists, including generated export API 
 Production identity is intentionally fail-closed until a managed identity provider is selected and wired:
 
 ```text
+AEVRYN_SECRET_MANAGER=deployment
+AEVRYN_ENVIRONMENT_NAME=production
 AEVRYN_IDENTITY_PROVIDER=managed
 AEVRYN_SESSION_SECRET=<stored in deployment secrets>
 ```
 
-These variables document the production identity contract, but public beta remains blocked until the managed identity adapter exists. Local JSON authentication remains private-alpha only.
+These variables document the production secret, environment, and identity contract, but public beta remains blocked until the managed identity adapter exists. Local JSON authentication and local-only secrets remain private-alpha only.
 
 Optional explicit authentication store path:
 

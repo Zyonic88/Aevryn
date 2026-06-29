@@ -17,6 +17,7 @@ from aevryn.api import (
     API_KEYS_ENV,
     AUTH_STORE_PATH_ENV,
     DEPLOYMENT_ENV,
+    ENVIRONMENT_NAME_ENV,
     EXTRACTION_MODE_ENV,
     IDENTITY_PROVIDER_ENV,
     IMPORT_STORAGE_PATH_ENV,
@@ -32,6 +33,7 @@ from aevryn.api import (
     R2_BUCKET_ENV,
     R2_ENDPOINT_URL_ENV,
     R2_SECRET_ACCESS_KEY_ENV,
+    SECRET_MANAGER_ENV,
     SESSION_SECRET_ENV,
     STORAGE_PROVIDER_ENV,
     create_app,
@@ -438,8 +440,36 @@ def test_create_app_from_env_requires_r2_provider_credentials() -> None:
         )
 
 
+def test_create_app_from_env_requires_production_secret_and_environment_config() -> None:
+    """Production mode should reject ambiguous secret and environment boundaries."""
+    complete_until_secret_manager = {
+        DEPLOYMENT_ENV: "production",
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        API_KEYS_ENV: "production-api-key",
+        STORAGE_PROVIDER_ENV: "r2",
+        R2_BUCKET_ENV: "aevryn-prod",
+        R2_ACCOUNT_ID_ENV: "account-id",
+        R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
+        R2_ACCESS_KEY_ID_ENV: "access-key",
+        R2_SECRET_ACCESS_KEY_ENV: "secret-key",
+    }
+
+    with pytest.raises(ValueError, match=SECRET_MANAGER_ENV):
+        create_app_from_env(complete_until_secret_manager)
+
+    with pytest.raises(ValueError, match=ENVIRONMENT_NAME_ENV):
+        create_app_from_env(
+            {
+                **complete_until_secret_manager,
+                SECRET_MANAGER_ENV: "deployment",
+            }
+        )
+
+
 def test_create_app_from_env_fails_closed_without_production_identity_provider() -> None:
-    """Production mode should reject local alpha auth after database and R2 are set."""
+    """Production mode should reject local alpha auth after infrastructure is set."""
     complete_until_identity = {
         DEPLOYMENT_ENV: "production",
         PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
@@ -452,6 +482,8 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
         R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
         R2_ACCESS_KEY_ID_ENV: "access-key",
         R2_SECRET_ACCESS_KEY_ENV: "secret-key",
+        SECRET_MANAGER_ENV: "deployment",
+        ENVIRONMENT_NAME_ENV: "production",
     }
 
     with pytest.raises(ValueError, match=IDENTITY_PROVIDER_ENV):
