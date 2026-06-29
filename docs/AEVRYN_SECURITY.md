@@ -105,6 +105,8 @@ Local JSON and filesystem adapters are development adapters. Production storage 
 
 The Phase 11 API hardening contract is documented in `docs/AEVRYN_API_SECURITY_HARDENING.md`.
 
+Repository secret scanning is documented in `docs/AEVRYN_REPOSITORY_SECRET_SCAN.md`.
+
 API hardening includes:
 
 * request validation

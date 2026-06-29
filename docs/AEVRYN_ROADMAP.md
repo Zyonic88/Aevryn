@@ -580,6 +580,8 @@ API security hardening is defined in `docs/AEVRYN_API_SECURITY_HARDENING.md`.
 
 Audit ledger architecture is defined in `docs/AEVRYN_AUDIT_LEDGER.md`.
 
+Repository secret scanning is defined in `docs/AEVRYN_REPOSITORY_SECRET_SCAN.md`.
+
 Repeatable security gates are tracked in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`.
 
 Opening slice:

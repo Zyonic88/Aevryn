@@ -325,10 +325,46 @@ Yes
 
 ---
 
+# Gate 10 - Repository Secret Scan
+
+Command:
+
+```text
+$env:PYTHONPATH='src'; python -m aevryn.security.secret_scan
+```
+
+Expected result:
+
+* git-tracked release files are scanned by default.
+* ignored local development files, including local env files, are not scanned unless they become tracked.
+* OpenAI-style keys, AWS access-key IDs, private-key blocks, and hardcoded key/secret/token/password assignments are detected.
+* findings include path, line number, stable rule ID, and a redacted snippet.
+* findings do not print full secret values.
+* documented placeholders and test-only fake credentials do not fail the gate.
+
+Latest result:
+
+```text
+Repository secret scan passed: 251 files scanned.
+```
+
+Known residual risk:
+
+* hosted repository secret scanning and push protection still need to be configured before public beta.
+* production secret management and cloud-provider secret storage remain deployment decisions.
+* dependency auditing and static security scanning are separate remaining Phase 11 gates.
+
+Public beta blocked:
+
+```text
+Yes
+```
+
+---
+
 # Remaining Gates
 
 The following gates still need Phase 11 implementation before public beta:
 
 * Dependency Audit
-* Repository Secret Scan
 * Static Security Scan
