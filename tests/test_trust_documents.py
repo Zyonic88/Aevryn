@@ -161,6 +161,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "Gate 8 - Release Candidate Test Pass",
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md",
         "docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md",
+        "docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md",
         "Public beta blocked.",
     )
 
@@ -255,6 +256,31 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
         "security monitoring alerts",
         "incident response routing",
         "metadata-only",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
+    """Gate 5 should block public beta on production backup and audit decisions."""
+    document = read_doc("docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md")
+
+    required_terms = (
+        "Gate: Backup, Recovery, And Audit",
+        "Status: Not started",
+        "Public beta: Blocked",
+        "Recovery must not become hidden retention.",
+        "backup frequency",
+        "recovery point objective",
+        "recovery time objective",
+        "backup retention window",
+        "restore test",
+        "production audit storage",
+        "audit retention",
+        "audit access controls",
+        "metadata-only",
+        "tamper-evident",
     )
 
     for term in required_terms:

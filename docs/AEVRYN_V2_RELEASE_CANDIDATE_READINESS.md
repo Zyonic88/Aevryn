@@ -199,6 +199,10 @@ Source docs:
 * `docs/BACKUP_AND_RECOVERY.md`
 * `docs/AEVRYN_AUDIT_LEDGER.md`
 
+Gate tracking:
+
+* `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`
+
 Acceptance:
 
 ```text
