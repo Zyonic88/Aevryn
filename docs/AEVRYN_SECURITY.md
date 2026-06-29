@@ -143,6 +143,8 @@ Production should fail closed when required security configuration is missing.
 
 ## Layer 7 - Audit Ledger
 
+Audit ledger architecture is defined in `docs/AEVRYN_AUDIT_LEDGER.md`.
+
 Aevryn should adopt an append-only audit ledger for security-relevant and workflow-relevant events.
 
 The ledger should be:

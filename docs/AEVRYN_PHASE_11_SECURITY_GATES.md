@@ -289,11 +289,46 @@ Yes
 
 ---
 
+# Gate 9 - Audit Ledger Integrity Test
+
+Command:
+
+```text
+python -m pytest tests/test_audit_ledger.py -q
+```
+
+Expected result:
+
+* audit records append in sequence order.
+* records are hash chained and tamper evident.
+* reordered or modified records fail verification.
+* audit metadata rejects source text, serialized output, credentials, secrets, tokens, machine-local paths, and non-concise prose.
+* deletion events can record counts and scope without preserving deleted story content.
+
+Latest result:
+
+```text
+5 passed
+```
+
+Known residual risk:
+
+* production audit storage adapter is not selected yet.
+* audit retention and access-control policy still need deployment decisions.
+* API and worker events are not fully wired into a persisted production ledger yet.
+
+Public beta blocked:
+
+```text
+Yes
+```
+
+---
+
 # Remaining Gates
 
 The following gates still need Phase 11 implementation before public beta:
 
-* Audit Ledger Integrity Test
 * Dependency Audit
 * Repository Secret Scan
 * Static Security Scan

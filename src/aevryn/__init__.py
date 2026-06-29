@@ -7,6 +7,7 @@ state across long-form stories.
 import logging
 
 from aevryn.api import create_app, create_app_from_env
+from aevryn.audit import AuditLedger, AuditLedgerIntegrityError, AuditLedgerRecord
 from aevryn.canon import (
     CanonConflict,
     CanonDatabase,
@@ -137,6 +138,9 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
     "AccessDeniedError",
+    "AuditLedger",
+    "AuditLedgerIntegrityError",
+    "AuditLedgerRecord",
     "CheckConstraintDefinition",
     "TableDefinition",
     "SchemaDefinition",
