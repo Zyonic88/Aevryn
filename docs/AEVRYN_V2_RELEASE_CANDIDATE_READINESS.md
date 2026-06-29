@@ -222,6 +222,10 @@ Required before public beta:
 * provider failure logging verified metadata-only
 * model configuration documented
 
+Gate tracking:
+
+* `docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md`
+
 Acceptance:
 
 ```text

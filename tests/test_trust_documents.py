@@ -162,6 +162,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md",
         "docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md",
         "docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md",
+        "docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md",
         "Public beta blocked.",
     )
 
@@ -281,6 +282,29 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "audit access controls",
         "metadata-only",
         "tamper-evident",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
+    """Gate 6 should block public beta on AI provider data-use decisions."""
+    document = read_doc("docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md")
+
+    required_terms = (
+        "Gate: AI Provider And Data Use",
+        "Status: Not started",
+        "Public beta: Blocked",
+        "Users must know when story content leaves Aevryn-owned systems.",
+        "provider name",
+        "model family or model configuration",
+        "data retention terms",
+        "provider training behavior",
+        "No training on user stories without explicit opt-in.",
+        "Provider output is not Canon.",
+        "metadata-only",
+        "provider data-use disclosure",
     )
 
     for term in required_terms:
