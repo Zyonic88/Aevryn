@@ -183,6 +183,10 @@ Phase 11 accepted security/privacy baseline:
 - Dependency auditing is documented in `docs/AEVRYN_DEPENDENCY_AUDIT.md`
 - Static security scanning is documented in `docs/AEVRYN_STATIC_SECURITY_SCAN.md`
 - Backup retention boundaries are documented in `docs/AEVRYN_BACKUP_RETENTION.md`
+- User-facing trust principles are documented in `docs/AEVRYN_TRUST_MODEL.md` and `docs/AEVRYN_USER_RIGHTS.md`
+- Content classification is documented in `docs/AEVRYN_CONTENT_CLASSIFICATION.md`
+- Public-launch legal drafts are in `docs/TERMS_OF_SERVICE.md`, `docs/PRIVACY_POLICY.md`, `docs/ACCEPTABLE_USE_POLICY.md`, and `docs/SECURITY_DISCLOSURE.md`
+- Data retention and recovery policy drafts are in `docs/DATA_RETENTION_POLICY.md` and `docs/BACKUP_AND_RECOVERY.md`
 - Repeatable Phase 11 gates are tracked in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`
 - Phase 11 gates currently list no remaining implementation gates
 - Treat Phase 11 as the accepted trust baseline before public beta, not as a product expansion phase

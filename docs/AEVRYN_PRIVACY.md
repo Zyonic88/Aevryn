@@ -120,6 +120,56 @@ These do not need to become broad new product features during Phase 11, but the 
 
 ---
 
+# Account Deletion
+
+Account deletion is a future product surface, but the privacy rule is already fixed:
+
+```text
+Deleting an account must remove or anonymize Aevryn-owned active user data unless retention is legally or operationally required and disclosed.
+```
+
+Account deletion must cover user profile data, projects, stories, imports, snapshots, exports, session state, and associated active product metadata.
+
+---
+
+# Third-Party AI Providers
+
+Provider-backed extraction is opt-in through configuration.
+
+Aevryn must disclose before public beta:
+
+* which providers can receive story content
+* what content is sent
+* whether providers retain input or output
+* whether providers train on submitted content
+* how provider failures are logged without source prose
+
+Aevryn must not silently route manuscripts to third parties.
+
+---
+
+# Data Residency
+
+Public beta must define where production data is stored and processed.
+
+Until production regions are selected, Aevryn must not promise a specific data residency region.
+
+---
+
+# Internal Employee Access
+
+Employees and contractors must not browse customer stories by default.
+
+Access to uploaded stories, generated canon, exports, backups, and account data must be:
+
+* limited by role
+* justified by support, security, or recovery need
+* logged where technically possible
+* reviewed for abuse
+* never used for training or curiosity access
+
+---
+
 # AI Data Use
 
 Default rule:

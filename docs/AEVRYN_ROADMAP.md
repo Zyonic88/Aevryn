@@ -588,6 +588,14 @@ Static security scanning is defined in `docs/AEVRYN_STATIC_SECURITY_SCAN.md`.
 
 Backup retention boundaries are defined in `docs/AEVRYN_BACKUP_RETENTION.md`.
 
+User-facing trust principles are defined in `docs/AEVRYN_TRUST_MODEL.md` and `docs/AEVRYN_USER_RIGHTS.md`.
+
+Content classification is defined in `docs/AEVRYN_CONTENT_CLASSIFICATION.md`.
+
+Public-launch legal drafts are tracked in `docs/TERMS_OF_SERVICE.md`, `docs/PRIVACY_POLICY.md`, `docs/ACCEPTABLE_USE_POLICY.md`, and `docs/SECURITY_DISCLOSURE.md`.
+
+Data retention and recovery engineering policy drafts are tracked in `docs/DATA_RETENTION_POLICY.md` and `docs/BACKUP_AND_RECOVERY.md`.
+
 Repeatable security gates are tracked in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`.
 
 Phase 11 gates are complete. The security gate tracker currently lists no remaining Phase 11 implementation gates.

@@ -23,9 +23,9 @@ Aevryn must fail closed in production, preserve least privilege across every bou
 
 # Security Layers
 
-## Layer 1 - Identity
+## Layer 1 - Identity And Authentication
 
-Identity answers:
+Identity and authentication answer:
 
 ```text
 Who are you?
@@ -231,6 +231,79 @@ Minimum gate categories:
 * audit-ledger integrity tests
 
 The security gate must be repeatable before public beta.
+
+---
+
+# Secret Management
+
+Production secrets must live outside source control and outside committed configuration files.
+
+Required rules:
+
+* API keys, session secrets, provider credentials, database credentials, worker credentials, and storage credentials must come from a secret manager or protected deployment environment.
+* Local `.env` files are developer-only and must remain ignored.
+* Secrets must not appear in logs, monitoring, audit records, performance artifacts, screenshots, support bundles, or bug reports.
+* Secret rotation must be possible without code changes.
+* Repository secret scanning is a release gate.
+
+---
+
+# Security Monitoring
+
+Security monitoring must observe workflows without copying private story content.
+
+Security-relevant events include:
+
+* login failures
+* password reset requests
+* cross-user access attempts
+* API key failures
+* project/story deletion
+* import submission
+* worker failure
+* export generation
+* production configuration failure
+
+Monitoring must use stable machine-readable event codes and concise metadata. It must not include full source prose, full AI payloads, credentials, tokens, local paths, usernames, hostnames, or serialized exports.
+
+---
+
+# Incident Response
+
+Before public beta, Aetherra Labs must define an incident response process covering:
+
+* severity classification
+* containment
+* evidence preservation without manuscript exposure
+* customer notification criteria
+* secret rotation
+* dependency vulnerability response
+* post-incident review
+* patch release procedure
+
+Incidents involving uploaded manuscripts must be treated as high-trust privacy incidents, not ordinary application errors.
+
+---
+
+# Security Review Process
+
+Security review is required for changes that touch:
+
+* authentication
+* authorization
+* deletion
+* source-file import
+* storage
+* AI provider integration
+* logs, monitoring, audit records, or diagnostics
+* export generation
+* dependency or build tooling
+
+The default review question is:
+
+```text
+Can this change expose, preserve, or move private user story data in a way the user did not expect?
+```
 
 ---
 
