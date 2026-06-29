@@ -166,6 +166,28 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         assert term in document
 
 
+def test_public_trust_readiness_document_tracks_gate_one_blockers() -> None:
+    """Gate 1 should distinguish existing drafts from public-beta-ready pages."""
+    document = read_doc("docs/AEVRYN_PUBLIC_TRUST_READINESS.md")
+
+    required_terms = (
+        "Gate: Public-Facing Trust Documentation",
+        "Status: Started",
+        "Public beta: Blocked",
+        "Public trust pages must be true, plain-language, and backed by implementation.",
+        "Draft exists. Legal review required.",
+        "Blocked by public contact information.",
+        "Support Contact",
+        "Missing.",
+        "Plain-Language Requirements",
+        "Truthfulness Requirements",
+        "Not accepted.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
 def test_future_ideas_document_preserves_scope_boundary() -> None:
     """Future ideas should be preserved without becoming roadmap commitments."""
     document = read_doc("docs/AEVRYN_FUTURE_IDEAS.md")

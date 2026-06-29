@@ -80,6 +80,7 @@ Future ideas are preserved in `docs/AEVRYN_FUTURE_IDEAS.md`. That document is no
 Next expected V2 target:
 
 - Work V2 Release Candidate Readiness from `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md`.
+- Gate 1 Public-Facing Trust Documentation is tracked in `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`.
 - Use `docs/AEVRYN_V2_CLOSEOUT.md` as the decision record that separates V2 product completion from public beta approval.
 - Do not treat Phase 11 acceptance as public beta approval; public beta still requires deployment-specific security decisions and production infrastructure choices.
 

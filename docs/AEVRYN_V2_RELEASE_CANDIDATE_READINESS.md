@@ -88,6 +88,10 @@ Source drafts:
 * `docs/AEVRYN_CONTENT_CLASSIFICATION.md`
 * `docs/SECURITY_DISCLOSURE.md`
 
+Gate tracking:
+
+* `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`
+
 Acceptance:
 
 ```text
