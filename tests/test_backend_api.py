@@ -891,6 +891,8 @@ def test_capabilities_endpoint_reports_routes_and_limits() -> None:
     assert "/v2/projects/preview" in route_paths
     assert "/v2/projects/{project_id}/status" in route_paths
     assert "/v2/projects/{project_id}/outputs" in route_paths
+    assert "/v2/projects/{project_id}/exports" in route_paths
+    assert "/v2/projects/{project_id}/exports/{export_id}/download" in route_paths
     assert "/v2/characters/preview" in route_paths
     assert "/v2/scenes/preview" in route_paths
     assert "/v2/prompts/preview" in route_paths
@@ -933,6 +935,20 @@ def test_openapi_schema_uses_stable_operation_ids_and_tags() -> None:
         "getV2ProjectOutputs"
     )
     assert paths["/v2/projects/{project_id}/outputs"]["get"]["tags"] == ["Projects"]
+    assert paths["/v2/projects/{project_id}/exports"]["get"]["operationId"] == (
+        "getV2ProjectExports"
+    )
+    assert paths["/v2/projects/{project_id}/exports"]["get"]["tags"] == ["Exports"]
+    assert paths["/v2/projects/{project_id}/exports"]["post"]["operationId"] == (
+        "postV2ProjectExports"
+    )
+    assert paths["/v2/projects/{project_id}/exports"]["post"]["tags"] == ["Exports"]
+    assert paths["/v2/projects/{project_id}/exports/{export_id}/download"]["get"][
+        "operationId"
+    ] == "getV2ProjectExportDownload"
+    assert paths["/v2/projects/{project_id}/exports/{export_id}/download"]["get"][
+        "tags"
+    ] == ["Exports"]
     assert paths["/v2/imports/inspect"]["post"]["operationId"] == (
         "postV2ImportsInspect"
     )

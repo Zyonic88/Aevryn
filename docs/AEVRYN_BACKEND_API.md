@@ -916,8 +916,45 @@ it includes record descriptions and evidence IDs, but not source quotes.
 
 Export output must include API-provided `export_options` that describe available
 export kinds and formats. Project output summaries must not include full
-serialized export content; full export content remains behind the explicit
-export preview route.
+serialized export content; full export content remains behind explicit export
+routes.
+
+## `GET /v2/projects/{project_id}/exports`
+
+Returns generated export metadata inside an authenticated project.
+
+The response includes export IDs, snapshot IDs, export kind, format, filename,
+content type, size, checksum, and creation time.
+
+It does not return storage references or serialized export content.
+
+## `POST /v2/projects/{project_id}/exports`
+
+Persists a generated export from a durable snapshot.
+
+The first storage-backed export target is deliberately narrow:
+
+* source: existing project snapshot
+* format: JSON
+* bytes: written through `StorageService`
+* metadata: recorded in the Project Database
+
+The request includes:
+
+* `export_id`
+* `snapshot_id`
+* `export_format`
+* optional `filename`
+* `now`
+
+The API does not re-run the engine while creating an export.
+
+## `GET /v2/projects/{project_id}/exports/{export_id}/download`
+
+Downloads generated export bytes after authentication and project ownership
+checks.
+
+The frontend never receives R2 credentials or storage references.
 
 ## `POST /v2/exports/preview`
 

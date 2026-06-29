@@ -52,6 +52,9 @@ from aevryn.api.models import (
     ErrorResponse,
     EvidenceAnchorPreview,
     ExportCapability,
+    ExportCreateRequest,
+    ExportListResponse,
+    ExportOutput,
     ExportPreviewRequest,
     ExportPreviewResponse,
     ExtractionApplyRequest,
@@ -122,6 +125,7 @@ from aevryn.auth import (
     PasswordPolicyError,
 )
 from aevryn.export import ExportEngine
+from aevryn.export_storage import ExportStorageService, ExportWriteRequest
 from aevryn.extraction import (
     EvidenceBoundedAIExtractor,
     OpenAIResponsesAIExtractionClient,
@@ -163,7 +167,12 @@ from aevryn.presentation import (
 from aevryn.projects import AevrynProjectRunner, ProjectRunResult
 from aevryn.projects.runner import ContinuityRecord, ContinuityReport, ContinuitySceneReport
 from aevryn.prompts import CanonPromptBuilder, ProductionPack
-from aevryn.storage import R2Storage
+from aevryn.storage import (
+    LocalFilesystemStorage,
+    R2Storage,
+    StorageObjectNotFoundError,
+    StorageService,
+)
 from aevryn.workers import (
     BackgroundJob,
     BackgroundJobHandler,
@@ -225,6 +234,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         background_job_queue,
         background_job_handler,
         import_content_store,
+        storage_service,
     ) = _platform_services_from_env(active_environ)
     return create_app(
         allowed_origins=_allowed_origins_from_env(active_environ),
@@ -234,6 +244,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         background_job_queue=background_job_queue,
         background_job_handler=background_job_handler,
         import_content_store=import_content_store,
+        storage_service=storage_service,
     )
 
 
@@ -245,6 +256,7 @@ def create_app(
     background_job_queue: BackgroundJobQueue | None = None,
     background_job_handler: BackgroundJobHandler | None = None,
     import_content_store: ImportContentStore | None = None,
+    storage_service: StorageService | None = None,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
 
@@ -256,6 +268,7 @@ def create_app(
         background_job_queue: Optional Phase 3 queue for engine run submission.
         background_job_handler: Optional Phase 3 worker handler for queued jobs.
         import_content_store: Optional storage adapter for uploaded source bytes.
+        storage_service: Optional storage adapter for generated exports.
 
     Returns:
         Configured FastAPI application.
@@ -751,6 +764,136 @@ def create_app(
             raise _project_storage_error(error) from error
         return SnapshotListResponse(
             snapshots=tuple(_snapshot_output(snapshot) for snapshot in snapshots),
+        )
+
+    @app.get(
+        "/v2/projects/{project_id}/exports",
+        response_model=ExportListResponse,
+        tags=["Exports"],
+        operation_id="getV2ProjectExports",
+    )
+    def list_project_exports(project_id: str, request: Request) -> ExportListResponse:
+        """Return generated export metadata inside an authenticated project."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            exports = repository.list_exports_for_project(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return ExportListResponse(exports=tuple(_export_output(export) for export in exports))
+
+    @app.post(
+        "/v2/projects/{project_id}/exports",
+        response_model=ExportOutput,
+        tags=["Exports"],
+        operation_id="postV2ProjectExports",
+    )
+    def create_project_export(
+        project_id: str,
+        request_body: ExportCreateRequest,
+        request: Request,
+    ) -> ExportOutput:
+        """Persist a generated export from a durable snapshot."""
+        repository = _require_project_repository(project_repository)
+        export_storage = ExportStorageService(
+            repository=repository,
+            storage=_require_storage_service(storage_service),
+        )
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            snapshot = repository.get_snapshot(
+                user_id=user.user_id,
+                snapshot_id=request_body.snapshot_id,
+            )
+            if snapshot.project_id != project_id:
+                raise RecordNotFoundError(f"Project not found: {project_id}")
+            export = export_storage.write_export(
+                ExportWriteRequest(
+                    export_id=request_body.export_id,
+                    project_id=project_id,
+                    snapshot_id=snapshot.snapshot_id,
+                    export_kind=snapshot.snapshot_kind,
+                    export_format=_required_snapshot_export_format(
+                        request_body.export_format
+                    ),
+                    filename=_snapshot_export_filename(
+                        snapshot=snapshot,
+                        filename=request_body.filename,
+                    ),
+                    content_type="application/json",
+                    content=snapshot.serialized_output.encode("utf-8"),
+                    created_at=request_body.now,
+                )
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "snapshot_not_found", "detail": "Snapshot not found."},
+            ) from error
+        except DuplicateRecordError as error:
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "export_exists", "detail": str(error)},
+            ) from error
+        except (PersistenceError, ValueError) as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "export_create_failed", "detail": str(error)},
+            ) from error
+        return _export_output(export)
+
+    @app.get(
+        "/v2/projects/{project_id}/exports/{export_id}/download",
+        tags=["Exports"],
+        operation_id="getV2ProjectExportDownload",
+    )
+    def download_project_export(
+        project_id: str,
+        export_id: str,
+        request: Request,
+    ) -> Response:
+        """Download generated export bytes inside an authenticated project."""
+        repository = _require_project_repository(project_repository)
+        export_storage = ExportStorageService(
+            repository=repository,
+            storage=_require_storage_service(storage_service),
+        )
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            export = repository.get_export(user_id=user.user_id, export_id=export_id)
+            if export.project_id != project_id:
+                raise RecordNotFoundError(f"Project not found: {project_id}")
+            content = export_storage.read_export(user_id=user.user_id, export_id=export_id)
+        except (AccessDeniedError, RecordNotFoundError, StorageObjectNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "export_not_found", "detail": "Export not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return Response(
+            content=content,
+            media_type=export.content_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{export.filename}"',
+            },
         )
 
     @app.get(
@@ -1837,6 +1980,7 @@ def _platform_services_from_env(
     BackgroundJobQueue | None,
     BackgroundJobHandler | None,
     ImportContentStore | None,
+    StorageService | None,
 ]:
     """Return configured platform services from deployment environment settings."""
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
@@ -1863,7 +2007,7 @@ def _platform_services_from_env(
 
     database_path = environ.get(PROJECT_DATABASE_PATH_ENV, "").strip()
     if not database_path:
-        return None, None, None, None, None
+        return None, None, None, None, None, None
 
     project_database_path = Path(database_path)
     repository = JsonProjectRepository(project_database_path)
@@ -1885,6 +2029,7 @@ def _production_postgresql_platform_services(
     BackgroundJobQueue,
     BackgroundJobHandler,
     ImportContentStore,
+    StorageService,
 ]:
     """Return production storage services after fail-closed environment validation."""
     auth_store_path = _postgresql_auth_store_path_from_env(environ)
@@ -1894,16 +2039,15 @@ def _production_postgresql_platform_services(
         credential_store=auth_store,
         session_store=auth_store,
     )
-    import_content_store = StorageServiceImportContentStore(
-        R2Storage(
-            bucket=environ.get(IMPORT_STORAGE_BUCKET_ENV, ""),
-            prefix=environ.get(IMPORT_STORAGE_PREFIX_ENV, ""),
-            endpoint_url=environ.get(IMPORT_STORAGE_ENDPOINT_URL_ENV, ""),
-            access_key_id=environ.get(IMPORT_STORAGE_ACCESS_KEY_ID_ENV, ""),
-            secret_access_key=environ.get(IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV, ""),
-            region_name=environ.get(IMPORT_STORAGE_REGION_ENV, "auto"),
-        )
+    storage_service = R2Storage(
+        bucket=environ.get(IMPORT_STORAGE_BUCKET_ENV, ""),
+        prefix=environ.get(IMPORT_STORAGE_PREFIX_ENV, ""),
+        endpoint_url=environ.get(IMPORT_STORAGE_ENDPOINT_URL_ENV, ""),
+        access_key_id=environ.get(IMPORT_STORAGE_ACCESS_KEY_ID_ENV, ""),
+        secret_access_key=environ.get(IMPORT_STORAGE_SECRET_ACCESS_KEY_ENV, ""),
+        region_name=environ.get(IMPORT_STORAGE_REGION_ENV, "auto"),
     )
+    import_content_store = StorageServiceImportContentStore(storage_service)
     return (
         authentication_service,
         repository,
@@ -1914,6 +2058,7 @@ def _production_postgresql_platform_services(
             extractor=_worker_extractor_from_env(environ),
         ),
         import_content_store,
+        storage_service,
     )
 
 
@@ -1929,9 +2074,11 @@ def _local_platform_services(
     BackgroundJobQueue,
     BackgroundJobHandler,
     ImportContentStore,
+    StorageService,
 ]:
     """Return browser-ready local platform services for one project repository."""
     import_content_store = FileSystemImportContentStore(import_storage_path)
+    storage_service = LocalFilesystemStorage(import_storage_path.parent / "storage_objects")
     auth_store = JsonAuthenticationStore(auth_store_path)
     authentication_service = AuthenticationService(
         repository=repository,
@@ -1948,6 +2095,7 @@ def _local_platform_services(
             extractor=_worker_extractor_from_env(environ),
         ),
         import_content_store,
+        storage_service,
     )
 
 
@@ -2164,6 +2312,19 @@ def _require_project_repository(
             },
         )
     return project_repository
+
+
+def _require_storage_service(storage_service: StorageService | None) -> StorageService:
+    """Return the configured Storage Service or fail clearly."""
+    if storage_service is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "export_storage_unavailable",
+                "detail": "Export storage is not configured.",
+            },
+        )
+    return storage_service
 
 
 def _require_background_job_queue(
@@ -3075,6 +3236,41 @@ def _snapshot_output(snapshot: SnapshotRecord) -> SnapshotOutput:
     )
 
 
+def _export_output(export: ExportRecord) -> ExportOutput:
+    """Convert persisted export metadata to the API contract."""
+    return ExportOutput(
+        export_id=export.export_id,
+        project_id=export.project_id,
+        snapshot_id=export.snapshot_id,
+        export_kind=export.export_kind,
+        export_format=export.export_format,
+        filename=export.filename,
+        content_type=export.content_type,
+        size=export.size,
+        checksum=export.checksum,
+        created_at=export.created_at,
+    )
+
+
+def _required_snapshot_export_format(value: str) -> str:
+    """Validate the first storage-backed snapshot export format."""
+    export_format = value.strip().lower()
+    if export_format != "json":
+        raise ValueError("Only json snapshot exports are currently supported.")
+    return export_format
+
+
+def _snapshot_export_filename(
+    *,
+    snapshot: SnapshotRecord,
+    filename: str | None,
+) -> str:
+    """Return a safe filename for one snapshot export."""
+    if filename is not None and filename.strip():
+        return filename.strip()
+    return f"{snapshot.snapshot_kind}_{snapshot.snapshot_id}.json"
+
+
 def _snapshot_kind_filter(value: str | None) -> SnapshotKind | None:
     """Validate snapshot kind filters and worker payloads."""
     if value is None:
@@ -3436,6 +3632,21 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="GET",
             path="/v2/projects/{project_id}/outputs",
             purpose="Return processed project output summaries from durable snapshots.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}/exports",
+            purpose="List generated export metadata inside a project.",
+        ),
+        ApiRouteCapability(
+            method="POST",
+            path="/v2/projects/{project_id}/exports",
+            purpose="Persist a generated export from a durable snapshot.",
+        ),
+        ApiRouteCapability(
+            method="GET",
+            path="/v2/projects/{project_id}/exports/{export_id}/download",
+            purpose="Download generated export bytes inside a project.",
         ),
         ApiRouteCapability(
             method="GET",

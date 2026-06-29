@@ -538,6 +538,43 @@ class SnapshotListResponse(BaseModel):
     snapshots: tuple[SnapshotOutput, ...]
 
 
+class ExportCreateRequest(BaseModel):
+    """Request to persist a generated export from a durable snapshot."""
+
+    model_config = ConfigDict(frozen=True)
+
+    export_id: str = Field(min_length=1)
+    snapshot_id: str = Field(min_length=1)
+    export_format: str = Field(default="json", min_length=1)
+    filename: str | None = None
+    now: str = Field(min_length=1)
+
+
+class ExportOutput(BaseModel):
+    """Ownership-safe generated export metadata."""
+
+    model_config = ConfigDict(frozen=True)
+
+    export_id: str
+    project_id: str
+    snapshot_id: str
+    export_kind: str
+    export_format: str
+    filename: str
+    content_type: str
+    size: int
+    checksum: str
+    created_at: str
+
+
+class ExportListResponse(BaseModel):
+    """Generated exports visible inside an authenticated project."""
+
+    model_config = ConfigDict(frozen=True)
+
+    exports: tuple[ExportOutput, ...]
+
+
 class WorkerProcessRequest(BaseModel):
     """Request to drain queued background jobs through the worker boundary."""
 

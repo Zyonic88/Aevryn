@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import logging
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -21,7 +22,15 @@ from aevryn.auth import (
     PasswordHasher,
 )
 from aevryn.import_storage import ImportContentNotFoundError, InMemoryImportContentStore
-from aevryn.persistence import ExportRecord, InMemoryProjectRepository, RecordNotFoundError
+from aevryn.persistence import (
+    EngineRunRecord,
+    ExportRecord,
+    ImportRecord,
+    InMemoryProjectRepository,
+    RecordNotFoundError,
+    SnapshotRecord,
+)
+from aevryn.storage import LocalFilesystemStorage
 from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
 from aevryn.workers.models import BackgroundJob
 
@@ -1675,6 +1684,146 @@ def test_worker_snapshot_api_stores_and_lists_completed_run_outputs() -> None:
     )
 
 
+def test_project_export_api_creates_lists_and_downloads_storage_backed_export(
+    tmp_path: Path,
+) -> None:
+    """Project exports should write bytes to Storage and return metadata only."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository),
+            project_repository=repository,
+            storage_service=LocalFilesystemStorage(tmp_path / "storage"),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    _store_succeeded_snapshot(repository)
+
+    created = client.post(
+        "/v2/projects/project_alpha/exports",
+        headers=auth_headers("token_001"),
+        json={
+            "export_id": "export_alpha",
+            "snapshot_id": "snapshot_alpha",
+            "export_format": "json",
+            "filename": "canon.json",
+            "now": SOON,
+        },
+    )
+
+    assert created.status_code == 200
+    payload = created.json()
+    assert payload == {
+        "export_id": "export_alpha",
+        "project_id": "project_alpha",
+        "snapshot_id": "snapshot_alpha",
+        "export_kind": "canon",
+        "export_format": "json",
+        "filename": "canon.json",
+        "content_type": "application/json",
+        "size": len('{"accepted_fact_count":1}'),
+        "checksum": payload["checksum"],
+        "created_at": SOON,
+    }
+    assert payload["checksum"].startswith("sha256:")
+    assert "storage_ref" not in payload
+    assert "storage://projects" not in created.text
+
+    listed = client.get(
+        "/v2/projects/project_alpha/exports",
+        headers=auth_headers("token_001"),
+    )
+    assert listed.status_code == 200
+    assert listed.json()["exports"] == [payload]
+
+    downloaded = client.get(
+        "/v2/projects/project_alpha/exports/export_alpha/download",
+        headers=auth_headers("token_001"),
+    )
+    assert downloaded.status_code == 200
+    assert downloaded.text == '{"accepted_fact_count":1}'
+    assert downloaded.headers["content-type"] == "application/json"
+    assert downloaded.headers["content-disposition"] == (
+        'attachment; filename="canon.json"'
+    )
+
+
+def test_project_export_api_rejects_cross_user_reads(tmp_path: Path) -> None:
+    """Export metadata and bytes must stay inside project ownership boundaries."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository),
+            project_repository=repository,
+            storage_service=LocalFilesystemStorage(tmp_path / "storage"),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    create_project_and_story(client)
+    _store_succeeded_snapshot(repository)
+    created = client.post(
+        "/v2/projects/project_alpha/exports",
+        headers=auth_headers("token_001"),
+        json={
+            "export_id": "export_alpha",
+            "snapshot_id": "snapshot_alpha",
+            "export_format": "json",
+            "now": SOON,
+        },
+    )
+    assert created.status_code == 200
+
+    listed = client.get(
+        "/v2/projects/project_alpha/exports",
+        headers=auth_headers("token_002"),
+    )
+    downloaded = client.get(
+        "/v2/projects/project_alpha/exports/export_alpha/download",
+        headers=auth_headers("token_002"),
+    )
+
+    assert listed.status_code == 404
+    assert listed.json()["error"] == "project_not_found"
+    assert downloaded.status_code == 404
+    assert downloaded.json()["error"] == "export_not_found"
+    assert "storage://projects" not in listed.text
+    assert "storage://projects" not in downloaded.text
+
+
+def test_project_export_api_rejects_unsupported_snapshot_export_format(
+    tmp_path: Path,
+) -> None:
+    """The first persisted export route should stay narrow until formats are added."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository),
+            project_repository=repository,
+            storage_service=LocalFilesystemStorage(tmp_path / "storage"),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    _store_succeeded_snapshot(repository)
+
+    response = client.post(
+        "/v2/projects/project_alpha/exports",
+        headers=auth_headers("token_001"),
+        json={
+            "export_id": "export_alpha",
+            "snapshot_id": "snapshot_alpha",
+            "export_format": "markdown",
+            "now": SOON,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "export_create_failed"
+    assert "Only json snapshot exports" in response.json()["detail"]
+
+
 def test_worker_snapshot_api_rejects_incomplete_runs_and_invalid_kinds() -> None:
     """Snapshot writes and filters should fail before unsafe records are persisted."""
     repository = InMemoryProjectRepository()
@@ -2004,6 +2153,49 @@ def import_create_payload() -> dict[str, str]:
         "title": "Alpha Source",
         "now": NOW,
     }
+
+
+def _store_succeeded_snapshot(repository: InMemoryProjectRepository) -> None:
+    """Store import, succeeded run, and canon snapshot test metadata."""
+    repository.record_import(
+        ImportRecord(
+            import_id="import_alpha",
+            story_id="story_alpha",
+            source_id="source_alpha",
+            filename="chapter_001.txt",
+            source_format="txt",
+            storage_ref="storage://projects/project_alpha/imports/import_alpha/source.txt",
+            chapter_count=1,
+            scene_count=1,
+            evidence_anchor_count=1,
+            created_at=NOW,
+        )
+    )
+    repository.record_engine_run(
+        EngineRunRecord(
+            run_id="run_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="succeeded",
+            engine_version="aevryn_v1",
+            started_at=NOW,
+            status_updated_at=SOON,
+            finished_at=SOON,
+        )
+    )
+    repository.store_snapshot(
+        SnapshotRecord(
+            snapshot_id="snapshot_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            run_id="run_alpha",
+            snapshot_kind="canon",
+            content_type="application/json",
+            serialized_output='{"accepted_fact_count":1}',
+            created_at=SOON,
+        )
+    )
 
 
 class RecordingWorkerHandler:
