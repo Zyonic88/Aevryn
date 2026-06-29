@@ -362,9 +362,65 @@ Yes
 
 ---
 
+# Gate 11 - Dependency Audit
+
+Command:
+
+```text
+python -m pip_audit . --progress-spinner off
+```
+
+Expected result:
+
+* the local Aevryn Python project dependency set is audited.
+* unrelated global developer-machine packages are not treated as the Aevryn release signal.
+* known vulnerabilities in project dependencies fail the gate.
+
+Latest result:
+
+```text
+No known vulnerabilities found
+```
+
+Command:
+
+```text
+npm audit --audit-level=high
+```
+
+Run from:
+
+```text
+web/
+```
+
+Expected result:
+
+* frontend production and development dependencies are audited from `web/package-lock.json`.
+* high or critical vulnerabilities fail the gate.
+
+Latest result:
+
+```text
+found 0 vulnerabilities
+```
+
+Known residual risk:
+
+* Python dependency auditing is project-scoped, not lockfile-scoped, because Aevryn does not yet have a Python lockfile.
+* hosted dependency alerts and protected branch checks still need to be configured before public beta.
+* SBOM generation, license review, and production image/container scanning remain future release-hardening work.
+
+Public beta blocked:
+
+```text
+Yes
+```
+
+---
+
 # Remaining Gates
 
 The following gates still need Phase 11 implementation before public beta:
 
-* Dependency Audit
 * Static Security Scan

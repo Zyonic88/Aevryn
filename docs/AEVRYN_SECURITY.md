@@ -107,6 +107,8 @@ The Phase 11 API hardening contract is documented in `docs/AEVRYN_API_SECURITY_H
 
 Repository secret scanning is documented in `docs/AEVRYN_REPOSITORY_SECRET_SCAN.md`.
 
+Dependency auditing is documented in `docs/AEVRYN_DEPENDENCY_AUDIT.md`.
+
 API hardening includes:
 
 * request validation

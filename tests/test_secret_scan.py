@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_secret_scan_detects_realistic_api_key_without_revealing_value() -> None:
-    secret = "sk-abcdefghijklmnopqrstuvwxyz1234567890"
+    secret = "sk-" + "abcdefghijklmnopqrstuvwxyz1234567890"
 
     findings = scan_text("example.py", f'OPENAI_API_KEY="{secret}"\n')
 
@@ -34,8 +34,8 @@ def test_secret_scan_ignores_documented_placeholders() -> None:
 def test_secret_scan_detects_private_keys_and_cloud_access_keys() -> None:
     text = "\n".join(
         [
-            "-----BEGIN PRIVATE KEY-----",
-            "AKIAABCDEFGHIJKLMNOP",
+            "-----BEGIN " + "PRIVATE KEY-----",
+            "AKIA" + "ABCDEFGHIJKLMNOP",
         ]
     )
 

@@ -30,3 +30,25 @@ def test_api_security_hardening_document_covers_required_controls() -> None:
 
     for term in required_terms:
         assert term in document
+
+
+def test_dependency_audit_document_covers_required_controls() -> None:
+    """Dependency audit docs should define repeatable backend and frontend gates."""
+    document = (ROOT / "docs" / "AEVRYN_DEPENDENCY_AUDIT.md").read_text(
+        encoding="utf-8"
+    )
+
+    required_terms = (
+        "pyproject.toml",
+        "web/package-lock.json",
+        "python -m pip_audit . --progress-spinner off",
+        "npm audit --audit-level=high",
+        "No known vulnerabilities found",
+        "found 0 vulnerabilities",
+        "Do not use a raw environment audit as the release signal.",
+        "high or critical vulnerabilities must block release",
+        "hosted dependency monitoring",
+    )
+
+    for term in required_terms:
+        assert term in document
