@@ -75,6 +75,8 @@ Phase 5B engine output views are implemented.
 
 Before future frontend polish, read `docs/AEVRYN_UX_ARCHITECTURE.md`. Phase 5 has working API-backed views, but the next frontend experience pass should start with workspace architecture and low-fidelity wireframes, not colors, icons, gradients, or animation.
 
+Future ideas are preserved in `docs/AEVRYN_FUTURE_IDEAS.md`. That document is not the roadmap and should not be treated as implementation scope unless the roadmap is explicitly updated.
+
 Next expected V2 target:
 
 - Plan V2 Release Candidate Readiness from `docs/AEVRYN_V2_CLOSEOUT.md`.

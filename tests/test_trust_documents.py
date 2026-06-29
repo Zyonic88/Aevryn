@@ -141,3 +141,24 @@ def test_v2_closeout_document_separates_completion_from_public_beta() -> None:
 
     for term in required_terms:
         assert term in document
+
+
+def test_future_ideas_document_preserves_scope_boundary() -> None:
+    """Future ideas should be preserved without becoming roadmap commitments."""
+    document = read_doc("docs/AEVRYN_FUTURE_IDEAS.md")
+
+    required_terms = (
+        "These ideas are **not commitments**.",
+        "separate from the official roadmap",
+        "Future capabilities should consume Canon rather than replace it.",
+        "Idea 001 - Narrative Perspective",
+        "Idea 002 - Production Presets",
+        "Idea 003 - Audiobook Production Engine",
+        "Canon remains unchanged.",
+        "Production Presets influence Presentation, Prompt generation, and Export formatting "
+        "without modifying Canon.",
+        "This engine consumes Canon-backed scene understanding and never modifies Canon itself.",
+    )
+
+    for term in required_terms:
+        assert term in document

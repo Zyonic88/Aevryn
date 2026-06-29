@@ -6,6 +6,8 @@ This document defines the long-term development roadmap for aevryn.
 
 The roadmap exists to prevent scope creep and ensure every feature is built in the correct order.
 
+Future ideas are preserved separately in `docs/AEVRYN_FUTURE_IDEAS.md`.
+
 **Rule:**
 
 A feature belongs in the earliest version where it is required.
