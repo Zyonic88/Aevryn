@@ -185,6 +185,8 @@ OPENAI_TIMEOUT_SECONDS_ENV = "AEVRYN_OPENAI_TIMEOUT_SECONDS"
 OPENAI_MAX_RESPONSE_BYTES_ENV = "AEVRYN_OPENAI_MAX_RESPONSE_BYTES"
 PLATFORM_ENGINE_VERSION = "aevryn_v1"
 ALPHA_ACTIVE_RUN_TIMEOUT = timedelta(minutes=30)
+MAX_IMPORT_CONTENT_BYTES = 10 * 1024 * 1024
+MAX_IMPORT_CONTENT_BASE64_CHARS = ((MAX_IMPORT_CONTENT_BYTES + 2) // 3) * 4
 
 
 def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
@@ -1664,13 +1666,30 @@ def create_app(
 
 def _decode_base64(value: str) -> bytes:
     """Decode base64 API content or raise a stable HTTP error."""
+    if len(value) > MAX_IMPORT_CONTENT_BASE64_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "error": "import_content_too_large",
+                "detail": "Uploaded source content exceeds the 10 MiB limit.",
+            },
+        )
     try:
-        return base64.b64decode(value, validate=True)
+        decoded = base64.b64decode(value, validate=True)
     except (binascii.Error, ValueError) as error:
         raise HTTPException(
             status_code=400,
             detail={"error": "invalid_base64", "detail": "content_base64 is invalid."},
         ) from error
+    if len(decoded) > MAX_IMPORT_CONTENT_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "error": "import_content_too_large",
+                "detail": "Uploaded source content exceeds the 10 MiB limit.",
+            },
+        )
+    return decoded
 
 
 def _adapter_status(adapter: object | None) -> str:

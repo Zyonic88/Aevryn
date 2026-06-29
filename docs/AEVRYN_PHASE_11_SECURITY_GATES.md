@@ -146,11 +146,45 @@ Yes
 
 ---
 
+# Gate 5 - Upload Validation Test
+
+Command:
+
+```text
+python -m pytest tests/test_backend_api.py::test_import_inspect_endpoint_rejects_oversized_upload tests/test_auth_api.py::test_story_imports_api_rejects_oversized_uploads_before_storage -q
+```
+
+Expected result:
+
+* stateless import inspection rejects oversized source payloads before parsing.
+* authenticated story import rejects oversized source payloads before persistence.
+* oversized payload failures use stable `413 import_content_too_large` responses.
+* rejected story imports do not create import metadata or stored source bytes.
+
+Latest result:
+
+```text
+2 passed
+```
+
+Known residual risk:
+
+* final public-beta upload size may change after production storage, queue, and provider limits are selected.
+* request-body limits at the deployment proxy/server layer still need production configuration.
+* archive expansion limits for DOCX, ODT, EPUB, and FB2 should be reviewed before public beta.
+
+Public beta blocked:
+
+```text
+Yes
+```
+
+---
+
 # Remaining Gates
 
 The following gates still need Phase 11 implementation before public beta:
 
-* Upload Validation Test
 * API Hardening Test
 * CORS And Security Header Test
 * Audit Ledger Integrity Test

@@ -10,6 +10,7 @@ from _pytest.logging import LogCaptureFixture
 from fastapi.testclient import TestClient
 
 from aevryn.api import create_app
+from aevryn.api.app import MAX_IMPORT_CONTENT_BASE64_CHARS
 from aevryn.auth import (
     AuthenticationConfig,
     AuthenticationService,
@@ -514,6 +515,37 @@ def test_story_imports_api_rejects_duplicate_and_cross_user_writes() -> None:
     )
     assert wrong_project.status_code == 404
     assert wrong_project.json()["error"] == "story_not_found"
+
+
+def test_story_imports_api_rejects_oversized_uploads_before_storage() -> None:
+    """Story imports should reject oversized source bytes before persistence."""
+    repository = InMemoryProjectRepository()
+    content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            import_content_store=content_store,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+
+    response = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json={
+            **import_create_payload(),
+            "content_base64": "A" * (MAX_IMPORT_CONTENT_BASE64_CHARS + 4),
+        },
+    )
+
+    assert response.status_code == 413
+    assert response.json() == {
+        "detail": "Uploaded source content exceeds the 10 MiB limit.",
+        "error": "import_content_too_large",
+    }
+    assert repository.list_imports_for_story("user_owner", "story_alpha") == ()
 
 
 def test_import_runs_api_submits_and_lists_pending_runs() -> None:

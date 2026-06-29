@@ -349,6 +349,8 @@ Accepts a JSON request containing:
 
 The API writes the content to a temporary request file, asks Project Manager to import it, and returns bounded source-structure metadata.
 
+Decoded source content is limited to 10 MiB per request. Oversized payloads fail with `413 import_content_too_large` before parsing or storage.
+
 The response includes:
 
 * source ID
@@ -563,6 +565,8 @@ The request includes:
 * `now`
 
 The route stores metadata and a storage reference, not uploaded source bytes.
+
+Decoded source content is limited to 10 MiB per request. Oversized payloads fail with `413 import_content_too_large` before parsing or storage.
 
 Duplicate import IDs fail clearly.
 

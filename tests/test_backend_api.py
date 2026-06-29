@@ -22,7 +22,7 @@ from aevryn.api import (
     create_app,
     create_app_from_env,
 )
-from aevryn.api.app import _worker_extractor_from_env
+from aevryn.api.app import MAX_IMPORT_CONTENT_BASE64_CHARS, _worker_extractor_from_env
 from aevryn.extraction import EvidenceBoundedAIExtractor
 from aevryn.import_storage import InMemoryImportContentStore
 from aevryn.persistence import InMemoryProjectRepository
@@ -726,6 +726,26 @@ def test_import_inspect_endpoint_rejects_invalid_base64() -> None:
     assert response.json() == {
         "detail": "content_base64 is invalid.",
         "error": "invalid_base64",
+    }
+
+
+def test_import_inspect_endpoint_rejects_oversized_upload() -> None:
+    """Import inspection should fail before parsing oversized source payloads."""
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/v2/imports/inspect",
+        json={
+            "source_id": "api_demo",
+            "filename": "chapter.txt",
+            "content_base64": "A" * (MAX_IMPORT_CONTENT_BASE64_CHARS + 4),
+        },
+    )
+
+    assert response.status_code == 413
+    assert response.json() == {
+        "detail": "Uploaded source content exceeds the 10 MiB limit.",
+        "error": "import_content_too_large",
     }
 
 
