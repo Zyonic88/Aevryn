@@ -831,6 +831,30 @@ def test_project_import_snapshot_handler_uses_injected_extractor() -> None:
     assert "Lyra opened the sky gate" not in snapshots[0].serialized_output
 
 
+def test_project_import_snapshot_handler_persists_scene_prompts_without_characters() -> None:
+    """Scene and prompt panels should not disappear when extraction finds no Canon facts."""
+    repository = seeded_repository()
+    import_content_store: ImportContentStore = StaticImportContentStore(
+        b"Chapter 1\n\nA quiet room waited under pale light."
+    )
+    handler = ProjectImportSnapshotHandler(
+        repository=repository,
+        import_content_store=import_content_store,
+    )
+
+    snapshots = handler.process(background_job())
+
+    snapshot_payload = json.loads(snapshots[0].serialized_output)
+    presentation = snapshot_payload["presentation"]
+    assert snapshot_payload["accepted_entity_count"] == 0
+    assert presentation["scenes"][0]["title"] == "Scene 1"
+    assert presentation["scenes"][0]["characters_present"]["items"] == []
+    assert presentation["prompt_packs"][0]["scene"]["title"] == "Scene 1"
+    assert presentation["prompt_packs"][0]["image_prompt"]["items"][0].startswith(
+        "Generate this image"
+    )
+
+
 def test_project_import_snapshot_handler_filters_unknown_provider_anchors() -> None:
     """Provider anchor drift should not fail the whole import processing run."""
     repository = seeded_repository()

@@ -571,8 +571,6 @@ def _scene_sheets_payload(
             if len(scene_payloads) >= _MAX_PROJECT_SCENE_SHEETS:
                 return tuple(scene_payloads)
             character_ids = character_ids_by_scene.get(scene.scene_id, ())
-            if not character_ids:
-                continue
             context = runner.build_scene_context(
                 result=result,
                 scene_id=scene.scene_id,
@@ -607,8 +605,6 @@ def _production_packs_payload(
             if len(prompt_payloads) >= _MAX_PROJECT_PROMPT_PACKS:
                 return tuple(prompt_payloads)
             character_ids = character_ids_by_scene.get(scene.scene_id, ())
-            if not character_ids:
-                continue
             context = runner.build_scene_context(
                 result=result,
                 scene_id=scene.scene_id,
