@@ -168,6 +168,10 @@ Required before public beta:
 * security monitoring alerts
 * incident response process
 
+Gate tracking:
+
+* `docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md`
+
 Acceptance:
 
 ```text

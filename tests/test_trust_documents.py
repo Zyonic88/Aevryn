@@ -160,6 +160,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "Gate 7 - Public Beta Support Readiness",
         "Gate 8 - Release Candidate Test Pass",
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md",
+        "docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md",
         "Public beta blocked.",
     )
 
@@ -229,6 +230,30 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "local JSON storage",
         "local source-byte storage",
         "production-like deployment smoke test passes",
+        "metadata-only",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_security_operations_readiness_document_tracks_gate_four() -> None:
+    """Gate 4 should block public beta on hosted security operations controls."""
+    document = read_doc("docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md")
+
+    required_terms = (
+        "Gate: Security Operations",
+        "Status: Not started",
+        "Public beta: Blocked",
+        "Security controls must protect the release path, not just the local machine.",
+        "hosted secret scanning",
+        "push protection",
+        "hosted dependency alerts",
+        "protected branch rules",
+        "required CI release gates",
+        "production rate limits",
+        "security monitoring alerts",
+        "incident response routing",
         "metadata-only",
     )
 

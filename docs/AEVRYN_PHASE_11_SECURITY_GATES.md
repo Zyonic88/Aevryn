@@ -345,7 +345,7 @@ Expected result:
 Latest result:
 
 ```text
-Repository secret scan passed: 275 files scanned.
+Repository secret scan passed: 276 files scanned.
 ```
 
 Known residual risk:
