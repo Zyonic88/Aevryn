@@ -25,6 +25,7 @@ Phase 11 starts with:
 * `docs/AEVRYN_AUDIT_LEDGER.md`
 * `docs/AEVRYN_REPOSITORY_SECRET_SCAN.md`
 * `docs/AEVRYN_DEPENDENCY_AUDIT.md`
+* `docs/AEVRYN_STATIC_SECURITY_SCAN.md`
 * this acceptance document
 * `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`
 * explicit authorization-boundary audit

@@ -109,6 +109,8 @@ Repository secret scanning is documented in `docs/AEVRYN_REPOSITORY_SECRET_SCAN.
 
 Dependency auditing is documented in `docs/AEVRYN_DEPENDENCY_AUDIT.md`.
 
+Static security scanning is documented in `docs/AEVRYN_STATIC_SECURITY_SCAN.md`.
+
 API hardening includes:
 
 * request validation

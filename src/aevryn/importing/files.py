@@ -6,10 +6,13 @@ import html
 import logging
 import re
 import zipfile
+from collections.abc import Iterator
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
-from xml.etree import ElementTree
+from typing import Protocol
+
+from defusedxml import ElementTree
 
 from aevryn.importing.epub import EpubTextExtractor
 
@@ -278,7 +281,17 @@ class _ReadableHtmlTextParser(HTMLParser):
         return value.strip()
 
 
-def _iter_text(element: ElementTree.Element) -> list[str]:
+class _XmlElement(Protocol):
+    tag: str
+
+    def iter(self) -> Iterator[_XmlElement]:
+        """Return this element and descendants."""
+
+    def itertext(self) -> Iterator[str]:
+        """Return text fragments below this element."""
+
+
+def _iter_text(element: _XmlElement) -> list[str]:
     """Return all text fragments below an XML element."""
     return [text for text in element.itertext()]
 

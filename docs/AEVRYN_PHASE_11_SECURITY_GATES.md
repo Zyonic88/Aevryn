@@ -345,7 +345,7 @@ Expected result:
 Latest result:
 
 ```text
-Repository secret scan passed: 251 files scanned.
+Repository secret scan passed: 256 files scanned.
 ```
 
 Known residual risk:
@@ -419,8 +419,87 @@ Yes
 
 ---
 
+# Gate 12 - Static Security Scan
+
+Command:
+
+```text
+$env:PYTHONIOENCODING='utf-8'; python -m bandit -r src -q
+```
+
+Expected result:
+
+* Python source is scanned for security-sensitive static patterns.
+* unsafe XML parsing, unsafe URL opening, and subprocess use are either fixed or narrowly justified.
+* suppressions are tied to specific Bandit rule IDs and backed by code-level safety checks.
+
+Latest result:
+
+```text
+No findings.
+```
+
+Command:
+
+```text
+ruff check .
+mypy src
+```
+
+Expected result:
+
+* backend lint and strict typing checks pass.
+
+Latest result:
+
+```text
+All checks passed!
+Success: no issues found in 78 source files
+```
+
+Command:
+
+```text
+npm.cmd run lint
+npm.cmd run build
+```
+
+Run from:
+
+```text
+web/
+```
+
+Expected result:
+
+* frontend lint passes.
+* TypeScript and Vite production build complete successfully.
+
+Latest result:
+
+```text
+eslint exited successfully.
+Vite production build completed successfully.
+```
+
+Known residual risk:
+
+* local static scanning does not replace CI enforcement, code review, DAST, penetration testing, or production infrastructure scanning.
+* accepted suppressions must be reviewed again before public beta.
+* production container/image scanning remains future release-hardening work.
+
+Public beta blocked:
+
+```text
+Yes
+```
+
+---
+
 # Remaining Gates
 
 The following gates still need Phase 11 implementation before public beta:
 
-* Static Security Scan
+```text
+None.
+```

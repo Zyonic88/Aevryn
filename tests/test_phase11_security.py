@@ -52,3 +52,28 @@ def test_dependency_audit_document_covers_required_controls() -> None:
 
     for term in required_terms:
         assert term in document
+
+
+def test_static_security_scan_document_covers_required_controls() -> None:
+    """Static security scan docs should define repeatable source checks."""
+    document = (ROOT / "docs" / "AEVRYN_STATIC_SECURITY_SCAN.md").read_text(
+        encoding="utf-8"
+    )
+
+    required_terms = (
+        "python -m bandit -r src -q",
+        "ruff check .",
+        "mypy src",
+        "npm.cmd run lint",
+        "npm.cmd run build",
+        "defusedxml",
+        "HTTPS endpoints",
+        "B310",
+        "B404",
+        "B603",
+        "B607",
+        "CI enforcement",
+    )
+
+    for term in required_terms:
+        assert term in document

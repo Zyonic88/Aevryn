@@ -9,7 +9,9 @@ import zipfile
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
-from xml.etree import ElementTree
+from typing import Any
+
+from defusedxml import ElementTree
 
 from aevryn.importing.engine import StoryImporter
 
@@ -138,7 +140,7 @@ class EpubTextExtractor:
 
         return Path(full_path)
 
-    def _manifest(self, opf: ElementTree.Element) -> dict[str, dict[str, str]]:
+    def _manifest(self, opf: Any) -> dict[str, dict[str, str]]:
         """Return package manifest items keyed by ID."""
         manifest: dict[str, dict[str, str]] = {}
         for item in opf.findall(f".//{self._opf('manifest')}/{self._opf('item')}"):

@@ -231,6 +231,18 @@ def test_openai_responses_client_reports_timeouts_without_transport_details() ->
         client.complete("extract this scene")
 
 
+def test_openai_responses_transport_requires_https_endpoint() -> None:
+    """OpenAI transport should reject non-HTTPS endpoints before network I/O."""
+    client = OpenAIResponsesAIExtractionClient(
+        api_key="test-key",
+        model="test-model",
+        endpoint="http://api.openai.local/v1/responses",
+    )
+
+    with pytest.raises(ValueError, match="endpoint must be an HTTPS URL"):
+        client.complete("extract this scene")
+
+
 def test_ai_extractor_rejects_unknown_evidence_anchor() -> None:
     """AI candidates cannot cite anchors outside the imported scene."""
     imported = StoryImporter().import_text(

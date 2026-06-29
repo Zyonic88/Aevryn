@@ -180,6 +180,7 @@ Phase 11 active security/privacy gate:
 - Audit ledger architecture is documented in `docs/AEVRYN_AUDIT_LEDGER.md`
 - Repository secret scanning is documented in `docs/AEVRYN_REPOSITORY_SECRET_SCAN.md`
 - Dependency auditing is documented in `docs/AEVRYN_DEPENDENCY_AUDIT.md`
+- Static security scanning is documented in `docs/AEVRYN_STATIC_SECURITY_SCAN.md`
 - Repeatable Phase 11 gates are tracked in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`
 - Treat Phase 11 as a trust gate before public beta, not as a product expansion phase
 - Opening slice: explicit authorization-boundary verification across project, story, import, run, snapshot, export/status, settings, output, and deletion access

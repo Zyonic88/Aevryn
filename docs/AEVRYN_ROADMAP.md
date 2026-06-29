@@ -584,6 +584,8 @@ Repository secret scanning is defined in `docs/AEVRYN_REPOSITORY_SECRET_SCAN.md`
 
 Dependency auditing is defined in `docs/AEVRYN_DEPENDENCY_AUDIT.md`.
 
+Static security scanning is defined in `docs/AEVRYN_STATIC_SECURITY_SCAN.md`.
+
 Repeatable security gates are tracked in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`.
 
 Opening slice:

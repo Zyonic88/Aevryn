@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
+import subprocess  # nosec B404
 import sys
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
@@ -73,7 +73,8 @@ ALLOWED_PLACEHOLDER_MARKERS = (
 def tracked_files(root: Path) -> tuple[Path, ...]:
     """Return git-tracked files under root."""
 
-    result = subprocess.run(
+    # Fixed git command, no shell, repository root only.
+    result = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "-z"],
         cwd=root,
         check=True,

@@ -7,6 +7,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 from aevryn.extraction.models import (
@@ -57,6 +58,9 @@ class UrllibOpenAIResponsesTransport:
         max_response_bytes: int,
     ) -> dict[str, Any]:
         """POST JSON and return a decoded JSON object."""
+        parsed_url = urlparse(url)
+        if parsed_url.scheme != "https" or not parsed_url.netloc:
+            raise ValueError("OpenAI extraction endpoint must be an HTTPS URL.")
         request = Request(
             url,
             data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
@@ -64,7 +68,7 @@ class UrllibOpenAIResponsesTransport:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=timeout_seconds) as response:
+            with urlopen(request, timeout=timeout_seconds) as response:  # nosec B310
                 raw_response = response.read(max_response_bytes + 1)
         except TimeoutError as error:
             raise ValueError("OpenAI extraction request timed out.") from error
