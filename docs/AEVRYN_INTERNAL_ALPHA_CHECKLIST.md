@@ -24,7 +24,7 @@ Codex / Aetherra Labs
 
 Build or Commit:
 
-44504dd
+a064bef
 
 Environment:
 
@@ -32,7 +32,7 @@ Local Windows workspace at `C:\Users\enigm\Documents\Aevryn`; validation source 
 
 Result:
 
-Automated readiness gates passed. Manual alpha UX pass found a release-candidate blocker, and follow-up alpha hardening resolved the broad output-surface gap at the contract level. Import, processing, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports now have API-backed processed project output surfaces. A browser sanity pass is still needed before broad trusted tester invitation.
+Automated readiness gates passed. Manual alpha UX pass found release-candidate blockers, and follow-up alpha hardening resolved the broad output-surface gap at the contract and browser levels. Import, processing, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports now have API-backed processed project output surfaces. Browser sanity testing validated the newly completed Continuity, Prompt Packs, and Exports panels after the prompt-pack fallback bug was fixed.
 
 Known Limitations:
 
@@ -40,7 +40,7 @@ Production database, identity provider, object storage, deployment, public launc
 
 Can the tester continue?
 
-Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, worker interruption observability, import retries, and processed output review. Not yet for broad trusted tester invitation until the new Continuity, Prompt Packs, and Exports processed panels receive a browser sanity pass.
+Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, worker interruption observability, import retries, processed output review, and narrow private alpha testing with documented limitations.
 
 ---
 
@@ -157,7 +157,7 @@ Required checks:
 
 Result:
 
-PARTIAL PASS. Automated gates passed, and manual browser passes proved registration, project creation, story creation, supported multi-file import, import save, run submission, local worker processing, Monitoring, snapshot availability, refresh recovery, project deletion, import retry after failures, and processed-output review for Characters, World, Timeline, and Scenes. Follow-up contract hardening added processed Continuity, Prompt Packs, and Exports panels from persisted backend snapshots. A final browser sanity pass is still needed before trusted tester invitation.
+PASS FOR NARROW PRIVATE ALPHA. Automated gates passed, and manual browser passes proved registration, project creation, story creation, supported multi-file import, import save, run submission, local worker processing, Monitoring, snapshot availability, refresh recovery, project deletion, import retry after failures, and processed-output review for Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports. Follow-up contract hardening added processed Continuity, Prompt Packs, and Exports panels from persisted backend snapshots. Browser sanity testing found and fixed the local/demo prompt-pack fallback issue before closeout.
 
 Known Limitations:
 
@@ -171,9 +171,11 @@ Manual browser pass findings:
 * The Source text control is visible but was not reachable through the label API during browser automation.
 * Web Import is clearly unavailable, as expected for Phase 10.
 * Character Cards, World, Timeline, Scene Sheets, Continuity, Prompt Packs, and Exports now render processed project output from backend snapshots.
+* Local/demo extraction can produce scene and prompt output with unknown canon fields; this is expected when no accepted AI facts exist and prevents the UI from inventing details.
 * Export output intentionally lists available export kinds and formats; full serialized export content remains behind explicit export preview.
 * Alpha AI extraction can still misclassify sparse race/gender evidence when source language is indirect; presentation now hides conflicting gender values instead of showing both.
+* Private tester instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
 
 Can the tester continue?
 
-Yes for continued internal alpha development and narrow operator-led testing of the full output path. Not yet for broad trusted tester invitation until the newly completed output panels pass a browser sanity pass.
+Yes for continued internal alpha development and narrow private alpha testing with trusted testers who understand the documented limitations. No public beta or untrusted manuscript intake until Phase 11 Security & Privacy Hardening is complete.

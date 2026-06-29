@@ -167,6 +167,8 @@ Manual alpha checks should cover the parts automation cannot fully judge yet:
 
 Manual checks must not expand Phase 10 into branding polish, public launch readiness, or media-generation scope.
 
+Private tester instructions live in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
+
 ---
 
 # Known Non-Goals

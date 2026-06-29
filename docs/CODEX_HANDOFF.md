@@ -161,11 +161,14 @@ Phase 10 starting point:
 Phase 10 progress:
 
 - Internal alpha docs and readiness checklist exist.
-- Automated gates are green after alpha hardening through commit `44504dd`.
+- Automated gates are green after alpha hardening through commit `a064bef`.
 - Import, processing, monitoring, refresh recovery, project deletion, and retry after extraction failures have been manually exercised through the browser.
 - Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports now render processed project output from persisted backend snapshots instead of requiring testers to use developer preview inputs.
 - Alpha extraction now dedupes duplicate relationship candidates and presentation hides conflicting gender values instead of showing both.
-- Remaining release-candidate slice: browser sanity-pass the newly completed output panels before broad trusted tester invitation.
+- Browser sanity testing validated Continuity, Prompt Packs, and Exports against persisted backend snapshots.
+- Browser sanity testing found and fixed the local/demo prompt-pack fallback so scene and prompt panels stay available even when extraction accepts no canon facts.
+- Private tester instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
+- Phase 10 is ready for narrow private alpha testing with documented limitations; Phase 11 Security & Privacy Hardening is still required before public beta or untrusted manuscript intake.
 
 Phase 11 planned security/privacy gate:
 

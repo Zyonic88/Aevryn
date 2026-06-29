@@ -528,7 +528,7 @@ Accepted performance scope:
 
 ## Phase 10 - Internal Alpha
 
-Status: **In Progress**
+Status: **Release Candidate Ready For Narrow Private Alpha**
 
 Version 2 ends with a private alpha, not a public launch.
 
@@ -551,7 +551,9 @@ Current alpha status:
 * Automated backend and frontend gates are passing.
 * Manual alpha testing has validated import, processing, monitoring, refresh recovery, and processed-output review for Characters, World, Timeline, and Scenes.
 * Processed Continuity, Prompt Packs, and Exports panels now consume persisted backend snapshot output at the API/frontend contract level.
-* Release-candidate readiness remains partial until the newly completed output panels receive a browser sanity pass.
+* Browser sanity testing validated Continuity, Prompt Packs, and Exports against persisted backend snapshots.
+* Private tester instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
+* Phase 10 remains a private alpha gate only; public beta still requires Phase 11 Security & Privacy Hardening.
 
 ---
 

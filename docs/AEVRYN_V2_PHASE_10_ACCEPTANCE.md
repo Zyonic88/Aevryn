@@ -21,6 +21,7 @@ Phase 10 starts with:
 
 * `docs/AEVRYN_INTERNAL_ALPHA.md`
 * `docs/AEVRYN_INTERNAL_ALPHA_CHECKLIST.md`
+* `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`
 * this acceptance document
 * a complete alpha smoke path
 * a clear split between automated gates and manual alpha checks
