@@ -89,11 +89,12 @@ Tracking docs:
 * `docs/AEVRYN_BRANCH_PROTECTION.md`
 * `docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md`
 * `docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md`
+* `docs/AEVRYN_SECURITY_ALERT_ROUTING.md`
 
 Status:
 
 ```text
-Workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, pull request template, branch protection, required checks, secret scanning, push protection, dependency alerts, private vulnerability reporting, and default CodeQL are configured. Protected-path drill was exercised through PR #9 and final hosted checks passed. Hosted alert routing remains open.
+Workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, pull request template, branch protection, required checks, secret scanning, push protection, dependency alerts, private vulnerability reporting, and default CodeQL are configured. Protected-path drill was exercised through PR #9 and final hosted checks passed. Hosted alert routing runbook is documented; notification delivery testing remains open.
 ```
 
 ---

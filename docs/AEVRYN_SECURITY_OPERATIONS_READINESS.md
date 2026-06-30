@@ -49,6 +49,7 @@ Existing local gates include:
 * Phase 11 gate tracking in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`
 * hosted branch-protection runbook in `docs/AEVRYN_BRANCH_PROTECTION.md`
 * hosted GitHub settings checklist in `docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md`
+* security alert routing runbook in `docs/AEVRYN_SECURITY_ALERT_ROUTING.md`
 * repo-side `CODEOWNERS`, `dependabot.yml`, `SECURITY.md`, and pull request template files under `.github/`
 
 These gates are necessary, but they are not enough for public beta.
@@ -91,6 +92,8 @@ Protected branch rules must define:
 Bypass permissions must be narrow and auditable.
 
 The concrete branch-protection runbook lives in `docs/AEVRYN_BRANCH_PROTECTION.md`.
+
+The security alert routing runbook lives in `docs/AEVRYN_SECURITY_ALERT_ROUTING.md`.
 
 ---
 
@@ -219,11 +222,13 @@ Current implementation progress:
 .github/CODEOWNERS, .github/dependabot.yml, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md exist.
 docs/AEVRYN_BRANCH_PROTECTION.md defines the protected branch posture and required hosted checks.
 docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md defines the exact GitHub hosted settings and protected-path drill.
+docs/AEVRYN_SECURITY_ALERT_ROUTING.md defines security, privacy, abuse, support, dependency, secret, code-scanning, CI, and production alert routing.
 Local repository secret scan, Ruff, and mypy passed before workflow creation.
 GitHub branch protection is configured for master.
 GitHub dependency graph, Dependabot alerts, Dependabot security updates, secret scanning, push protection, private vulnerability reporting, and default CodeQL are enabled.
 Protected-path verification was exercised through PR #9: direct pushes to master were blocked, required hosted checks ran, hosted checks caught failures before merge, and final hosted checks passed after fixes.
-Hosted alert routing remains open.
+Hosted alert routing runbook is documented.
+Hosted alert notification delivery test remains open.
 ```
 
 ---

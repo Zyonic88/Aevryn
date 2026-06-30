@@ -162,6 +162,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "Gate 8 - Release Candidate Test Pass",
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md",
         "docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md",
+        "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
         "docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md",
         "docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md",
         "docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md",
@@ -191,6 +192,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "abuse@aevryn.ai",
         "docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md",
         "docs/AEVRYN_REPLY_IDENTITY_SETUP.md",
+        "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
         "GitHub Branch Protection And Hosted Security Controls",
         "Production Provider And Data-Use Review",
         "Backup, Retention, Restore, And Audit",
@@ -505,6 +507,7 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
         "Status: Started",
         "Public beta: Blocked",
         "Security controls must protect the release path, not just the local machine.",
+        "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
         "hosted secret scanning",
         "push protection",
         "hosted dependency alerts",
@@ -513,7 +516,40 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
         "production rate limits",
         "security monitoring alerts",
         "incident response routing",
+        "Hosted alert routing runbook is documented.",
+        "Hosted alert notification delivery test remains open.",
         "metadata-only",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_security_alert_routing_document_tracks_human_alert_paths() -> None:
+    """Security alert routing should map hosted alerts to human-owned channels."""
+    document = read_doc("docs/AEVRYN_SECURITY_ALERT_ROUTING.md")
+
+    required_terms = (
+        "Gate: Security Alert Routing",
+        "Status: Routing runbook documented; hosted delivery verification pending",
+        "Public beta: Blocked",
+        "Alerts must route to a responsible human without exposing private user stories.",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "Secret scanning alert",
+        "Code scanning high severity",
+        "Dependabot critical or high alert",
+        "Cross-user authorization failure",
+        "Project or account deletion failure",
+        "Metadata-Only Alert Payloads",
+        "full manuscripts",
+        "GitHub secret scanning",
+        "GitHub CodeQL code scanning",
+        "GitHub Actions release gates",
+        "At least one synthetic hosted alert or equivalent notification path is tested.",
+        "Hosted alert notification delivery test remains open.",
     )
 
     for term in required_terms:
