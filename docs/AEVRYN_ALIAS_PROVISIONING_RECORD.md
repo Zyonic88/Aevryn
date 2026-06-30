@@ -12,7 +12,7 @@ This document should be filled in after the aliases are created and tested.
 
 ```text
 Record: Public Contact Alias Provisioning
-Status: Inbound, DNS, access, and outbound reply identities verified
+Status: Inbound, DNS, access, outbound reply identities, and mail authentication verified
 Public beta: Blocked
 ```
 
@@ -79,9 +79,9 @@ Record DNS/mail settings after setup:
 | Setting | Required Result | Actual Result |
 | --- | --- | --- |
 | MX records | Point to selected provider | TBD |
-| SPF | Present and provider-aligned | TBD |
-| DKIM | Enabled if provider supports it | TBD |
-| DMARC | Present before public beta | TBD |
+| SPF | Present and provider-aligned | Passed. Gmail received-message details show SPF pass. |
+| DKIM | Enabled if provider supports it | Passed. Gmail received-message details show DKIM pass. |
+| DMARC | Present before public beta | Passed. Gmail received-message details show DMARC pass. |
 | Test inbound delivery | Each alias receives mail | Passed. All four aliases delivered to `aetherra.project@gmail.com`. |
 | Cloudflare routing health | Email Routing status and DNS records enabled | Passed. Cloudflare shows Status Enabled, DNS records Enabled, 4 routing rules, 1 destination, 9 received, 9 forwarded, 0 failed, and 0 rejected. |
 | Test outbound replies | Replies send from expected identity | Passed. Support, privacy, security, and abuse aliases sent successfully through Cloudflare Email Sending SMTP and were received by `zyonic88@gmail.com`. |
@@ -205,11 +205,10 @@ Inbound delivery from zyonic88@gmail.com to all four aliases passed.
 Gmail filters route all four Aevryn aliases into their respective folders.
 Cloudflare MFA and Gmail MFA are enabled.
 Cloudflare Email Routing health passed for inbound routing: Status Enabled, DNS records Enabled, 9 received, 9 forwarded, 0 failed, 0 rejected.
-Reply identity remains open with Cloudflare Email Sending selected as the preferred provider candidate.
-Outbound-specific SPF, DKIM, and DMARC posture remains tied to Cloudflare Email Sending configuration and reply testing.
+Cloudflare Email Sending is configured as the outbound reply provider candidate.
+Outbound-specific SPF, DKIM, and DMARC received-message verification passed in Gmail.
 Support reply test passed: Cloudflare Email Sending SMTP sent a synthetic outbound test from support@aevryn.ai to zyonic88@gmail.com.
 Privacy, security, and abuse reply tests passed: Cloudflare Email Sending SMTP sent synthetic outbound tests to zyonic88@gmail.com.
-SPF, DKIM, and DMARC received-message verification remains open.
 Outbound reply identity setup is tracked in docs/AEVRYN_REPLY_IDENTITY_SETUP.md.
 ```
 

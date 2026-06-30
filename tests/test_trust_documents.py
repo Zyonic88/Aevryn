@@ -202,8 +202,8 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Cloudflare/Gmail MFA verified.",
         "Cloudflare Email Sending SMTP successfully sent support/privacy/security/abuse "
         "aliases to zyonic88@gmail.com.",
-        "SPF/DKIM/DMARC received-message verification and public-page publication "
-        "remain open.",
+        "SPF/DKIM/DMARC received-message verification passed.",
+        "Public-page publication remains open.",
         "Local production config contract passed.",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
@@ -324,7 +324,8 @@ def test_alias_provisioning_record_tracks_contact_setup_verification() -> None:
 
     required_terms = (
         "Record: Public Contact Alias Provisioning",
-        "Status: Inbound, DNS, access, and outbound reply identities verified",
+        "Status: Inbound, DNS, access, outbound reply identities, and mail "
+        "authentication verified",
         "Public beta: Blocked",
         "Cloudflare Email Routing",
         "Cloudflare",
@@ -352,9 +353,8 @@ def test_alias_provisioning_record_tracks_contact_setup_verification() -> None:
         "Gmail filters route all four Aevryn aliases into their respective folders.",
         "Privacy, security, and abuse reply tests passed: Cloudflare Email Sending SMTP "
         "sent synthetic outbound tests to zyonic88@gmail.com.",
-        "SPF, DKIM, and DMARC received-message verification remains open.",
-        "Outbound-specific SPF, DKIM, and DMARC posture remains tied to Cloudflare "
-        "Email Sending configuration and reply testing.",
+        "Outbound-specific SPF, DKIM, and DMARC received-message verification passed "
+        "in Gmail.",
         "Outbound reply identity setup is tracked in docs/AEVRYN_REPLY_IDENTITY_SETUP.md.",
         "private-story redaction guidance",
     )
@@ -369,7 +369,7 @@ def test_reply_identity_setup_document_tracks_outbound_sender_boundary() -> None
 
     required_terms = (
         "Gate: Product reply identity",
-        "Status: All product reply identities received; DNS-authentication review pending",
+        "Status: Product reply identity verified",
         "Public beta: Blocked",
         "Cloudflare Email Sending is the preferred candidate",
         "Cloudflare Email Sending SMTP has successfully sent synthetic outbound tests "
@@ -390,7 +390,7 @@ def test_reply_identity_setup_document_tracks_outbound_sender_boundary() -> None
         "DKIM",
         "DMARC",
         "Do not include real manuscripts",
-        "SPF, DKIM, and DMARC posture is verified",
+        "SPF, DKIM, and DMARC passed in Gmail received-message details.",
         "Aevryn can receive and reply through tested product-domain identities",
     )
 

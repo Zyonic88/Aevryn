@@ -187,7 +187,8 @@ Cloudflare inbound DNS/routing health passed: Status Enabled, DNS records Enable
 Cloudflare MFA and Gmail MFA are enabled.
 Cloudflare Email Sending is the preferred outbound candidate.
 Support/privacy/security/abuse outbound reply tests passed to zyonic88@gmail.com.
-SPF/DKIM/DMARC received-message verification and public-page publication remain open.
+SPF/DKIM/DMARC received-message verification passed.
+Public-page publication remains open.
 ```
 
 ---

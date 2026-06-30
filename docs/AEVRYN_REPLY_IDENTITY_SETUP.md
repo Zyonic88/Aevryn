@@ -14,7 +14,7 @@ It does not, by itself, prove that Aevryn can send trusted replies from product-
 
 ```text
 Gate: Product reply identity
-Status: All product reply identities received; DNS-authentication review pending
+Status: Product reply identity verified
 Public beta: Blocked
 ```
 
@@ -22,7 +22,9 @@ Cloudflare Email Sending is the preferred candidate because Aevryn already uses 
 
 Cloudflare Email Sending SMTP has successfully sent synthetic outbound tests from `support@aevryn.ai`, `privacy@aevryn.ai`, `security@aevryn.ai`, and `abuse@aevryn.ai` to `zyonic88@gmail.com`.
 
-Public beta remains blocked until SPF, DKIM, and DMARC are verified from received message details and the public contact pages are published.
+SPF, DKIM, and DMARC passed in Gmail received-message details.
+
+Public beta remains blocked until public contact pages are published and the remaining release-candidate gates pass.
 
 ---
 
@@ -156,9 +158,6 @@ Required reply tests:
 
 Public beta remains blocked until:
 
-* Cloudflare Email Sending is configured or a fallback provider is selected
-* product-domain reply identities are configured
-* SPF, DKIM, and DMARC posture is verified
 * support operators know not to request full source prose by default
 * public support, privacy, security, and trust pages list only tested contact paths
 
