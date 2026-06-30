@@ -50,6 +50,10 @@ from aevryn.api import (
     SESSION_AUTHORITY_ENV,
     SESSION_SECRET_ENV,
     STORAGE_PROVIDER_ENV,
+    SUPABASE_ANON_KEY_ENV,
+    SUPABASE_JWKS_URL_ENV,
+    SUPABASE_SERVICE_ROLE_KEY_ENV,
+    SUPABASE_URL_ENV,
     WORKER_API_KEY_ENV,
     WORKER_CONCURRENCY_ENV,
     WORKER_MAX_RETRIES_ENV,
@@ -364,7 +368,11 @@ def production_identity_env() -> dict[str, str]:
     """Return required production identity settings for fail-closed tests."""
     return {
         IDENTITY_PROVIDER_ENV: "managed",
-        IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+        IDENTITY_PROVIDER_NAME_ENV: "supabase",
+        SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+        SUPABASE_JWKS_URL_ENV: "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json",
+        SUPABASE_ANON_KEY_ENV: "supabase-anon-key-placeholder",
+        SUPABASE_SERVICE_ROLE_KEY_ENV: "supabase-service-role-key-placeholder",
         SESSION_AUTHORITY_ENV: "bearer",
         SESSION_SECRET_ENV: "session-secret-placeholder",
         PASSWORD_RESET_ENABLED_ENV: "true",
@@ -618,7 +626,13 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
             {
                 **complete_until_identity,
                 IDENTITY_PROVIDER_ENV: "managed",
-                IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWKS_URL_ENV: (
+                    "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json"
+                ),
+                SUPABASE_ANON_KEY_ENV: "supabase-anon-key-placeholder",
+                SUPABASE_SERVICE_ROLE_KEY_ENV: "supabase-service-role-key-placeholder",
                 SESSION_AUTHORITY_ENV: "bearer",
             }
         )
@@ -640,12 +654,64 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
             }
         )
 
+    with pytest.raises(ValueError, match=SUPABASE_URL_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+            }
+        )
+
+    with pytest.raises(ValueError, match=SUPABASE_JWKS_URL_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+            }
+        )
+
+    with pytest.raises(ValueError, match=SUPABASE_ANON_KEY_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWKS_URL_ENV: (
+                    "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json"
+                ),
+            }
+        )
+
+    with pytest.raises(ValueError, match=SUPABASE_SERVICE_ROLE_KEY_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWKS_URL_ENV: (
+                    "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json"
+                ),
+                SUPABASE_ANON_KEY_ENV: "supabase-anon-key-placeholder",
+            }
+        )
+
     with pytest.raises(ValueError, match=SESSION_AUTHORITY_ENV):
         create_app_from_env(
             {
                 **complete_until_identity,
                 IDENTITY_PROVIDER_ENV: "managed",
-                IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWKS_URL_ENV: (
+                    "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json"
+                ),
+                SUPABASE_ANON_KEY_ENV: "supabase-anon-key-placeholder",
+                SUPABASE_SERVICE_ROLE_KEY_ENV: "supabase-service-role-key-placeholder",
                 SESSION_AUTHORITY_ENV: "cookie",
             }
         )
@@ -655,7 +721,13 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
             {
                 **complete_until_identity,
                 IDENTITY_PROVIDER_ENV: "managed",
-                IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWKS_URL_ENV: (
+                    "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json"
+                ),
+                SUPABASE_ANON_KEY_ENV: "supabase-anon-key-placeholder",
+                SUPABASE_SERVICE_ROLE_KEY_ENV: "supabase-service-role-key-placeholder",
                 SESSION_AUTHORITY_ENV: "bearer",
                 SESSION_SECRET_ENV: "session-secret-placeholder",
             }
@@ -666,7 +738,13 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
             {
                 **complete_until_identity,
                 IDENTITY_PROVIDER_ENV: "managed",
-                IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWKS_URL_ENV: (
+                    "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json"
+                ),
+                SUPABASE_ANON_KEY_ENV: "supabase-anon-key-placeholder",
+                SUPABASE_SERVICE_ROLE_KEY_ENV: "supabase-service-role-key-placeholder",
                 SESSION_AUTHORITY_ENV: "bearer",
                 SESSION_SECRET_ENV: "session-secret-placeholder",
                 PASSWORD_RESET_ENABLED_ENV: "true",

@@ -236,14 +236,18 @@ Production identity is intentionally fail-closed until a managed identity provid
 AEVRYN_SECRET_MANAGER=deployment
 AEVRYN_ENVIRONMENT_NAME=production
 AEVRYN_IDENTITY_PROVIDER=managed
-AEVRYN_IDENTITY_PROVIDER_NAME=<selected managed provider>
+AEVRYN_IDENTITY_PROVIDER_NAME=supabase
+AEVRYN_SUPABASE_URL=https://<project-ref>.supabase.co
+AEVRYN_SUPABASE_JWKS_URL=https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json
+AEVRYN_SUPABASE_ANON_KEY=<stored in deployment secrets>
+AEVRYN_SUPABASE_SERVICE_ROLE_KEY=<stored in deployment secrets>
 AEVRYN_SESSION_AUTHORITY=bearer
 AEVRYN_SESSION_SECRET=<stored in deployment secrets>
 AEVRYN_PASSWORD_RESET_ENABLED=true
 AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true
 ```
 
-These variables document the production secret, environment, and identity contract, but public beta remains blocked until the managed identity adapter exists. The selected provider must not be local JSON or in-memory auth. Bearer sessions remain the production contract until cookie-backed sessions and CSRF protection are deliberately implemented. Local JSON authentication and local-only secrets remain private-alpha only.
+These variables document the production secret, environment, and identity contract, but public beta remains blocked until the Supabase Auth adapter exists. Supabase Auth is the selected managed identity provider. Bearer sessions remain the production contract until cookie-backed sessions and CSRF protection are deliberately implemented. Local JSON authentication and local-only secrets remain private-alpha only.
 
 Production worker runtime is intentionally fail-closed until a managed queue/runtime is selected and wired:
 

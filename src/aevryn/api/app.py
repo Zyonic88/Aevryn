@@ -204,6 +204,10 @@ R2_ENDPOINT_URL_ENV = "AEVRYN_R2_ENDPOINT_URL"
 R2_REGION_ENV = "AEVRYN_R2_REGION"
 IDENTITY_PROVIDER_ENV = "AEVRYN_IDENTITY_PROVIDER"
 IDENTITY_PROVIDER_NAME_ENV = "AEVRYN_IDENTITY_PROVIDER_NAME"
+SUPABASE_URL_ENV = "AEVRYN_SUPABASE_URL"
+SUPABASE_JWKS_URL_ENV = "AEVRYN_SUPABASE_JWKS_URL"
+SUPABASE_ANON_KEY_ENV = "AEVRYN_SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_ROLE_KEY_ENV = "AEVRYN_SUPABASE_SERVICE_ROLE_KEY"
 SESSION_AUTHORITY_ENV = "AEVRYN_SESSION_AUTHORITY"
 SESSION_SECRET_ENV = "AEVRYN_SESSION_SECRET"
 PASSWORD_RESET_ENABLED_ENV = "AEVRYN_PASSWORD_RESET_ENABLED"
@@ -2059,9 +2063,22 @@ def _require_production_identity_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_IDENTITY_PROVIDER_NAME is required when "
             "AEVRYN_IDENTITY_PROVIDER=managed."
         )
-    if provider_name in {"json", "local", "inmemory", "in-memory"}:
+    if provider_name != "supabase":
         raise ValueError(
-            "AEVRYN_IDENTITY_PROVIDER_NAME must name a managed identity provider."
+            "AEVRYN_IDENTITY_PROVIDER_NAME=supabase is required for the selected "
+            "public-beta identity provider."
+        )
+    _require_https_url(environ, SUPABASE_URL_ENV)
+    _require_https_url(environ, SUPABASE_JWKS_URL_ENV)
+    if not environ.get(SUPABASE_ANON_KEY_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_SUPABASE_ANON_KEY is required when "
+            "AEVRYN_IDENTITY_PROVIDER_NAME=supabase."
+        )
+    if not environ.get(SUPABASE_SERVICE_ROLE_KEY_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_SUPABASE_SERVICE_ROLE_KEY is required when "
+            "AEVRYN_IDENTITY_PROVIDER_NAME=supabase."
         )
     session_authority = environ.get(SESSION_AUTHORITY_ENV, "").strip().lower()
     if session_authority != "bearer":

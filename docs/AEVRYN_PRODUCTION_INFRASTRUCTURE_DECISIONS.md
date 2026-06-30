@@ -193,10 +193,10 @@ Large snapshot object storage remains open only if snapshot payload size justifi
 
 # Decision 3 - Identity Provider
 
-Recommended decision:
+Approved decision:
 
 ```text
-Use a managed identity provider for public-beta authentication.
+Use Supabase Auth as the managed identity provider for public-beta authentication.
 ```
 
 Rationale:
@@ -215,10 +215,10 @@ Requirements:
 * account deletion handoff
 * secure cookie and CSRF posture if browser cookies become session authority
 
-Open decision:
+Approved provider:
 
 ```text
-Provider not selected.
+Supabase Auth.
 Bearer session authority is the current production contract.
 Cookie-backed sessions remain blocked until CSRF protection is implemented.
 ```
@@ -227,13 +227,17 @@ Implementation contract:
 
 ```text
 AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER=managed.
-AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER_NAME.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER_NAME=supabase.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SUPABASE_URL.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SUPABASE_JWKS_URL.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SUPABASE_ANON_KEY.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SUPABASE_SERVICE_ROLE_KEY.
 AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SESSION_AUTHORITY=bearer.
 AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SESSION_SECRET.
 AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_PASSWORD_RESET_ENABLED=true.
 AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true.
 Production startup rejects local JSON authentication.
-Managed identity is not implemented yet, so public beta remains blocked.
+Supabase Auth adapter is not implemented yet, so public beta remains blocked.
 ```
 
 ---

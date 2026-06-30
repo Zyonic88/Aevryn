@@ -483,6 +483,8 @@ def test_production_config_check_reports_managed_identity_blocker_without_secret
         "secret-worker-key",
         "secret-session-value",
         "secret-api-key",
+        "secret-supabase-anon-key",
+        "secret-supabase-service-role-key",
     )
     env_values = {
         "AEVRYN_DEPLOYMENT_ENV": "production",
@@ -517,7 +519,13 @@ def test_production_config_check_reports_managed_identity_blocker_without_secret
         "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
         "AEVRYN_METADATA_ONLY_LOGGING": "true",
         "AEVRYN_IDENTITY_PROVIDER": "managed",
-        "AEVRYN_IDENTITY_PROVIDER_NAME": "managed-test-provider",
+        "AEVRYN_IDENTITY_PROVIDER_NAME": "supabase",
+        "AEVRYN_SUPABASE_URL": "https://aevryn-dev.supabase.co",
+        "AEVRYN_SUPABASE_JWKS_URL": (
+            "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json"
+        ),
+        "AEVRYN_SUPABASE_ANON_KEY": "secret-supabase-anon-key",
+        "AEVRYN_SUPABASE_SERVICE_ROLE_KEY": "secret-supabase-service-role-key",
         "AEVRYN_SESSION_AUTHORITY": "bearer",
         "AEVRYN_SESSION_SECRET": "secret-session-value",
         "AEVRYN_PASSWORD_RESET_ENABLED": "true",

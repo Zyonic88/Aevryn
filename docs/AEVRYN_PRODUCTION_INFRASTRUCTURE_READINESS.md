@@ -269,13 +269,17 @@ Decision 3 progress:
 ```text
 Production startup now rejects local JSON authentication.
 Production startup requires AEVRYN_IDENTITY_PROVIDER=managed.
-Production startup requires AEVRYN_IDENTITY_PROVIDER_NAME.
+Production startup requires AEVRYN_IDENTITY_PROVIDER_NAME=supabase.
+Production startup requires AEVRYN_SUPABASE_URL.
+Production startup requires AEVRYN_SUPABASE_JWKS_URL.
+Production startup requires AEVRYN_SUPABASE_ANON_KEY.
+Production startup requires AEVRYN_SUPABASE_SERVICE_ROLE_KEY.
 Production startup requires AEVRYN_SESSION_AUTHORITY=bearer.
 Production startup requires AEVRYN_SESSION_SECRET.
 Production startup requires AEVRYN_PASSWORD_RESET_ENABLED=true.
 Production startup requires AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true.
-Managed identity provider selection and adapter wiring remain open.
-Public beta remains blocked until managed identity is implemented or the owner accepts a documented residual risk.
+Supabase Auth is selected as the managed identity provider.
+Public beta remains blocked until the Supabase Auth adapter is implemented or the owner accepts a documented residual risk.
 ```
 
 Next Gate 3 target:
