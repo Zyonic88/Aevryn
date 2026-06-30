@@ -166,6 +166,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md",
         "docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md",
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md",
+        "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
         "Public beta blocked.",
     )
 
@@ -189,6 +190,34 @@ def test_public_trust_readiness_document_tracks_gate_one_blockers() -> None:
         "Plain-Language Requirements",
         "Truthfulness Requirements",
         "Not accepted.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_trust_page_copy_preserves_plain_language_promises() -> None:
+    """Public trust copy should be user-readable without overpromising readiness."""
+    document = read_doc("docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md")
+
+    required_terms = (
+        "Your work belongs to you.",
+        "Aevryn is built to understand stories, not to own them.",
+        "AI does not own truth.",
+        "Your stories are private by default.",
+        "Aetherra Labs does not train on user stories without explicit opt-in.",
+        "security@aevryn.ai",
+        "privacy@aevryn.ai",
+        "support@aevryn.ai",
+        "abuse@aevryn.ai",
+        "Please do not send full manuscripts",
+        "Aevryn is content-aware, not content-opinionated.",
+        "Lawful mature fiction is not automatically prohibited.",
+        "Attorney safe-harbor review",
+        "contact aliases must be provisioned and tested",
+        "production backup retention window must be selected",
+        "AI provider review must be completed",
+        "without overpromising public-beta readiness",
     )
 
     for term in required_terms:

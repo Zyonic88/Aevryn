@@ -37,6 +37,7 @@ No public trust page may claim a production behavior that Aevryn has not impleme
 Source:
 
 * `docs/AEVRYN_TRUST_MODEL.md`
+* `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 
 Readiness:
 
@@ -55,6 +56,7 @@ Required before public beta:
 Source:
 
 * `docs/AEVRYN_USER_RIGHTS.md`
+* `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 
 Readiness:
 
@@ -74,6 +76,7 @@ Source:
 
 * `docs/AEVRYN_PRIVACY.md`
 * `docs/PRIVACY_POLICY.md`
+* `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 
 Readiness:
 
@@ -94,6 +97,7 @@ Required before public beta:
 Source:
 
 * `docs/AEVRYN_SECURITY.md`
+* `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 
 Readiness:
 
@@ -114,6 +118,7 @@ Required before public beta:
 Source:
 
 * `docs/AEVRYN_CONTENT_CLASSIFICATION.md`
+* `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 
 Readiness:
 
@@ -132,6 +137,7 @@ Required before public beta:
 Source:
 
 * `docs/SECURITY_DISCLOSURE.md`
+* `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 
 Readiness:
 
@@ -151,6 +157,7 @@ Required before public beta:
 Source:
 
 * `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`
+* `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 
 Readiness:
 
@@ -210,4 +217,11 @@ Current result:
 
 ```text
 Not accepted.
+```
+
+Current implementation progress:
+
+```text
+docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md drafts plain-language public trust, privacy, security, user-rights, content classification, support, and security-disclosure page copy.
+Publication remains blocked by contact alias provisioning, legal review, backup retention selection, provider review, security operations configuration, and final public-beta signoff.
 ```

@@ -95,6 +95,7 @@ Next expected V2 target:
 - Restore-test readiness is documented in `docs/AEVRYN_RESTORE_TEST_PLAN.md`; production backup provider, retention window, restore execution, and audit storage decisions remain open.
 - AI provider review is documented in `docs/AEVRYN_AI_PROVIDER_REVIEW.md`; OpenAI remains an internal-alpha candidate only until provider terms, retention, training behavior, disclosure, and release-gate coverage are reviewed.
 - Public contact targets are documented in `docs/AEVRYN_PUBLIC_CONTACTS.md`; `support@aevryn.ai`, `privacy@aevryn.ai`, `security@aevryn.ai`, and `abuse@aevryn.ai` are selected targets but still need provisioning and testing before public beta.
+- Public trust website copy is drafted in `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`; publication remains blocked by contact provisioning, legal review, backup retention selection, provider review, security operations, and final public-beta signoff.
 
 Phase 6 Project Storage accepted:
 
