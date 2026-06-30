@@ -240,6 +240,14 @@ Production startup rejects local JSON authentication.
 Supabase Auth adapter is not implemented yet, so public beta remains blocked.
 ```
 
+Current implementation result:
+
+```text
+Provider-neutral ManagedIdentityVerifier boundary is implemented.
+ManagedIdentityAuthenticationAdapter maps verified provider identities to stable Aevryn UserRecord ownership records.
+Supabase JWT/JWKS verification adapter remains open.
+```
+
 ---
 
 # Decision 4 - Secret Management

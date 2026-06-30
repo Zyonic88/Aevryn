@@ -249,6 +249,18 @@ AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true
 
 These variables document the production secret, environment, and identity contract, but public beta remains blocked until the Supabase Auth adapter exists. Supabase Auth is the selected managed identity provider. Bearer sessions remain the production contract until cookie-backed sessions and CSRF protection are deliberately implemented. Local JSON authentication and local-only secrets remain private-alpha only.
 
+The managed identity boundary now separates provider token verification from Aevryn ownership records:
+
+```text
+Supabase bearer token
+-> ManagedIdentityVerifier
+-> ManagedIdentity
+-> ManagedIdentityAuthenticationAdapter
+-> Aevryn UserRecord
+```
+
+The boundary maps external provider subjects to stable Aevryn user IDs without storing provider tokens. Supabase JWT verification remains the next adapter implementation step.
+
 Production worker runtime is intentionally fail-closed until a managed queue/runtime is selected and wired:
 
 ```text

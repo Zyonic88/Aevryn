@@ -279,6 +279,9 @@ Production startup requires AEVRYN_SESSION_SECRET.
 Production startup requires AEVRYN_PASSWORD_RESET_ENABLED=true.
 Production startup requires AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true.
 Supabase Auth is selected as the managed identity provider.
+Provider-neutral ManagedIdentityVerifier boundary is implemented.
+ManagedIdentityAuthenticationAdapter maps verified provider identities to stable Aevryn UserRecord ownership records.
+Supabase JWT/JWKS verification adapter remains open.
 Public beta remains blocked until the Supabase Auth adapter is implemented or the owner accepts a documented residual risk.
 ```
 

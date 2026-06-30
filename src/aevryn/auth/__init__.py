@@ -10,6 +10,12 @@ from aevryn.auth.errors import (
     PasswordPolicyError,
 )
 from aevryn.auth.json_store import JsonAuthenticationStore
+from aevryn.auth.managed_identity import (
+    ManagedIdentity,
+    ManagedIdentityAuthenticationAdapter,
+    ManagedIdentityVerifier,
+    managed_identity_user_id,
+)
 from aevryn.auth.models import (
     AuthenticatedSession,
     PasswordResetToken,
@@ -39,6 +45,10 @@ __all__ = [
     "InvalidResetTokenError",
     "InvalidSessionError",
     "JsonAuthenticationStore",
+    "ManagedIdentity",
+    "ManagedIdentityAuthenticationAdapter",
+    "ManagedIdentityVerifier",
+    "managed_identity_user_id",
     "PasswordHasher",
     "PasswordPolicyError",
     "PasswordResetRecord",
