@@ -186,7 +186,8 @@ Inbound delivery testing passed for all four aliases, and Gmail filters route th
 Cloudflare inbound DNS/routing health passed: Status Enabled, DNS records Enabled, 9 received, 9 forwarded, 0 failed, 0 rejected.
 Cloudflare MFA and Gmail MFA are enabled.
 Cloudflare Email Sending is the preferred outbound candidate.
-Outbound reply testing and public-page publication remain open.
+Support outbound reply test passed from support@aevryn.ai to zyonic88@gmail.com.
+Privacy/security/abuse outbound reply tests, SPF/DKIM/DMARC received-message verification, and public-page publication remain open.
 ```
 
 ---

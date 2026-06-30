@@ -14,13 +14,15 @@ It does not, by itself, prove that Aevryn can send trusted replies from product-
 
 ```text
 Gate: Product reply identity
-Status: Preferred provider candidate selected
+Status: Support reply verified; remaining aliases pending
 Public beta: Blocked
 ```
 
 Cloudflare Email Sending is the preferred candidate because Aevryn already uses Cloudflare for DNS and inbound Email Routing.
 
-Public beta remains blocked until Cloudflare Email Sending is configured for `aevryn.ai`, replies can be sent from the expected product identity, and the result is tested.
+Cloudflare Email Sending SMTP has successfully sent a synthetic outbound test from `support@aevryn.ai` to `zyonic88@gmail.com`.
+
+Public beta remains blocked until privacy, security, and abuse reply tests pass and SPF, DKIM, and DMARC are verified from received message details.
 
 ---
 
@@ -143,7 +145,7 @@ Required reply tests:
 
 | Alias | Required Result | Status |
 | --- | --- | --- |
-| `support@aevryn.ai` | Reply sends as Aevryn support identity | Not tested |
+| `support@aevryn.ai` | Reply sends as Aevryn support identity | Passed. Synthetic outbound SMTP test received by `zyonic88@gmail.com`. |
 | `privacy@aevryn.ai` | Reply sends as Aevryn privacy identity | Not tested |
 | `security@aevryn.ai` | Reply sends as Aevryn security identity | Not tested |
 | `abuse@aevryn.ai` | Reply sends as Aevryn abuse identity | Not tested |
@@ -157,7 +159,7 @@ Public beta remains blocked until:
 * Cloudflare Email Sending is configured or a fallback provider is selected
 * product-domain reply identities are configured
 * SPF, DKIM, and DMARC posture is verified
-* all four required aliases pass reply tests
+* privacy, security, and abuse aliases pass reply tests
 * support operators know not to request full source prose by default
 * public support, privacy, security, and trust pages list only tested contact paths
 

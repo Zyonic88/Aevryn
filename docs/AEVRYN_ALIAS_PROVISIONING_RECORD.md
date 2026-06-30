@@ -12,7 +12,7 @@ This document should be filled in after the aliases are created and tested.
 
 ```text
 Record: Public Contact Alias Provisioning
-Status: Inbound, DNS, and access verified; reply review pending
+Status: Inbound, DNS, access, and support reply verified; remaining reply tests pending
 Public beta: Blocked
 ```
 
@@ -58,7 +58,7 @@ Verified. Cloudflare MFA and Gmail MFA are enabled.
 
 | Alias | Purpose | Recipient/Owner | Provisioned | Inbound Tested | Reply Tested | MFA/Access Reviewed |
 | --- | --- | --- | --- | --- | --- | --- |
-| `support@aevryn.ai` | Product support, account access, import/export help, project deletion help | `aetherra.project@gmail.com` | Yes | Yes | No | Yes |
+| `support@aevryn.ai` | Product support, account access, import/export help, project deletion help | `aetherra.project@gmail.com` | Yes | Yes | Yes | Yes |
 | `privacy@aevryn.ai` | Privacy questions, account deletion, backup retention, AI provider data-use questions | `aetherra.project@gmail.com` | Yes | Yes | No | Yes |
 | `security@aevryn.ai` | Vulnerability reports, account compromise, suspected data exposure | `aetherra.project@gmail.com` | Yes | Yes | No | Yes |
 | `abuse@aevryn.ai` | Platform abuse, spam, malware, illegal use reports, rights escalation | `aetherra.project@gmail.com` | Yes | Yes | No | Yes |
@@ -84,7 +84,7 @@ Record DNS/mail settings after setup:
 | DMARC | Present before public beta | TBD |
 | Test inbound delivery | Each alias receives mail | Passed. All four aliases delivered to `aetherra.project@gmail.com`. |
 | Cloudflare routing health | Email Routing status and DNS records enabled | Passed. Cloudflare shows Status Enabled, DNS records Enabled, 4 routing rules, 1 destination, 9 received, 9 forwarded, 0 failed, and 0 rejected. |
-| Test outbound replies | Replies send from expected identity | TBD |
+| Test outbound replies | Replies send from expected identity | Partial. `support@aevryn.ai` sent successfully through Cloudflare Email Sending SMTP and was received by `zyonic88@gmail.com`. Privacy, security, and abuse reply tests remain open. |
 | Admin/account MFA | Cloudflare and destination mailbox MFA enabled | Passed. Cloudflare MFA and Gmail MFA are enabled. |
 
 Cloudflare Email Routing verifies inbound receiving and forwarding. Outbound SPF, DKIM, DMARC, and branded reply posture remain tied to the final reply-identity decision.
@@ -130,7 +130,7 @@ Record:
 
 | Alias | Sent From | Received By | Reply Sent | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `support@aevryn.ai` | `zyonic88@gmail.com` | `aetherra.project@gmail.com` | TBD | Passed inbound | Gmail filter routes to Aevryn support folder. |
+| `support@aevryn.ai` | `zyonic88@gmail.com` | `aetherra.project@gmail.com` | Yes | Passed inbound and outbound | Gmail filter routes inbound mail to Aevryn support folder. Cloudflare Email Sending SMTP sent a synthetic outbound test from `support@aevryn.ai` to `zyonic88@gmail.com`. |
 | `privacy@aevryn.ai` | `zyonic88@gmail.com` | `aetherra.project@gmail.com` | TBD | Passed inbound | Gmail filter routes to Aevryn privacy folder. |
 | `security@aevryn.ai` | `zyonic88@gmail.com` | `aetherra.project@gmail.com` | TBD | Passed inbound | Gmail filter routes to Aevryn security folder. |
 | `abuse@aevryn.ai` | `zyonic88@gmail.com` | `aetherra.project@gmail.com` | TBD | Passed inbound | Gmail filter routes to Aevryn abuse folder. |
@@ -207,6 +207,8 @@ Cloudflare MFA and Gmail MFA are enabled.
 Cloudflare Email Routing health passed for inbound routing: Status Enabled, DNS records Enabled, 9 received, 9 forwarded, 0 failed, 0 rejected.
 Reply identity remains open with Cloudflare Email Sending selected as the preferred provider candidate.
 Outbound-specific SPF, DKIM, and DMARC posture remains tied to Cloudflare Email Sending configuration and reply testing.
+Support reply test passed: Cloudflare Email Sending SMTP sent a synthetic outbound test from support@aevryn.ai to zyonic88@gmail.com.
+Privacy, security, and abuse outbound reply tests remain open.
 Outbound reply identity setup is tracked in docs/AEVRYN_REPLY_IDENTITY_SETUP.md.
 ```
 

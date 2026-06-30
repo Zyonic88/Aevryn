@@ -59,7 +59,7 @@ Tracking docs:
 Status:
 
 ```text
-Cloudflare routing rules created, inbound delivery passed, Cloudflare inbound DNS/routing health passed, and Cloudflare/Gmail MFA verified. Cloudflare Email Sending is the preferred outbound candidate. Outbound reply testing and public-page publication remain open.
+Cloudflare routing rules created, inbound delivery passed, Cloudflare inbound DNS/routing health passed, and Cloudflare/Gmail MFA verified. Cloudflare Email Sending SMTP successfully sent support@aevryn.ai to zyonic88@gmail.com. Privacy/security/abuse outbound reply tests, SPF/DKIM/DMARC received-message verification, and public-page publication remain open.
 ```
 
 ---
