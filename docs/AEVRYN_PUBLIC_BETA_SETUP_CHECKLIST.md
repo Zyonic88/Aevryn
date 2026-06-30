@@ -53,11 +53,12 @@ Tracking docs:
 
 * `docs/AEVRYN_PUBLIC_CONTACTS.md`
 * `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`
+* `docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md`
 
 Status:
 
 ```text
-Not provisioned.
+Alias provisioning record exists. Aliases not provisioned.
 ```
 
 ---

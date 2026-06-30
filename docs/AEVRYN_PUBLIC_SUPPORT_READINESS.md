@@ -49,6 +49,8 @@ Users should be told not to include full manuscripts, full chapters, full AI res
 
 Target public contact paths are defined in `docs/AEVRYN_PUBLIC_CONTACTS.md`.
 
+Provisioning and verification are tracked in `docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md`.
+
 Target aliases:
 
 * `support@aevryn.ai`
@@ -176,6 +178,7 @@ Current implementation progress:
 
 ```text
 Target product-domain aliases are selected in docs/AEVRYN_PUBLIC_CONTACTS.md.
+Alias provisioning record exists in docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md.
 Alias provisioning, delivery testing, mailbox access controls, and public-page publication remain open.
 ```
 

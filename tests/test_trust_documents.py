@@ -189,12 +189,14 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "privacy@aevryn.ai",
         "security@aevryn.ai",
         "abuse@aevryn.ai",
+        "docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md",
         "GitHub Branch Protection And Hosted Security Controls",
         "Production Provider And Data-Use Review",
         "Backup, Retention, Restore, And Audit",
         "Production-Like Deployment Smoke",
         "Public Trust And Legal Publication",
         "Release Candidate Run And Signoff",
+        "Alias provisioning record exists. Aliases not provisioned.",
         "Local production config contract passed.",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
@@ -298,7 +300,38 @@ def test_public_contacts_document_tracks_product_domain_aliases() -> None:
         "full manuscripts",
         "screenshots containing private story text",
         "enable MFA for mailbox/admin access",
+        "docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md",
         "provisioned and tested before public beta",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_alias_provisioning_record_tracks_contact_setup_verification() -> None:
+    """Alias provisioning should record delivery, reply, MFA, and DNS status."""
+    document = read_doc("docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md")
+
+    required_terms = (
+        "Record: Public Contact Alias Provisioning",
+        "Status: Not provisioned",
+        "Public beta: Blocked",
+        "Email provider",
+        "DNS provider",
+        "Mailbox or forwarding model",
+        "MFA enabled for admin access",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "MX records",
+        "SPF",
+        "DKIM",
+        "DMARC",
+        "Test inbound delivery",
+        "Test outbound replies",
+        "Do not publish untested aliases.",
+        "private-story redaction guidance",
     )
 
     for term in required_terms:

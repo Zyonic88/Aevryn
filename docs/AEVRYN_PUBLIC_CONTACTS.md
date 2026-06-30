@@ -113,6 +113,8 @@ Before public beta:
 * document source-prose redaction guidance
 * add contacts to Privacy Policy, Security Disclosure, support page, and trust pages
 
+Provisioning and test results should be recorded in `docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md`.
+
 ---
 
 # Acceptance
