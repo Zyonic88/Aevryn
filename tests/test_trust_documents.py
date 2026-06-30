@@ -239,7 +239,7 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "Managed PostgreSQL is approved as the production Project Database target.",
         "Decision 2 - Object Storage",
         "`aevryn production-config-check` verifies the production startup contract",
-        "public_beta=blocked_managed_identity",
+        "startup_contract=ready",
     )
 
     for term in required_terms:
@@ -274,7 +274,7 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Generated export storage service writes bytes through StorageService",
         "Generated export API/download routes are implemented.",
         "`aevryn production-config-check` verifies production startup configuration",
-        "public_beta=blocked_managed_identity",
+        "startup_contract=ready",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER=managed.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER_NAME=supabase.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SUPABASE_URL.",
@@ -284,7 +284,8 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Provider-neutral ManagedIdentityVerifier boundary is implemented.",
         "ManagedIdentityAuthenticationAdapter maps verified provider identities",
         "Supabase RS256 JWT/JWKS verification adapter is implemented.",
-        "Production app factory wiring and production-like smoke execution remain open.",
+        "Production app factory wiring is implemented.",
+        "Production-like smoke execution remains open.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SESSION_AUTHORITY=bearer.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SECRET_MANAGER=deployment.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_PASSWORD_RESET_ENABLED=true.",
@@ -305,7 +306,7 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_MONITORING_DESTINATION=hosted.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SECURITY_ALERTS_ENABLED=true.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_METADATA_ONLY_LOGGING=true.",
-        "Supabase Auth adapter is not implemented yet",
+        "Public beta remains blocked.",
         "Public beta remains blocked.",
     )
 

@@ -1172,18 +1172,7 @@ def _run_production_config_check(environ: dict[str, str]) -> dict[str, object]:
     """Check the production startup contract and return metadata only."""
     if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
         raise ValueError(f"{DEPLOYMENT_ENV}=production is required.")
-    try:
-        create_app_from_env(environ)
-    except ValueError as error:
-        if "Managed production identity is not implemented yet" not in str(error):
-            raise
-        return {
-            "deployment_env": "production",
-            "startup_contract": "fail_closed",
-            "public_beta": "blocked_managed_identity",
-            "secrets_printed": 0,
-            "ok": "production_config_contract_checked",
-        }
+    create_app_from_env(environ)
     return {
         "deployment_env": "production",
         "startup_contract": "ready",

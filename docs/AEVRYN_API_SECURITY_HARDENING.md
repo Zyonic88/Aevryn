@@ -117,7 +117,7 @@ When `AEVRYN_DEPLOYMENT_ENV=production`, the app refuses to start unless these a
 
 This prevents accidental public startup with stateless storage, local source-byte storage, local JSON authentication, local-only secrets, in-memory worker queues, local-only logs, ambiguous monitoring, non-redacted logging posture, missing Cloudflare R2 storage credentials, missing HTTPS/HSTS edge posture, missing browser-origin policy, missing managed identity provider details, missing password reset, missing account deletion handoff, missing session secret, ambiguous environment separation, or unprotected workflow routes.
 
-Managed production identity is not implemented yet. Production startup remains intentionally fail-closed until a managed identity adapter is selected and wired.
+Supabase Auth is selected for managed production identity. Production startup wires Supabase bearer-token verification through the managed identity boundary when the full production contract is configured.
 
 Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because local JSON Project Database storage is not allowed for public deployment.
 Production mode rejects `AEVRYN_IMPORT_STORAGE_PATH` because local filesystem source-byte storage is not allowed for public deployment.

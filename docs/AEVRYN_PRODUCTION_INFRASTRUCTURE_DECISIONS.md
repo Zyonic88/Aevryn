@@ -237,7 +237,8 @@ AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SESSION_SECRET.
 AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_PASSWORD_RESET_ENABLED=true.
 AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true.
 Production startup rejects local JSON authentication.
-Supabase Auth adapter is not implemented yet, so public beta remains blocked.
+Supabase Auth adapter is implemented behind the managed identity boundary.
+Public beta remains blocked until production-like smoke execution and release-candidate signoff are complete.
 ```
 
 Current implementation result:
@@ -246,7 +247,8 @@ Current implementation result:
 Provider-neutral ManagedIdentityVerifier boundary is implemented.
 ManagedIdentityAuthenticationAdapter maps verified provider identities to stable Aevryn UserRecord ownership records.
 Supabase RS256 JWT/JWKS verification adapter is implemented.
-Production app factory wiring and production-like smoke execution remain open.
+Production app factory wiring is implemented.
+Production-like smoke execution remains open.
 ```
 
 ---
@@ -461,7 +463,7 @@ Production-like smoke support:
 ```text
 `aevryn production-config-check` verifies production startup configuration without printing secrets.
 The check does not connect to PostgreSQL or R2.
-The current expected metadata result is public_beta=blocked_managed_identity until managed identity is implemented.
+The current expected metadata result is startup_contract=ready when the production contract is complete.
 ```
 
 ---

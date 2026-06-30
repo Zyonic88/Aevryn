@@ -122,7 +122,11 @@ from aevryn.auth import (
     InvalidResetTokenError,
     InvalidSessionError,
     JsonAuthenticationStore,
+    ManagedIdentityAuthenticationAdapter,
     PasswordPolicyError,
+    SupabaseJwksJwtDecoder,
+    SupabaseJwtVerifier,
+    supabase_issuer_from_url,
 )
 from aevryn.export import ExportEngine
 from aevryn.export_storage import ExportStorageService, ExportWriteRequest
@@ -279,7 +283,9 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
 def create_app(
     allowed_origins: Sequence[str] = (),
     api_keys: Sequence[str] = (),
-    authentication_service: AuthenticationService | None = None,
+    authentication_service: (
+        AuthenticationService | ManagedIdentityAuthenticationAdapter | None
+    ) = None,
     project_repository: ProjectRepository | None = None,
     background_job_queue: BackgroundJobQueue | None = None,
     background_job_handler: BackgroundJobHandler | None = None,
@@ -490,6 +496,11 @@ def create_app(
                 status_code=401,
                 detail={"error": "invalid_credentials", "detail": str(error)},
             ) from error
+        except AuthenticationError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "login_failed", "detail": str(error)},
+            ) from error
         return _auth_session_response(session)
 
     @app.get(
@@ -583,6 +594,11 @@ def create_app(
             raise HTTPException(
                 status_code=400,
                 detail={"error": "invalid_reset_token", "detail": str(error)},
+            ) from error
+        except AuthenticationError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "password_reset_complete_failed", "detail": str(error)},
             ) from error
         return AuthMessageResponse(status="password_reset_complete")
 
@@ -2049,10 +2065,6 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "allowed for production."
         )
     _require_production_identity_config(environ)
-    raise ValueError(
-        "Managed production identity is not implemented yet. Public beta remains "
-        "blocked until the identity provider adapter is selected and wired."
-    )
 
 
 def _require_production_identity_config(environ: Mapping[str, str]) -> None:
@@ -2156,7 +2168,7 @@ def _require_positive_int_env(environ: Mapping[str, str], key: str) -> None:
 def _platform_services_from_env(
     environ: Mapping[str, str],
 ) -> tuple[
-    AuthenticationService | None,
+    AuthenticationService | ManagedIdentityAuthenticationAdapter | None,
     ProjectRepository | None,
     BackgroundJobQueue | None,
     BackgroundJobHandler | None,
@@ -2205,7 +2217,7 @@ def _production_postgresql_platform_services(
     repository: ProjectRepository,
     environ: Mapping[str, str],
 ) -> tuple[
-    AuthenticationService,
+    AuthenticationService | ManagedIdentityAuthenticationAdapter,
     ProjectRepository,
     BackgroundJobQueue,
     BackgroundJobHandler,
@@ -2213,12 +2225,9 @@ def _production_postgresql_platform_services(
     StorageService,
 ]:
     """Return production storage services after fail-closed environment validation."""
-    auth_store_path = _postgresql_auth_store_path_from_env(environ)
-    auth_store = JsonAuthenticationStore(auth_store_path)
-    authentication_service = AuthenticationService(
+    authentication_service = _production_authentication_service(
         repository=repository,
-        credential_store=auth_store,
-        session_store=auth_store,
+        environ=environ,
     )
     storage_service = _r2_storage_from_env(environ)
     import_content_store = StorageServiceImportContentStore(storage_service)
@@ -2233,6 +2242,22 @@ def _production_postgresql_platform_services(
         ),
         import_content_store,
         storage_service,
+    )
+
+
+def _production_authentication_service(
+    *,
+    repository: ProjectRepository,
+    environ: Mapping[str, str],
+) -> ManagedIdentityAuthenticationAdapter:
+    """Return the production managed identity authentication adapter."""
+    decoder = SupabaseJwksJwtDecoder(
+        jwks_url=environ.get(SUPABASE_JWKS_URL_ENV, ""),
+        issuer=supabase_issuer_from_url(environ.get(SUPABASE_URL_ENV, "")),
+    )
+    return ManagedIdentityAuthenticationAdapter(
+        repository=repository,
+        verifier=SupabaseJwtVerifier(decoder=decoder),
     )
 
 
@@ -2478,8 +2503,8 @@ def _extract_api_key(request: Request) -> str:
 
 
 def _require_authentication_service(
-    authentication_service: AuthenticationService | None,
-) -> AuthenticationService:
+    authentication_service: AuthenticationService | ManagedIdentityAuthenticationAdapter | None,
+) -> AuthenticationService | ManagedIdentityAuthenticationAdapter:
     """Return the configured Authentication service or fail clearly."""
     if authentication_service is None:
         raise HTTPException(
@@ -2552,7 +2577,7 @@ def _require_background_job_handler(
 
 def _authenticated_user(
     request: Request,
-    authentication_service: AuthenticationService | None,
+    authentication_service: AuthenticationService | ManagedIdentityAuthenticationAdapter | None,
 ) -> UserRecord:
     """Return the authenticated user for project storage routes."""
     service = _require_authentication_service(authentication_service)

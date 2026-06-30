@@ -220,7 +220,7 @@ Metadata-only production configuration contract check:
 aevryn production-config-check
 ```
 
-The check validates that `AEVRYN_DEPLOYMENT_ENV=production` has the fail-closed production startup contract configured. It does not connect to PostgreSQL or R2, and it never prints database URLs, API keys, storage keys, worker keys, or session secrets. Until managed production identity is implemented, a fully configured production contract reports `public_beta=blocked_managed_identity`.
+The check validates that `AEVRYN_DEPLOYMENT_ENV=production` has the fail-closed production startup contract configured. It never prints database URLs, API keys, storage keys, worker keys, Supabase keys, or session secrets. A complete production contract reports `startup_contract=ready`, but public beta still requires gate signoff and production-like smoke execution.
 
 Newly saved import source bytes use project-scoped object references such as:
 
@@ -259,7 +259,7 @@ Supabase bearer token
 -> Aevryn UserRecord
 ```
 
-The boundary maps external provider subjects to stable Aevryn user IDs without storing provider tokens. Supabase RS256 JWT/JWKS verification is implemented behind this boundary. Production startup still remains blocked until the Supabase verifier is wired into the API app factory and covered by production-like smoke execution.
+The boundary maps external provider subjects to stable Aevryn user IDs without storing provider tokens. Supabase RS256 JWT/JWKS verification is wired into the production API app factory. Public beta still requires production-like smoke execution.
 
 Production worker runtime is intentionally fail-closed until a managed queue/runtime is selected and wired:
 

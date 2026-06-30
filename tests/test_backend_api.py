@@ -598,7 +598,9 @@ def test_create_app_from_env_requires_production_secret_and_environment_config()
         )
 
 
-def test_create_app_from_env_fails_closed_without_production_identity_provider() -> None:
+def test_create_app_from_env_fails_closed_without_production_identity_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Production mode should reject local alpha auth after infrastructure is set."""
     complete_until_identity = {
         DEPLOYMENT_ENV: "production",
@@ -751,8 +753,75 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
             }
         )
 
-    with pytest.raises(ValueError, match="Managed production identity is not implemented"):
+    class FakePostgresqlProjectRepository(InMemoryProjectRepository):
+        """Test double for PostgreSQL repository selection."""
+
+        def __init__(self, database_url: str) -> None:
+            super().__init__()
+            self.database_url = database_url
+
+    class FakeR2Storage:
+        """Test double for R2 storage selection."""
+
+        def __init__(
+            self,
+            *,
+            bucket: str,
+            endpoint_url: str,
+            access_key_id: str,
+            secret_access_key: str,
+            region_name: str,
+        ) -> None:
+            self.settings = {
+                "bucket": bucket,
+                "endpoint_url": endpoint_url,
+                "access_key_id": access_key_id,
+                "secret_access_key": secret_access_key,
+                "region_name": region_name,
+            }
+
+        def save_object(
+            self,
+            *,
+            storage_ref: str,
+            content: bytes,
+            content_type: str,
+            metadata: dict[str, str],
+        ) -> object:
+            return object()
+
+        def read_object(self, storage_ref: str) -> bytes:
+            return b""
+
+        def delete_object(self, storage_ref: str) -> None:
+            return None
+
+    monkeypatch.setattr(
+        "aevryn.api.app.PostgresqlProjectRepository",
+        FakePostgresqlProjectRepository,
+    )
+    monkeypatch.setattr("aevryn.api.app.R2Storage", FakeR2Storage)
+
+    client = TestClient(
         create_app_from_env({**complete_until_identity, **production_identity_env()})
+    )
+
+    health = client.get("/v2/health")
+    register = client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": "user_demo",
+            "email": "demo@example.com",
+            "display_name": "Demo User",
+            "password": "StrongPass123",
+            "now": "2026-06-29T00:00:00Z",
+        },
+    )
+
+    assert health.status_code == 200
+    assert register.status_code == 400
+    assert register.json()["error"] == "registration_failed"
+    assert "Managed identity provider owns registration" in register.json()["detail"]
 
 
 def test_create_app_from_env_requires_production_worker_runtime_config() -> None:

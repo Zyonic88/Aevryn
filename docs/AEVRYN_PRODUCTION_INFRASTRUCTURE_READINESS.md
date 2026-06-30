@@ -282,8 +282,9 @@ Supabase Auth is selected as the managed identity provider.
 Provider-neutral ManagedIdentityVerifier boundary is implemented.
 ManagedIdentityAuthenticationAdapter maps verified provider identities to stable Aevryn UserRecord ownership records.
 Supabase RS256 JWT/JWKS verification adapter is implemented.
-Production app factory wiring and production-like smoke execution remain open.
-Public beta remains blocked until the Supabase Auth adapter is implemented or the owner accepts a documented residual risk.
+Production app factory wiring is implemented.
+Production-like smoke execution remains open.
+Public beta remains blocked until production-like smoke execution and release-candidate signoff are complete.
 ```
 
 Next Gate 3 target:
@@ -359,8 +360,8 @@ Production-like smoke progress:
 
 ```text
 `aevryn production-config-check` verifies the production startup contract without printing secrets.
-The check reports public_beta=blocked_managed_identity while managed identity remains intentionally unwired.
-Production-like deployment smoke still requires hosted provider selections and environment execution.
+The check reports startup_contract=ready when the production contract is complete.
+Production-like deployment smoke still requires hosted environment execution.
 ```
 
 ---

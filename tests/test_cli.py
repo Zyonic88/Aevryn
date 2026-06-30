@@ -471,7 +471,7 @@ def test_production_config_check_requires_production_env(
     assert "AEVRYN_DEPLOYMENT_ENV=production is required" in captured.err
 
 
-def test_production_config_check_reports_managed_identity_blocker_without_secrets(
+def test_production_config_check_reports_ready_contract_without_secrets(
     capsys: CaptureFixture[str],
     monkeypatch: MonkeyPatch,
 ) -> None:
@@ -534,13 +534,20 @@ def test_production_config_check_reports_managed_identity_blocker_without_secret
     for key, value in env_values.items():
         monkeypatch.setenv(key, value)
 
+    def fake_create_app_from_env(environ: dict[str, str]) -> object:
+        assert environ["AEVRYN_IDENTITY_PROVIDER_NAME"] == "supabase"
+        assert environ["AEVRYN_SUPABASE_ANON_KEY"] == "secret-supabase-anon-key"
+        return object()
+
+    monkeypatch.setattr("aevryn.cli.create_app_from_env", fake_create_app_from_env)
+
     exit_code = main(["production-config-check"])
     captured = capsys.readouterr()
 
     assert exit_code == 0
     assert "deployment_env=production" in captured.out
-    assert "startup_contract=fail_closed" in captured.out
-    assert "public_beta=blocked_managed_identity" in captured.out
+    assert "startup_contract=ready" in captured.out
+    assert "public_beta=not_approved_until_gate_signoff" in captured.out
     assert "secrets_printed=0" in captured.out
     assert "ok=production_config_contract_checked" in captured.out
     for secret_value in secret_values:

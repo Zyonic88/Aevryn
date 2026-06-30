@@ -12,7 +12,8 @@ from typing import Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
-from aevryn.auth.errors import InvalidSessionError
+from aevryn.auth.errors import AuthenticationError, InvalidSessionError
+from aevryn.auth.models import AuthenticatedSession, PasswordResetToken, RegisteredUser
 from aevryn.persistence import DuplicateRecordError, ProjectRepository, RecordNotFoundError
 from aevryn.persistence.models import UserRecord
 
@@ -175,6 +176,42 @@ class ManagedIdentityAuthenticationAdapter:
             except DuplicateRecordError:
                 return self._repository.get_user(user_id)
             return user
+
+    def register(
+        self,
+        *,
+        user_id: str,
+        email: str,
+        display_name: str,
+        password: str,
+        now: str,
+    ) -> RegisteredUser:
+        """Reject local registration when a managed provider owns identity."""
+        raise AuthenticationError("Managed identity provider owns registration.")
+
+    def login(self, *, email: str, password: str, now: str) -> AuthenticatedSession:
+        """Reject local password login when a managed provider owns identity."""
+        raise AuthenticationError("Managed identity provider owns login.")
+
+    def request_password_reset(
+        self,
+        *,
+        email: str,
+        reset_id: str,
+        now: str,
+    ) -> PasswordResetToken:
+        """Reject local password reset when a managed provider owns identity."""
+        raise AuthenticationError("Managed identity provider owns password reset.")
+
+    def complete_password_reset(
+        self,
+        *,
+        reset_token: str,
+        new_password: str,
+        now: str,
+    ) -> None:
+        """Reject local password reset completion for managed identity."""
+        raise AuthenticationError("Managed identity provider owns password reset.")
 
 
 def managed_identity_user_id(*, provider: str, subject: str) -> str:
