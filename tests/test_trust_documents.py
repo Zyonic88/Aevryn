@@ -421,7 +421,7 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
 
     required_terms = (
         "Gate: AI Provider And Data Use",
-        "Status: Not started",
+        "Status: Started",
         "Public beta: Blocked",
         "Users must know when story content leaves Aevryn-owned systems.",
         "provider name",
@@ -432,6 +432,33 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "Provider output is not Canon.",
         "metadata-only",
         "provider data-use disclosure",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None:
+    """Provider review should record data-use, training, and disclosure requirements."""
+    document = read_doc("docs/AEVRYN_AI_PROVIDER_REVIEW.md")
+
+    required_terms = (
+        "Provider output is never Canon, and provider data use is never hidden.",
+        "Provider: OpenAI",
+        "Status: Internal alpha candidate only",
+        "Public beta approval: Not approved",
+        "AEVRYN_EXTRACTION_MODE=openai",
+        "AEVRYN_OPENAI_API_KEY",
+        "AEVRYN_OPENAI_MODEL",
+        "data retention terms",
+        "training behavior",
+        "selected scene text required for extraction",
+        "evidence anchor identifiers",
+        "full provider prompts",
+        "full provider responses",
+        "No training on user stories without explicit opt-in.",
+        "approved_for_public_beta",
+        "blocked_pending_terms_review",
     )
 
     for term in required_terms:

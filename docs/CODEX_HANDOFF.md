@@ -93,6 +93,7 @@ Next expected V2 target:
 - Release Candidate Readiness progress: local production startup contract now passes with `startup_contract=ready` and `secrets_printed=0`; hosted CI/security workflows exist under `.github/workflows/`; GitHub branch protection, push protection, hosted alert routing, hosted production-like smoke, and release-candidate signoff remain open.
 - Branch protection readiness is documented in `docs/AEVRYN_BRANCH_PROTECTION.md`; required hosted checks must be configured in GitHub before public beta.
 - Restore-test readiness is documented in `docs/AEVRYN_RESTORE_TEST_PLAN.md`; production backup provider, retention window, restore execution, and audit storage decisions remain open.
+- AI provider review is documented in `docs/AEVRYN_AI_PROVIDER_REVIEW.md`; OpenAI remains an internal-alpha candidate only until provider terms, retention, training behavior, disclosure, and release-gate coverage are reviewed.
 
 Phase 6 Project Storage accepted:
 

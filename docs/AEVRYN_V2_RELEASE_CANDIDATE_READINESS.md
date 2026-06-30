@@ -228,6 +228,7 @@ Required before public beta:
 Gate tracking:
 
 * `docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md`
+* `docs/AEVRYN_AI_PROVIDER_REVIEW.md`
 
 Acceptance:
 

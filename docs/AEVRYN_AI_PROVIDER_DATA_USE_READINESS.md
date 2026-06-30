@@ -12,7 +12,7 @@ Gate 6 defines what must be true before Aevryn can publicly use third-party AI p
 
 ```text
 Gate: AI Provider And Data Use
-Status: Not started
+Status: Started
 Public beta: Blocked
 ```
 
@@ -38,6 +38,8 @@ Users must be told which providers can receive story content, why content is sen
 
 The current alpha provider boundary is documented in `docs/AEVRYN_AI_EXTRACTION_ALPHA.md`.
 
+Provider-by-provider public-beta review is tracked in `docs/AEVRYN_AI_PROVIDER_REVIEW.md`.
+
 Current posture:
 
 * external AI extraction is not the default worker path
@@ -48,6 +50,8 @@ Current posture:
 * provider extraction proposes candidates; it does not own Canon truth
 
 This does not approve provider-backed extraction for public beta.
+
+OpenAI is currently supported as an internal-alpha candidate provider only. Public beta approval remains blocked until provider terms, model configuration, retention, training behavior, disclosure, and release-gate coverage are reviewed and recorded.
 
 ---
 
@@ -175,6 +179,13 @@ Public beta remains blocked until:
 * provider timeout behavior is documented
 * provider data-use disclosure is added to public privacy material
 * provider configuration is covered by release gates
+
+Current implementation progress:
+
+```text
+docs/AEVRYN_AI_PROVIDER_REVIEW.md defines the provider review checklist, OpenAI alpha-candidate status, data-sent boundary, logging boundary, training/retention decision, disclosure requirements, and approval states.
+Provider terms review, production model selection, provider disclosure, and public-beta approval remain open.
+```
 
 ---
 
