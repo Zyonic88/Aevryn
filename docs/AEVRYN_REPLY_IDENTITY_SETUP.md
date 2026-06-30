@@ -14,15 +14,15 @@ It does not, by itself, prove that Aevryn can send trusted replies from product-
 
 ```text
 Gate: Product reply identity
-Status: Support reply verified; remaining aliases pending
+Status: All product reply identities received; DNS-authentication review pending
 Public beta: Blocked
 ```
 
 Cloudflare Email Sending is the preferred candidate because Aevryn already uses Cloudflare for DNS and inbound Email Routing.
 
-Cloudflare Email Sending SMTP has successfully sent a synthetic outbound test from `support@aevryn.ai` to `zyonic88@gmail.com`.
+Cloudflare Email Sending SMTP has successfully sent synthetic outbound tests from `support@aevryn.ai`, `privacy@aevryn.ai`, `security@aevryn.ai`, and `abuse@aevryn.ai` to `zyonic88@gmail.com`.
 
-Public beta remains blocked until privacy, security, and abuse reply tests pass and SPF, DKIM, and DMARC are verified from received message details.
+Public beta remains blocked until SPF, DKIM, and DMARC are verified from received message details and the public contact pages are published.
 
 ---
 
@@ -146,9 +146,9 @@ Required reply tests:
 | Alias | Required Result | Status |
 | --- | --- | --- |
 | `support@aevryn.ai` | Reply sends as Aevryn support identity | Passed. Synthetic outbound SMTP test received by `zyonic88@gmail.com`. |
-| `privacy@aevryn.ai` | Reply sends as Aevryn privacy identity | Not tested |
-| `security@aevryn.ai` | Reply sends as Aevryn security identity | Not tested |
-| `abuse@aevryn.ai` | Reply sends as Aevryn abuse identity | Not tested |
+| `privacy@aevryn.ai` | Reply sends as Aevryn privacy identity | Passed. Synthetic outbound SMTP test received by `zyonic88@gmail.com`. |
+| `security@aevryn.ai` | Reply sends as Aevryn security identity | Passed. Synthetic outbound SMTP test received by `zyonic88@gmail.com`. |
+| `abuse@aevryn.ai` | Reply sends as Aevryn abuse identity | Passed. Synthetic outbound SMTP test received by `zyonic88@gmail.com`. |
 
 ---
 
@@ -159,7 +159,6 @@ Public beta remains blocked until:
 * Cloudflare Email Sending is configured or a fallback provider is selected
 * product-domain reply identities are configured
 * SPF, DKIM, and DMARC posture is verified
-* privacy, security, and abuse aliases pass reply tests
 * support operators know not to request full source prose by default
 * public support, privacy, security, and trust pages list only tested contact paths
 
