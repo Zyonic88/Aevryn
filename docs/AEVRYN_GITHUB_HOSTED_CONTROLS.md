@@ -12,7 +12,7 @@ The repository already defines CI and security workflows. GitHub still needs hos
 
 ```text
 Gate: GitHub hosted controls
-Status: GitHub branch and security settings configured; protected-path drill pending
+Status: GitHub branch and security settings configured; protected-path drill exercised
 Public beta: Blocked
 ```
 
@@ -121,6 +121,42 @@ Do not include secrets, provider tokens, private URLs, full manuscripts, full ch
 
 ---
 
+# Protected-Path Drill Record
+
+Protected-path drill:
+
+```text
+Pull request: https://github.com/Zyonic88/Aevryn/pull/9
+Target branch: master
+Result: Required hosted checks passed after hosted-only failures were fixed.
+```
+
+Verified behavior:
+
+* Direct push to `master` was blocked by GitHub branch protection.
+* The pull request exposed all required hosted checks.
+* Required backend gates failed when the hosted runner found CI workspace and compatibility issues.
+* Static security scanning failed when the hosted runner found a `urlopen` review issue.
+* Fixes were made on the pull request branch and rechecked by GitHub.
+* Final hosted checks passed:
+  * `Backend gates / Python 3.11`
+  * `Backend gates / Python 3.13`
+  * `Frontend gates`
+  * `Repository secret scan`
+  * `Dependency audit`
+  * `Static security scan`
+  * CodeQL default setup checks
+
+Notes:
+
+* Conversation resolution is configured in branch protection.
+* Restricted deletions are configured.
+* GitHub did not expose a separate bypass-control option in the current branch-rule UI.
+* GitHub did not show an allow-force-push option in the current branch-rule UI.
+* Require signed commits was disabled during the drill because local commit signing is not yet configured.
+
+---
+
 # Current Progress
 
 ```text
@@ -134,7 +170,7 @@ Required job names are documented.
 GitHub branch protection settings are configured for master.
 GitHub secret scanning, push protection, dependency graph, Dependabot alerts, Dependabot security updates, private vulnerability reporting, and default CodeQL are enabled.
 Bypass controls were not exposed in the current GitHub branch-rule UI.
-Protected-path verification drill remains open.
+Protected-path verification drill exercised through PR #9.
 ```
 
 ---

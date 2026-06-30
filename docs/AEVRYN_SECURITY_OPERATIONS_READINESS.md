@@ -222,7 +222,8 @@ docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md defines the exact GitHub hosted settings a
 Local repository secret scan, Ruff, and mypy passed before workflow creation.
 GitHub branch protection is configured for master.
 GitHub dependency graph, Dependabot alerts, Dependabot security updates, secret scanning, push protection, private vulnerability reporting, and default CodeQL are enabled.
-Hosted alert routing and release-candidate protected-path verification remain open.
+Protected-path verification was exercised through PR #9: direct pushes to master were blocked, required hosted checks ran, hosted checks caught failures before merge, and final hosted checks passed after fixes.
+Hosted alert routing remains open.
 ```
 
 ---

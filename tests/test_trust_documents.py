@@ -540,7 +540,9 @@ def test_branch_protection_document_tracks_hosted_release_controls() -> None:
         "push protection",
         "dependency alerts",
         "docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md",
-        "Protected-path verification drill remains open.",
+        "Protected-path verification drill exercised through PR #9.",
+        "Direct pushes to master were blocked.",
+        "Final hosted checks passed on the PR branch after fixes.",
         "Hosted checks and repository protections prevent unverified code",
     )
 
@@ -555,7 +557,7 @@ def test_github_hosted_controls_document_tracks_external_settings() -> None:
     required_terms = (
         "Gate: GitHub hosted controls",
         "Status: GitHub branch and security settings configured; protected-path drill "
-        "pending",
+        "exercised",
         "Public beta: Blocked",
         "Hosted controls must block unsafe release changes before they reach the "
         "protected branch.",
@@ -580,7 +582,9 @@ def test_github_hosted_controls_document_tracks_external_settings() -> None:
         ".github/PULL_REQUEST_TEMPLATE.md",
         "GitHub branch protection settings are configured for master.",
         "Bypass controls were not exposed in the current GitHub branch-rule UI.",
-        "Protected-path verification drill remains open.",
+        "Protected-path verification drill exercised through PR #9.",
+        "Direct push to `master` was blocked by GitHub branch protection.",
+        "Final hosted checks passed",
         "GitHub hosted settings require the documented CI and security checks",
     )
 

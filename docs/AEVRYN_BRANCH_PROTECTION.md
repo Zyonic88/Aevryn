@@ -146,7 +146,11 @@ CODEOWNERS, Dependabot configuration, GitHub security policy, and pull request t
 Required hosted check names are documented.
 GitHub hosted branch protection is configured for master with required pull requests, code-owner review, required checks, up-to-date branches, conversation resolution, and restricted deletions.
 GitHub did not expose a bypass-control option in the current branch-rule UI.
-Protected-path verification drill remains open.
+Protected-path verification drill exercised through PR #9.
+Direct pushes to master were blocked.
+Required hosted checks caught static-security and backend-gate issues before merge.
+Final hosted checks passed on the PR branch after fixes.
+Require signed commits is not enabled until local commit signing is configured.
 ```
 
 ---
