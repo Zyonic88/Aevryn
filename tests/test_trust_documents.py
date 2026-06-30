@@ -190,6 +190,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "security@aevryn.ai",
         "abuse@aevryn.ai",
         "docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md",
+        "docs/AEVRYN_REPLY_IDENTITY_SETUP.md",
         "GitHub Branch Protection And Hosted Security Controls",
         "Production Provider And Data-Use Review",
         "Backup, Retention, Restore, And Audit",
@@ -199,7 +200,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Cloudflare routing rules created, inbound delivery passed",
         "Cloudflare inbound DNS/routing health passed",
         "Cloudflare/Gmail MFA verified.",
-        "Reply identity and public-page publication remain open.",
+        "Outbound reply identity and public-page publication remain open.",
         "Local production config contract passed.",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
@@ -306,6 +307,7 @@ def test_public_contacts_document_tracks_product_domain_aliases() -> None:
         "screenshots containing private story text",
         "enable MFA for mailbox/admin access",
         "docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md",
+        "docs/AEVRYN_REPLY_IDENTITY_SETUP.md",
         "provisioned and tested before public beta",
     )
 
@@ -348,7 +350,38 @@ def test_alias_provisioning_record_tracks_contact_setup_verification() -> None:
         "Reply identity remains open.",
         "Outbound-specific SPF, DKIM, and DMARC posture remains tied to the reply "
         "identity decision.",
+        "Outbound reply identity setup is tracked in docs/AEVRYN_REPLY_IDENTITY_SETUP.md.",
         "private-story redaction guidance",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_reply_identity_setup_document_tracks_outbound_sender_boundary() -> None:
+    """Reply identity setup should separate inbound routing from trusted sending."""
+    document = read_doc("docs/AEVRYN_REPLY_IDENTITY_SETUP.md")
+
+    required_terms = (
+        "Gate: Product reply identity",
+        "Status: Started",
+        "Public beta: Blocked",
+        "Replies should come from the specific product identity unless Aetherra Labs is "
+        "intentionally speaking as the company.",
+        "Cloudflare Email Routing",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "Managed Business Mailbox",
+        "Helpdesk With Verified Sending",
+        "Gmail Send-As Bridge",
+        "SPF",
+        "DKIM",
+        "DMARC",
+        "Do not include real manuscripts",
+        "all four required aliases pass reply tests",
+        "Aevryn can receive and reply through tested product-domain identities",
     )
 
     for term in required_terms:

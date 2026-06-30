@@ -91,6 +91,8 @@ Cloudflare Email Routing verifies inbound receiving and forwarding. Outbound SPF
 
 If only inbound forwarding is available at first, reply identity must still be reviewed before publishing the alias publicly.
 
+Outbound reply identity setup is tracked in `docs/AEVRYN_REPLY_IDENTITY_SETUP.md`.
+
 ---
 
 # Reply Identity Policy
@@ -190,6 +192,8 @@ Before public beta, add verified contact aliases to:
 
 Do not publish untested aliases.
 
+Do not publish an alias as a support contact until both inbound receipt and outbound reply identity have been tested, unless the public page clearly says the address is intake-only.
+
 ---
 
 # Current Progress
@@ -203,6 +207,7 @@ Cloudflare MFA and Gmail MFA are enabled.
 Cloudflare Email Routing health passed for inbound routing: Status Enabled, DNS records Enabled, 9 received, 9 forwarded, 0 failed, 0 rejected.
 Reply identity remains open.
 Outbound-specific SPF, DKIM, and DMARC posture remains tied to the reply identity decision.
+Outbound reply identity setup is tracked in docs/AEVRYN_REPLY_IDENTITY_SETUP.md.
 ```
 
 ---

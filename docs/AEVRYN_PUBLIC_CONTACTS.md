@@ -131,6 +131,8 @@ Before public beta:
 
 Provisioning and test results should be recorded in `docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md`.
 
+Outbound reply identity setup should be recorded in `docs/AEVRYN_REPLY_IDENTITY_SETUP.md`.
+
 ---
 
 # Acceptance

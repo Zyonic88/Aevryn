@@ -54,11 +54,12 @@ Tracking docs:
 * `docs/AEVRYN_PUBLIC_CONTACTS.md`
 * `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`
 * `docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md`
+* `docs/AEVRYN_REPLY_IDENTITY_SETUP.md`
 
 Status:
 
 ```text
-Cloudflare routing rules created, inbound delivery passed, Cloudflare inbound DNS/routing health passed, and Cloudflare/Gmail MFA verified. Reply identity and public-page publication remain open.
+Cloudflare routing rules created, inbound delivery passed, Cloudflare inbound DNS/routing health passed, and Cloudflare/Gmail MFA verified. Outbound reply identity and public-page publication remain open.
 ```
 
 ---
