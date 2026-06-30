@@ -22,6 +22,8 @@ Public beta requires a broader release-candidate pass after production-readiness
 
 Initial hosted CI and security workflows now define the automated release gates that the final release-candidate pass will require.
 
+The release-candidate run template is tracked in `docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md`.
+
 ---
 
 # Core Rule
@@ -165,6 +167,8 @@ The final manual pass should record:
 
 Manual findings must be resolved or explicitly accepted before public beta.
 
+The manual alpha-to-beta pass should be recorded in `docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md` or a dated copy of that template.
+
 ---
 
 # Signoff
@@ -196,6 +200,13 @@ Public beta remains blocked until:
 * production-like deployment smoke test passes
 * final manual alpha-to-beta pass is recorded
 * release-candidate signoff is recorded
+
+Current implementation progress:
+
+```text
+docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md defines the final run metadata, automated gate record, product smoke record, recovery record, privacy/trust record, production-like smoke record, known limitations, residual risks, and signoff tables.
+The release-candidate run itself has not been executed.
+```
 
 ---
 

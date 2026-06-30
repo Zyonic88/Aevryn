@@ -542,6 +542,44 @@ def test_release_candidate_test_readiness_document_tracks_gate_eight() -> None:
         "final manual alpha-to-beta pass",
         "release-candidate signoff",
         "metadata-only",
+        "docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
+    """Release candidate run record should capture the final public beta decision."""
+    document = read_doc("docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md")
+
+    required_terms = (
+        "Record type: Release Candidate Run Template",
+        "Status: Not run",
+        "Public beta: Blocked",
+        "Release Candidate Run ID",
+        "Automated Gate Record",
+        "Backend tests",
+        "Repository secret scan",
+        "Production config check",
+        "Product Smoke Record",
+        "The smoke path must not require CLI knowledge from the tester.",
+        "Recovery Record",
+        "Can the user continue?",
+        "Privacy And Trust Record",
+        "full manuscripts",
+        "full provider prompts",
+        "Production-Like Smoke Record",
+        "Accepted Residual Risks",
+        "If a risk touches story privacy",
+        "Signoff",
+        "Product",
+        "Security",
+        "Privacy",
+        "Legal",
+        "Operations",
+        "Support",
+        "Release candidate run has not been completed.",
     )
 
     for term in required_terms:

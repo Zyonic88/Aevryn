@@ -282,6 +282,7 @@ Required before public beta:
 Gate tracking:
 
 * `docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md`
+* `docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md`
 
 Acceptance:
 
