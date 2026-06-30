@@ -98,10 +98,16 @@ When `AEVRYN_DEPLOYMENT_ENV=production`, the app refuses to start unless these a
 * `AEVRYN_WORKER_TIMEOUT_SECONDS`
 * `AEVRYN_WORKER_MAX_RETRIES`
 * `AEVRYN_WORKER_CONCURRENCY`
+* `AEVRYN_LOG_DESTINATION=hosted`
+* `AEVRYN_MONITORING_DESTINATION=hosted`
+* `AEVRYN_LOG_RETENTION_DAYS`
+* `AEVRYN_MONITORING_RETENTION_DAYS`
+* `AEVRYN_SECURITY_ALERTS_ENABLED=true`
+* `AEVRYN_METADATA_ONLY_LOGGING=true`
 * `AEVRYN_IDENTITY_PROVIDER=managed`
 * `AEVRYN_SESSION_SECRET`
 
-This prevents accidental public startup with stateless storage, local source-byte storage, local JSON authentication, local-only secrets, in-memory worker queues, missing Cloudflare R2 storage credentials, missing HTTPS/HSTS edge posture, missing browser-origin policy, missing session secret, ambiguous environment separation, or unprotected workflow routes.
+This prevents accidental public startup with stateless storage, local source-byte storage, local JSON authentication, local-only secrets, in-memory worker queues, local-only logs, ambiguous monitoring, non-redacted logging posture, missing Cloudflare R2 storage credentials, missing HTTPS/HSTS edge posture, missing browser-origin policy, missing session secret, ambiguous environment separation, or unprotected workflow routes.
 
 Managed production identity is not implemented yet. Production startup remains intentionally fail-closed until a managed identity adapter is selected and wired.
 

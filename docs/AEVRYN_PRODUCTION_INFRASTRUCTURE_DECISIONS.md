@@ -16,7 +16,7 @@ They are the recommended public-beta architecture shape to approve, revise, or r
 Gate: Production Infrastructure
 Decision status: Decisions 1-2 approved
 Owner approval: Decisions 1-2 approved
-Implementation status: Decisions 1-2 implemented; Decisions 3-7 fail-closed contract started
+Implementation status: Decisions 1-2 implemented; Decisions 3-8 fail-closed contract started
 Public beta: Blocked
 ```
 
@@ -424,6 +424,18 @@ Open decision:
 ```text
 Log and monitoring provider not selected.
 Retention window not selected.
+```
+
+Implementation contract:
+
+```text
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_LOG_DESTINATION=hosted.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_MONITORING_DESTINATION=hosted.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_LOG_RETENTION_DAYS.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_MONITORING_RETENTION_DAYS.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SECURITY_ALERTS_ENABLED=true.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_METADATA_ONLY_LOGGING=true.
+Hosted log/monitoring provider, alert routing, and retention policy selection remain open.
 ```
 
 ---

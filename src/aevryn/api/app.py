@@ -216,6 +216,12 @@ WORKER_API_KEY_ENV = "AEVRYN_WORKER_API_KEY"
 WORKER_TIMEOUT_SECONDS_ENV = "AEVRYN_WORKER_TIMEOUT_SECONDS"
 WORKER_MAX_RETRIES_ENV = "AEVRYN_WORKER_MAX_RETRIES"
 WORKER_CONCURRENCY_ENV = "AEVRYN_WORKER_CONCURRENCY"
+LOG_DESTINATION_ENV = "AEVRYN_LOG_DESTINATION"
+MONITORING_DESTINATION_ENV = "AEVRYN_MONITORING_DESTINATION"
+LOG_RETENTION_DAYS_ENV = "AEVRYN_LOG_RETENTION_DAYS"
+MONITORING_RETENTION_DAYS_ENV = "AEVRYN_MONITORING_RETENTION_DAYS"
+SECURITY_ALERTS_ENABLED_ENV = "AEVRYN_SECURITY_ALERTS_ENABLED"
+METADATA_ONLY_LOGGING_ENV = "AEVRYN_METADATA_ONLY_LOGGING"
 EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
 OPENAI_API_KEY_ENV = "AEVRYN_OPENAI_API_KEY"
 OPENAI_MODEL_ENV = "AEVRYN_OPENAI_MODEL"
@@ -2026,6 +2032,7 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "local, test, and staging environments."
         )
     _require_production_worker_config(environ)
+    _require_production_observability_config(environ)
     identity_provider = environ.get(IDENTITY_PROVIDER_ENV, "").strip().lower()
     if identity_provider != "managed":
         raise ValueError(
@@ -2068,11 +2075,32 @@ def _require_production_worker_config(environ: Mapping[str, str]) -> None:
     _require_positive_int_env(environ, WORKER_CONCURRENCY_ENV)
 
 
+def _require_production_observability_config(environ: Mapping[str, str]) -> None:
+    """Reject production startup without hosted metadata-only observability."""
+    log_destination = environ.get(LOG_DESTINATION_ENV, "").strip().lower()
+    if log_destination != "hosted":
+        raise ValueError(
+            "AEVRYN_LOG_DESTINATION=hosted is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Local-only logs are not allowed "
+            "for production."
+        )
+    monitoring_destination = environ.get(MONITORING_DESTINATION_ENV, "").strip().lower()
+    if monitoring_destination != "hosted":
+        raise ValueError(
+            "AEVRYN_MONITORING_DESTINATION=hosted is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production."
+        )
+    _require_positive_int_env(environ, LOG_RETENTION_DAYS_ENV)
+    _require_positive_int_env(environ, MONITORING_RETENTION_DAYS_ENV)
+    _require_true_flag(environ, SECURITY_ALERTS_ENABLED_ENV)
+    _require_true_flag(environ, METADATA_ONLY_LOGGING_ENV)
+
+
 def _require_positive_int_env(environ: Mapping[str, str], key: str) -> None:
     """Require one production worker numeric setting to be a positive integer."""
     value = environ.get(key, "").strip()
     if not value:
-        raise ValueError(f"{key} is required when AEVRYN_WORKER_RUNTIME=managed.")
+        raise ValueError(f"{key} is required when AEVRYN_DEPLOYMENT_ENV=production.")
     try:
         parsed = int(value)
     except ValueError as error:

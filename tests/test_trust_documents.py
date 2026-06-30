@@ -253,7 +253,7 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Owner approval: Decisions 1-2 approved",
         (
             "Implementation status: Decisions 1-2 implemented; "
-            "Decisions 3-7 fail-closed contract started"
+            "Decisions 3-8 fail-closed contract started"
         ),
         "Public beta: Blocked",
         "managed PostgreSQL",
@@ -282,6 +282,10 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_WORKER_RUNTIME=managed.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_WORKER_QUEUE_PROVIDER=managed.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_WORKER_API_KEY.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_LOG_DESTINATION=hosted.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_MONITORING_DESTINATION=hosted.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SECURITY_ALERTS_ENABLED=true.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_METADATA_ONLY_LOGGING=true.",
         "Managed identity is not implemented yet",
         "Public beta remains blocked.",
     )

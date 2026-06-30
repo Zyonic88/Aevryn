@@ -246,6 +246,19 @@ AEVRYN_WORKER_CONCURRENCY=1
 
 These variables document the production worker contract. The local in-memory queue remains private-alpha only.
 
+Production observability is intentionally fail-closed until hosted logs, hosted monitoring, retention, and security alert routing are selected:
+
+```text
+AEVRYN_LOG_DESTINATION=hosted
+AEVRYN_MONITORING_DESTINATION=hosted
+AEVRYN_LOG_RETENTION_DAYS=30
+AEVRYN_MONITORING_RETENTION_DAYS=30
+AEVRYN_SECURITY_ALERTS_ENABLED=true
+AEVRYN_METADATA_ONLY_LOGGING=true
+```
+
+These variables document the production observability contract. Logs and monitoring must remain metadata-only; full manuscripts, full chapters, full AI responses, credentials, tokens, private URLs, hostnames, usernames, and machine-local paths remain out of logs.
+
 Optional explicit authentication store path:
 
 ```text

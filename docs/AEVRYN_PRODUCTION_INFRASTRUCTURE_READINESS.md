@@ -324,6 +324,24 @@ Production startup now requires AEVRYN_WORKER_CONCURRENCY.
 Managed worker runtime, managed queue provider, retry behavior, and shutdown/resume implementation remain open.
 ```
 
+Next Gate 3 target:
+
+```text
+Decision 8 - Logs And Monitoring
+```
+
+Decision 8 progress:
+
+```text
+Production startup now requires AEVRYN_LOG_DESTINATION=hosted.
+Production startup now requires AEVRYN_MONITORING_DESTINATION=hosted.
+Production startup now requires AEVRYN_LOG_RETENTION_DAYS.
+Production startup now requires AEVRYN_MONITORING_RETENTION_DAYS.
+Production startup now requires AEVRYN_SECURITY_ALERTS_ENABLED=true.
+Production startup now requires AEVRYN_METADATA_ONLY_LOGGING=true.
+Hosted log/monitoring provider, alert routing, and retention policy selection remain open.
+```
+
 ---
 
 # Acceptance
