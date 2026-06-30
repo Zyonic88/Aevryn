@@ -464,6 +464,7 @@ Production-like smoke support:
 `aevryn production-config-check` verifies production startup configuration without printing secrets.
 The check does not connect to PostgreSQL or R2.
 The current expected metadata result is startup_contract=ready when the production contract is complete.
+Local production contract check has produced deployment_env=production, startup_contract=ready, secrets_printed=0, and ok=production_config_contract_checked.
 ```
 
 ---

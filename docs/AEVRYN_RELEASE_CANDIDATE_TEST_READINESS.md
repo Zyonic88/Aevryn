@@ -12,13 +12,15 @@ Gate 8 defines the repeatable release-candidate test pass required before public
 
 ```text
 Gate: Release Candidate Test Pass
-Status: Not started
+Status: Started
 Public beta: Blocked
 ```
 
 Private alpha readiness is recorded in `docs/AEVRYN_INTERNAL_ALPHA_CHECKLIST.md`.
 
 Public beta requires a broader release-candidate pass after production-readiness decisions are made.
+
+Initial hosted CI and security workflows now define the automated release gates that the final release-candidate pass will require.
 
 ---
 

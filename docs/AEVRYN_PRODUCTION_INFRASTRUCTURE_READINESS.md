@@ -361,6 +361,7 @@ Production-like smoke progress:
 ```text
 `aevryn production-config-check` verifies the production startup contract without printing secrets.
 The check reports startup_contract=ready when the production contract is complete.
+Local production contract check passed with deployment_env=production, startup_contract=ready, secrets_printed=0.
 Production-like deployment smoke still requires hosted environment execution.
 ```
 

@@ -320,7 +320,7 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
 
     required_terms = (
         "Gate: Security Operations",
-        "Status: Not started",
+        "Status: Started",
         "Public beta: Blocked",
         "Security controls must protect the release path, not just the local machine.",
         "hosted secret scanning",
@@ -392,7 +392,7 @@ def test_release_candidate_test_readiness_document_tracks_gate_eight() -> None:
 
     required_terms = (
         "Gate: Release Candidate Test Pass",
-        "Status: Not started",
+        "Status: Started",
         "Public beta: Blocked",
         "Public beta must be repeatable, not lucky.",
         "backend tests",

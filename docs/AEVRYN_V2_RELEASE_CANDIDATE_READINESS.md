@@ -306,3 +306,10 @@ Status: Started
 Public beta: Blocked
 Version 3: Not started
 ```
+
+Current Gate 3 progress:
+
+```text
+The local production startup contract check passes without printing secrets.
+Hosted production-like deployment smoke remains required before Gate 3 can close.
+```

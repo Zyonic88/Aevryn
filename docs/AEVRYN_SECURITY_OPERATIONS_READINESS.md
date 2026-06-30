@@ -12,13 +12,17 @@ Gate 4 moves security controls from local developer checks into hosted, repeatab
 
 ```text
 Gate: Security Operations
-Status: Not started
+Status: Started
 Public beta: Blocked
 ```
 
 Local security gates exist.
 
 Public beta also needs hosted security controls that run outside a developer workstation.
+
+Initial hosted workflow files now exist for backend gates, frontend gates, repository secret scanning, dependency auditing, and static security scanning.
+
+These workflows provide checks that branch protection can require, but public beta remains blocked until hosted branch protection, push protection, alert routing, rate limiting, and incident response are configured and verified.
 
 ---
 
@@ -189,16 +193,25 @@ Incident response must protect user stories while still allowing containment and
 
 Public beta remains blocked until:
 
-* hosted secret scanning is enabled
+* hosted secret scanning is enabled and enforced
 * push protection is enabled
 * hosted dependency alerts are enabled
 * protected branch rules are configured
-* required CI release gates are configured
+* required CI release gates are configured as branch-protection requirements
 * production rate limits are configured and tested
 * production security monitoring alerts are configured
 * incident response routing is documented
 * security disclosure intake path is public
 * hosted controls are verified on a release-candidate branch
+
+Current implementation progress:
+
+```text
+.github/workflows/ci.yml defines backend and frontend release gates.
+.github/workflows/security.yml defines repository secret scan, dependency audit, and static security scan gates.
+Local repository secret scan, Ruff, and mypy passed before workflow creation.
+GitHub branch protection, push protection, hosted alert routing, and release-candidate verification remain open.
+```
 
 ---
 
