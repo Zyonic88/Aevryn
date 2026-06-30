@@ -144,7 +144,8 @@ Current implementation progress:
 CI and security workflow files exist.
 CODEOWNERS, Dependabot configuration, GitHub security policy, and pull request template exist.
 Required hosted check names are documented.
-GitHub hosted settings are not verified yet.
+GitHub hosted branch protection is configured for master with required pull requests, code-owner review, required checks, up-to-date branches, conversation resolution, and restricted deletions.
+GitHub did not expose a bypass-control option in the current branch-rule UI.
 Protected-path verification drill remains open.
 ```
 

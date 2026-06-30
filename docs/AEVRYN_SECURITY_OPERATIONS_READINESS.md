@@ -220,7 +220,9 @@ Current implementation progress:
 docs/AEVRYN_BRANCH_PROTECTION.md defines the protected branch posture and required hosted checks.
 docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md defines the exact GitHub hosted settings and protected-path drill.
 Local repository secret scan, Ruff, and mypy passed before workflow creation.
-GitHub branch protection, push protection, hosted alert routing, and release-candidate verification remain open.
+GitHub branch protection is configured for master.
+GitHub dependency graph, Dependabot alerts, Dependabot security updates, secret scanning, push protection, private vulnerability reporting, and default CodeQL are enabled.
+Hosted alert routing and release-candidate protected-path verification remain open.
 ```
 
 ---

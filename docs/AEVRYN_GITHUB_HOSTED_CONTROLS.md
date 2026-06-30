@@ -12,7 +12,7 @@ The repository already defines CI and security workflows. GitHub still needs hos
 
 ```text
 Gate: GitHub hosted controls
-Status: Repo workflows ready; GitHub settings not verified
+Status: GitHub branch and security settings configured; protected-path drill pending
 Public beta: Blocked
 ```
 
@@ -59,19 +59,19 @@ Required settings:
 
 | Setting | Required Value | Verification |
 | --- | --- | --- |
-| Require a pull request before merging | Enabled | Not verified |
-| Require approvals | Enabled | Not verified |
-| Dismiss stale approvals when new commits are pushed | Enabled where practical | Not verified |
-| Require review from code owners | Enabled once branch protection is configured | Not verified |
-| Require status checks to pass before merging | Enabled | Not verified |
-| Require branches to be up to date before merging | Enabled where practical | Not verified |
-| Required status checks | Six checks listed above | Not verified |
-| Require conversation resolution before merging | Enabled | Not verified |
+| Require a pull request before merging | Enabled | Configured |
+| Require approvals | Enabled | Configured with 1 required approval |
+| Dismiss stale approvals when new commits are pushed | Enabled where practical | Configured |
+| Require review from code owners | Enabled once branch protection is configured | Configured |
+| Require status checks to pass before merging | Enabled | Configured |
+| Require branches to be up to date before merging | Enabled where practical | Configured |
+| Required status checks | Six checks listed above | Configured |
+| Require conversation resolution before merging | Enabled | Configured |
 | Lock branch | Disabled unless emergency freeze is needed | Not verified |
-| Do not allow bypassing the above settings | Enabled where practical | Not verified |
+| Do not allow bypassing the above settings | Enabled where practical | Not exposed in current GitHub branch-rule UI |
 | Restrict who can push to matching branches | Enabled if team membership is stable | Not verified |
-| Allow force pushes | Disabled | Not verified |
-| Allow deletions | Disabled | Not verified |
+| Allow force pushes | Disabled | No allow-force-push option shown; protected branch defaults apply |
+| Allow deletions | Disabled | Restrict deletions enabled |
 
 Bypass permissions must be narrow and auditable.
 
@@ -83,12 +83,13 @@ Required repository security posture:
 
 | Setting | Required Value | Verification |
 | --- | --- | --- |
-| Secret scanning | Enabled | Not verified |
-| Push protection | Enabled | Not verified |
-| Dependabot alerts | Enabled | Not verified |
-| Dependabot security updates | Enabled where practical | Not verified |
-| Code scanning alerts | Enabled if GitHub Advanced Security or compatible scanner is available | Not verified |
-| Private vulnerability reporting | Enabled if available | Not verified |
+| Secret scanning | Enabled | Configured |
+| Push protection | Enabled | Configured |
+| Dependency graph | Enabled | Configured |
+| Dependabot alerts | Enabled | Configured |
+| Dependabot security updates | Enabled where practical | Configured |
+| Code scanning alerts | Enabled if GitHub Advanced Security or compatible scanner is available | CodeQL default setup configured |
+| Private vulnerability reporting | Enabled if available | Configured |
 
 If a secret is blocked, rotate it if it may have left the local machine or reached a remote.
 
@@ -130,8 +131,9 @@ Dependabot configuration exists for Python, frontend, and GitHub Actions.
 GitHub security policy exists and points to security@aevryn.ai.
 Pull request template exists with verification and privacy checklist items.
 Required job names are documented.
-GitHub branch protection settings remain unverified.
-GitHub secret scanning, push protection, dependency alerts, and bypass permissions remain unverified.
+GitHub branch protection settings are configured for master.
+GitHub secret scanning, push protection, dependency graph, Dependabot alerts, Dependabot security updates, private vulnerability reporting, and default CodeQL are enabled.
+Bypass controls were not exposed in the current GitHub branch-rule UI.
 Protected-path verification drill remains open.
 ```
 

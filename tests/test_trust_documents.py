@@ -554,7 +554,8 @@ def test_github_hosted_controls_document_tracks_external_settings() -> None:
 
     required_terms = (
         "Gate: GitHub hosted controls",
-        "Status: Repo workflows ready; GitHub settings not verified",
+        "Status: GitHub branch and security settings configured; protected-path drill "
+        "pending",
         "Public beta: Blocked",
         "Hosted controls must block unsafe release changes before they reach the "
         "protected branch.",
@@ -565,14 +566,20 @@ def test_github_hosted_controls_document_tracks_external_settings() -> None:
         "Dependency audit",
         "Static security scan",
         "Require status checks to pass before merging",
+        "Configured with 1 required approval",
+        "Restrict deletions enabled",
         "Secret scanning",
         "Push protection",
+        "Dependency graph",
         "Dependabot alerts",
+        "CodeQL default setup configured",
         "Verification Drill",
         ".github/CODEOWNERS",
         ".github/dependabot.yml",
         ".github/SECURITY.md",
         ".github/PULL_REQUEST_TEMPLATE.md",
+        "GitHub branch protection settings are configured for master.",
+        "Bypass controls were not exposed in the current GitHub branch-rule UI.",
         "Protected-path verification drill remains open.",
         "GitHub hosted settings require the documented CI and security checks",
     )

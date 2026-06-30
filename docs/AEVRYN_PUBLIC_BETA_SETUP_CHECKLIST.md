@@ -93,7 +93,7 @@ Tracking docs:
 Status:
 
 ```text
-Workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, pull request template, and exact required hosted settings are documented. Hosted repository settings not verified.
+Workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, pull request template, branch protection, required checks, secret scanning, push protection, dependency alerts, private vulnerability reporting, and default CodeQL are configured. Protected-path drill and hosted alert routing remain open.
 ```
 
 ---
