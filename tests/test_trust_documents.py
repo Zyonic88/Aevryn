@@ -196,8 +196,9 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Production-Like Deployment Smoke",
         "Public Trust And Legal Publication",
         "Release Candidate Run And Signoff",
-        "Cloudflare routing rules created and inbound delivery passed.",
-        "Reply identity, DNS deliverability, MFA/access review",
+        "Cloudflare routing rules created, inbound delivery passed",
+        "Cloudflare/Gmail MFA verified.",
+        "Reply identity, DNS deliverability",
         "Local production config contract passed.",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
@@ -315,7 +316,7 @@ def test_alias_provisioning_record_tracks_contact_setup_verification() -> None:
 
     required_terms = (
         "Record: Public Contact Alias Provisioning",
-        "Status: Inbound verified; reply and access review pending",
+        "Status: Inbound and access verified; reply review pending",
         "Public beta: Blocked",
         "Cloudflare Email Routing",
         "Cloudflare",
@@ -332,11 +333,12 @@ def test_alias_provisioning_record_tracks_contact_setup_verification() -> None:
         "DMARC",
         "Test inbound delivery",
         "Test outbound replies",
+        "Cloudflare MFA and Gmail MFA are enabled.",
         "Do not publish untested aliases.",
         "Cloudflare Email Routing rules are created",
         "Inbound delivery from zyonic88@gmail.com to all four aliases passed.",
         "Gmail filters route all four Aevryn aliases into their respective folders.",
-        "Reply identity, DNS deliverability, and MFA/access review remain open.",
+        "Reply identity and DNS deliverability remain open.",
         "private-story redaction guidance",
     )
 

@@ -98,7 +98,7 @@ Next expected V2 target:
 - Public trust website copy is drafted in `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`; publication remains blocked by contact provisioning, legal review, backup retention selection, provider review, security operations, and final public-beta signoff.
 - Release-candidate run record template is documented in `docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md`; the actual release-candidate run has not been executed.
 - Public beta external setup is consolidated in `docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md`; it tracks contact aliases, branch protection, provider review, backup/restore/audit, production-like smoke, public trust/legal publication, and final signoff.
-- Public contact alias provisioning is recorded in `docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md`; Cloudflare Email Routing rules exist for support/privacy/security/abuse to `aetherra.project@gmail.com`, inbound delivery from `zyonic88@gmail.com` passed for all four aliases, and Gmail filters route them into their respective folders. Reply identity, DNS deliverability, and MFA/access review remain open.
+- Public contact alias provisioning is recorded in `docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md`; Cloudflare Email Routing rules exist for support/privacy/security/abuse to `aetherra.project@gmail.com`, inbound delivery from `zyonic88@gmail.com` passed for all four aliases, Gmail filters route them into their respective folders, and Cloudflare/Gmail MFA are enabled. Reply identity and DNS deliverability remain open.
 
 Phase 6 Project Storage accepted:
 
