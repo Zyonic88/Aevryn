@@ -14,7 +14,9 @@ Status: Started
 Public beta: Blocked
 ```
 
-Aevryn does not yet have public support, privacy, security, abuse, or deletion contact paths selected.
+Aevryn target support, privacy, security, and abuse contact paths are selected for the `aevryn.ai` product domain.
+
+The aliases still need to be provisioned, tested, and added to public pages before public beta.
 
 ---
 
@@ -44,6 +46,17 @@ Before public beta, Aevryn needs public contact paths for:
 Each contact path must explain what users should and should not include.
 
 Users should be told not to include full manuscripts, full chapters, full AI responses, credentials, tokens, API keys, private URLs, or machine-local paths in support requests.
+
+Target public contact paths are defined in `docs/AEVRYN_PUBLIC_CONTACTS.md`.
+
+Target aliases:
+
+* `support@aevryn.ai`
+* `privacy@aevryn.ai`
+* `security@aevryn.ai`
+* `abuse@aevryn.ai`
+
+These aliases are selected targets, not public-beta approval by themselves.
 
 ---
 
@@ -77,6 +90,12 @@ The privacy contact path must support:
 
 The public Privacy Policy must include this contact path before public beta.
 
+Target alias:
+
+```text
+privacy@aevryn.ai
+```
+
 ---
 
 # Security Contact Path
@@ -89,6 +108,12 @@ The security contact path must support:
 * platform abuse that affects security
 
 The public Security Disclosure must include this contact path before public beta.
+
+Target alias:
+
+```text
+security@aevryn.ai
+```
 
 ---
 
@@ -105,6 +130,12 @@ The abuse path must support reports of:
 
 Abuse handling must not become a general-purpose way for employees to browse user stories.
 
+Target alias:
+
+```text
+abuse@aevryn.ai
+```
+
 ---
 
 # Deletion Support
@@ -119,20 +150,34 @@ Deletion support must explain:
 
 Support responses must not promise instant deletion from all backups unless production backup architecture makes that true.
 
+Target aliases:
+
+```text
+support@aevryn.ai
+privacy@aevryn.ai
+```
+
 ---
 
 # Public Beta Blockers
 
 Public beta remains blocked until:
 
-* support contact path is selected
-* privacy contact path is selected
-* security report contact path is selected
-* abuse report path is selected
-* deletion/account help path is selected
+* support contact path is provisioned and tested
+* privacy contact path is provisioned and tested
+* security report contact path is provisioned and tested
+* abuse report path is provisioned and tested
+* deletion/account help path is provisioned and tested
 * contact paths are added to public trust/legal pages
 * support instructions include source-prose redaction guidance
 * security disclosure includes report intake details
+
+Current implementation progress:
+
+```text
+Target product-domain aliases are selected in docs/AEVRYN_PUBLIC_CONTACTS.md.
+Alias provisioning, delivery testing, mailbox access controls, and public-page publication remain open.
+```
 
 ---
 

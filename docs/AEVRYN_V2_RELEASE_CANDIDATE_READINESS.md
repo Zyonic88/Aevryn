@@ -92,6 +92,7 @@ Gate tracking:
 
 * `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`
 * `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`
+* `docs/AEVRYN_PUBLIC_CONTACTS.md`
 
 Acceptance:
 

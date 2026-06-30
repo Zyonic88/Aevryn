@@ -136,7 +136,7 @@ Source:
 Readiness:
 
 ```text
-Blocked by public contact information.
+Target contact selected. Provisioning and testing required.
 ```
 
 Required before public beta:
@@ -155,7 +155,7 @@ Source:
 Readiness:
 
 ```text
-Started. Contact paths not selected.
+Started. Target contact paths selected; provisioning and testing required.
 ```
 
 Required before public beta:

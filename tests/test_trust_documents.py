@@ -112,7 +112,8 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
             "Reporting Vulnerabilities",
             "Safe Harbor Intent",
             "Response Process",
-            "Public contact information must be added before launch.",
+            "security@aevryn.ai",
+            "Public contact information must be verified before launch.",
         ),
     }
 
@@ -182,9 +183,9 @@ def test_public_trust_readiness_document_tracks_gate_one_blockers() -> None:
         "Public beta: Blocked",
         "Public trust pages must be true, plain-language, and backed by implementation.",
         "Draft exists. Legal review required.",
-        "Blocked by public contact information.",
+        "Target contact selected. Provisioning and testing required.",
         "Support Contact",
-        "Started. Contact paths not selected.",
+        "Started. Target contact paths selected; provisioning and testing required.",
         "Plain-Language Requirements",
         "Truthfulness Requirements",
         "Not accepted.",
@@ -208,8 +209,37 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
         "security vulnerability reports",
         "abuse reports",
         "account deletion requests",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
         "source-prose redaction guidance",
         "Support should not ask for full source prose by default.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_contacts_document_tracks_product_domain_aliases() -> None:
+    """Public contacts should define product-domain aliases without approving beta."""
+    document = read_doc("docs/AEVRYN_PUBLIC_CONTACTS.md")
+
+    required_terms = (
+        "aevryn.ai",
+        "Aetherra Labs is the operator identity.",
+        "aevryn.dev",
+        "aevryn.io",
+        "aetherra.ai",
+        "aetherra.dev",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "full manuscripts",
+        "screenshots containing private story text",
+        "enable MFA for mailbox/admin access",
+        "provisioned and tested before public beta",
     )
 
     for term in required_terms:

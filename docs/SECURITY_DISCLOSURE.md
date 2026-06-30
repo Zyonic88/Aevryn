@@ -10,7 +10,15 @@ This document must be finalized before public launch.
 
 Security researchers should report suspected vulnerabilities privately to Aetherra Labs.
 
-Public contact information must be added before launch.
+Target security contact:
+
+```text
+security@aevryn.ai
+```
+
+This alias must be provisioned and tested before public beta.
+
+Public contact information must be verified before launch.
 
 Public security contact readiness is tracked in `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`.
 
