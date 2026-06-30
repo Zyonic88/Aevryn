@@ -12,7 +12,7 @@ This document should be filled in after the aliases are created and tested.
 
 ```text
 Record: Public Contact Alias Provisioning
-Status: Not provisioned
+Status: Rules created; verification pending
 Public beta: Blocked
 ```
 
@@ -25,31 +25,31 @@ Public beta remains blocked until the required aliases are provisioned, secured,
 Email provider:
 
 ```text
-TBD
+Cloudflare Email Routing
 ```
 
 DNS provider:
 
 ```text
-TBD
+Cloudflare
 ```
 
 Mailbox or forwarding model:
 
 ```text
-TBD - mailbox, group, alias, routing rule, or helpdesk inbox.
+Cloudflare Email Routing aliases forwarding to aetherra.project@gmail.com.
 ```
 
 Admin owner:
 
 ```text
-TBD
+Aetherra Labs
 ```
 
 MFA enabled for admin access:
 
 ```text
-TBD
+TBD - verify Cloudflare account and destination mailbox MFA before public beta.
 ```
 
 ---
@@ -58,10 +58,10 @@ TBD
 
 | Alias | Purpose | Recipient/Owner | Provisioned | Inbound Tested | Reply Tested | MFA/Access Reviewed |
 | --- | --- | --- | --- | --- | --- | --- |
-| `support@aevryn.ai` | Product support, account access, import/export help, project deletion help | TBD | No | No | No | No |
-| `privacy@aevryn.ai` | Privacy questions, account deletion, backup retention, AI provider data-use questions | TBD | No | No | No | No |
-| `security@aevryn.ai` | Vulnerability reports, account compromise, suspected data exposure | TBD | No | No | No | No |
-| `abuse@aevryn.ai` | Platform abuse, spam, malware, illegal use reports, rights escalation | TBD | No | No | No | No |
+| `support@aevryn.ai` | Product support, account access, import/export help, project deletion help | `aetherra.project@gmail.com` | Yes | No | No | No |
+| `privacy@aevryn.ai` | Privacy questions, account deletion, backup retention, AI provider data-use questions | `aetherra.project@gmail.com` | Yes | No | No | No |
+| `security@aevryn.ai` | Vulnerability reports, account compromise, suspected data exposure | `aetherra.project@gmail.com` | Yes | No | No | No |
+| `abuse@aevryn.ai` | Platform abuse, spam, malware, illegal use reports, rights escalation | `aetherra.project@gmail.com` | Yes | No | No | No |
 
 Optional future aliases:
 
@@ -164,6 +164,16 @@ Before public beta, add verified contact aliases to:
 * release-candidate run record
 
 Do not publish untested aliases.
+
+---
+
+# Current Progress
+
+```text
+Cloudflare Email Routing rules are created for support, privacy, security, and abuse aliases.
+All four aliases currently route to aetherra.project@gmail.com.
+Inbound delivery, reply identity, DNS deliverability, and MFA/access review remain open.
+```
 
 ---
 

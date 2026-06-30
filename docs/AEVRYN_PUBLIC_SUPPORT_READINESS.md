@@ -179,7 +179,8 @@ Current implementation progress:
 ```text
 Target product-domain aliases are selected in docs/AEVRYN_PUBLIC_CONTACTS.md.
 Alias provisioning record exists in docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md.
-Alias provisioning, delivery testing, mailbox access controls, and public-page publication remain open.
+Cloudflare Email Routing rules are created for support, privacy, security, and abuse aliases to aetherra.project@gmail.com.
+Inbound delivery testing, reply identity, mailbox access controls, and public-page publication remain open.
 ```
 
 ---

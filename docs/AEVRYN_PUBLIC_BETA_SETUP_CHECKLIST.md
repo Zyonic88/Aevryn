@@ -58,7 +58,7 @@ Tracking docs:
 Status:
 
 ```text
-Alias provisioning record exists. Aliases not provisioned.
+Cloudflare routing rules created. Inbound delivery, reply identity, MFA/access review, and public-page publication remain open.
 ```
 
 ---
