@@ -200,6 +200,7 @@ Source docs:
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/BACKUP_AND_RECOVERY.md`
 * `docs/AEVRYN_AUDIT_LEDGER.md`
+* `docs/AEVRYN_RESTORE_TEST_PLAN.md`
 
 Gate tracking:
 

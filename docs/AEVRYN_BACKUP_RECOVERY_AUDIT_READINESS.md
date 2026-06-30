@@ -12,7 +12,7 @@ Gate 5 turns backup, restore, disaster recovery, and audit-ledger contracts into
 
 ```text
 Gate: Backup, Recovery, And Audit
-Status: Not started
+Status: Started
 Public beta: Blocked
 ```
 
@@ -40,6 +40,7 @@ Gate 5 builds on:
 * `docs/BACKUP_AND_RECOVERY.md`
 * `docs/AEVRYN_AUDIT_LEDGER.md`
 * `docs/DATA_RETENTION_POLICY.md`
+* `docs/AEVRYN_RESTORE_TEST_PLAN.md`
 
 These documents define the privacy and engineering boundaries.
 
@@ -80,6 +81,8 @@ Before public beta, restore testing must prove:
 * restored environments do not silently become production
 
 Restore tests must not expose full manuscripts in logs, support artifacts, or screenshots.
+
+The concrete restore drill is defined in `docs/AEVRYN_RESTORE_TEST_PLAN.md`.
 
 ---
 
@@ -173,6 +176,13 @@ Public beta remains blocked until:
 * audit access controls are documented
 * audit integrity verification is part of the release gate
 * deletion and backup language is aligned with production behavior
+
+Current implementation progress:
+
+```text
+docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
+Production backup provider, retention window, restore execution, audit storage provider, and audit retention remain open.
+```
 
 ---
 

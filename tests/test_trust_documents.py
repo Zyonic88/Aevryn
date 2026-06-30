@@ -370,7 +370,7 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
 
     required_terms = (
         "Gate: Backup, Recovery, And Audit",
-        "Status: Not started",
+        "Status: Started",
         "Public beta: Blocked",
         "Recovery must not become hidden retention.",
         "backup frequency",
@@ -383,6 +383,32 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "audit access controls",
         "metadata-only",
         "tamper-evident",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_restore_test_plan_document_tracks_recovery_privacy_drill() -> None:
+    """Restore test planning should preserve privacy and ownership boundaries."""
+    document = read_doc("docs/AEVRYN_RESTORE_TEST_PLAN.md")
+
+    required_terms = (
+        "Recovery must restore service without weakening story privacy.",
+        "PostgreSQL project metadata",
+        "Cloudflare R2 object references",
+        "staging or release-candidate environment",
+        "full manuscripts",
+        "machine-local paths",
+        "dedicated test account",
+        "disposable deleted story",
+        "Confirm deleted active-storage data is unavailable.",
+        "project ownership boundaries",
+        "source and export storage references",
+        "audit-ledger integrity checks",
+        "metadata-only",
+        "public beta remains blocked",
+        "privacy incident",
     )
 
     for term in required_terms:
