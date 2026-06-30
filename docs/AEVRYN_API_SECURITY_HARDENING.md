@@ -79,6 +79,10 @@ When `AEVRYN_DEPLOYMENT_ENV=production`, the app refuses to start unless these a
 * `AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql`
 * `AEVRYN_PROJECT_DATABASE_URL`
 * `AEVRYN_API_ALLOWED_ORIGINS`
+* `AEVRYN_PUBLIC_FRONTEND_BASE_URL`
+* `AEVRYN_PUBLIC_API_BASE_URL`
+* `AEVRYN_HTTPS_ONLY=true`
+* `AEVRYN_HSTS_ENABLED=true`
 * `AEVRYN_API_KEYS`
 * `AEVRYN_STORAGE_PROVIDER=r2`
 * `AEVRYN_R2_BUCKET`
@@ -91,7 +95,7 @@ When `AEVRYN_DEPLOYMENT_ENV=production`, the app refuses to start unless these a
 * `AEVRYN_IDENTITY_PROVIDER=managed`
 * `AEVRYN_SESSION_SECRET`
 
-This prevents accidental public startup with stateless storage, local source-byte storage, local JSON authentication, local-only secrets, missing Cloudflare R2 storage credentials, missing browser-origin policy, missing session secret, ambiguous environment separation, or unprotected workflow routes.
+This prevents accidental public startup with stateless storage, local source-byte storage, local JSON authentication, local-only secrets, missing Cloudflare R2 storage credentials, missing HTTPS/HSTS edge posture, missing browser-origin policy, missing session secret, ambiguous environment separation, or unprotected workflow routes.
 
 Managed production identity is not implemented yet. Production startup remains intentionally fail-closed until a managed identity adapter is selected and wired.
 

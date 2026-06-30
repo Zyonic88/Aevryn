@@ -206,6 +206,10 @@ IDENTITY_PROVIDER_ENV = "AEVRYN_IDENTITY_PROVIDER"
 SESSION_SECRET_ENV = "AEVRYN_SESSION_SECRET"
 SECRET_MANAGER_ENV = "AEVRYN_SECRET_MANAGER"
 ENVIRONMENT_NAME_ENV = "AEVRYN_ENVIRONMENT_NAME"
+PUBLIC_API_BASE_URL_ENV = "AEVRYN_PUBLIC_API_BASE_URL"
+PUBLIC_FRONTEND_BASE_URL_ENV = "AEVRYN_PUBLIC_FRONTEND_BASE_URL"
+HTTPS_ONLY_ENV = "AEVRYN_HTTPS_ONLY"
+HSTS_ENABLED_ENV = "AEVRYN_HSTS_ENABLED"
 EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
 OPENAI_API_KEY_ENV = "AEVRYN_OPENAI_API_KEY"
 OPENAI_MODEL_ENV = "AEVRYN_OPENAI_MODEL"
@@ -1905,6 +1909,32 @@ def _api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
     return _normalize_api_keys(environ.get(API_KEYS_ENV, "").split(","))
 
 
+def _require_https_origins(environ: Mapping[str, str]) -> None:
+    """Require production CORS origins to use HTTPS."""
+    for origin in _allowed_origins_from_env(environ):
+        if not origin.startswith("https://"):
+            raise ValueError(
+                "AEVRYN_API_ALLOWED_ORIGINS must contain only https:// origins when "
+                "AEVRYN_DEPLOYMENT_ENV=production."
+            )
+
+
+def _require_https_url(environ: Mapping[str, str], key: str) -> None:
+    """Require one public production URL to use HTTPS."""
+    value = environ.get(key, "").strip()
+    if not value:
+        raise ValueError(f"{key} is required when AEVRYN_DEPLOYMENT_ENV=production.")
+    if not value.startswith("https://"):
+        raise ValueError(f"{key} must use https:// in production.")
+
+
+def _require_true_flag(environ: Mapping[str, str], key: str) -> None:
+    """Require a boolean production flag to be explicitly enabled."""
+    value = environ.get(key, "").strip().lower()
+    if value != "true":
+        raise ValueError(f"{key}=true is required when AEVRYN_DEPLOYMENT_ENV=production.")
+
+
 def _require_production_security_config(environ: Mapping[str, str]) -> None:
     """Reject production startup when required security config is missing."""
     deployment_env = environ.get(DEPLOYMENT_ENV, "").strip().lower()
@@ -1934,6 +1964,11 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_API_ALLOWED_ORIGINS is required when "
             "AEVRYN_DEPLOYMENT_ENV=production."
         )
+    _require_https_origins(environ)
+    _require_https_url(environ, PUBLIC_FRONTEND_BASE_URL_ENV)
+    _require_https_url(environ, PUBLIC_API_BASE_URL_ENV)
+    _require_true_flag(environ, HTTPS_ONLY_ENV)
+    _require_true_flag(environ, HSTS_ENABLED_ENV)
     if not _api_keys_from_env(environ):
         raise ValueError(
             "AEVRYN_API_KEYS is required when AEVRYN_DEPLOYMENT_ENV=production."

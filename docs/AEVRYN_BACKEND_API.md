@@ -121,7 +121,16 @@ When production mode is enabled, `create_app_from_env` refuses to start unless t
 * `AEVRYN_R2_ACCESS_KEY_ID`
 * `AEVRYN_R2_SECRET_ACCESS_KEY`
 
-This prevents public deployments from accidentally starting with stateless storage, local source-byte storage, broad or absent browser-origin policy, or unprotected workflow routes.
+Production CORS origins must be HTTPS only. Production also requires public edge declarations:
+
+```text
+AEVRYN_PUBLIC_FRONTEND_BASE_URL=https://app.aevryn.ai
+AEVRYN_PUBLIC_API_BASE_URL=https://api.aevryn.ai
+AEVRYN_HTTPS_ONLY=true
+AEVRYN_HSTS_ENABLED=true
+```
+
+This prevents public deployments from accidentally starting with stateless storage, local source-byte storage, broad or absent browser-origin policy, missing HTTPS/HSTS edge posture, or unprotected workflow routes.
 
 Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because that path selects the local JSON adapter.
 Production mode rejects `AEVRYN_IMPORT_STORAGE_PATH` because that path selects local filesystem source-byte storage.

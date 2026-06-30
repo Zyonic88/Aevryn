@@ -19,6 +19,8 @@ from aevryn.api import (
     DEPLOYMENT_ENV,
     ENVIRONMENT_NAME_ENV,
     EXTRACTION_MODE_ENV,
+    HSTS_ENABLED_ENV,
+    HTTPS_ONLY_ENV,
     IDENTITY_PROVIDER_ENV,
     IMPORT_STORAGE_PATH_ENV,
     OPENAI_API_KEY_ENV,
@@ -28,6 +30,8 @@ from aevryn.api import (
     PROJECT_DATABASE_ADAPTER_ENV,
     PROJECT_DATABASE_PATH_ENV,
     PROJECT_DATABASE_URL_ENV,
+    PUBLIC_API_BASE_URL_ENV,
+    PUBLIC_FRONTEND_BASE_URL_ENV,
     R2_ACCESS_KEY_ID_ENV,
     R2_ACCOUNT_ID_ENV,
     R2_BUCKET_ENV,
@@ -305,6 +309,72 @@ def test_create_app_from_env_rejects_wildcard_cors_origin() -> None:
         raise AssertionError("Expected wildcard CORS origin to be rejected.")
 
 
+def production_edge_env() -> dict[str, str]:
+    """Return required production public-edge settings for fail-closed tests."""
+    return {
+        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        PUBLIC_FRONTEND_BASE_URL_ENV: "https://app.aevryn.ai",
+        PUBLIC_API_BASE_URL_ENV: "https://api.aevryn.ai",
+        HTTPS_ONLY_ENV: "true",
+        HSTS_ENABLED_ENV: "true",
+    }
+
+
+def test_create_app_from_env_requires_production_https_edge_config() -> None:
+    """Production mode should reject non-HTTPS or incomplete public edge settings."""
+    complete_until_allowed_origins = {
+        DEPLOYMENT_ENV: "production",
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+    }
+
+    with pytest.raises(ValueError, match="only https:// origins"):
+        create_app_from_env(
+            {
+                **complete_until_allowed_origins,
+                ALLOWED_ORIGINS_ENV: "http://localhost:5173",
+            }
+        )
+
+    with pytest.raises(ValueError, match=PUBLIC_FRONTEND_BASE_URL_ENV):
+        create_app_from_env(
+            {
+                **complete_until_allowed_origins,
+                ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+            }
+        )
+
+    with pytest.raises(ValueError, match=PUBLIC_API_BASE_URL_ENV):
+        create_app_from_env(
+            {
+                **complete_until_allowed_origins,
+                ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+                PUBLIC_FRONTEND_BASE_URL_ENV: "https://app.aevryn.ai",
+            }
+        )
+
+    with pytest.raises(ValueError, match=HTTPS_ONLY_ENV):
+        create_app_from_env(
+            {
+                **complete_until_allowed_origins,
+                ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+                PUBLIC_FRONTEND_BASE_URL_ENV: "https://app.aevryn.ai",
+                PUBLIC_API_BASE_URL_ENV: "https://api.aevryn.ai",
+            }
+        )
+
+    with pytest.raises(ValueError, match=HSTS_ENABLED_ENV):
+        create_app_from_env(
+            {
+                **complete_until_allowed_origins,
+                ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+                PUBLIC_FRONTEND_BASE_URL_ENV: "https://app.aevryn.ai",
+                PUBLIC_API_BASE_URL_ENV: "https://api.aevryn.ai",
+                HTTPS_ONLY_ENV: "true",
+            }
+        )
+
+
 def test_create_app_from_env_fails_closed_for_incomplete_production_config(
     tmp_path: Path,
 ) -> None:
@@ -355,7 +425,7 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
                 **production_env,
                 PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
                 PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
-                ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+                **production_edge_env(),
             }
         )
 
@@ -363,7 +433,7 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
         **production_env,
         PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
         PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
-        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        **production_edge_env(),
         API_KEYS_ENV: "production-api-key",
     }
 
@@ -403,7 +473,7 @@ def test_create_app_from_env_requires_r2_provider_credentials() -> None:
         DEPLOYMENT_ENV: "production",
         PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
         PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
-        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        **production_edge_env(),
         API_KEYS_ENV: "production-api-key",
         STORAGE_PROVIDER_ENV: "r2",
         R2_BUCKET_ENV: "aevryn-prod",
@@ -446,7 +516,7 @@ def test_create_app_from_env_requires_production_secret_and_environment_config()
         DEPLOYMENT_ENV: "production",
         PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
         PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
-        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        **production_edge_env(),
         API_KEYS_ENV: "production-api-key",
         STORAGE_PROVIDER_ENV: "r2",
         R2_BUCKET_ENV: "aevryn-prod",
@@ -474,7 +544,7 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
         DEPLOYMENT_ENV: "production",
         PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
         PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
-        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        **production_edge_env(),
         API_KEYS_ENV: "production-api-key",
         STORAGE_PROVIDER_ENV: "r2",
         R2_BUCKET_ENV: "aevryn-prod",

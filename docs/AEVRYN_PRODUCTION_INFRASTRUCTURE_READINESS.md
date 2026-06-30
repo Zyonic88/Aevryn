@@ -289,6 +289,23 @@ This prevents production from silently using local-only secrets or an ambiguous 
 Specific hosted secret manager and staging/production deployment targets remain open.
 ```
 
+Next Gate 3 target:
+
+```text
+Decision 6 - HTTPS, HSTS, Domain, And DNS
+```
+
+Decision 6 progress:
+
+```text
+Production CORS origins must be explicit HTTPS origins.
+Production startup now requires AEVRYN_PUBLIC_FRONTEND_BASE_URL.
+Production startup now requires AEVRYN_PUBLIC_API_BASE_URL.
+Production startup now requires AEVRYN_HTTPS_ONLY=true.
+Production startup now requires AEVRYN_HSTS_ENABLED=true.
+Domain, DNS provider, TLS certificate source, and hosted edge implementation remain open.
+```
+
 ---
 
 # Acceptance

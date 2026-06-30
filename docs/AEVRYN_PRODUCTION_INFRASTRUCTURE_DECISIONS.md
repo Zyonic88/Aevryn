@@ -16,7 +16,7 @@ They are the recommended public-beta architecture shape to approve, revise, or r
 Gate: Production Infrastructure
 Decision status: Decisions 1-2 approved
 Owner approval: Decisions 1-2 approved
-Implementation status: Decisions 1-2 implemented; Decisions 3-5 fail-closed contract started
+Implementation status: Decisions 1-2 implemented; Decisions 3-6 fail-closed contract started
 Public beta: Blocked
 ```
 
@@ -339,6 +339,17 @@ Open decision:
 
 ```text
 Domain and DNS provider not selected.
+```
+
+Implementation contract:
+
+```text
+AEVRYN_DEPLOYMENT_ENV=production requires HTTPS-only CORS origins.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_PUBLIC_FRONTEND_BASE_URL.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_PUBLIC_API_BASE_URL.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_HTTPS_ONLY=true.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_HSTS_ENABLED=true.
+Domain, DNS provider, TLS certificate source, and hosted edge implementation remain open.
 ```
 
 ---
