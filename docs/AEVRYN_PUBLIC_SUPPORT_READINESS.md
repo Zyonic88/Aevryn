@@ -181,8 +181,9 @@ Target product-domain aliases are selected in docs/AEVRYN_PUBLIC_CONTACTS.md.
 Alias provisioning record exists in docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md.
 Cloudflare Email Routing rules are created for support, privacy, security, and abuse aliases to aetherra.project@gmail.com.
 Inbound delivery testing passed for all four aliases, and Gmail filters route them into their respective folders.
+Cloudflare inbound DNS/routing health passed: Status Enabled, DNS records Enabled, 9 received, 9 forwarded, 0 failed, 0 rejected.
 Cloudflare MFA and Gmail MFA are enabled.
-Reply identity, DNS deliverability, and public-page publication remain open.
+Reply identity and public-page publication remain open.
 ```
 
 ---

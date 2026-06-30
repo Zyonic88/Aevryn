@@ -71,6 +71,22 @@ If a report arrives at the wrong address, Aetherra Labs should route it internal
 
 ---
 
+# Reply Identity
+
+Aevryn product contact should reply from Aevryn product identities.
+
+Replies for Aevryn support, privacy, security, abuse, deletion, account, import, export, or story-processing issues should come from the matching `aevryn.ai` alias once reply sending is configured.
+
+Aetherra Labs may send company-wide, legal, press, or multi-product messages from an Aetherra Labs identity. It may also send an Aevryn or Aetherra product announcement as Aetherra Labs when the message is intentionally from the company.
+
+Core rule:
+
+```text
+Replies should come from the specific product identity unless Aetherra Labs is intentionally speaking as the company.
+```
+
+---
+
 # User Guidance
 
 Public contact instructions must tell users not to include:

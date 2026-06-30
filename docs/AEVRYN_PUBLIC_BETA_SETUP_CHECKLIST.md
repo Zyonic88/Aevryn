@@ -58,7 +58,7 @@ Tracking docs:
 Status:
 
 ```text
-Cloudflare routing rules created, inbound delivery passed, and Cloudflare/Gmail MFA verified. Reply identity, DNS deliverability, and public-page publication remain open.
+Cloudflare routing rules created, inbound delivery passed, Cloudflare inbound DNS/routing health passed, and Cloudflare/Gmail MFA verified. Reply identity and public-page publication remain open.
 ```
 
 ---

@@ -12,7 +12,7 @@ This document should be filled in after the aliases are created and tested.
 
 ```text
 Record: Public Contact Alias Provisioning
-Status: Inbound and access verified; reply review pending
+Status: Inbound, DNS, and access verified; reply review pending
 Public beta: Blocked
 ```
 
@@ -83,10 +83,34 @@ Record DNS/mail settings after setup:
 | DKIM | Enabled if provider supports it | TBD |
 | DMARC | Present before public beta | TBD |
 | Test inbound delivery | Each alias receives mail | Passed. All four aliases delivered to `aetherra.project@gmail.com`. |
+| Cloudflare routing health | Email Routing status and DNS records enabled | Passed. Cloudflare shows Status Enabled, DNS records Enabled, 4 routing rules, 1 destination, 9 received, 9 forwarded, 0 failed, and 0 rejected. |
 | Test outbound replies | Replies send from expected identity | TBD |
 | Admin/account MFA | Cloudflare and destination mailbox MFA enabled | Passed. Cloudflare MFA and Gmail MFA are enabled. |
 
+Cloudflare Email Routing verifies inbound receiving and forwarding. Outbound SPF, DKIM, DMARC, and branded reply posture remain tied to the final reply-identity decision.
+
 If only inbound forwarding is available at first, reply identity must still be reviewed before publishing the alias publicly.
+
+---
+
+# Reply Identity Policy
+
+Product-specific Aevryn correspondence should reply from the matching `aevryn.ai` product identity.
+
+Expected reply identities:
+
+| Mail Type | Reply Identity |
+| --- | --- |
+| Aevryn support, privacy, security, abuse, deletion, account, import, export, or story-processing issues | Product-specific `aevryn.ai` alias |
+| Aevryn product announcements sent by Aetherra Labs | Aetherra Labs or a product-specific `aevryn.ai` sender, depending on message context |
+| Aetherra Labs company, legal, press, hiring, or multi-product communication | Aetherra Labs sender |
+| Aetherra product-specific communication | Aetherra product sender |
+
+Core rule:
+
+```text
+Replies should come from the specific product identity unless Aetherra Labs is intentionally speaking as the company.
+```
 
 ---
 
@@ -176,7 +200,9 @@ All four aliases currently route to aetherra.project@gmail.com.
 Inbound delivery from zyonic88@gmail.com to all four aliases passed.
 Gmail filters route all four Aevryn aliases into their respective folders.
 Cloudflare MFA and Gmail MFA are enabled.
-Reply identity and DNS deliverability remain open.
+Cloudflare Email Routing health passed for inbound routing: Status Enabled, DNS records Enabled, 9 received, 9 forwarded, 0 failed, 0 rejected.
+Reply identity remains open.
+Outbound-specific SPF, DKIM, and DMARC posture remains tied to the reply identity decision.
 ```
 
 ---

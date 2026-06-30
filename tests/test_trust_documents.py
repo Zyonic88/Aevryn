@@ -197,8 +197,9 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Public Trust And Legal Publication",
         "Release Candidate Run And Signoff",
         "Cloudflare routing rules created, inbound delivery passed",
+        "Cloudflare inbound DNS/routing health passed",
         "Cloudflare/Gmail MFA verified.",
-        "Reply identity, DNS deliverability",
+        "Reply identity and public-page publication remain open.",
         "Local production config contract passed.",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
@@ -299,6 +300,8 @@ def test_public_contacts_document_tracks_product_domain_aliases() -> None:
         "privacy@aevryn.ai",
         "security@aevryn.ai",
         "abuse@aevryn.ai",
+        "Replies should come from the specific product identity unless Aetherra Labs is "
+        "intentionally speaking as the company.",
         "full manuscripts",
         "screenshots containing private story text",
         "enable MFA for mailbox/admin access",
@@ -316,7 +319,7 @@ def test_alias_provisioning_record_tracks_contact_setup_verification() -> None:
 
     required_terms = (
         "Record: Public Contact Alias Provisioning",
-        "Status: Inbound and access verified; reply review pending",
+        "Status: Inbound, DNS, and access verified; reply review pending",
         "Public beta: Blocked",
         "Cloudflare Email Routing",
         "Cloudflare",
@@ -333,12 +336,18 @@ def test_alias_provisioning_record_tracks_contact_setup_verification() -> None:
         "DMARC",
         "Test inbound delivery",
         "Test outbound replies",
+        "Cloudflare shows Status Enabled, DNS records Enabled, 4 routing rules, "
+        "1 destination, 9 received, 9 forwarded, 0 failed, and 0 rejected.",
+        "Replies should come from the specific product identity unless Aetherra Labs is "
+        "intentionally speaking as the company.",
         "Cloudflare MFA and Gmail MFA are enabled.",
         "Do not publish untested aliases.",
         "Cloudflare Email Routing rules are created",
         "Inbound delivery from zyonic88@gmail.com to all four aliases passed.",
         "Gmail filters route all four Aevryn aliases into their respective folders.",
-        "Reply identity and DNS deliverability remain open.",
+        "Reply identity remains open.",
+        "Outbound-specific SPF, DKIM, and DMARC posture remains tied to the reply "
+        "identity decision.",
         "private-story redaction guidance",
     )
 
