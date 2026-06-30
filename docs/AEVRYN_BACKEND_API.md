@@ -259,7 +259,7 @@ Supabase bearer token
 -> Aevryn UserRecord
 ```
 
-The boundary maps external provider subjects to stable Aevryn user IDs without storing provider tokens. Supabase JWT verification remains the next adapter implementation step.
+The boundary maps external provider subjects to stable Aevryn user IDs without storing provider tokens. Supabase RS256 JWT/JWKS verification is implemented behind this boundary. Production startup still remains blocked until the Supabase verifier is wired into the API app factory and covered by production-like smoke execution.
 
 Production worker runtime is intentionally fail-closed until a managed queue/runtime is selected and wired:
 

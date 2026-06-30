@@ -11,10 +11,14 @@ from aevryn.auth.errors import (
 )
 from aevryn.auth.json_store import JsonAuthenticationStore
 from aevryn.auth.managed_identity import (
+    JwtDecoder,
     ManagedIdentity,
     ManagedIdentityAuthenticationAdapter,
     ManagedIdentityVerifier,
+    SupabaseJwksJwtDecoder,
+    SupabaseJwtVerifier,
     managed_identity_user_id,
+    supabase_issuer_from_url,
 )
 from aevryn.auth.models import (
     AuthenticatedSession,
@@ -45,10 +49,14 @@ __all__ = [
     "InvalidResetTokenError",
     "InvalidSessionError",
     "JsonAuthenticationStore",
+    "JwtDecoder",
     "ManagedIdentity",
     "ManagedIdentityAuthenticationAdapter",
     "ManagedIdentityVerifier",
+    "SupabaseJwksJwtDecoder",
+    "SupabaseJwtVerifier",
     "managed_identity_user_id",
+    "supabase_issuer_from_url",
     "PasswordHasher",
     "PasswordPolicyError",
     "PasswordResetRecord",

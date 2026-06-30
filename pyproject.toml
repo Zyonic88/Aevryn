@@ -50,6 +50,9 @@ postgresql = [
 object-storage = [
     "boto3>=1.34",
 ]
+identity = [
+    "cryptography>=42",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -281,7 +281,8 @@ Production startup requires AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true.
 Supabase Auth is selected as the managed identity provider.
 Provider-neutral ManagedIdentityVerifier boundary is implemented.
 ManagedIdentityAuthenticationAdapter maps verified provider identities to stable Aevryn UserRecord ownership records.
-Supabase JWT/JWKS verification adapter remains open.
+Supabase RS256 JWT/JWKS verification adapter is implemented.
+Production app factory wiring and production-like smoke execution remain open.
 Public beta remains blocked until the Supabase Auth adapter is implemented or the owner accepts a documented residual risk.
 ```
 

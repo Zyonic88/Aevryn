@@ -245,7 +245,8 @@ Current implementation result:
 ```text
 Provider-neutral ManagedIdentityVerifier boundary is implemented.
 ManagedIdentityAuthenticationAdapter maps verified provider identities to stable Aevryn UserRecord ownership records.
-Supabase JWT/JWKS verification adapter remains open.
+Supabase RS256 JWT/JWKS verification adapter is implemented.
+Production app factory wiring and production-like smoke execution remain open.
 ```
 
 ---
