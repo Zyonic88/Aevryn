@@ -71,6 +71,11 @@ Bypass permissions must be narrow and auditable.
 
 During early Aetherra Labs development, a single owner may hold multiple responsibilities, but the release record must still name the responsibility being accepted.
 
+Repo-side support files:
+
+* `.github/CODEOWNERS` defines current repository ownership.
+* `.github/PULL_REQUEST_TEMPLATE.md` requires release-readiness and privacy notes on pull requests.
+
 ---
 
 # Push Protection
@@ -137,6 +142,7 @@ Current implementation progress:
 
 ```text
 CI and security workflow files exist.
+CODEOWNERS, Dependabot configuration, GitHub security policy, and pull request template exist.
 Required hosted check names are documented.
 GitHub hosted settings are not verified yet.
 Protected-path verification drill remains open.

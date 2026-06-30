@@ -62,7 +62,7 @@ Required settings:
 | Require a pull request before merging | Enabled | Not verified |
 | Require approvals | Enabled | Not verified |
 | Dismiss stale approvals when new commits are pushed | Enabled where practical | Not verified |
-| Require review from code owners | Optional until CODEOWNERS exists | Not applicable |
+| Require review from code owners | Enabled once branch protection is configured | Not verified |
 | Require status checks to pass before merging | Enabled | Not verified |
 | Require branches to be up to date before merging | Enabled where practical | Not verified |
 | Required status checks | Six checks listed above | Not verified |
@@ -92,6 +92,15 @@ Required repository security posture:
 
 If a secret is blocked, rotate it if it may have left the local machine or reached a remote.
 
+Repo-side support files now exist:
+
+| File | Purpose |
+| --- | --- |
+| `.github/CODEOWNERS` | Names release ownership for code-owner review. |
+| `.github/dependabot.yml` | Schedules Python, frontend, and GitHub Actions dependency update checks. |
+| `.github/SECURITY.md` | Exposes security reporting guidance in GitHub. |
+| `.github/PULL_REQUEST_TEMPLATE.md` | Keeps PR verification and release-readiness notes explicit. |
+
 ---
 
 # Verification Drill
@@ -116,6 +125,10 @@ Do not include secrets, provider tokens, private URLs, full manuscripts, full ch
 ```text
 CI workflow exists.
 Security workflow exists.
+CODEOWNERS exists.
+Dependabot configuration exists for Python, frontend, and GitHub Actions.
+GitHub security policy exists and points to security@aevryn.ai.
+Pull request template exists with verification and privacy checklist items.
 Required job names are documented.
 GitHub branch protection settings remain unverified.
 GitHub secret scanning, push protection, dependency alerts, and bypass permissions remain unverified.

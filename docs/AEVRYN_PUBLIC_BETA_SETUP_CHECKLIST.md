@@ -93,7 +93,7 @@ Tracking docs:
 Status:
 
 ```text
-Workflows exist and exact required GitHub hosted settings are documented. Hosted repository settings not verified.
+Workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, pull request template, and exact required hosted settings are documented. Hosted repository settings not verified.
 ```
 
 ---

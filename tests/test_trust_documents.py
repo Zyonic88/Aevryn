@@ -569,12 +569,44 @@ def test_github_hosted_controls_document_tracks_external_settings() -> None:
         "Push protection",
         "Dependabot alerts",
         "Verification Drill",
+        ".github/CODEOWNERS",
+        ".github/dependabot.yml",
+        ".github/SECURITY.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
         "Protected-path verification drill remains open.",
         "GitHub hosted settings require the documented CI and security checks",
     )
 
     for term in required_terms:
         assert term in document
+
+
+def test_github_support_files_exist_for_hosted_controls() -> None:
+    """GitHub support files should reinforce branch protection and security intake."""
+    required_documents = {
+        ".github/CODEOWNERS": ("* @Zyonic88",),
+        ".github/dependabot.yml": (
+            "package-ecosystem: pip",
+            "package-ecosystem: npm",
+            "package-ecosystem: github-actions",
+            "timezone: America/Denver",
+        ),
+        ".github/SECURITY.md": (
+            "security@aevryn.ai",
+            "docs/SECURITY_DISCLOSURE.md",
+            "Do not include full manuscripts",
+        ),
+        ".github/PULL_REQUEST_TEMPLATE.md": (
+            "No secrets, tokens, credentials",
+            "public-beta readiness gates",
+            "Residual risks or deferred external setup items are recorded.",
+        ),
+    }
+
+    for relative_path, terms in required_documents.items():
+        document = read_doc(relative_path)
+        for term in terms:
+            assert term in document, f"{term!r} missing from {relative_path}"
 
 
 def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:

@@ -22,7 +22,9 @@ Public beta also needs hosted security controls that run outside a developer wor
 
 Initial hosted workflow files now exist for backend gates, frontend gates, repository secret scanning, dependency auditing, and static security scanning.
 
-These workflows provide checks that branch protection can require, but public beta remains blocked until hosted branch protection, push protection, alert routing, rate limiting, and incident response are configured and verified.
+Repo-side GitHub support files now also exist for CODEOWNERS, Dependabot updates, GitHub security reporting, and pull request verification.
+
+These workflows and support files provide checks that branch protection can require, but public beta remains blocked until hosted branch protection, push protection, alert routing, rate limiting, and incident response are configured and verified.
 
 ---
 
@@ -47,6 +49,7 @@ Existing local gates include:
 * Phase 11 gate tracking in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`
 * hosted branch-protection runbook in `docs/AEVRYN_BRANCH_PROTECTION.md`
 * hosted GitHub settings checklist in `docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md`
+* repo-side `CODEOWNERS`, `dependabot.yml`, `SECURITY.md`, and pull request template files under `.github/`
 
 These gates are necessary, but they are not enough for public beta.
 
@@ -213,6 +216,7 @@ Current implementation progress:
 ```text
 .github/workflows/ci.yml defines backend and frontend release gates.
 .github/workflows/security.yml defines repository secret scan, dependency audit, and static security scan gates.
+.github/CODEOWNERS, .github/dependabot.yml, .github/SECURITY.md, and .github/PULL_REQUEST_TEMPLATE.md exist.
 docs/AEVRYN_BRANCH_PROTECTION.md defines the protected branch posture and required hosted checks.
 docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md defines the exact GitHub hosted settings and protected-path drill.
 Local repository secret scan, Ruff, and mypy passed before workflow creation.
