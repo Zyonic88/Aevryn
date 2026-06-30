@@ -12,7 +12,7 @@ This document should be filled in after the aliases are created and tested.
 
 ```text
 Record: Public Contact Alias Provisioning
-Status: Rules created; verification pending
+Status: Inbound verified; reply and access review pending
 Public beta: Blocked
 ```
 
@@ -58,10 +58,10 @@ TBD - verify Cloudflare account and destination mailbox MFA before public beta.
 
 | Alias | Purpose | Recipient/Owner | Provisioned | Inbound Tested | Reply Tested | MFA/Access Reviewed |
 | --- | --- | --- | --- | --- | --- | --- |
-| `support@aevryn.ai` | Product support, account access, import/export help, project deletion help | `aetherra.project@gmail.com` | Yes | No | No | No |
-| `privacy@aevryn.ai` | Privacy questions, account deletion, backup retention, AI provider data-use questions | `aetherra.project@gmail.com` | Yes | No | No | No |
-| `security@aevryn.ai` | Vulnerability reports, account compromise, suspected data exposure | `aetherra.project@gmail.com` | Yes | No | No | No |
-| `abuse@aevryn.ai` | Platform abuse, spam, malware, illegal use reports, rights escalation | `aetherra.project@gmail.com` | Yes | No | No | No |
+| `support@aevryn.ai` | Product support, account access, import/export help, project deletion help | `aetherra.project@gmail.com` | Yes | Yes | No | No |
+| `privacy@aevryn.ai` | Privacy questions, account deletion, backup retention, AI provider data-use questions | `aetherra.project@gmail.com` | Yes | Yes | No | No |
+| `security@aevryn.ai` | Vulnerability reports, account compromise, suspected data exposure | `aetherra.project@gmail.com` | Yes | Yes | No | No |
+| `abuse@aevryn.ai` | Platform abuse, spam, malware, illegal use reports, rights escalation | `aetherra.project@gmail.com` | Yes | Yes | No | No |
 
 Optional future aliases:
 
@@ -82,7 +82,7 @@ Record DNS/mail settings after setup:
 | SPF | Present and provider-aligned | TBD |
 | DKIM | Enabled if provider supports it | TBD |
 | DMARC | Present before public beta | TBD |
-| Test inbound delivery | Each alias receives mail | TBD |
+| Test inbound delivery | Each alias receives mail | Passed. All four aliases delivered to `aetherra.project@gmail.com`. |
 | Test outbound replies | Replies send from expected identity | TBD |
 
 If only inbound forwarding is available at first, reply identity must still be reviewed before publishing the alias publicly.
@@ -103,10 +103,10 @@ Record:
 
 | Alias | Sent From | Received By | Reply Sent | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `support@aevryn.ai` | TBD | TBD | TBD | TBD | TBD |
-| `privacy@aevryn.ai` | TBD | TBD | TBD | TBD | TBD |
-| `security@aevryn.ai` | TBD | TBD | TBD | TBD | TBD |
-| `abuse@aevryn.ai` | TBD | TBD | TBD | TBD | TBD |
+| `support@aevryn.ai` | `zyonic88@gmail.com` | `aetherra.project@gmail.com` | TBD | Passed inbound | Gmail filter routes to Aevryn support folder. |
+| `privacy@aevryn.ai` | `zyonic88@gmail.com` | `aetherra.project@gmail.com` | TBD | Passed inbound | Gmail filter routes to Aevryn privacy folder. |
+| `security@aevryn.ai` | `zyonic88@gmail.com` | `aetherra.project@gmail.com` | TBD | Passed inbound | Gmail filter routes to Aevryn security folder. |
+| `abuse@aevryn.ai` | `zyonic88@gmail.com` | `aetherra.project@gmail.com` | TBD | Passed inbound | Gmail filter routes to Aevryn abuse folder. |
 
 ---
 
@@ -172,7 +172,9 @@ Do not publish untested aliases.
 ```text
 Cloudflare Email Routing rules are created for support, privacy, security, and abuse aliases.
 All four aliases currently route to aetherra.project@gmail.com.
-Inbound delivery, reply identity, DNS deliverability, and MFA/access review remain open.
+Inbound delivery from zyonic88@gmail.com to all four aliases passed.
+Gmail filters route all four Aevryn aliases into their respective folders.
+Reply identity, DNS deliverability, and MFA/access review remain open.
 ```
 
 ---
