@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 
 from aevryn.api import (
     ALLOWED_ORIGINS_ENV,
+    DEPLOYMENT_ENV,
     R2_ACCESS_KEY_ID_ENV,
     R2_BUCKET_ENV,
     R2_ENDPOINT_URL_ENV,
@@ -133,6 +134,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if command == "storage-smoke":
             _handle_storage_smoke()
+            return 0
+        if command == "production-config-check":
+            _handle_production_config_check()
             return 0
     except FileNotFoundError as error:
         missing_path = error.filename or error.args[0]
@@ -555,6 +559,17 @@ def _build_parser() -> argparse.ArgumentParser:
             "Reads R2 settings from process environment variables, writes one "
             "synthetic private object, reads it back, deletes it, and never prints "
             "storage secrets."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+
+    subcommands.add_parser(
+        "production-config-check",
+        help="Check production startup configuration without printing secrets.",
+        description=(
+            "Check production startup configuration without printing secrets. "
+            "This verifies the fail-closed production contract and reports the "
+            "current managed-identity blocker as metadata."
         ),
         formatter_class=_RawDefaultsHelpFormatter,
     )
@@ -1030,6 +1045,13 @@ def _handle_storage_smoke() -> None:
         print(f"{key}={value}")
 
 
+def _handle_production_config_check() -> None:
+    """Handle the production-config-check command."""
+    summary = _run_production_config_check(dict(os.environ))
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _load_local_env_file(path: Path) -> dict[str, str]:
     """Load simple KEY=VALUE pairs from an ignored local env file."""
     if not path.exists():
@@ -1143,6 +1165,31 @@ def _run_r2_storage_smoke(
         "objects_created": 1,
         "objects_deleted": 1,
         "ok": "storage_r2_smoke_completed",
+    }
+
+
+def _run_production_config_check(environ: dict[str, str]) -> dict[str, object]:
+    """Check the production startup contract and return metadata only."""
+    if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
+        raise ValueError(f"{DEPLOYMENT_ENV}=production is required.")
+    try:
+        create_app_from_env(environ)
+    except ValueError as error:
+        if "Managed production identity is not implemented yet" not in str(error):
+            raise
+        return {
+            "deployment_env": "production",
+            "startup_contract": "fail_closed",
+            "public_beta": "blocked_managed_identity",
+            "secrets_printed": 0,
+            "ok": "production_config_contract_checked",
+        }
+    return {
+        "deployment_env": "production",
+        "startup_contract": "ready",
+        "public_beta": "not_approved_until_gate_signoff",
+        "secrets_printed": 0,
+        "ok": "production_config_contract_checked",
     }
 
 

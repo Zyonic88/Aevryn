@@ -136,6 +136,7 @@ Before public beta, Aevryn needs a production-like deployment smoke test that pr
 * HTTPS behavior is defined at the edge
 * workflow routes are protected
 * storage references resolve inside project ownership boundaries
+* `aevryn production-config-check` passes without printing secrets
 * worker processing can complete
 * monitoring observes workflow state
 * export preview works

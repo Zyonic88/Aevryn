@@ -438,6 +438,14 @@ AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_METADATA_ONLY_LOGGING=true.
 Hosted log/monitoring provider, alert routing, and retention policy selection remain open.
 ```
 
+Production-like smoke support:
+
+```text
+`aevryn production-config-check` verifies production startup configuration without printing secrets.
+The check does not connect to PostgreSQL or R2.
+The current expected metadata result is public_beta=blocked_managed_identity until managed identity is implemented.
+```
+
 ---
 
 # Production Adapter Rule
@@ -470,7 +478,7 @@ Recommended implementation order:
 5. Add managed identity integration.
 6. Add worker queue/runtime integration.
 7. Add hosted logs and monitoring redaction rules.
-8. Add production-like smoke environment.
+8. Add production-like smoke environment and run `aevryn production-config-check`.
 9. Run Gate 8 release-candidate test pass.
 
 ---

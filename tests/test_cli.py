@@ -444,6 +444,98 @@ def test_storage_smoke_reads_env_without_printing_credentials(
     assert "secret-r2-secret-key" not in captured.err
 
 
+def test_production_config_check_help_describes_metadata_only_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Production config check help should describe the metadata-only contract."""
+    with pytest.raises(SystemExit) as error:
+        main(["production-config-check", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Check production startup configuration without printing secrets" in output
+    assert "managed-identity blocker" in output
+
+
+def test_production_config_check_requires_production_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Production config check should fail before local app startup."""
+    monkeypatch.delenv("AEVRYN_DEPLOYMENT_ENV", raising=False)
+
+    exit_code = main(["production-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_DEPLOYMENT_ENV=production is required" in captured.err
+
+
+def test_production_config_check_reports_managed_identity_blocker_without_secrets(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Production config check should print metadata and no secret values."""
+    secret_values = (
+        "secret-db-password",
+        "secret-r2-access-key",
+        "secret-r2-secret-key",
+        "secret-worker-key",
+        "secret-session-value",
+        "secret-api-key",
+    )
+    env_values = {
+        "AEVRYN_DEPLOYMENT_ENV": "production",
+        "AEVRYN_PROJECT_DATABASE_ADAPTER": "postgresql",
+        "AEVRYN_PROJECT_DATABASE_URL": (
+            "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
+        ),
+        "AEVRYN_API_ALLOWED_ORIGINS": "https://app.aevryn.ai",
+        "AEVRYN_PUBLIC_FRONTEND_BASE_URL": "https://app.aevryn.ai",
+        "AEVRYN_PUBLIC_API_BASE_URL": "https://api.aevryn.ai",
+        "AEVRYN_HTTPS_ONLY": "true",
+        "AEVRYN_HSTS_ENABLED": "true",
+        "AEVRYN_API_KEYS": "secret-api-key",
+        "AEVRYN_STORAGE_PROVIDER": "r2",
+        "AEVRYN_R2_BUCKET": "aevryn-prod",
+        "AEVRYN_R2_ACCOUNT_ID": "account-id",
+        "AEVRYN_R2_ENDPOINT_URL": "https://account-id.r2.cloudflarestorage.com",
+        "AEVRYN_R2_ACCESS_KEY_ID": "secret-r2-access-key",
+        "AEVRYN_R2_SECRET_ACCESS_KEY": "secret-r2-secret-key",
+        "AEVRYN_SECRET_MANAGER": "deployment",
+        "AEVRYN_ENVIRONMENT_NAME": "production",
+        "AEVRYN_WORKER_RUNTIME": "managed",
+        "AEVRYN_WORKER_QUEUE_PROVIDER": "managed",
+        "AEVRYN_WORKER_API_KEY": "secret-worker-key",
+        "AEVRYN_WORKER_TIMEOUT_SECONDS": "120",
+        "AEVRYN_WORKER_MAX_RETRIES": "3",
+        "AEVRYN_WORKER_CONCURRENCY": "1",
+        "AEVRYN_LOG_DESTINATION": "hosted",
+        "AEVRYN_MONITORING_DESTINATION": "hosted",
+        "AEVRYN_LOG_RETENTION_DAYS": "30",
+        "AEVRYN_MONITORING_RETENTION_DAYS": "30",
+        "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+        "AEVRYN_METADATA_ONLY_LOGGING": "true",
+        "AEVRYN_IDENTITY_PROVIDER": "managed",
+        "AEVRYN_SESSION_SECRET": "secret-session-value",
+    }
+    for key, value in env_values.items():
+        monkeypatch.setenv(key, value)
+
+    exit_code = main(["production-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "deployment_env=production" in captured.out
+    assert "startup_contract=fail_closed" in captured.out
+    assert "public_beta=blocked_managed_identity" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=production_config_contract_checked" in captured.out
+    for secret_value in secret_values:
+        assert secret_value not in captured.out
+        assert secret_value not in captured.err
+
+
 def test_performance_baseline_help_describes_local_artifact(
     capsys: CaptureFixture[str],
 ) -> None:

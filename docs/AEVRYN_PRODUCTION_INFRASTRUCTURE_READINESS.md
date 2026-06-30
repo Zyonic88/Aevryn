@@ -342,6 +342,14 @@ Production startup now requires AEVRYN_METADATA_ONLY_LOGGING=true.
 Hosted log/monitoring provider, alert routing, and retention policy selection remain open.
 ```
 
+Production-like smoke progress:
+
+```text
+`aevryn production-config-check` verifies the production startup contract without printing secrets.
+The check reports public_beta=blocked_managed_identity while managed identity remains intentionally unwired.
+Production-like deployment smoke still requires hosted provider selections and environment execution.
+```
+
 ---
 
 # Acceptance

@@ -135,7 +135,7 @@ This prevents public deployments from accidentally starting with stateless stora
 Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because that path selects the local JSON adapter.
 Production mode rejects `AEVRYN_IMPORT_STORAGE_PATH` because that path selects local filesystem source-byte storage.
 
-The PostgreSQL Project Database adapter is available through the optional `postgresql` dependencies. Cloudflare R2 source/import storage is available through the optional `object-storage` dependencies. Generated export writes can use the same `StorageService` boundary and record export metadata in the Project Database. Public-beta production startup still remains blocked by remaining production identity, export API/download routes, snapshot storage, secrets, HTTPS, monitoring, and smoke-test decisions.
+The PostgreSQL Project Database adapter is available through the optional `postgresql` dependencies. Cloudflare R2 source/import storage is available through the optional `object-storage` dependencies. Generated export writes can use the same `StorageService` boundary and record export metadata in the Project Database. Public-beta production startup still remains blocked by remaining production identity, hosted provider selections, and production-like smoke-test signoff.
 
 For local development, the Aevryn CLI can launch the same API:
 
@@ -213,6 +213,14 @@ aevryn storage-smoke
 ```
 
 The smoke test writes, reads, and deletes one tiny synthetic private object. It prints metadata-only results and never prints access keys or secret keys.
+
+Metadata-only production configuration contract check:
+
+```text
+aevryn production-config-check
+```
+
+The check validates that `AEVRYN_DEPLOYMENT_ENV=production` has the fail-closed production startup contract configured. It does not connect to PostgreSQL or R2, and it never prints database URLs, API keys, storage keys, worker keys, or session secrets. Until managed production identity is implemented, a fully configured production contract reports `public_beta=blocked_managed_identity`.
 
 Newly saved import source bytes use project-scoped object references such as:
 

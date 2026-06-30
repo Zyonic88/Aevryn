@@ -238,6 +238,8 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "metadata-only",
         "Managed PostgreSQL is approved as the production Project Database target.",
         "Decision 2 - Object Storage",
+        "`aevryn production-config-check` verifies the production startup contract",
+        "public_beta=blocked_managed_identity",
     )
 
     for term in required_terms:
@@ -271,6 +273,8 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "Storage owns bytes. Database owns references. Engine owns meaning.",
         "Generated export storage service writes bytes through StorageService",
         "Generated export API/download routes are implemented.",
+        "`aevryn production-config-check` verifies production startup configuration",
+        "public_beta=blocked_managed_identity",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER=managed.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SECRET_MANAGER=deployment.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_ENVIRONMENT_NAME=production.",
