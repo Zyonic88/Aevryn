@@ -40,6 +40,12 @@ from aevryn.api import (
     SECRET_MANAGER_ENV,
     SESSION_SECRET_ENV,
     STORAGE_PROVIDER_ENV,
+    WORKER_API_KEY_ENV,
+    WORKER_CONCURRENCY_ENV,
+    WORKER_MAX_RETRIES_ENV,
+    WORKER_QUEUE_PROVIDER_ENV,
+    WORKER_RUNTIME_ENV,
+    WORKER_TIMEOUT_SECONDS_ENV,
     create_app,
     create_app_from_env,
 )
@@ -320,6 +326,18 @@ def production_edge_env() -> dict[str, str]:
     }
 
 
+def production_worker_env() -> dict[str, str]:
+    """Return required production worker settings for fail-closed tests."""
+    return {
+        WORKER_RUNTIME_ENV: "managed",
+        WORKER_QUEUE_PROVIDER_ENV: "managed",
+        WORKER_API_KEY_ENV: "worker-api-key-placeholder",
+        WORKER_TIMEOUT_SECONDS_ENV: "120",
+        WORKER_MAX_RETRIES_ENV: "3",
+        WORKER_CONCURRENCY_ENV: "1",
+    }
+
+
 def test_create_app_from_env_requires_production_https_edge_config() -> None:
     """Production mode should reject non-HTTPS or incomplete public edge settings."""
     complete_until_allowed_origins = {
@@ -554,6 +572,7 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
         R2_SECRET_ACCESS_KEY_ENV: "secret-key",
         SECRET_MANAGER_ENV: "deployment",
         ENVIRONMENT_NAME_ENV: "production",
+        **production_worker_env(),
     }
 
     with pytest.raises(ValueError, match=IDENTITY_PROVIDER_ENV):
@@ -573,6 +592,78 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
                 **complete_until_identity,
                 IDENTITY_PROVIDER_ENV: "managed",
                 SESSION_SECRET_ENV: "session-secret-placeholder",
+            }
+        )
+
+
+def test_create_app_from_env_requires_production_worker_runtime_config() -> None:
+    """Production mode should reject in-memory worker and queue configuration."""
+    complete_until_worker = {
+        DEPLOYMENT_ENV: "production",
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+        **production_edge_env(),
+        API_KEYS_ENV: "production-api-key",
+        STORAGE_PROVIDER_ENV: "r2",
+        R2_BUCKET_ENV: "aevryn-prod",
+        R2_ACCOUNT_ID_ENV: "account-id",
+        R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
+        R2_ACCESS_KEY_ID_ENV: "access-key",
+        R2_SECRET_ACCESS_KEY_ENV: "secret-key",
+        SECRET_MANAGER_ENV: "deployment",
+        ENVIRONMENT_NAME_ENV: "production",
+    }
+
+    with pytest.raises(ValueError, match=WORKER_RUNTIME_ENV):
+        create_app_from_env(complete_until_worker)
+
+    with pytest.raises(ValueError, match=WORKER_QUEUE_PROVIDER_ENV):
+        create_app_from_env(
+            {
+                **complete_until_worker,
+                WORKER_RUNTIME_ENV: "managed",
+            }
+        )
+
+    with pytest.raises(ValueError, match=WORKER_API_KEY_ENV):
+        create_app_from_env(
+            {
+                **complete_until_worker,
+                WORKER_RUNTIME_ENV: "managed",
+                WORKER_QUEUE_PROVIDER_ENV: "managed",
+            }
+        )
+
+    with pytest.raises(ValueError, match=WORKER_TIMEOUT_SECONDS_ENV):
+        create_app_from_env(
+            {
+                **complete_until_worker,
+                WORKER_RUNTIME_ENV: "managed",
+                WORKER_QUEUE_PROVIDER_ENV: "managed",
+                WORKER_API_KEY_ENV: "worker-api-key-placeholder",
+            }
+        )
+
+    with pytest.raises(ValueError, match=WORKER_MAX_RETRIES_ENV):
+        create_app_from_env(
+            {
+                **complete_until_worker,
+                WORKER_RUNTIME_ENV: "managed",
+                WORKER_QUEUE_PROVIDER_ENV: "managed",
+                WORKER_API_KEY_ENV: "worker-api-key-placeholder",
+                WORKER_TIMEOUT_SECONDS_ENV: "120",
+            }
+        )
+
+    with pytest.raises(ValueError, match=WORKER_CONCURRENCY_ENV):
+        create_app_from_env(
+            {
+                **complete_until_worker,
+                WORKER_RUNTIME_ENV: "managed",
+                WORKER_QUEUE_PROVIDER_ENV: "managed",
+                WORKER_API_KEY_ENV: "worker-api-key-placeholder",
+                WORKER_TIMEOUT_SECONDS_ENV: "120",
+                WORKER_MAX_RETRIES_ENV: "3",
             }
         )
 

@@ -306,6 +306,24 @@ Production startup now requires AEVRYN_HSTS_ENABLED=true.
 Domain, DNS provider, TLS certificate source, and hosted edge implementation remain open.
 ```
 
+Next Gate 3 target:
+
+```text
+Decision 7 - API And Worker Runtime
+```
+
+Decision 7 progress:
+
+```text
+Production startup now requires AEVRYN_WORKER_RUNTIME=managed.
+Production startup now requires AEVRYN_WORKER_QUEUE_PROVIDER=managed.
+Production startup now requires AEVRYN_WORKER_API_KEY.
+Production startup now requires AEVRYN_WORKER_TIMEOUT_SECONDS.
+Production startup now requires AEVRYN_WORKER_MAX_RETRIES.
+Production startup now requires AEVRYN_WORKER_CONCURRENCY.
+Managed worker runtime, managed queue provider, retry behavior, and shutdown/resume implementation remain open.
+```
+
 ---
 
 # Acceptance

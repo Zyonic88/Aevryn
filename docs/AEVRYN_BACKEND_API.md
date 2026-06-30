@@ -233,6 +233,19 @@ AEVRYN_SESSION_SECRET=<stored in deployment secrets>
 
 These variables document the production secret, environment, and identity contract, but public beta remains blocked until the managed identity adapter exists. Local JSON authentication and local-only secrets remain private-alpha only.
 
+Production worker runtime is intentionally fail-closed until a managed queue/runtime is selected and wired:
+
+```text
+AEVRYN_WORKER_RUNTIME=managed
+AEVRYN_WORKER_QUEUE_PROVIDER=managed
+AEVRYN_WORKER_API_KEY=<stored in deployment secrets>
+AEVRYN_WORKER_TIMEOUT_SECONDS=120
+AEVRYN_WORKER_MAX_RETRIES=3
+AEVRYN_WORKER_CONCURRENCY=1
+```
+
+These variables document the production worker contract. The local in-memory queue remains private-alpha only.
+
 Optional explicit authentication store path:
 
 ```text

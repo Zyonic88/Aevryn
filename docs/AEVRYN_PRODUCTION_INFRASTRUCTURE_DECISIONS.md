@@ -16,7 +16,7 @@ They are the recommended public-beta architecture shape to approve, revise, or r
 Gate: Production Infrastructure
 Decision status: Decisions 1-2 approved
 Owner approval: Decisions 1-2 approved
-Implementation status: Decisions 1-2 implemented; Decisions 3-6 fail-closed contract started
+Implementation status: Decisions 1-2 implemented; Decisions 3-7 fail-closed contract started
 Public beta: Blocked
 ```
 
@@ -382,6 +382,18 @@ Open decision:
 
 ```text
 Worker runtime and queue provider not selected.
+```
+
+Implementation contract:
+
+```text
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_WORKER_RUNTIME=managed.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_WORKER_QUEUE_PROVIDER=managed.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_WORKER_API_KEY.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_WORKER_TIMEOUT_SECONDS.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_WORKER_MAX_RETRIES.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_WORKER_CONCURRENCY.
+Managed worker runtime, managed queue provider, retry behavior, and shutdown/resume implementation remain open.
 ```
 
 ---

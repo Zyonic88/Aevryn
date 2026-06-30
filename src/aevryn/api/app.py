@@ -210,6 +210,12 @@ PUBLIC_API_BASE_URL_ENV = "AEVRYN_PUBLIC_API_BASE_URL"
 PUBLIC_FRONTEND_BASE_URL_ENV = "AEVRYN_PUBLIC_FRONTEND_BASE_URL"
 HTTPS_ONLY_ENV = "AEVRYN_HTTPS_ONLY"
 HSTS_ENABLED_ENV = "AEVRYN_HSTS_ENABLED"
+WORKER_RUNTIME_ENV = "AEVRYN_WORKER_RUNTIME"
+WORKER_QUEUE_PROVIDER_ENV = "AEVRYN_WORKER_QUEUE_PROVIDER"
+WORKER_API_KEY_ENV = "AEVRYN_WORKER_API_KEY"
+WORKER_TIMEOUT_SECONDS_ENV = "AEVRYN_WORKER_TIMEOUT_SECONDS"
+WORKER_MAX_RETRIES_ENV = "AEVRYN_WORKER_MAX_RETRIES"
+WORKER_CONCURRENCY_ENV = "AEVRYN_WORKER_CONCURRENCY"
 EXTRACTION_MODE_ENV = "AEVRYN_EXTRACTION_MODE"
 OPENAI_API_KEY_ENV = "AEVRYN_OPENAI_API_KEY"
 OPENAI_MODEL_ENV = "AEVRYN_OPENAI_MODEL"
@@ -2019,6 +2025,7 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_DEPLOYMENT_ENV=production. Production must be separated from "
             "local, test, and staging environments."
         )
+    _require_production_worker_config(environ)
     identity_provider = environ.get(IDENTITY_PROVIDER_ENV, "").strip().lower()
     if identity_provider != "managed":
         raise ValueError(
@@ -2034,6 +2041,44 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
         "Managed production identity is not implemented yet. Public beta remains "
         "blocked until the identity provider adapter is selected and wired."
     )
+
+
+def _require_production_worker_config(environ: Mapping[str, str]) -> None:
+    """Reject production startup without an explicit managed worker boundary."""
+    worker_runtime = environ.get(WORKER_RUNTIME_ENV, "").strip().lower()
+    if worker_runtime != "managed":
+        raise ValueError(
+            "AEVRYN_WORKER_RUNTIME=managed is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. The local in-memory worker runtime "
+            "is not allowed for production."
+        )
+    queue_provider = environ.get(WORKER_QUEUE_PROVIDER_ENV, "").strip().lower()
+    if queue_provider != "managed":
+        raise ValueError(
+            "AEVRYN_WORKER_QUEUE_PROVIDER=managed is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. The local in-memory queue is not "
+            "allowed for production."
+        )
+    if not environ.get(WORKER_API_KEY_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_WORKER_API_KEY is required when AEVRYN_WORKER_RUNTIME=managed."
+        )
+    _require_positive_int_env(environ, WORKER_TIMEOUT_SECONDS_ENV)
+    _require_positive_int_env(environ, WORKER_MAX_RETRIES_ENV)
+    _require_positive_int_env(environ, WORKER_CONCURRENCY_ENV)
+
+
+def _require_positive_int_env(environ: Mapping[str, str], key: str) -> None:
+    """Require one production worker numeric setting to be a positive integer."""
+    value = environ.get(key, "").strip()
+    if not value:
+        raise ValueError(f"{key} is required when AEVRYN_WORKER_RUNTIME=managed.")
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise ValueError(f"{key} must be a positive integer.") from error
+    if parsed < 1:
+        raise ValueError(f"{key} must be a positive integer.")
 
 
 def _platform_services_from_env(
