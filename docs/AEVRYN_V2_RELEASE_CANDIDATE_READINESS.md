@@ -18,6 +18,8 @@ Release Candidate Readiness is not Version 3.
 
 It is the bridge between a working private-alpha product and a public-facing product that strangers can trust with unpublished creative work.
 
+External setup work that cannot be completed by repository code alone is consolidated in `docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md`.
+
 ---
 
 # Core Rule
@@ -94,6 +96,7 @@ Gate tracking:
 * `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`
 * `docs/AEVRYN_PUBLIC_CONTACTS.md`
 * `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
+* `docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md`
 
 Acceptance:
 
@@ -318,4 +321,10 @@ Current Gate 3 progress:
 ```text
 The local production startup contract check passes without printing secrets.
 Hosted production-like deployment smoke remains required before Gate 3 can close.
+```
+
+Current external setup progress:
+
+```text
+docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md consolidates remaining external setup blockers and verification artifacts.
 ```

@@ -167,7 +167,37 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md",
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md",
         "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
+        "docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md",
         "Public beta blocked.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
+    """Public beta setup checklist should consolidate non-repository blockers."""
+    document = read_doc("docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md")
+
+    required_terms = (
+        "Checklist: Public Beta External Setup",
+        "Status: Not complete",
+        "Public beta: Blocked",
+        "Public beta requires verified operations, not remembered intentions.",
+        "Product Contact Aliases",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "GitHub Branch Protection And Hosted Security Controls",
+        "Production Provider And Data-Use Review",
+        "Backup, Retention, Restore, And Audit",
+        "Production-Like Deployment Smoke",
+        "Public Trust And Legal Publication",
+        "Release Candidate Run And Signoff",
+        "Local production config contract passed.",
+        "Release-candidate run not complete.",
+        "Public beta: Blocked",
     )
 
     for term in required_terms:
