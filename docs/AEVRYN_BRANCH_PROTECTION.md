@@ -51,6 +51,8 @@ Required checks must be kept in sync with workflow job names.
 
 If a workflow job is renamed, branch protection must be updated in the same release-readiness slice.
 
+The concrete hosted-settings checklist is tracked in `docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md`.
+
 ---
 
 # Required Pull Request Controls
@@ -130,6 +132,15 @@ Public beta remains blocked until:
 * bypass permissions are reviewed
 * a protected release path has been exercised
 * the release-candidate record confirms the controls worked
+
+Current implementation progress:
+
+```text
+CI and security workflow files exist.
+Required hosted check names are documented.
+GitHub hosted settings are not verified yet.
+Protected-path verification drill remains open.
+```
 
 ---
 

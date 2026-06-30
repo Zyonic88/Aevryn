@@ -88,11 +88,12 @@ Tracking docs:
 
 * `docs/AEVRYN_BRANCH_PROTECTION.md`
 * `docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md`
+* `docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md`
 
 Status:
 
 ```text
-Workflows exist. Hosted repository settings not verified.
+Workflows exist and exact required GitHub hosted settings are documented. Hosted repository settings not verified.
 ```
 
 ---

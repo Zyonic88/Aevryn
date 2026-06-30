@@ -539,7 +539,38 @@ def test_branch_protection_document_tracks_hosted_release_controls() -> None:
         "force pushes disabled",
         "push protection",
         "dependency alerts",
+        "docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md",
+        "Protected-path verification drill remains open.",
         "Hosted checks and repository protections prevent unverified code",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_github_hosted_controls_document_tracks_external_settings() -> None:
+    """Hosted controls should define exact GitHub settings before public beta."""
+    document = read_doc("docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md")
+
+    required_terms = (
+        "Gate: GitHub hosted controls",
+        "Status: Repo workflows ready; GitHub settings not verified",
+        "Public beta: Blocked",
+        "Hosted controls must block unsafe release changes before they reach the "
+        "protected branch.",
+        "Backend gates / Python 3.11",
+        "Backend gates / Python 3.13",
+        "Frontend gates",
+        "Repository secret scan",
+        "Dependency audit",
+        "Static security scan",
+        "Require status checks to pass before merging",
+        "Secret scanning",
+        "Push protection",
+        "Dependabot alerts",
+        "Verification Drill",
+        "Protected-path verification drill remains open.",
+        "GitHub hosted settings require the documented CI and security checks",
     )
 
     for term in required_terms:

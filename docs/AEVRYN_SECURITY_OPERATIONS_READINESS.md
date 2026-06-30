@@ -46,6 +46,7 @@ Existing local gates include:
 * API hardening in `docs/AEVRYN_API_SECURITY_HARDENING.md`
 * Phase 11 gate tracking in `docs/AEVRYN_PHASE_11_SECURITY_GATES.md`
 * hosted branch-protection runbook in `docs/AEVRYN_BRANCH_PROTECTION.md`
+* hosted GitHub settings checklist in `docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md`
 
 These gates are necessary, but they are not enough for public beta.
 
@@ -213,6 +214,7 @@ Current implementation progress:
 .github/workflows/ci.yml defines backend and frontend release gates.
 .github/workflows/security.yml defines repository secret scan, dependency audit, and static security scan gates.
 docs/AEVRYN_BRANCH_PROTECTION.md defines the protected branch posture and required hosted checks.
+docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md defines the exact GitHub hosted settings and protected-path drill.
 Local repository secret scan, Ruff, and mypy passed before workflow creation.
 GitHub branch protection, push protection, hosted alert routing, and release-candidate verification remain open.
 ```
