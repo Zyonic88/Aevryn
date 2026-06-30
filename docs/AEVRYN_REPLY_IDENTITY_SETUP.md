@@ -14,11 +14,13 @@ It does not, by itself, prove that Aevryn can send trusted replies from product-
 
 ```text
 Gate: Product reply identity
-Status: Started
+Status: Preferred provider candidate selected
 Public beta: Blocked
 ```
 
-Public beta remains blocked until replies can be sent from the expected product identity and the result is tested.
+Cloudflare Email Sending is the preferred candidate because Aevryn already uses Cloudflare for DNS and inbound Email Routing.
+
+Public beta remains blocked until Cloudflare Email Sending is configured for `aevryn.ai`, replies can be sent from the expected product identity, and the result is tested.
 
 ---
 
@@ -51,9 +53,25 @@ Aetherra Labs should be used when the company is intentionally speaking as the o
 
 # Recommended Options
 
-## Option A - Managed Business Mailbox
+## Preferred Candidate - Cloudflare Email Sending
 
-Use a hosted mailbox provider that supports custom-domain sending, SPF, DKIM, and DMARC.
+Use Cloudflare Email Sending for outbound product-domain mail if it is available and configurable for `aevryn.ai`.
+
+This keeps inbound routing, DNS, and outbound sender authentication in the same operational control plane.
+
+Cloudflare Email Sending remains a candidate until:
+
+* `aevryn.ai` is verified for sending
+* required DNS records are configured
+* SPF, DKIM, and DMARC pass on received replies
+* all four required product aliases can send tested replies
+* bounce or failure visibility is available to the operator
+
+Because Cloudflare Email Sending is provider-managed outbound mail, Aevryn should not store SMTP credentials or API tokens in source control, support notes, screenshots, logs, diagnostics, or public docs.
+
+## Fallback Option A - Managed Business Mailbox
+
+Use a hosted mailbox provider that supports custom-domain sending, SPF, DKIM, and DMARC if Cloudflare Email Sending does not meet reply, deliverability, or support-workflow needs.
 
 Examples:
 
@@ -65,7 +83,7 @@ Examples:
 
 This is the preferred public-beta posture because the mail provider owns both receiving and sending behavior.
 
-## Option B - Helpdesk With Verified Sending
+## Fallback Option B - Helpdesk With Verified Sending
 
 Use a support/helpdesk provider that can send from verified `aevryn.ai` identities.
 
@@ -73,7 +91,7 @@ This can work well once Aevryn has enough support volume to need ticket assignme
 
 The helpdesk must not encourage users to upload full manuscripts by default.
 
-## Option C - Gmail Send-As Bridge
+## Fallback Option C - Gmail Send-As Bridge
 
 Use the existing destination mailbox for triage while configuring verified custom-domain send-as identities through an SMTP provider.
 
@@ -102,7 +120,7 @@ Before public beta, outbound mail must have:
 
 Inbound Cloudflare Email Routing DNS health is already recorded in `docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md`.
 
-Outbound DNS remains separate until the reply provider is selected.
+Outbound DNS remains separate until Cloudflare Email Sending is configured and verified.
 
 ---
 
@@ -136,7 +154,7 @@ Required reply tests:
 
 Public beta remains blocked until:
 
-* outbound reply provider is selected
+* Cloudflare Email Sending is configured or a fallback provider is selected
 * product-domain reply identities are configured
 * SPF, DKIM, and DMARC posture is verified
 * all four required aliases pass reply tests

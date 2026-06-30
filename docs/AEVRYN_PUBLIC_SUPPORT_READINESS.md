@@ -185,7 +185,8 @@ Cloudflare Email Routing rules are created for support, privacy, security, and a
 Inbound delivery testing passed for all four aliases, and Gmail filters route them into their respective folders.
 Cloudflare inbound DNS/routing health passed: Status Enabled, DNS records Enabled, 9 received, 9 forwarded, 0 failed, 0 rejected.
 Cloudflare MFA and Gmail MFA are enabled.
-Outbound reply identity and public-page publication remain open.
+Cloudflare Email Sending is the preferred outbound candidate.
+Outbound reply testing and public-page publication remain open.
 ```
 
 ---

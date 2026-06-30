@@ -200,7 +200,8 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Cloudflare routing rules created, inbound delivery passed",
         "Cloudflare inbound DNS/routing health passed",
         "Cloudflare/Gmail MFA verified.",
-        "Outbound reply identity and public-page publication remain open.",
+        "Cloudflare Email Sending is the preferred outbound candidate.",
+        "Outbound reply testing and public-page publication remain open.",
         "Local production config contract passed.",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
@@ -347,9 +348,10 @@ def test_alias_provisioning_record_tracks_contact_setup_verification() -> None:
         "Cloudflare Email Routing rules are created",
         "Inbound delivery from zyonic88@gmail.com to all four aliases passed.",
         "Gmail filters route all four Aevryn aliases into their respective folders.",
-        "Reply identity remains open.",
-        "Outbound-specific SPF, DKIM, and DMARC posture remains tied to the reply "
-        "identity decision.",
+        "Reply identity remains open with Cloudflare Email Sending selected as the "
+        "preferred provider candidate.",
+        "Outbound-specific SPF, DKIM, and DMARC posture remains tied to Cloudflare "
+        "Email Sending configuration and reply testing.",
         "Outbound reply identity setup is tracked in docs/AEVRYN_REPLY_IDENTITY_SETUP.md.",
         "private-story redaction guidance",
     )
@@ -364,8 +366,9 @@ def test_reply_identity_setup_document_tracks_outbound_sender_boundary() -> None
 
     required_terms = (
         "Gate: Product reply identity",
-        "Status: Started",
+        "Status: Preferred provider candidate selected",
         "Public beta: Blocked",
+        "Cloudflare Email Sending is the preferred candidate",
         "Replies should come from the specific product identity unless Aetherra Labs is "
         "intentionally speaking as the company.",
         "Cloudflare Email Routing",
@@ -373,6 +376,7 @@ def test_reply_identity_setup_document_tracks_outbound_sender_boundary() -> None
         "privacy@aevryn.ai",
         "security@aevryn.ai",
         "abuse@aevryn.ai",
+        "Preferred Candidate - Cloudflare Email Sending",
         "Managed Business Mailbox",
         "Helpdesk With Verified Sending",
         "Gmail Send-As Bridge",

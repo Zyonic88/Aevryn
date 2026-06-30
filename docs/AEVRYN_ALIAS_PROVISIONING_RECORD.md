@@ -205,8 +205,8 @@ Inbound delivery from zyonic88@gmail.com to all four aliases passed.
 Gmail filters route all four Aevryn aliases into their respective folders.
 Cloudflare MFA and Gmail MFA are enabled.
 Cloudflare Email Routing health passed for inbound routing: Status Enabled, DNS records Enabled, 9 received, 9 forwarded, 0 failed, 0 rejected.
-Reply identity remains open.
-Outbound-specific SPF, DKIM, and DMARC posture remains tied to the reply identity decision.
+Reply identity remains open with Cloudflare Email Sending selected as the preferred provider candidate.
+Outbound-specific SPF, DKIM, and DMARC posture remains tied to Cloudflare Email Sending configuration and reply testing.
 Outbound reply identity setup is tracked in docs/AEVRYN_REPLY_IDENTITY_SETUP.md.
 ```
 
