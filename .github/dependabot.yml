@@ -8,9 +8,6 @@ updates:
       time: "10:00"
       timezone: America/Denver
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - python
 
   - package-ecosystem: npm
     directory: /web
@@ -20,9 +17,6 @@ updates:
       time: "10:15"
       timezone: America/Denver
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - frontend
 
   - package-ecosystem: github-actions
     directory: /
@@ -32,6 +26,3 @@ updates:
       time: "10:30"
       timezone: America/Denver
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - github-actions
