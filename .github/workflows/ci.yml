@@ -41,7 +41,9 @@ jobs:
         run: python -m mypy src tests
 
       - name: Pytest
-        run: python -m pytest --basetemp=.local/pytest-tmp -q
+        run: |
+          mkdir -p .local
+          python -m pytest --basetemp=.local/pytest-tmp -q
 
   frontend:
     name: Frontend gates
