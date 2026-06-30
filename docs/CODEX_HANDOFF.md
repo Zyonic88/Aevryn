@@ -91,6 +91,7 @@ Next expected V2 target:
 - Use `docs/AEVRYN_V2_CLOSEOUT.md` as the decision record that separates V2 product completion from public beta approval.
 - Do not treat Phase 11 acceptance as public beta approval; public beta still requires deployment-specific security decisions and production infrastructure choices.
 - Release Candidate Readiness progress: local production startup contract now passes with `startup_contract=ready` and `secrets_printed=0`; hosted CI/security workflows exist under `.github/workflows/`; GitHub branch protection, push protection, hosted alert routing, hosted production-like smoke, and release-candidate signoff remain open.
+- Branch protection readiness is documented in `docs/AEVRYN_BRANCH_PROTECTION.md`; required hosted checks must be configured in GitHub before public beta.
 
 Phase 6 Project Storage accepted:
 

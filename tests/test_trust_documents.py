@@ -338,6 +338,32 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
         assert term in document
 
 
+def test_branch_protection_document_tracks_hosted_release_controls() -> None:
+    """Branch protection should define the hosted checks required before public beta."""
+    document = read_doc("docs/AEVRYN_BRANCH_PROTECTION.md")
+
+    required_terms = (
+        "Public-beta code must pass protected release gates before it can reach the "
+        "protected branch.",
+        "master",
+        "release-candidate branch",
+        "Backend gates / Python 3.11",
+        "Backend gates / Python 3.13",
+        "Frontend gates",
+        "Repository secret scan",
+        "Dependency audit",
+        "Static security scan",
+        "pull request before merge",
+        "force pushes disabled",
+        "push protection",
+        "dependency alerts",
+        "Hosted checks and repository protections prevent unverified code",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
 def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
     """Gate 5 should block public beta on production backup and audit decisions."""
     document = read_doc("docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md")

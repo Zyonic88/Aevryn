@@ -172,6 +172,7 @@ Required before public beta:
 Gate tracking:
 
 * `docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md`
+* `docs/AEVRYN_BRANCH_PROTECTION.md`
 
 Acceptance:
 
