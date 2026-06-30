@@ -203,7 +203,11 @@ R2_SECRET_ACCESS_KEY_ENV = "AEVRYN_R2_SECRET_ACCESS_KEY"
 R2_ENDPOINT_URL_ENV = "AEVRYN_R2_ENDPOINT_URL"
 R2_REGION_ENV = "AEVRYN_R2_REGION"
 IDENTITY_PROVIDER_ENV = "AEVRYN_IDENTITY_PROVIDER"
+IDENTITY_PROVIDER_NAME_ENV = "AEVRYN_IDENTITY_PROVIDER_NAME"
+SESSION_AUTHORITY_ENV = "AEVRYN_SESSION_AUTHORITY"
 SESSION_SECRET_ENV = "AEVRYN_SESSION_SECRET"
+PASSWORD_RESET_ENABLED_ENV = "AEVRYN_PASSWORD_RESET_ENABLED"
+ACCOUNT_DELETION_HANDOFF_ENV = "AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED"
 SECRET_MANAGER_ENV = "AEVRYN_SECRET_MANAGER"
 ENVIRONMENT_NAME_ENV = "AEVRYN_ENVIRONMENT_NAME"
 PUBLIC_API_BASE_URL_ENV = "AEVRYN_PUBLIC_API_BASE_URL"
@@ -2040,14 +2044,37 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_DEPLOYMENT_ENV=production. Local JSON authentication is not "
             "allowed for production."
         )
-    if not environ.get(SESSION_SECRET_ENV, "").strip():
-        raise ValueError(
-            "AEVRYN_SESSION_SECRET is required when AEVRYN_IDENTITY_PROVIDER=managed."
-        )
+    _require_production_identity_config(environ)
     raise ValueError(
         "Managed production identity is not implemented yet. Public beta remains "
         "blocked until the identity provider adapter is selected and wired."
     )
+
+
+def _require_production_identity_config(environ: Mapping[str, str]) -> None:
+    """Reject production startup without concrete managed identity details."""
+    provider_name = environ.get(IDENTITY_PROVIDER_NAME_ENV, "").strip().lower()
+    if not provider_name:
+        raise ValueError(
+            "AEVRYN_IDENTITY_PROVIDER_NAME is required when "
+            "AEVRYN_IDENTITY_PROVIDER=managed."
+        )
+    if provider_name in {"json", "local", "inmemory", "in-memory"}:
+        raise ValueError(
+            "AEVRYN_IDENTITY_PROVIDER_NAME must name a managed identity provider."
+        )
+    session_authority = environ.get(SESSION_AUTHORITY_ENV, "").strip().lower()
+    if session_authority != "bearer":
+        raise ValueError(
+            "AEVRYN_SESSION_AUTHORITY=bearer is required until cookie-backed "
+            "production sessions and CSRF protection are implemented."
+        )
+    if not environ.get(SESSION_SECRET_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_SESSION_SECRET is required when AEVRYN_IDENTITY_PROVIDER=managed."
+        )
+    _require_true_flag(environ, PASSWORD_RESET_ENABLED_ENV)
+    _require_true_flag(environ, ACCOUNT_DELETION_HANDOFF_ENV)
 
 
 def _require_production_worker_config(environ: Mapping[str, str]) -> None:

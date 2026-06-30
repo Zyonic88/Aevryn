@@ -276,7 +276,14 @@ def test_production_infrastructure_decisions_document_records_proposed_architect
         "`aevryn production-config-check` verifies production startup configuration",
         "public_beta=blocked_managed_identity",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER=managed.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER_NAME.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SESSION_AUTHORITY=bearer.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SECRET_MANAGER=deployment.",
+        "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_PASSWORD_RESET_ENABLED=true.",
+        (
+            "AEVRYN_DEPLOYMENT_ENV=production requires "
+            "AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true."
+        ),
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_ENVIRONMENT_NAME=production.",
         "AEVRYN_DEPLOYMENT_ENV=production requires HTTPS-only CORS origins.",
         "AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_PUBLIC_FRONTEND_BASE_URL.",

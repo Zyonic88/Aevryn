@@ -13,6 +13,7 @@ from _pytest.logging import LogCaptureFixture
 from fastapi.testclient import TestClient
 
 from aevryn.api import (
+    ACCOUNT_DELETION_HANDOFF_ENV,
     ALLOWED_ORIGINS_ENV,
     API_KEYS_ENV,
     AUTH_STORE_PATH_ENV,
@@ -22,6 +23,7 @@ from aevryn.api import (
     HSTS_ENABLED_ENV,
     HTTPS_ONLY_ENV,
     IDENTITY_PROVIDER_ENV,
+    IDENTITY_PROVIDER_NAME_ENV,
     IMPORT_STORAGE_PATH_ENV,
     LOG_DESTINATION_ENV,
     LOG_RETENTION_DAYS_ENV,
@@ -32,6 +34,7 @@ from aevryn.api import (
     OPENAI_MAX_RESPONSE_BYTES_ENV,
     OPENAI_MODEL_ENV,
     OPENAI_TIMEOUT_SECONDS_ENV,
+    PASSWORD_RESET_ENABLED_ENV,
     PROJECT_DATABASE_ADAPTER_ENV,
     PROJECT_DATABASE_PATH_ENV,
     PROJECT_DATABASE_URL_ENV,
@@ -44,6 +47,7 @@ from aevryn.api import (
     R2_SECRET_ACCESS_KEY_ENV,
     SECRET_MANAGER_ENV,
     SECURITY_ALERTS_ENABLED_ENV,
+    SESSION_AUTHORITY_ENV,
     SESSION_SECRET_ENV,
     STORAGE_PROVIDER_ENV,
     WORKER_API_KEY_ENV,
@@ -356,6 +360,18 @@ def production_observability_env() -> dict[str, str]:
     }
 
 
+def production_identity_env() -> dict[str, str]:
+    """Return required production identity settings for fail-closed tests."""
+    return {
+        IDENTITY_PROVIDER_ENV: "managed",
+        IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+        SESSION_AUTHORITY_ENV: "bearer",
+        SESSION_SECRET_ENV: "session-secret-placeholder",
+        PASSWORD_RESET_ENABLED_ENV: "true",
+        ACCOUNT_DELETION_HANDOFF_ENV: "true",
+    }
+
+
 def test_create_app_from_env_requires_production_https_edge_config() -> None:
     """Production mode should reject non-HTTPS or incomplete public edge settings."""
     complete_until_allowed_origins = {
@@ -602,17 +618,63 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider()
             {
                 **complete_until_identity,
                 IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+                SESSION_AUTHORITY_ENV: "bearer",
             }
         )
 
-    with pytest.raises(ValueError, match="Managed production identity is not implemented"):
+    with pytest.raises(ValueError, match=IDENTITY_PROVIDER_NAME_ENV):
         create_app_from_env(
             {
                 **complete_until_identity,
                 IDENTITY_PROVIDER_ENV: "managed",
+            }
+        )
+
+    with pytest.raises(ValueError, match=IDENTITY_PROVIDER_NAME_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "local",
+            }
+        )
+
+    with pytest.raises(ValueError, match=SESSION_AUTHORITY_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+                SESSION_AUTHORITY_ENV: "cookie",
+            }
+        )
+
+    with pytest.raises(ValueError, match=PASSWORD_RESET_ENABLED_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+                SESSION_AUTHORITY_ENV: "bearer",
                 SESSION_SECRET_ENV: "session-secret-placeholder",
             }
         )
+
+    with pytest.raises(ValueError, match=ACCOUNT_DELETION_HANDOFF_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "managed-test-provider",
+                SESSION_AUTHORITY_ENV: "bearer",
+                SESSION_SECRET_ENV: "session-secret-placeholder",
+                PASSWORD_RESET_ENABLED_ENV: "true",
+            }
+        )
+
+    with pytest.raises(ValueError, match="Managed production identity is not implemented"):
+        create_app_from_env({**complete_until_identity, **production_identity_env()})
 
 
 def test_create_app_from_env_requires_production_worker_runtime_config() -> None:

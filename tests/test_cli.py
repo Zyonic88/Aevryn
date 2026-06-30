@@ -517,7 +517,11 @@ def test_production_config_check_reports_managed_identity_blocker_without_secret
         "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
         "AEVRYN_METADATA_ONLY_LOGGING": "true",
         "AEVRYN_IDENTITY_PROVIDER": "managed",
+        "AEVRYN_IDENTITY_PROVIDER_NAME": "managed-test-provider",
+        "AEVRYN_SESSION_AUTHORITY": "bearer",
         "AEVRYN_SESSION_SECRET": "secret-session-value",
+        "AEVRYN_PASSWORD_RESET_ENABLED": "true",
+        "AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED": "true",
     }
     for key, value in env_values.items():
         monkeypatch.setenv(key, value)

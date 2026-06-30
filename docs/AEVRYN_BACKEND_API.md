@@ -236,10 +236,14 @@ Production identity is intentionally fail-closed until a managed identity provid
 AEVRYN_SECRET_MANAGER=deployment
 AEVRYN_ENVIRONMENT_NAME=production
 AEVRYN_IDENTITY_PROVIDER=managed
+AEVRYN_IDENTITY_PROVIDER_NAME=<selected managed provider>
+AEVRYN_SESSION_AUTHORITY=bearer
 AEVRYN_SESSION_SECRET=<stored in deployment secrets>
+AEVRYN_PASSWORD_RESET_ENABLED=true
+AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true
 ```
 
-These variables document the production secret, environment, and identity contract, but public beta remains blocked until the managed identity adapter exists. Local JSON authentication and local-only secrets remain private-alpha only.
+These variables document the production secret, environment, and identity contract, but public beta remains blocked until the managed identity adapter exists. The selected provider must not be local JSON or in-memory auth. Bearer sessions remain the production contract until cookie-backed sessions and CSRF protection are deliberately implemented. Local JSON authentication and local-only secrets remain private-alpha only.
 
 Production worker runtime is intentionally fail-closed until a managed queue/runtime is selected and wired:
 

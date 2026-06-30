@@ -219,14 +219,19 @@ Open decision:
 
 ```text
 Provider not selected.
-Session authority not finalized.
+Bearer session authority is the current production contract.
+Cookie-backed sessions remain blocked until CSRF protection is implemented.
 ```
 
 Implementation contract:
 
 ```text
 AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER=managed.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_IDENTITY_PROVIDER_NAME.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SESSION_AUTHORITY=bearer.
 AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_SESSION_SECRET.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_PASSWORD_RESET_ENABLED=true.
+AEVRYN_DEPLOYMENT_ENV=production requires AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true.
 Production startup rejects local JSON authentication.
 Managed identity is not implemented yet, so public beta remains blocked.
 ```

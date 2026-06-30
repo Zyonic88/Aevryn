@@ -268,7 +268,12 @@ Decision 3 progress:
 
 ```text
 Production startup now rejects local JSON authentication.
-Production startup requires AEVRYN_IDENTITY_PROVIDER=managed and AEVRYN_SESSION_SECRET.
+Production startup requires AEVRYN_IDENTITY_PROVIDER=managed.
+Production startup requires AEVRYN_IDENTITY_PROVIDER_NAME.
+Production startup requires AEVRYN_SESSION_AUTHORITY=bearer.
+Production startup requires AEVRYN_SESSION_SECRET.
+Production startup requires AEVRYN_PASSWORD_RESET_ENABLED=true.
+Production startup requires AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true.
 Managed identity provider selection and adapter wiring remain open.
 Public beta remains blocked until managed identity is implemented or the owner accepts a documented residual risk.
 ```
