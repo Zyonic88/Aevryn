@@ -163,7 +163,7 @@ def format_secret_scan_report(
         for finding in findings:
             lines.append(
                 f"{finding.path}:{finding.line_number}: "
-                f"{finding.rule_id}: {finding.snippet}"
+                f"{finding.rule_id}: redacted finding omitted"
             )
         return "\n".join(lines)
 
