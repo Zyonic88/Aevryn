@@ -197,7 +197,7 @@ Tracking docs:
 Status:
 
 ```text
-Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run deployment prep is documented. Hosted production-like smoke not complete.
+Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. Custom-domain, frontend, managed-identity, and creator workflow smoke are not complete.
 ```
 
 ---

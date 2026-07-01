@@ -432,6 +432,8 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
         "2026-07-01 local production-style smoke passed",
+        "aevryn-api-00003-9v4",
+        "/v2/health returned OK",
     )
 
     for term in required_terms:
@@ -839,7 +841,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-01 local PostgreSQL and R2 smoke passed",
+        "Latest attempt: 2026-07-01 hosted Cloud Run health smoke passed",
         "Production-like smoke proves configuration and workflow safety.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -858,10 +860,15 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "ok=production_config_contract_checked",
         "ok=project_database_postgresql_smoke_completed",
         "ok=storage_r2_smoke_completed",
+        "Hosted Cloud Run API Health Smoke",
+        "aevryn-api-00003-9v4",
+        "https://aevryn-api-561437810621.us-central1.run.app",
+        "/v2/health returned status OK.",
+        "PASS for hosted Cloud Run API startup.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
-        "hosted production-like browser/API smoke has not passed",
+        "custom-domain, frontend, managed-identity, and creator workflow smoke have not passed",
     )
 
     for term in required_terms:
@@ -876,7 +883,7 @@ def test_cloud_run_deployment_document_tracks_hosted_api_runbook() -> None:
 
     required_terms = (
         "Deployment target: Google Cloud Run",
-        "Status: Prepared",
+        "Status: Deployed - health smoke passed",
         "Public beta: Blocked",
         "Cloud Run owns API runtime. Cloudflare owns edge, DNS, R2, and email.",
         "Cloud Run Admin API",
@@ -898,8 +905,13 @@ def test_cloud_run_deployment_document_tracks_hosted_api_runbook() -> None:
         "gcloud builds submit",
         "gcloud run deploy aevryn-api",
         "curl.exe https://YOUR_CLOUD_RUN_URL/v2/health",
+        "aevryn-api-00003-9v4",
+        "https://aevryn-api-561437810621.us-central1.run.app",
+        "Result: /v2/health returned HTTP OK",
+        "Header/status check: HTTP OK",
         "api.aevryn.ai",
-        "hosted Cloud Run browser/API smoke has not passed",
+        "Cloud Run API health smoke passed",
+        "managed-identity, and workflow smoke have not passed",
     )
 
     for term in required_terms:

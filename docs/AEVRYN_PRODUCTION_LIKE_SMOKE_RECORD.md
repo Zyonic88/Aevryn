@@ -14,14 +14,16 @@ It is separate from the final release-candidate run record because smoke attempt
 Record type: Production-Like Smoke Attempt Log
 Status: Started
 Public beta: Blocked
-Latest attempt: 2026-07-01 local PostgreSQL and R2 smoke passed
+Latest attempt: 2026-07-01 hosted Cloud Run health smoke passed
 ```
 
 Production-like smoke is partially complete.
 
 The latest attempt verified the production startup contract, local PostgreSQL Project Database smoke, and Cloudflare R2 storage smoke with metadata-only output.
 
-Hosted browser/API smoke is still not complete.
+Hosted Cloud Run API health smoke has passed.
+
+Hosted custom-domain, browser/API, managed-identity, and workflow smoke are still not complete.
 
 ---
 
@@ -133,6 +135,48 @@ No database URL, database password, API key, storage access key, storage secret 
 
 ---
 
+# Attempt 2026-07-01 - Hosted Cloud Run API Health Smoke
+
+Environment:
+
+```text
+Execution surface: Google Cloud Run
+Service: aevryn-api
+Region: us-central1
+Revision: aevryn-api-00003-9v4
+Service URL: https://aevryn-api-561437810621.us-central1.run.app
+Result: hosted API health smoke passed
+```
+
+Commands run:
+
+```powershell
+curl.exe https://aevryn-api-561437810621.us-central1.run.app/v2/health
+curl.exe -i https://aevryn-api-561437810621.us-central1.run.app/v2/health
+```
+
+Observed result:
+
+```text
+/v2/health returned status OK.
+Header/status check returned status OK.
+```
+
+Interpretation:
+
+```text
+PASS for hosted Cloud Run API startup.
+PASS for HTTPS health endpoint availability.
+BLOCKED for api.aevryn.ai custom-domain smoke.
+BLOCKED for Cloudflare Pages frontend-to-API smoke.
+BLOCKED for managed identity browser flow smoke.
+BLOCKED for creator workflow smoke.
+```
+
+No database URL, database password, API key, storage access key, storage secret key, Supabase key, worker key, session secret, source prose, or AI payload was printed.
+
+---
+
 # Required Production-Like Environment
 
 The next successful smoke attempt needs a release-candidate or hosted environment with production-style configuration loaded from the deployment secret manager.
@@ -165,8 +209,8 @@ A successful production-like smoke must record:
 | Production config check | `startup_contract=ready`, `secrets_printed=0` | Passed locally |
 | PostgreSQL smoke | create/read/delete synthetic metadata record succeeds | Passed locally |
 | R2 storage smoke | write/read/delete tiny synthetic private object succeeds | Passed locally |
-| API startup | production app starts with local-only adapters rejected | Not run in production-like environment |
-| HTTPS/CORS | public origins are explicit and HTTPS-only | Not run in production-like environment |
+| API startup | production app starts with local-only adapters rejected | Passed on Cloud Run |
+| HTTPS/CORS | public origins are explicit and HTTPS-only | Health endpoint passed on Cloud Run; custom-domain/browser CORS smoke not complete |
 | Managed identity | protected routes require managed identity tokens | Not run in production-like environment |
 | Worker processing | import processing completes through production-safe worker posture | Not run in production-like environment |
 | Monitoring | workflow state is observable through metadata-only status | Not run in production-like environment |
@@ -194,5 +238,5 @@ Then run the browser/API smoke against the production-like API and record the re
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, and R2 smoke passed, but hosted production-like browser/API smoke has not passed.
+Reason: Local production-style config, PostgreSQL, R2, and hosted Cloud Run API health smoke passed, but custom-domain, frontend, managed-identity, and creator workflow smoke have not passed.
 ```
