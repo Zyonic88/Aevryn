@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
 _GENESIS_HASH = "0" * 64
@@ -36,6 +36,11 @@ class AuditLedgerIntegrityError(ValueError):
     """Raised when an audit ledger hash chain fails verification."""
 
 
+def _empty_metadata() -> Mapping[str, str]:
+    """Return an immutable empty metadata mapping for audit records."""
+    return MappingProxyType({})
+
+
 @dataclass(frozen=True)
 class AuditLedgerRecord:
     """One append-only metadata record in a tamper-evident audit ledger."""
@@ -47,7 +52,7 @@ class AuditLedgerRecord:
     actor_id: str = ""
     project_id: str = ""
     story_id: str = ""
-    metadata: Mapping[str, str] = MappingProxyType({})
+    metadata: Mapping[str, str] = field(default_factory=_empty_metadata)
     previous_hash: str = _GENESIS_HASH
     record_hash: str = ""
 
