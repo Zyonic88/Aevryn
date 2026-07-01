@@ -1568,6 +1568,24 @@ def test_import_inspect_endpoint_uses_engine_import_without_source_text_leak() -
     assert "quote" not in payload["first_evidence_anchors"][0]
 
 
+def test_import_inspect_endpoint_uses_fixed_temp_path_for_upload_filename() -> None:
+    """Import API should not use uploaded filename path components for temp files."""
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/v2/imports/inspect",
+        json={
+            "source_id": "api_demo",
+            "filename": "../../private/chapter.txt",
+            "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["source_format"] == "txt"
+    assert response.json()["chapters"] == 1
+
+
 def test_import_inspect_logs_duration_without_source_payload(
     caplog: LogCaptureFixture,
 ) -> None:

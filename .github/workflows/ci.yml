@@ -23,10 +23,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -41,7 +41,9 @@ jobs:
         run: python -m mypy src tests
 
       - name: Pytest
-        run: python -m pytest --basetemp=.local/pytest-tmp -q
+        run: |
+          mkdir -p .local
+          python -m pytest --basetemp=.local/pytest-tmp -q
 
   frontend:
     name: Frontend gates
@@ -49,10 +51,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
