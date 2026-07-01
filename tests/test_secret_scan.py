@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aevryn.security.secret_scan import scan_paths, scan_text, tracked_files
+from aevryn.security.secret_scan import (
+    scan_paths,
+    scan_text,
+    tracked_files,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 

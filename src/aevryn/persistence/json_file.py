@@ -156,10 +156,7 @@ class JsonProjectRepository(InMemoryProjectRepository):
         )
         self._validate_loaded_uniqueness()
         self._validate_loaded_relationships()
-        logger.debug(
-            "json_project_repository_loaded",
-            extra={"database_path": str(self._database_path)},
-        )
+        logger.debug("json_project_repository_loaded", extra={"adapter": "local_json"})
 
     def _validate_loaded_uniqueness(self) -> None:
         """Reject persisted records that violate repository uniqueness rules."""
@@ -229,10 +226,7 @@ class JsonProjectRepository(InMemoryProjectRepository):
             encoding="utf-8",
         )
         temporary_path.replace(self._database_path)
-        logger.debug(
-            "json_project_repository_saved",
-            extra={"database_path": str(self._database_path)},
-        )
+        logger.debug("json_project_repository_saved", extra={"adapter": "local_json"})
 
 
 def _require_payload_sections(payload: dict[str, Any]) -> None:

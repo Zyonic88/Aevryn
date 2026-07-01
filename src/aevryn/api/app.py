@@ -244,6 +244,15 @@ PLATFORM_ENGINE_VERSION = "aevryn_v1"
 ALPHA_ACTIVE_RUN_TIMEOUT = timedelta(minutes=30)
 MAX_IMPORT_CONTENT_BYTES = 10 * 1024 * 1024
 MAX_IMPORT_CONTENT_BASE64_CHARS = ((MAX_IMPORT_CONTENT_BYTES + 2) // 3) * 4
+_API_IMPORT_SUFFIX_BY_FORMAT = {
+    "txt": ".txt",
+    "markdown": ".md",
+    "html": ".html",
+    "fb2": ".fb2",
+    "docx": ".docx",
+    "odt": ".odt",
+    "epub": ".epub",
+}
 
 
 def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
@@ -1899,6 +1908,15 @@ def _decode_base64(value: str) -> bytes:
             },
         )
     return decoded
+
+
+def _api_upload_source_path(directory: str, filename: str) -> tuple[Path, str]:
+    """Return a fixed temporary source path for API-uploaded content."""
+    source_format = SourceFileTextExtractor.source_format_for_path(
+        Path(Path(filename).name)
+    )
+    suffix = _API_IMPORT_SUFFIX_BY_FORMAT[source_format]
+    return Path(directory) / f"source{suffix}", source_format
 
 
 def _adapter_status(adapter: object | None) -> str:
@@ -4076,16 +4094,13 @@ def _import_request_source(
     """Import source content from a request through Project Manager."""
     source_bytes = _decode_base64(request.content_base64)
     with tempfile.TemporaryDirectory(prefix="AEVRYN_api_import_") as directory:
-        source_path = Path(directory) / Path(request.filename).name
-        source_path.write_bytes(source_bytes)
         try:
+            source_path, source_format = _api_upload_source_path(directory, request.filename)
+            source_path.write_bytes(source_bytes)
             imported_source = AevrynProjectRunner().import_text_file(
                 path=source_path,
                 source_id=request.source_id,
                 title=request.title,
-            )
-            source_format = SourceFileTextExtractor.source_format_for_path(
-                source_path
             )
         except ValueError as error:
             raise HTTPException(

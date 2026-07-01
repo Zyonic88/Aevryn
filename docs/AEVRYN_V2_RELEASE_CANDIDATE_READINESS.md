@@ -178,6 +178,7 @@ Gate tracking:
 
 * `docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md`
 * `docs/AEVRYN_BRANCH_PROTECTION.md`
+* `docs/AEVRYN_SECURITY_ALERT_ROUTING.md`
 
 Acceptance:
 
