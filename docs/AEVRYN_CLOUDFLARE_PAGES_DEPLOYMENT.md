@@ -213,11 +213,25 @@ API CORS result: https://api.aevryn.ai/v2/health allowed Origin https://app.aevr
 Secrets printed: 0
 ```
 
+Hosted browser-flow smoke result:
+
+```text
+Date: 2026-07-01
+Login page: loaded at https://app.aevryn.ai/login
+Register page: loaded at https://app.aevryn.ai/register
+Protected frontend route: /dashboard redirected to /login while signed out
+Protected API route: GET /v2/projects returned 401 session_required
+API CORS result: https://api.aevryn.ai/v2/projects allowed Origin https://app.aevryn.ai
+Browser console warnings/errors: none observed during checked flow
+Blocked: synthetic fake login returned "Managed identity provider owns login"
+Secrets printed: 0
+```
+
 ---
 
 # Public Beta Decision
 
 ```text
 Public beta: Blocked
-Reason: Cloudflare Pages frontend/API header smoke passed, but managed identity and creator workflow smoke have not passed.
+Reason: Cloudflare Pages frontend/API header smoke and unauthenticated browser-route/API protection checks passed, but managed identity login completion and creator workflow smoke have not passed.
 ```
