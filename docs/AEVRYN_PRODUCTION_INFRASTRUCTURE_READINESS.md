@@ -362,6 +362,12 @@ Production-like smoke progress:
 `aevryn production-config-check` verifies the production startup contract without printing secrets.
 The check reports startup_contract=ready when the production contract is complete.
 Local production contract check passed with deployment_env=production, startup_contract=ready, secrets_printed=0.
+2026-07-01 local smoke attempt verified fail-closed behavior when required environment variables are absent.
+2026-07-01 local production-style smoke passed for production config, PostgreSQL Project Database, and Cloudflare R2.
+The attempt is recorded in docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md.
+Cloud Run deployment prep is documented in docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md.
+2026-07-01 Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK.
+2026-07-01 api.aevryn.ai mapped to Cloud Run and /v2/health returned OK over HTTPS.
 Production-like deployment smoke still requires hosted environment execution.
 ```
 

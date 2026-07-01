@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from aevryn.auth.errors import AuthenticationError, InvalidSessionError
@@ -350,8 +351,12 @@ def _timestamp_seconds(now: str) -> int:
 
 def _fetch_jwks(jwks_url: str) -> JsonMapping:
     """Fetch a JWKS document without logging secrets or tokens."""
+    parsed = urlparse(jwks_url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise InvalidSessionError("Supabase JWKS URL must be an HTTPS URL.")
     try:
-        with urlopen(jwks_url, timeout=10) as response:
+        # The URL is HTTPS-validated above before urllib opens it.
+        with urlopen(jwks_url, timeout=10) as response:  # nosec B310
             payload = json.loads(response.read().decode())
     except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
         raise InvalidSessionError("Supabase JWKS could not be loaded.") from error

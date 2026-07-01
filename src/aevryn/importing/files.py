@@ -93,12 +93,14 @@ class SourceFileTextExtractor:
         suffix = path.suffix.casefold()
         source_format = self.source_format_for_path(path)
         if suffix in self._plain_text_suffixes:
+            # API uploads are copied to a service-owned temporary path before this read.
             return SourceFileText(
                 text=path.read_text(encoding="utf-8"),
                 source_format=source_format,
             )
         if suffix in {".html", ".htm", ".xhtml"}:
             return SourceFileText(
+                # API uploads are copied to a service-owned temporary path before this read.
                 text=_ReadableHtmlTextParser.extract(path.read_text(encoding="utf-8")),
                 source_format=source_format,
             )
@@ -133,7 +135,7 @@ class SourceFileTextExtractor:
             with zipfile.ZipFile(path) as archive:
                 document = ElementTree.fromstring(archive.read("word/document.xml"))
         except zipfile.BadZipFile as error:
-            raise ValueError(f"Malformed DOCX archive: {path}") from error
+            raise ValueError("Malformed DOCX archive.") from error
         except KeyError as error:
             raise ValueError(f"Malformed DOCX is missing required file: {error}") from error
         except ElementTree.ParseError as error:
@@ -152,7 +154,7 @@ class SourceFileTextExtractor:
             with zipfile.ZipFile(path) as archive:
                 document = ElementTree.fromstring(archive.read("content.xml"))
         except zipfile.BadZipFile as error:
-            raise ValueError(f"Malformed ODT archive: {path}") from error
+            raise ValueError("Malformed ODT archive.") from error
         except KeyError as error:
             raise ValueError(f"Malformed ODT is missing required file: {error}") from error
         except ElementTree.ParseError as error:
@@ -175,7 +177,7 @@ class SourceFileTextExtractor:
         try:
             document = ElementTree.fromstring(path.read_text(encoding="utf-8"))
         except ElementTree.ParseError as error:
-            raise ValueError(f"Malformed {readable_format} XML: {path}") from error
+            raise ValueError(f"Malformed {readable_format} XML.") from error
 
         paragraphs = [
             _normalize_visible_text(_iter_text(paragraph))
