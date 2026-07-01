@@ -181,6 +181,40 @@ export type ExportPreviewRequest = ImportInspectRequest & {
   world_entity_ids?: string[];
 };
 
+export type JsonPostResponse = {
+  ok: boolean;
+  status: number;
+  payload: unknown;
+};
+
+export async function postJson(
+  url: string,
+  {
+    headers,
+    body,
+  }: {
+    headers: HeadersInit;
+    body: unknown;
+  },
+): Promise<JsonPostResponse> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new ApiError(friendlyNetworkMessage(error), 0, "network_error");
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    payload: await readOptionalJsonPayload(response),
+  };
+}
+
 export class AevrynApiClient {
   readonly baseUrl: string;
 
@@ -580,6 +614,14 @@ async function readJsonPayload(response: Response): Promise<unknown> {
     if (response.ok) {
       throw new ApiError("Aevryn API returned invalid JSON.", response.status, "invalid_json");
     }
+    return {};
+  }
+}
+
+async function readOptionalJsonPayload(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
     return {};
   }
 }
