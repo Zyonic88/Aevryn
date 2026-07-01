@@ -52,6 +52,8 @@ from aevryn.api import (
     STORAGE_PROVIDER_ENV,
     SUPABASE_ANON_KEY_ENV,
     SUPABASE_JWKS_URL_ENV,
+    SUPABASE_JWT_ALGORITHM_ENV,
+    SUPABASE_JWT_SECRET_ENV,
     SUPABASE_SERVICE_ROLE_KEY_ENV,
     SUPABASE_URL_ENV,
     WORKER_API_KEY_ENV,
@@ -675,6 +677,28 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
             }
         )
 
+    with pytest.raises(ValueError, match=SUPABASE_JWT_ALGORITHM_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWT_ALGORITHM_ENV: "none",
+            }
+        )
+
+    with pytest.raises(ValueError, match=SUPABASE_JWT_SECRET_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWT_ALGORITHM_ENV: "hs256",
+            }
+        )
+
     with pytest.raises(ValueError, match=SUPABASE_ANON_KEY_ENV):
         create_app_from_env(
             {
@@ -682,9 +706,8 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
                 IDENTITY_PROVIDER_ENV: "managed",
                 IDENTITY_PROVIDER_NAME_ENV: "supabase",
                 SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
-                SUPABASE_JWKS_URL_ENV: (
-                    "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json"
-                ),
+                SUPABASE_JWT_ALGORITHM_ENV: "hs256",
+                SUPABASE_JWT_SECRET_ENV: "supabase-jwt-secret-placeholder",
             }
         )
 

@@ -122,8 +122,10 @@ from aevryn.auth import (
     InvalidResetTokenError,
     InvalidSessionError,
     JsonAuthenticationStore,
+    JwtDecoder,
     ManagedIdentityAuthenticationAdapter,
     PasswordPolicyError,
+    SupabaseHs256JwtDecoder,
     SupabaseJwksJwtDecoder,
     SupabaseJwtVerifier,
     supabase_issuer_from_url,
@@ -210,6 +212,8 @@ IDENTITY_PROVIDER_ENV = "AEVRYN_IDENTITY_PROVIDER"
 IDENTITY_PROVIDER_NAME_ENV = "AEVRYN_IDENTITY_PROVIDER_NAME"
 SUPABASE_URL_ENV = "AEVRYN_SUPABASE_URL"
 SUPABASE_JWKS_URL_ENV = "AEVRYN_SUPABASE_JWKS_URL"
+SUPABASE_JWT_ALGORITHM_ENV = "AEVRYN_SUPABASE_JWT_ALGORITHM"
+SUPABASE_JWT_SECRET_ENV = "AEVRYN_SUPABASE_JWT_SECRET"
 SUPABASE_ANON_KEY_ENV = "AEVRYN_SUPABASE_ANON_KEY"
 SUPABASE_SERVICE_ROLE_KEY_ENV = "AEVRYN_SUPABASE_SERVICE_ROLE_KEY"
 SESSION_AUTHORITY_ENV = "AEVRYN_SESSION_AUTHORITY"
@@ -2099,7 +2103,20 @@ def _require_production_identity_config(environ: Mapping[str, str]) -> None:
             "public-beta identity provider."
         )
     _require_https_url(environ, SUPABASE_URL_ENV)
-    _require_https_url(environ, SUPABASE_JWKS_URL_ENV)
+    jwt_algorithm = environ.get(SUPABASE_JWT_ALGORITHM_ENV, "rs256").strip().lower()
+    if jwt_algorithm == "rs256":
+        _require_https_url(environ, SUPABASE_JWKS_URL_ENV)
+    elif jwt_algorithm == "hs256":
+        if not environ.get(SUPABASE_JWT_SECRET_ENV, "").strip():
+            raise ValueError(
+                "AEVRYN_SUPABASE_JWT_SECRET is required when "
+                "AEVRYN_SUPABASE_JWT_ALGORITHM=hs256."
+            )
+    else:
+        raise ValueError(
+            "AEVRYN_SUPABASE_JWT_ALGORITHM must be 'rs256' or 'hs256' when "
+            "AEVRYN_IDENTITY_PROVIDER_NAME=supabase."
+        )
     if not environ.get(SUPABASE_ANON_KEY_ENV, "").strip():
         raise ValueError(
             "AEVRYN_SUPABASE_ANON_KEY is required when "
@@ -2269,10 +2286,19 @@ def _production_authentication_service(
     environ: Mapping[str, str],
 ) -> ManagedIdentityAuthenticationAdapter:
     """Return the production managed identity authentication adapter."""
-    decoder = SupabaseJwksJwtDecoder(
-        jwks_url=environ.get(SUPABASE_JWKS_URL_ENV, ""),
-        issuer=supabase_issuer_from_url(environ.get(SUPABASE_URL_ENV, "")),
-    )
+    issuer = supabase_issuer_from_url(environ.get(SUPABASE_URL_ENV, ""))
+    jwt_algorithm = environ.get(SUPABASE_JWT_ALGORITHM_ENV, "rs256").strip().lower()
+    decoder: JwtDecoder
+    if jwt_algorithm == "hs256":
+        decoder = SupabaseHs256JwtDecoder(
+            jwt_secret=environ.get(SUPABASE_JWT_SECRET_ENV, ""),
+            issuer=issuer,
+        )
+    else:
+        decoder = SupabaseJwksJwtDecoder(
+            jwks_url=environ.get(SUPABASE_JWKS_URL_ENV, ""),
+            issuer=issuer,
+        )
     return ManagedIdentityAuthenticationAdapter(
         repository=repository,
         verifier=SupabaseJwtVerifier(decoder=decoder),
