@@ -207,6 +207,8 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "SPF/DKIM/DMARC received-message verification passed.",
         "Public-page publication remains open.",
         "Local production config contract passed.",
+        "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
+        "2026-07-01 local smoke attempt verified fail-closed behavior",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
     )
@@ -424,6 +426,8 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "Decision 2 - Object Storage",
         "`aevryn production-config-check` verifies the production startup contract",
         "startup_contract=ready",
+        "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
+        "2026-07-01 local smoke attempt verified fail-closed behavior",
     )
 
     for term in required_terms:
@@ -817,6 +821,36 @@ def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
         "Operations",
         "Support",
         "Release candidate run has not been completed.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
+    """Production-like smoke attempts should distinguish fail-closed checks from success."""
+    document = read_doc("docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md")
+
+    required_terms = (
+        "Record type: Production-Like Smoke Attempt Log",
+        "Status: Started",
+        "Public beta: Blocked",
+        "Latest attempt: 2026-07-01 local fail-closed check",
+        "Production-like smoke proves configuration and workflow safety.",
+        "python -m aevryn.cli production-config-check",
+        "python -m aevryn.cli project-db-smoke",
+        "python -m aevryn.cli storage-smoke",
+        "AEVRYN_DEPLOYMENT_ENV=production is required",
+        "AEVRYN_PROJECT_DATABASE_URL is required in the process environment",
+        "AEVRYN_STORAGE_PROVIDER is required in the process environment",
+        "PASS for fail-closed behavior.",
+        "FAIL/blocked for production-like smoke completion.",
+        "No secret values were printed.",
+        "No source prose was used.",
+        "startup_contract=ready",
+        "secrets_printed=0",
+        "Not run in production-like environment",
+        "Production-like smoke has not passed",
     )
 
     for term in required_terms:
