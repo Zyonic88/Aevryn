@@ -49,7 +49,11 @@ def run_local_v2_performance_baseline() -> PerformanceSnapshotPayload:
         return run_performance_baseline(
             {
                 "import_inspect": lambda: _assert_ok(
-                    client.post("/v2/imports/inspect", json=_inspect_payload())
+                    client.post(
+                        "/v2/imports/inspect",
+                        headers=_auth_headers(),
+                        json=_inspect_payload(),
+                    )
                 ),
                 "import_save": lambda: _assert_ok(
                     client.post(

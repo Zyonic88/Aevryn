@@ -362,12 +362,16 @@ describe("AevrynApiClient", () => {
 
     const client = new AevrynApiClient("https://api.aevryn.ai");
     await expect(
-      client.inspectImport({
-        source_id: "api_demo",
-        filename: "chapter.txt",
-        title: "API Demo",
-        content_base64: "Q2hhcHRlciAx",
-      }),
+      client.inspectImport(
+        {
+          source_id: "api_demo",
+          filename: "chapter.txt",
+          title: "API Demo",
+          content_base64: "Q2hhcHRlciAx",
+        },
+        "session_token",
+        "2026-07-01T00:00:00Z",
+      ),
     ).resolves.toEqual(importInspectPayload);
 
     const [, init] = fetchMock.mock.calls[0];
@@ -375,6 +379,8 @@ describe("AevrynApiClient", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.importsInspect}`);
     expect(init.method).toBe("POST");
     expect(headers.get("Content-Type")).toBe("application/json");
+    expect(headers.get("Authorization")).toBe("Bearer session_token");
+    expect(headers.get("X-Aevryn-Now")).toBe("2026-07-01T00:00:00Z");
   });
 
   it("sends JSON requests for world previews", async () => {
@@ -586,9 +592,7 @@ describe("AevrynApiClient", () => {
 
     const [, init] = fetchMock.mock.calls[0];
     const headers = init.headers as Headers;
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      `https://api.aevryn.ai${API_PATHS.continuityPreview}`,
-    );
+    expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.continuityPreview}`);
     expect(init.method).toBe("POST");
     expect(headers.get("Content-Type")).toBe("application/json");
   });
@@ -623,11 +627,11 @@ describe("AevrynApiClient", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new AevrynApiClient("https://api.aevryn.ai");
-    await expect(
-      client.listProjects("session-token", "2026-06-27T00:00:00.000Z"),
-    ).resolves.toEqual({
-      projects: [projectPayload],
-    });
+    await expect(client.listProjects("session-token", "2026-06-27T00:00:00.000Z")).resolves.toEqual(
+      {
+        projects: [projectPayload],
+      },
+    );
     await expect(
       client.createProject(
         {
@@ -661,20 +665,15 @@ describe("AevrynApiClient", () => {
       .fn()
       .mockResolvedValueOnce(new Response(JSON.stringify(projectSettingsPayload), { status: 200 }))
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ ...projectSettingsPayload, default_export_format: "json" }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ ...projectSettingsPayload, default_export_format: "json" }), {
+          status: 200,
+        }),
       );
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new AevrynApiClient("https://api.aevryn.ai");
     await expect(
-      client.getProjectSettings(
-        "project_alpha",
-        "session-token",
-        "2026-06-27T00:00:00.000Z",
-      ),
+      client.getProjectSettings("project_alpha", "session-token", "2026-06-27T00:00:00.000Z"),
     ).resolves.toEqual(projectSettingsPayload);
     await expect(
       client.updateProjectSettings(
@@ -785,11 +784,15 @@ describe("AevrynApiClient", () => {
       .fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ runs: [engineRunPayload] })))
       .mockResolvedValueOnce(new Response(JSON.stringify(engineRunPayload)))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        claimed_jobs: 1,
-        succeeded_jobs: 1,
-        failed_jobs: 0,
-      })));
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            claimed_jobs: 1,
+            succeeded_jobs: 1,
+            failed_jobs: 0,
+          }),
+        ),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new AevrynApiClient("https://api.aevryn.ai");
@@ -820,9 +823,7 @@ describe("AevrynApiClient", () => {
     expect(fetchMock.mock.calls[1][0]).toBe(
       `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/stories/story_alpha/imports/import_alpha/runs`,
     );
-    expect(fetchMock.mock.calls[2][0]).toBe(
-      `https://api.aevryn.ai${API_PATHS.workerProcess}`,
-    );
+    expect(fetchMock.mock.calls[2][0]).toBe(`https://api.aevryn.ai${API_PATHS.workerProcess}`);
     for (const [, init] of fetchMock.mock.calls.slice(0, 2)) {
       const headers = init.headers as Headers;
       expect(headers.get("Authorization")).toBe("Bearer session-token");

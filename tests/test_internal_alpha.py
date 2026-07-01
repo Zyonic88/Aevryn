@@ -122,7 +122,11 @@ def test_internal_alpha_smoke_path_uses_v2_api_without_cli() -> None:
     )
     assert created_story.status_code == 200
 
-    inspected = client.post("/v2/imports/inspect", json=_import_payload())
+    inspected = client.post(
+        "/v2/imports/inspect",
+        headers=auth_headers,
+        json=_import_payload(),
+    )
     assert inspected.status_code == 200
     assert inspected.json()["source_format"] == "txt"
     saved_import = client.post(

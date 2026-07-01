@@ -1501,8 +1501,15 @@ def create_app(
         tags=["Import"],
         operation_id="postV2ImportsInspect",
     )
-    def inspect_import(request: ImportInspectRequest) -> ImportInspectResponse:
+    def inspect_import(
+        request: ImportInspectRequest,
+        http_request: Request,
+    ) -> ImportInspectResponse:
         """Inspect source structure through Project Manager and Story Import."""
+        _require_user_session_when_configured(
+            http_request,
+            authentication_service,
+        )
         started_at = time.perf_counter()
         imported_source, source_format = _import_request_source(request)
         response = _import_response(
@@ -2525,6 +2532,8 @@ def _is_auth_protected_route(request: Request) -> bool:
     path = request.url.path
     if path.startswith("/v2/auth/"):
         return False
+    if path == "/v2/imports/inspect":
+        return False
     if path == "/v2/projects" or (
         path.startswith("/v2/projects/") and path != "/v2/projects/preview"
     ):
@@ -2544,6 +2553,16 @@ def _extract_api_key(request: Request) -> str:
         return token.strip()
 
     return ""
+
+
+def _require_user_session_when_configured(
+    request: Request,
+    authentication_service: AuthenticationService | ManagedIdentityAuthenticationAdapter | None,
+) -> None:
+    """Require a browser user session when platform authentication is enabled."""
+    if authentication_service is None:
+        return
+    _authenticated_user(request, authentication_service)
 
 
 def _require_authentication_service(

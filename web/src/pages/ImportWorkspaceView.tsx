@@ -15,10 +15,7 @@ import {
   sourceIdFromFilename,
 } from "../importing/importPayload";
 import { formatRunStatus } from "../formatting/display";
-import {
-  importResultTotalsLabel,
-  importScenePreviewRows,
-} from "../importing/importResult";
+import { importResultTotalsLabel, importScenePreviewRows } from "../importing/importResult";
 import type { EngineRun, ImportInspect, ImportRecord, Snapshot, Story } from "../api/schemas";
 import type { SourceFormats } from "../api/schemas";
 import type { ProjectSummary } from "../projects/projectStore";
@@ -55,7 +52,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const storyOptions = storiesQuery.data?.stories ?? [];
   const activeStoryId = storyOptions.some((story) => story.story_id === selectedStoryId)
     ? selectedStoryId
-    : storyOptions[0]?.story_id ?? "";
+    : (storyOptions[0]?.story_id ?? "");
   const importsQuery = useQuery({
     queryKey: importQueryKey(project.id, activeStoryId, session?.session_token),
     queryFn: () =>
@@ -86,7 +83,8 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     enabled: session !== null && activeStoryId !== "",
   });
   const inspectImport = useMutation({
-    mutationFn: (payload: ImportInspectRequest) => apiClient.inspectImport(payload),
+    mutationFn: (payload: ImportInspectRequest) =>
+      apiClient.inspectImport(payload, requireSessionToken(session), new Date().toISOString()),
     onSuccess(result) {
       setInspectionResult(result);
     },
@@ -123,7 +121,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       return apiClient.processWorkerJobs({ started_at: now, finished_at: now, max_jobs: 10 });
     },
     onSuccess() {
-      void queryClient.invalidateQueries({ queryKey: runQueryKey(project.id, session?.session_token) });
+      void queryClient.invalidateQueries({
+        queryKey: runQueryKey(project.id, session?.session_token),
+      });
       void queryClient.invalidateQueries({
         queryKey: snapshotQueryKey(project.id, activeStoryId, session?.session_token),
       });
@@ -132,13 +132,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     },
   });
   const createImport = useMutation({
-    mutationFn: ({
-      payload,
-      storyId,
-    }: {
-      payload: ImportInspectRequest;
-      storyId: string;
-    }) => {
+    mutationFn: ({ payload, storyId }: { payload: ImportInspectRequest; storyId: string }) => {
       const now = new Date().toISOString();
       return apiClient.createStoryImport(
         project.id,
@@ -277,11 +271,12 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   }
 
   function confirmAdditionalStoryImport({ storyId }: { storyId: string }): boolean {
-    const existingImports = storyId === activeStoryId ? importsQuery.data?.imports ?? [] : [];
+    const existingImports = storyId === activeStoryId ? (importsQuery.data?.imports ?? []) : [];
     if (existingImports.length === 0) {
       return true;
     }
-    const storyTitle = storyOptions.find((story) => story.story_id === storyId)?.title ?? "this story";
+    const storyTitle =
+      storyOptions.find((story) => story.story_id === storyId)?.title ?? "this story";
     return window.confirm(
       `${storyTitle} already has imported source. Only continue if this source belongs to the same story. Add it anyway?`,
     );
@@ -336,7 +331,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       setFileContentBase64("");
       setSelectedFileName("");
       setSelectedFileSize(0);
-      setFormError("Aevryn could not read that selection. Choose one native file, or multiple TXT, Markdown, HTML, or FB2 files.");
+      setFormError(
+        "Aevryn could not read that selection. Choose one native file, or multiple TXT, Markdown, HTML, or FB2 files.",
+      );
     } finally {
       setIsReadingSourceFile(false);
     }
@@ -403,7 +400,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               </select>
             </label>
           ) : (
-            <p className="field-note">Aevryn will create a story record when you save this import.</p>
+            <p className="field-note">
+              Aevryn will create a story record when you save this import.
+            </p>
           )}
           <div className="form-row-grid">
             <label>
@@ -467,14 +466,19 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             <ErrorMessage>{createDefaultStory.error.message}</ErrorMessage>
           ) : null}
           {submitRun.error ? <ErrorMessage>{submitRun.error.message}</ErrorMessage> : null}
-          {drainLocalWorker.error ? <ErrorMessage>{drainLocalWorker.error.message}</ErrorMessage> : null}
+          {drainLocalWorker.error ? (
+            <ErrorMessage>{drainLocalWorker.error.message}</ErrorMessage>
+          ) : null}
           <button
             type="submit"
             className="primary-button"
             aria-busy={isInspectingImport}
             disabled={!canSubmit || isInspectingImport}
           >
-            {importInspectButtonLabel({ isReading: isReadingSourceFile, isInspecting: inspectImport.isPending })}
+            {importInspectButtonLabel({
+              isReading: isReadingSourceFile,
+              isInspecting: inspectImport.isPending,
+            })}
           </button>
         </form>
       </section>
@@ -486,7 +490,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             Source URL
             <input value="" placeholder="https://example.com/story" disabled readOnly />
           </label>
-          <p className="field-note">Unavailable: permission checks are required before web intake.</p>
+          <p className="field-note">
+            Unavailable: permission checks are required before web intake.
+          </p>
           <button type="button" className="secondary-button" disabled>
             Check permissions
           </button>
@@ -549,7 +555,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               ? "Saving import"
               : "Save import"}
           </button>
-      </section>
+        </section>
       ) : null}
 
       {activeStoryId ? (
@@ -595,7 +601,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           View monitoring
         </NavLink>
         {runsQuery.isLoading ? <LoadingMessage>Loading project runs.</LoadingMessage> : null}
-        {runsQuery.error && !runsQuery.data ? <ErrorMessage>{runsQuery.error.message}</ErrorMessage> : null}
+        {runsQuery.error && !runsQuery.data ? (
+          <ErrorMessage>{runsQuery.error.message}</ErrorMessage>
+        ) : null}
         {snapshotsQuery.error ? <ErrorMessage>{snapshotsQuery.error.message}</ErrorMessage> : null}
         {!runsQuery.isLoading && !runsQuery.error && (runsQuery.data?.runs.length ?? 0) === 0 ? (
           <EmptyState title="No project runs">
@@ -620,7 +628,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             })}
           </div>
         ) : null}
-        </section>
+      </section>
     </div>
   );
 }
@@ -782,11 +790,7 @@ function runQueryKey(projectId: string, sessionToken: string | undefined) {
   return ["project-runs", projectId, sessionToken] as const;
 }
 
-function snapshotQueryKey(
-  projectId: string,
-  storyId: string,
-  sessionToken: string | undefined,
-) {
+function snapshotQueryKey(projectId: string, storyId: string, sessionToken: string | undefined) {
   return ["story-snapshots", projectId, storyId, "canon", sessionToken] as const;
 }
 
@@ -926,7 +930,10 @@ function createJobId(runId: string): string {
 }
 
 function machineSuffix(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function requireSessionToken(session: { session_token: string } | null): string {

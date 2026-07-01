@@ -234,9 +234,14 @@ export class AevrynApiClient {
     return this.request(API_PATHS.sourceFormats, sourceFormatsSchema);
   }
 
-  inspectImport(payload: ImportInspectRequest): Promise<ImportInspect> {
+  inspectImport(
+    payload: ImportInspectRequest,
+    sessionToken?: string,
+    now?: string,
+  ): Promise<ImportInspect> {
     return this.request(API_PATHS.importsInspect, importInspectSchema, {
       method: "POST",
+      headers: sessionToken && now ? authHeaders(sessionToken, now) : undefined,
       body: JSON.stringify(payload),
     });
   }
@@ -319,7 +324,11 @@ export class AevrynApiClient {
     });
   }
 
-  createProject(payload: ProjectCreateRequest, sessionToken: string, now: string): Promise<Project> {
+  createProject(
+    payload: ProjectCreateRequest,
+    sessionToken: string,
+    now: string,
+  ): Promise<Project> {
     return this.request(API_PATHS.projects, projectSchema, {
       method: "POST",
       headers: authHeaders(sessionToken, now),
@@ -447,13 +456,9 @@ export class AevrynApiClient {
     now: string,
     snapshotKind?: string,
   ): Promise<SnapshotList> {
-    return this.request(
-      storySnapshotsPath(projectId, storyId, snapshotKind),
-      snapshotListSchema,
-      {
-        headers: authHeaders(sessionToken, now),
-      },
-    );
+    return this.request(storySnapshotsPath(projectId, storyId, snapshotKind), snapshotListSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
   }
 
   submitImportRun(
@@ -493,11 +498,7 @@ export class AevrynApiClient {
     try {
       response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
     } catch (error) {
-      throw new ApiError(
-        friendlyNetworkMessage(error),
-        0,
-        "network_error",
-      );
+      throw new ApiError(friendlyNetworkMessage(error), 0, "network_error");
     }
 
     const payload = await readJsonPayload(response);
@@ -531,11 +532,7 @@ export class AevrynApiClient {
     try {
       response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
     } catch (error) {
-      throw new ApiError(
-        friendlyNetworkMessage(error),
-        0,
-        "network_error",
-      );
+      throw new ApiError(friendlyNetworkMessage(error), 0, "network_error");
     }
 
     if (!response.ok) {
@@ -591,11 +588,7 @@ function projectSnapshotsPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/snapshots`;
 }
 
-function storySnapshotsPath(
-  projectId: string,
-  storyId: string,
-  snapshotKind?: string,
-): string {
+function storySnapshotsPath(projectId: string, storyId: string, snapshotKind?: string): string {
   const path = `${projectStoryPath(projectId, storyId)}/snapshots`;
   if (!snapshotKind) {
     return path;
