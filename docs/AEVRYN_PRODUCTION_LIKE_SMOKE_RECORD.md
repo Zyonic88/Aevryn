@@ -14,7 +14,7 @@ It is separate from the final release-candidate run record because smoke attempt
 Record type: Production-Like Smoke Attempt Log
 Status: Started
 Public beta: Blocked
-Latest attempt: 2026-07-01 hosted custom-domain API health smoke passed
+Latest attempt: 2026-07-01 hosted browser-flow smoke blocked on managed identity login
 ```
 
 Production-like smoke is partially complete.
@@ -25,7 +25,13 @@ Hosted Cloud Run API health smoke has passed.
 
 Hosted custom-domain API health smoke has passed.
 
-Hosted browser/API, managed-identity, and workflow smoke are still not complete.
+Local frontend gates have passed with the hosted API base URL configured.
+
+Hosted frontend/API custom-domain header smoke has passed.
+
+Hosted browser-flow smoke verified login/register availability, protected frontend-route redirects, protected API-route authentication, and clean browser console output.
+
+Managed-identity login completion and creator workflow smoke are still not complete.
 
 ---
 
@@ -169,7 +175,6 @@ Interpretation:
 ```text
 PASS for hosted Cloud Run API startup.
 PASS for HTTPS health endpoint availability.
-BLOCKED for Cloudflare Pages frontend-to-API smoke.
 BLOCKED for managed identity browser flow smoke.
 BLOCKED for creator workflow smoke.
 ```
@@ -214,7 +219,6 @@ Interpretation:
 PASS for api.aevryn.ai custom-domain DNS.
 PASS for Google-managed certificate provisioning.
 PASS for custom-domain HTTPS health endpoint availability.
-BLOCKED for Cloudflare Pages frontend-to-API smoke.
 BLOCKED for managed identity browser flow smoke.
 BLOCKED for creator workflow smoke.
 ```
@@ -242,7 +246,148 @@ Required configuration families:
 * security alert routing settings
 * metadata-only logging settings
 
+---
+
+# Attempt 2026-07-01 - Local Frontend Hosted-API Build Smoke
+
+Environment:
+
+```text
+Execution surface: local PowerShell
+Frontend base: local Vite production build
+API base: https://api.aevryn.ai
+Result: local frontend hosted-API build smoke passed
+```
+
+Commands run:
+
+```powershell
+cd C:\Users\enigm\Documents\Aevryn\web
+$env:VITE_AEVRYN_API_URL="https://api.aevryn.ai"
+npm.cmd run build
+npm.cmd run lint
+npm.cmd run test
+```
+
+Observed result:
+
+```text
+Frontend production build passed.
+Frontend lint passed.
+Frontend test suite passed: 146 tests.
+```
+
+Interpretation:
+
+```text
+PASS for local production build against hosted API configuration.
+PASS for frontend lint and tests.
+BLOCKED for Cloudflare Pages hosted frontend/API smoke.
+BLOCKED for managed identity browser flow smoke.
+BLOCKED for creator workflow smoke.
+```
+
+No API key, storage credential, database URL, Supabase service-role key, worker key, session secret, source prose, or AI payload was printed.
+
+---
+
+# Attempt 2026-07-01 - Hosted Frontend/API Custom-Domain Smoke
+
+Environment:
+
+```text
+Execution surface: Cloudflare Pages and Google Cloud Run custom domains
+Frontend project: aevryn-web
+Frontend preview URL: https://84f1e9e9.aevryn-web.pages.dev
+Frontend custom domain: https://app.aevryn.ai
+API custom domain: https://api.aevryn.ai
+Result: hosted frontend/API custom-domain header smoke passed
+```
+
+Commands run:
+
+```powershell
+curl.exe -I https://app.aevryn.ai
+curl.exe -i -H "Origin: https://app.aevryn.ai" https://api.aevryn.ai/v2/health
+```
+
+Observed result:
+
+```text
+https://app.aevryn.ai returned HTTP OK.
+https://api.aevryn.ai/v2/health returned status OK.
+API CORS returned access-control-allow-origin: https://app.aevryn.ai.
+```
+
+Interpretation:
+
+```text
+PASS for Cloudflare Pages custom-domain frontend availability.
+PASS for API CORS allowing the intended frontend origin.
+BLOCKED for managed identity browser flow smoke.
+BLOCKED for creator workflow smoke.
+```
+
+No API key, storage credential, database URL, Supabase service-role key, worker key, session secret, source prose, or AI payload was printed.
+
 Local-only project database paths, local import storage paths, local JSON authentication, local-only secrets, in-memory workers, local-only logs, and ambiguous environment names must remain rejected in production mode.
+
+---
+
+# Attempt 2026-07-01 - Hosted Browser-Flow Smoke
+
+Environment:
+
+```text
+Execution surface: in-app browser plus metadata-only hosted API checks
+Frontend custom domain: https://app.aevryn.ai
+API custom domain: https://api.aevryn.ai
+Result: browser-flow smoke partially passed; managed identity login completion blocked
+```
+
+Browser actions:
+
+```text
+Opened https://app.aevryn.ai.
+Opened https://app.aevryn.ai/dashboard while signed out.
+Opened https://app.aevryn.ai/register.
+Submitted a synthetic fake login on https://app.aevryn.ai/login.
+```
+
+Command run:
+
+```powershell
+curl.exe -i -H "Origin: https://app.aevryn.ai" https://api.aevryn.ai/v2/projects
+```
+
+Observed result:
+
+```text
+https://app.aevryn.ai redirected to /login.
+Login page loaded.
+Register page loaded.
+Unauthenticated /dashboard access redirected to /login.
+Browser console warnings/errors: none observed.
+No local auth/session storage keys were created by the failed login attempt.
+Synthetic fake login stayed on /login and returned: Managed identity provider owns login.
+Unauthenticated GET /v2/projects returned 401 session_required.
+API CORS returned access-control-allow-origin: https://app.aevryn.ai.
+API response included x-request-id.
+```
+
+Interpretation:
+
+```text
+PASS for hosted login/register shell availability.
+PASS for protected frontend route redirect while unauthenticated.
+PASS for protected API route requiring bearer managed identity.
+PASS for metadata-only unauthorized API error.
+PASS for clean browser console output during the checked flow.
+BLOCKED for managed identity login completion.
+BLOCKED for creator workflow smoke.
+```
+
+No real user credentials, API key, storage credential, database URL, Supabase service-role key, worker key, session secret, source prose, or AI payload was used or printed.
 
 ---
 
@@ -256,8 +401,8 @@ A successful production-like smoke must record:
 | PostgreSQL smoke | create/read/delete synthetic metadata record succeeds | Passed locally |
 | R2 storage smoke | write/read/delete tiny synthetic private object succeeds | Passed locally |
 | API startup | production app starts with local-only adapters rejected | Passed on Cloud Run |
-| HTTPS/CORS | public origins are explicit and HTTPS-only | Health endpoint passed on Cloud Run and api.aevryn.ai; browser CORS smoke not complete |
-| Managed identity | protected routes require managed identity tokens | Not run in production-like environment |
+| HTTPS/CORS | public origins are explicit and HTTPS-only | Health endpoint passed on Cloud Run and api.aevryn.ai; app.aevryn.ai frontend header smoke and API CORS origin check passed |
+| Managed identity | protected routes require managed identity tokens | Protected frontend and API routes passed while unauthenticated; provider login completion blocked |
 | Worker processing | import processing completes through production-safe worker posture | Not run in production-like environment |
 | Monitoring | workflow state is observable through metadata-only status | Not run in production-like environment |
 | Export preview | export preview works through storage-reference boundaries | Not run in production-like environment |
@@ -284,5 +429,5 @@ Then run the browser/API smoke against the production-like API and record the re
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, and custom-domain API health smoke passed, but frontend, managed-identity, and creator workflow smoke have not passed.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, and unauthenticated browser-route/API protection checks passed, but managed-identity login completion and creator workflow smoke have not passed.
 ```
