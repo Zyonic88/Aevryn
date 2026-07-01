@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import re
 import subprocess  # nosec B404
-import sys
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -150,24 +149,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     paths = _expanded_paths(args.paths, root) if args.paths else tracked_files(root)
     findings = scan_paths(paths, root=root)
 
-    sys.stdout.write(format_secret_scan_report(findings, scanned_count=len(tuple(paths))))
-    sys.stdout.write("\n")
     return 1 if findings else 0
-
-
-def format_secret_scan_report(
-    findings: Sequence[SecretScanFinding], *, scanned_count: int
-) -> str:
-    if findings:
-        lines = ["Repository secret scan failed:"]
-        for finding in findings:
-            lines.append(
-                f"{finding.path}:{finding.line_number}: "
-                f"{finding.rule_id}: redacted finding omitted"
-            )
-        return "\n".join(lines)
-
-    return f"Repository secret scan passed: {scanned_count} files scanned."
 
 
 def _expanded_paths(paths: Sequence[Path], root: Path) -> tuple[Path, ...]:
