@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import hmac
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -116,29 +117,59 @@ class SupabaseJwksJwtDecoder:
             signed_content=signed_content,
             signature=signature,
         )
-        self._validate_claims(payload=payload, now=now)
+        _validate_supabase_claims(
+            payload=payload,
+            issuer=self._issuer,
+            audience=self._audience,
+            now=now,
+            leeway_seconds=self._leeway_seconds,
+        )
         return payload
 
-    def _validate_claims(self, *, payload: JsonMapping, now: str) -> None:
-        """Validate Supabase issuer, audience, and time claims."""
-        if payload.get("iss") != self._issuer:
-            raise InvalidSessionError("Supabase JWT issuer is invalid.")
-        audience = payload.get("aud")
-        if isinstance(audience, str):
-            audience_valid = audience == self._audience
-        elif isinstance(audience, list):
-            audience_valid = self._audience in audience
-        else:
-            audience_valid = False
-        if not audience_valid:
-            raise InvalidSessionError("Supabase JWT audience is invalid.")
-        now_seconds = _timestamp_seconds(now)
-        exp = _numeric_claim(payload, "exp")
-        if exp < now_seconds - self._leeway_seconds:
-            raise InvalidSessionError("Supabase JWT has expired.")
-        nbf = payload.get("nbf")
-        if nbf is not None and _numeric_claim(payload, "nbf") > now_seconds + self._leeway_seconds:
-            raise InvalidSessionError("Supabase JWT is not valid yet.")
+
+class SupabaseHs256JwtDecoder:
+    """Decode and verify Supabase HS256 JWTs with the deployment JWT secret."""
+
+    def __init__(
+        self,
+        *,
+        jwt_secret: str,
+        issuer: str,
+        audience: str = "authenticated",
+        leeway_seconds: int = 60,
+    ) -> None:
+        """Create a Supabase HS256 JWT decoder."""
+        if not jwt_secret.strip():
+            raise ValueError("Supabase JWT secret cannot be blank.")
+        if not issuer.startswith("https://"):
+            raise ValueError("Supabase issuer must use https://.")
+        if leeway_seconds < 0:
+            raise ValueError("JWT leeway cannot be negative.")
+        self._jwt_secret = jwt_secret.encode()
+        self._issuer = issuer.rstrip("/")
+        self._audience = audience
+        self._leeway_seconds = leeway_seconds
+
+    def decode(self, *, token: str, now: str) -> JsonMapping:
+        """Return verified JWT claims."""
+        header, payload, signed_content, signature = _parse_compact_jwt(token)
+        if header.get("alg") != "HS256":
+            raise InvalidSessionError("Supabase JWT must use HS256.")
+        expected_signature = hmac.new(
+            self._jwt_secret,
+            signed_content,
+            hashlib.sha256,
+        ).digest()
+        if not hmac.compare_digest(expected_signature, signature):
+            raise InvalidSessionError("Supabase JWT signature is invalid.")
+        _validate_supabase_claims(
+            payload=payload,
+            issuer=self._issuer,
+            audience=self._audience,
+            now=now,
+            leeway_seconds=self._leeway_seconds,
+        )
+        return payload
 
 
 class ManagedIdentityAuthenticationAdapter:
@@ -339,6 +370,35 @@ def _numeric_claim(payload: JsonMapping, key: str) -> int:
     if not isinstance(value, int):
         raise InvalidSessionError(f"Supabase JWT missing numeric {key} claim.")
     return value
+
+
+def _validate_supabase_claims(
+    *,
+    payload: JsonMapping,
+    issuer: str,
+    audience: str,
+    now: str,
+    leeway_seconds: int,
+) -> None:
+    """Validate Supabase issuer, audience, and time claims."""
+    if payload.get("iss") != issuer:
+        raise InvalidSessionError("Supabase JWT issuer is invalid.")
+    payload_audience = payload.get("aud")
+    if isinstance(payload_audience, str):
+        audience_valid = payload_audience == audience
+    elif isinstance(payload_audience, list):
+        audience_valid = audience in payload_audience
+    else:
+        audience_valid = False
+    if not audience_valid:
+        raise InvalidSessionError("Supabase JWT audience is invalid.")
+    now_seconds = _timestamp_seconds(now)
+    exp = _numeric_claim(payload, "exp")
+    if exp < now_seconds - leeway_seconds:
+        raise InvalidSessionError("Supabase JWT has expired.")
+    nbf = payload.get("nbf")
+    if nbf is not None and _numeric_claim(payload, "nbf") > now_seconds + leeway_seconds:
+        raise InvalidSessionError("Supabase JWT is not valid yet.")
 
 
 def _timestamp_seconds(now: str) -> int:
