@@ -209,6 +209,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Local production config contract passed.",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
+        "2026-07-01 local production-style smoke passed",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
     )
@@ -428,6 +429,7 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "startup_contract=ready",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
+        "2026-07-01 local production-style smoke passed",
     )
 
     for term in required_terms:
@@ -835,7 +837,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-01 local fail-closed check",
+        "Latest attempt: 2026-07-01 local PostgreSQL and R2 smoke passed",
         "Production-like smoke proves configuration and workflow safety.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -847,10 +849,17 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "FAIL/blocked for production-like smoke completion.",
         "No secret values were printed.",
         "No source prose was used.",
+        "Local PostgreSQL And R2 Smoke",
+        "deployment_env=production",
         "startup_contract=ready",
         "secrets_printed=0",
-        "Not run in production-like environment",
-        "Production-like smoke has not passed",
+        "ok=production_config_contract_checked",
+        "ok=project_database_postgresql_smoke_completed",
+        "ok=storage_r2_smoke_completed",
+        "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
+        "AEVRYN_API_ALLOWED_ORIGINS",
+        "Passed locally",
+        "hosted production-like browser/API smoke has not passed",
     )
 
     for term in required_terms:
