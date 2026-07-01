@@ -25,6 +25,8 @@ Hosted Cloud Run API health smoke has passed.
 
 Hosted custom-domain API health smoke has passed.
 
+Local frontend gates have passed with the hosted API base URL configured.
+
 Hosted browser/API, managed-identity, and workflow smoke are still not complete.
 
 ---
@@ -238,6 +240,49 @@ Required configuration families:
 * HTTPS, HSTS, public API, and public frontend base URL settings
 * explicit HTTPS-only `AEVRYN_API_ALLOWED_ORIGINS`
 * managed worker runtime and queue settings
+
+---
+
+# Attempt 2026-07-01 - Local Frontend Hosted-API Build Smoke
+
+Environment:
+
+```text
+Execution surface: local PowerShell
+Frontend base: local Vite production build
+API base: https://api.aevryn.ai
+Result: local frontend hosted-API build smoke passed
+```
+
+Commands run:
+
+```powershell
+cd C:\Users\enigm\Documents\Aevryn\web
+$env:VITE_AEVRYN_API_URL="https://api.aevryn.ai"
+npm.cmd run build
+npm.cmd run lint
+npm.cmd run test
+```
+
+Observed result:
+
+```text
+Frontend production build passed.
+Frontend lint passed.
+Frontend test suite passed: 146 tests.
+```
+
+Interpretation:
+
+```text
+PASS for local production build against hosted API configuration.
+PASS for frontend lint and tests.
+BLOCKED for Cloudflare Pages hosted browser/API smoke.
+BLOCKED for managed identity browser flow smoke.
+BLOCKED for creator workflow smoke.
+```
+
+No API key, storage credential, database URL, Supabase service-role key, worker key, session secret, source prose, or AI payload was printed.
 * hosted log and monitoring settings
 * security alert routing settings
 * metadata-only logging settings
