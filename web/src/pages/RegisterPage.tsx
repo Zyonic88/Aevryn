@@ -2,8 +2,9 @@ import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { apiClient, type RegisterRequest } from "../api/client";
+import type { RegisterRequest } from "../api/client";
 import { buildRegisterPayload } from "../auth/formValidation";
+import { registerWithConfiguredAuth } from "../auth/managedIdentityAuth";
 import { useAuth } from "../auth/useAuth";
 import { ErrorMessage } from "../components/Feedback";
 
@@ -16,7 +17,7 @@ export function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const register = useMutation({
-    mutationFn: (payload: RegisterRequest) => apiClient.register(payload),
+    mutationFn: (payload: RegisterRequest) => registerWithConfiguredAuth(payload),
     onSuccess(session) {
       setSession(session);
       navigate("/dashboard");
