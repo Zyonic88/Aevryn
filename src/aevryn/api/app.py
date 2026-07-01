@@ -2104,7 +2104,7 @@ def _require_production_identity_config(environ: Mapping[str, str]) -> None:
         )
     _require_https_url(environ, SUPABASE_URL_ENV)
     jwt_algorithm = environ.get(SUPABASE_JWT_ALGORITHM_ENV, "rs256").strip().lower()
-    if jwt_algorithm == "rs256":
+    if jwt_algorithm in {"es256", "rs256"}:
         _require_https_url(environ, SUPABASE_JWKS_URL_ENV)
     elif jwt_algorithm == "hs256":
         if not environ.get(SUPABASE_JWT_SECRET_ENV, "").strip():
@@ -2114,7 +2114,7 @@ def _require_production_identity_config(environ: Mapping[str, str]) -> None:
             )
     else:
         raise ValueError(
-            "AEVRYN_SUPABASE_JWT_ALGORITHM must be 'rs256' or 'hs256' when "
+            "AEVRYN_SUPABASE_JWT_ALGORITHM must be 'es256', 'rs256', or 'hs256' when "
             "AEVRYN_IDENTITY_PROVIDER_NAME=supabase."
         )
     if not environ.get(SUPABASE_ANON_KEY_ENV, "").strip():

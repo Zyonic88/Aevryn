@@ -238,7 +238,7 @@ AEVRYN_ENVIRONMENT_NAME=production
 AEVRYN_IDENTITY_PROVIDER=managed
 AEVRYN_IDENTITY_PROVIDER_NAME=supabase
 AEVRYN_SUPABASE_URL=https://<project-ref>.supabase.co
-AEVRYN_SUPABASE_JWT_ALGORITHM=rs256
+AEVRYN_SUPABASE_JWT_ALGORITHM=es256
 AEVRYN_SUPABASE_JWKS_URL=https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json
 AEVRYN_SUPABASE_ANON_KEY=<stored in deployment secrets>
 AEVRYN_SUPABASE_SERVICE_ROLE_KEY=<stored in deployment secrets>
@@ -261,7 +261,7 @@ Supabase bearer token
 -> Aevryn UserRecord
 ```
 
-The boundary maps external provider subjects to stable Aevryn user IDs without storing provider tokens. Supabase RS256 JWT/JWKS verification is wired into the production API app factory by default. Supabase HS256 JWT verification is also supported when `AEVRYN_SUPABASE_JWT_ALGORITHM=hs256` and `AEVRYN_SUPABASE_JWT_SECRET` is supplied by deployment secrets. Public beta still requires production-like smoke execution.
+The boundary maps external provider subjects to stable Aevryn user IDs without storing provider tokens. Supabase ES256 and RS256 JWT/JWKS verification are wired into the production API app factory for asymmetric signing keys, with ES256 preferred for public beta. Supabase HS256 JWT verification is also supported when `AEVRYN_SUPABASE_JWT_ALGORITHM=hs256` and `AEVRYN_SUPABASE_JWT_SECRET` is supplied by deployment secrets. Public beta still requires production-like smoke execution.
 
 Production worker runtime is intentionally fail-closed until a managed queue/runtime is selected and wired:
 
