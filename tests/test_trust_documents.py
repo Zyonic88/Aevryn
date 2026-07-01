@@ -841,7 +841,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-01 hosted Cloud Run health smoke passed",
+        "Latest attempt: 2026-07-01 hosted custom-domain API health smoke passed",
         "Production-like smoke proves configuration and workflow safety.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -865,10 +865,16 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "https://aevryn-api-561437810621.us-central1.run.app",
         "/v2/health returned status OK.",
         "PASS for hosted Cloud Run API startup.",
+        "Hosted Custom-Domain API Health Smoke",
+        "api.aevryn.ai resolved to ghs.googlehosted.com.",
+        "https://api.aevryn.ai/v2/health returned status OK.",
+        "PASS for api.aevryn.ai custom-domain DNS.",
+        "PASS for Google-managed certificate provisioning.",
+        "PASS for custom-domain HTTPS health endpoint availability.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
-        "custom-domain, frontend, managed-identity, and creator workflow smoke have not passed",
+        "frontend, managed-identity, and creator workflow smoke have not passed",
     )
 
     for term in required_terms:
@@ -909,9 +915,13 @@ def test_cloud_run_deployment_document_tracks_hosted_api_runbook() -> None:
         "https://aevryn-api-561437810621.us-central1.run.app",
         "Result: /v2/health returned HTTP OK",
         "Header/status check: HTTP OK",
+        "Custom-domain health smoke result:",
+        "Domain: api.aevryn.ai",
+        "Certificate: Google-managed certificate provisioned",
+        "Result: https://api.aevryn.ai/v2/health returned HTTP OK",
         "api.aevryn.ai",
-        "Cloud Run API health smoke passed",
-        "managed-identity, and workflow smoke have not passed",
+        "Hosted Cloud Run API health smoke has passed",
+        "frontend, managed-identity, and workflow smoke have not passed",
     )
 
     for term in required_terms:

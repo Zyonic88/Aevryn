@@ -14,7 +14,7 @@ It is separate from the final release-candidate run record because smoke attempt
 Record type: Production-Like Smoke Attempt Log
 Status: Started
 Public beta: Blocked
-Latest attempt: 2026-07-01 hosted Cloud Run health smoke passed
+Latest attempt: 2026-07-01 hosted custom-domain API health smoke passed
 ```
 
 Production-like smoke is partially complete.
@@ -23,7 +23,9 @@ The latest attempt verified the production startup contract, local PostgreSQL Pr
 
 Hosted Cloud Run API health smoke has passed.
 
-Hosted custom-domain, browser/API, managed-identity, and workflow smoke are still not complete.
+Hosted custom-domain API health smoke has passed.
+
+Hosted browser/API, managed-identity, and workflow smoke are still not complete.
 
 ---
 
@@ -167,7 +169,51 @@ Interpretation:
 ```text
 PASS for hosted Cloud Run API startup.
 PASS for HTTPS health endpoint availability.
-BLOCKED for api.aevryn.ai custom-domain smoke.
+BLOCKED for Cloudflare Pages frontend-to-API smoke.
+BLOCKED for managed identity browser flow smoke.
+BLOCKED for creator workflow smoke.
+```
+
+No database URL, database password, API key, storage access key, storage secret key, Supabase key, worker key, session secret, source prose, or AI payload was printed.
+
+---
+
+# Attempt 2026-07-01 - Hosted Custom-Domain API Health Smoke
+
+Environment:
+
+```text
+Execution surface: Google Cloud Run custom domain
+Service: aevryn-api
+Region: us-central1
+Domain: api.aevryn.ai
+DNS: api CNAME ghs.googlehosted.com.
+Certificate: Google-managed certificate provisioned
+Result: hosted custom-domain API health smoke passed
+```
+
+Commands run:
+
+```powershell
+Resolve-DnsName api.aevryn.ai -Type CNAME
+curl.exe -i https://api.aevryn.ai/v2/health
+curl.exe -i https://aevryn-api-561437810621.us-central1.run.app/v2/health
+```
+
+Observed result:
+
+```text
+api.aevryn.ai resolved to ghs.googlehosted.com.
+https://api.aevryn.ai/v2/health returned status OK.
+Direct Cloud Run service URL also returned status OK.
+```
+
+Interpretation:
+
+```text
+PASS for api.aevryn.ai custom-domain DNS.
+PASS for Google-managed certificate provisioning.
+PASS for custom-domain HTTPS health endpoint availability.
 BLOCKED for Cloudflare Pages frontend-to-API smoke.
 BLOCKED for managed identity browser flow smoke.
 BLOCKED for creator workflow smoke.
@@ -210,7 +256,7 @@ A successful production-like smoke must record:
 | PostgreSQL smoke | create/read/delete synthetic metadata record succeeds | Passed locally |
 | R2 storage smoke | write/read/delete tiny synthetic private object succeeds | Passed locally |
 | API startup | production app starts with local-only adapters rejected | Passed on Cloud Run |
-| HTTPS/CORS | public origins are explicit and HTTPS-only | Health endpoint passed on Cloud Run; custom-domain/browser CORS smoke not complete |
+| HTTPS/CORS | public origins are explicit and HTTPS-only | Health endpoint passed on Cloud Run and api.aevryn.ai; browser CORS smoke not complete |
 | Managed identity | protected routes require managed identity tokens | Not run in production-like environment |
 | Worker processing | import processing completes through production-safe worker posture | Not run in production-like environment |
 | Monitoring | workflow state is observable through metadata-only status | Not run in production-like environment |
@@ -238,5 +284,5 @@ Then run the browser/API smoke against the production-like API and record the re
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, and hosted Cloud Run API health smoke passed, but custom-domain, frontend, managed-identity, and creator workflow smoke have not passed.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, and custom-domain API health smoke passed, but frontend, managed-identity, and creator workflow smoke have not passed.
 ```

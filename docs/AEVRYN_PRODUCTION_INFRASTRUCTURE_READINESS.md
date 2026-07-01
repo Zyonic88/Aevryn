@@ -367,6 +367,7 @@ Local production contract check passed with deployment_env=production, startup_c
 The attempt is recorded in docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md.
 Cloud Run deployment prep is documented in docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md.
 2026-07-01 Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK.
+2026-07-01 api.aevryn.ai mapped to Cloud Run and /v2/health returned OK over HTTPS.
 Production-like deployment smoke still requires hosted environment execution.
 ```
 

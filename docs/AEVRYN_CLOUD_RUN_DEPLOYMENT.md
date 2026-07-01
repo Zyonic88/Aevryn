@@ -20,7 +20,9 @@ The local production-style smoke has passed for production config, PostgreSQL Pr
 
 Hosted Cloud Run API health smoke has passed.
 
-Hosted custom-domain, browser/API, managed-identity, and workflow smoke are still required.
+Hosted custom-domain API health smoke has passed.
+
+Hosted browser/API, managed-identity, and workflow smoke are still required.
 
 ---
 
@@ -268,10 +270,22 @@ Header/status check: HTTP OK
 Secrets printed: 0
 ```
 
+Custom-domain health smoke result:
+
+```text
+Date: 2026-07-01
+Domain: api.aevryn.ai
+Mapping: Cloud Run domain mapping to aevryn-api
+DNS: api CNAME ghs.googlehosted.com.
+Certificate: Google-managed certificate provisioned
+Result: https://api.aevryn.ai/v2/health returned HTTP OK
+Header/status check: HTTP OK
+Secrets printed: 0
+```
+
 Remaining hosted smoke:
 
 ```text
-api.aevryn.ai custom domain mapping not complete.
 Cloudflare Pages frontend is not connected to the hosted API.
 Managed identity browser flow has not been smoke-tested against Cloud Run.
 Creator workflow smoke has not been run against Cloud Run.
@@ -299,5 +313,5 @@ Do not route public beta traffic until the hosted smoke has passed and the relea
 
 ```text
 Public beta: Blocked
-Reason: Cloud Run API health smoke passed, but custom domain, frontend, managed-identity, and workflow smoke have not passed.
+Reason: Cloud Run API health smoke and custom-domain API health smoke passed, but frontend, managed-identity, and workflow smoke have not passed.
 ```
