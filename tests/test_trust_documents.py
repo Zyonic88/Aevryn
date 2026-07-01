@@ -841,7 +841,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-01 hosted browser-flow smoke blocked on managed identity login",
+        "Latest attempt: 2026-07-01 hosted managed identity and project smoke passed",
         "Production-like smoke proves configuration and workflow safety.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -885,10 +885,25 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Unauthenticated GET /v2/projects returned 401 session_required.",
         "PASS for protected API route requiring bearer managed identity.",
         "BLOCKED for managed identity login completion.",
+        "Hosted Managed Identity And Project Smoke",
+        "managed identity login and authenticated project create/read/list passed",
+        "PASS for managed identity login completion.",
+        "PASS for authenticated project creation.",
+        "PASS for authenticated project detail read.",
+        "PASS for authenticated project list read.",
+        "OPEN for import processing workflow smoke in the hosted environment.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
-        "managed-identity login completion and creator workflow smoke have not passed",
+        (
+            "managed-identity login completion, and authenticated project "
+            "create/read/list smoke passed"
+        ),
+        (
+            "Hosted import processing, monitoring workflow status, export preview, "
+            "production-safe worker posture, log review, and final release-candidate "
+            "signoff have not passed."
+        ),
     )
 
     for term in required_terms:
