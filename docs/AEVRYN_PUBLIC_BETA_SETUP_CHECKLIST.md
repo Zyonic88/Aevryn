@@ -89,11 +89,12 @@ Tracking docs:
 * `docs/AEVRYN_BRANCH_PROTECTION.md`
 * `docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md`
 * `docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md`
+* `docs/AEVRYN_SECURITY_ALERT_ROUTING.md`
 
 Status:
 
 ```text
-Workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, pull request template, and exact required hosted settings are documented. Hosted repository settings not verified.
+Workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, pull request template, branch protection, required checks, secret scanning, push protection, dependency alerts, private vulnerability reporting, and default CodeQL are configured. Protected-path drill was exercised through PR #9 and final hosted checks passed. Hosted alert routing runbook is documented; synthetic GitHub-hosted alert path was tested through issue #10. Email inbox receipt from GitHub notification settings remains unverified.
 ```
 
 ---
@@ -189,12 +190,14 @@ Tracking docs:
 
 * `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md`
 * `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md`
+* `docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md`
+* `docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md`
 * `docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md`
 
 Status:
 
 ```text
-Local production config contract passed. Hosted production-like smoke not complete.
+Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. api.aevryn.ai custom-domain health smoke returned OK. Frontend, managed-identity, and creator workflow smoke are not complete.
 ```
 
 ---

@@ -24,6 +24,7 @@ web/coverage/
 # Tool caches
 .mypy_cache/
 .ruff_cache/
+.wrangler/
 web/node_modules/
 web/.vite/
 *.tsbuildinfo

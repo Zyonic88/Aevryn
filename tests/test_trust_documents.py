@@ -162,6 +162,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "Gate 8 - Release Candidate Test Pass",
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md",
         "docs/AEVRYN_SECURITY_OPERATIONS_READINESS.md",
+        "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
         "docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md",
         "docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md",
         "docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md",
@@ -191,6 +192,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "abuse@aevryn.ai",
         "docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md",
         "docs/AEVRYN_REPLY_IDENTITY_SETUP.md",
+        "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
         "GitHub Branch Protection And Hosted Security Controls",
         "Production Provider And Data-Use Review",
         "Backup, Retention, Restore, And Audit",
@@ -205,6 +207,10 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "SPF/DKIM/DMARC received-message verification passed.",
         "Public-page publication remains open.",
         "Local production config contract passed.",
+        "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
+        "2026-07-01 local smoke attempt verified fail-closed behavior",
+        "2026-07-01 local production-style smoke passed",
+        "docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
     )
@@ -422,6 +428,12 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "Decision 2 - Object Storage",
         "`aevryn production-config-check` verifies the production startup contract",
         "startup_contract=ready",
+        "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
+        "docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md",
+        "2026-07-01 local smoke attempt verified fail-closed behavior",
+        "2026-07-01 local production-style smoke passed",
+        "aevryn-api-00003-9v4",
+        "/v2/health returned OK",
     )
 
     for term in required_terms:
@@ -505,6 +517,7 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
         "Status: Started",
         "Public beta: Blocked",
         "Security controls must protect the release path, not just the local machine.",
+        "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
         "hosted secret scanning",
         "push protection",
         "hosted dependency alerts",
@@ -513,7 +526,44 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
         "production rate limits",
         "security monitoring alerts",
         "incident response routing",
+        "Hosted alert routing runbook is documented.",
+        "Synthetic GitHub-hosted alert path was tested through issue #10.",
+        "Email inbox receipt from GitHub notification settings remains unverified.",
         "metadata-only",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_security_alert_routing_document_tracks_human_alert_paths() -> None:
+    """Security alert routing should map hosted alerts to human-owned channels."""
+    document = read_doc("docs/AEVRYN_SECURITY_ALERT_ROUTING.md")
+
+    required_terms = (
+        "Gate: Security Alert Routing",
+        "Status: Routing runbook documented; synthetic GitHub alert path tested",
+        "Public beta: Blocked",
+        "Alerts must route to a responsible human without exposing private user stories.",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "Secret scanning alert",
+        "Code scanning high severity",
+        "Dependabot critical or high alert",
+        "Cross-user authorization failure",
+        "Project or account deletion failure",
+        "Metadata-Only Alert Payloads",
+        "full manuscripts",
+        "GitHub secret scanning",
+        "GitHub CodeQL code scanning",
+        "GitHub Actions release gates",
+        "At least one synthetic hosted alert or equivalent notification path is tested.",
+        "Synthetic Hosted Alert Drill",
+        "https://github.com/Zyonic88/Aevryn/issues/10",
+        "GitHub-hosted issue alert path verified with metadata-only evidence.",
+        "Email inbox receipt from GitHub notification settings remains unverified.",
     )
 
     for term in required_terms:
@@ -540,7 +590,9 @@ def test_branch_protection_document_tracks_hosted_release_controls() -> None:
         "push protection",
         "dependency alerts",
         "docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md",
-        "Protected-path verification drill remains open.",
+        "Protected-path verification drill exercised through PR #9.",
+        "Direct pushes to master were blocked.",
+        "Final hosted checks passed on the PR branch after fixes.",
         "Hosted checks and repository protections prevent unverified code",
     )
 
@@ -554,7 +606,8 @@ def test_github_hosted_controls_document_tracks_external_settings() -> None:
 
     required_terms = (
         "Gate: GitHub hosted controls",
-        "Status: Repo workflows ready; GitHub settings not verified",
+        "Status: GitHub branch and security settings configured; protected-path drill "
+        "exercised",
         "Public beta: Blocked",
         "Hosted controls must block unsafe release changes before they reach the "
         "protected branch.",
@@ -565,15 +618,23 @@ def test_github_hosted_controls_document_tracks_external_settings() -> None:
         "Dependency audit",
         "Static security scan",
         "Require status checks to pass before merging",
+        "Configured with 1 required approval",
+        "Restrict deletions enabled",
         "Secret scanning",
         "Push protection",
+        "Dependency graph",
         "Dependabot alerts",
+        "CodeQL default setup configured",
         "Verification Drill",
         ".github/CODEOWNERS",
         ".github/dependabot.yml",
         ".github/SECURITY.md",
         ".github/PULL_REQUEST_TEMPLATE.md",
-        "Protected-path verification drill remains open.",
+        "GitHub branch protection settings are configured for master.",
+        "Bypass controls were not exposed in the current GitHub branch-rule UI.",
+        "Protected-path verification drill exercised through PR #9.",
+        "Direct push to `master` was blocked by GitHub branch protection.",
+        "Final hosted checks passed",
         "GitHub hosted settings require the documented CI and security checks",
     )
 
@@ -770,6 +831,144 @@ def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
 
     for term in required_terms:
         assert term in document
+
+
+def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
+    """Production-like smoke attempts should distinguish fail-closed checks from success."""
+    document = read_doc("docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md")
+
+    required_terms = (
+        "Record type: Production-Like Smoke Attempt Log",
+        "Status: Started",
+        "Public beta: Blocked",
+        "Latest attempt: 2026-07-01 hosted browser-flow smoke blocked on managed identity login",
+        "Production-like smoke proves configuration and workflow safety.",
+        "python -m aevryn.cli production-config-check",
+        "python -m aevryn.cli project-db-smoke",
+        "python -m aevryn.cli storage-smoke",
+        "AEVRYN_DEPLOYMENT_ENV=production is required",
+        "AEVRYN_PROJECT_DATABASE_URL is required in the process environment",
+        "AEVRYN_STORAGE_PROVIDER is required in the process environment",
+        "PASS for fail-closed behavior.",
+        "FAIL/blocked for production-like smoke completion.",
+        "No secret values were printed.",
+        "No source prose was used.",
+        "Local PostgreSQL And R2 Smoke",
+        "deployment_env=production",
+        "startup_contract=ready",
+        "secrets_printed=0",
+        "ok=production_config_contract_checked",
+        "ok=project_database_postgresql_smoke_completed",
+        "ok=storage_r2_smoke_completed",
+        "Hosted Cloud Run API Health Smoke",
+        "aevryn-api-00003-9v4",
+        "https://aevryn-api-561437810621.us-central1.run.app",
+        "/v2/health returned status OK.",
+        "PASS for hosted Cloud Run API startup.",
+        "Hosted Custom-Domain API Health Smoke",
+        "api.aevryn.ai resolved to ghs.googlehosted.com.",
+        "https://api.aevryn.ai/v2/health returned status OK.",
+        "PASS for api.aevryn.ai custom-domain DNS.",
+        "PASS for Google-managed certificate provisioning.",
+        "PASS for custom-domain HTTPS health endpoint availability.",
+        "Hosted Frontend/API Custom-Domain Smoke",
+        "Frontend project: aevryn-web",
+        "https://app.aevryn.ai returned HTTP OK.",
+        "API CORS returned access-control-allow-origin: https://app.aevryn.ai.",
+        "PASS for Cloudflare Pages custom-domain frontend availability.",
+        "PASS for API CORS allowing the intended frontend origin.",
+        "Hosted Browser-Flow Smoke",
+        "Login page loaded.",
+        "Register page loaded.",
+        "Unauthenticated /dashboard access redirected to /login.",
+        "Synthetic fake login stayed on /login and returned: Managed identity provider owns login.",
+        "Unauthenticated GET /v2/projects returned 401 session_required.",
+        "PASS for protected API route requiring bearer managed identity.",
+        "BLOCKED for managed identity login completion.",
+        "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
+        "AEVRYN_API_ALLOWED_ORIGINS",
+        "Passed locally",
+        "managed-identity login completion and creator workflow smoke have not passed",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_cloud_run_deployment_document_tracks_hosted_api_runbook() -> None:
+    """Cloud Run deployment prep should preserve runtime and secret boundaries."""
+    document = read_doc("docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md")
+    dockerfile = read_doc("Dockerfile")
+    dockerignore = read_doc(".dockerignore")
+
+    required_terms = (
+        "Deployment target: Google Cloud Run",
+        "Status: Deployed - health smoke passed",
+        "Public beta: Blocked",
+        "Cloud Run owns API runtime. Cloudflare owns edge, DNS, R2, and email.",
+        "Cloud Run Admin API",
+        "Artifact Registry API",
+        "Cloud Build API",
+        "Secret Manager API",
+        "Dockerfile",
+        ".dockerignore",
+        ".[platform,postgresql,object-storage,identity]",
+        "python -m aevryn.cli api",
+        "Cloud Run provides `PORT`.",
+        "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
+        "AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai",
+        "Secret-backed Cloud Run variables",
+        "AEVRYN_PROJECT_DATABASE_URL",
+        "AEVRYN_R2_SECRET_ACCESS_KEY",
+        "AEVRYN_SUPABASE_SERVICE_ROLE_KEY",
+        "Do not put secret values",
+        "gcloud builds submit",
+        "gcloud run deploy aevryn-api",
+        "curl.exe https://YOUR_CLOUD_RUN_URL/v2/health",
+        "aevryn-api-00003-9v4",
+        "https://aevryn-api-561437810621.us-central1.run.app",
+        "Result: /v2/health returned HTTP OK",
+        "Header/status check: HTTP OK",
+        "Custom-domain health smoke result:",
+        "Domain: api.aevryn.ai",
+        "Certificate: Google-managed certificate provisioned",
+        "Result: https://api.aevryn.ai/v2/health returned HTTP OK",
+        "api.aevryn.ai",
+        "Hosted Cloud Run API health smoke has passed",
+        "Hosted frontend/API header smoke has passed.",
+        "Unauthenticated browser-route/API protection checks have passed.",
+        "Cloudflare Pages frontend is deployed at https://app.aevryn.ai.",
+        "API CORS allows Origin https://app.aevryn.ai.",
+        "Unauthenticated GET /v2/projects returns 401 session_required.",
+        "Synthetic fake login returns \"Managed identity provider owns login.\"",
+        "managed-identity login completion and creator workflow smoke have not passed",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+    docker_terms = (
+        "FROM python:3.13-slim",
+        "PORT=8080",
+        ".[platform,postgresql,object-storage,identity]",
+        "python -m aevryn.cli api --host 0.0.0.0",
+        "${AEVRYN_API_ALLOWED_ORIGINS:-https://app.aevryn.ai}",
+    )
+
+    for term in docker_terms:
+        assert term in dockerfile
+
+    ignored_terms = (
+        ".env",
+        ".env.*",
+        ".local/",
+        "runtime/",
+        "snapshots/",
+        "web/node_modules/",
+    )
+
+    for term in ignored_terms:
+        assert term in dockerignore
 
 
 def test_future_ideas_document_preserves_scope_boundary() -> None:

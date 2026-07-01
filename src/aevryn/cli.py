@@ -14,7 +14,6 @@ from typing import Any, cast
 from uuid import uuid4
 
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 from aevryn.api import (
     ALLOWED_ORIGINS_ENV,
@@ -45,10 +44,6 @@ from aevryn.import_storage import InMemoryImportContentStore
 from aevryn.importing import SourceFileTextExtractor
 from aevryn.json_utils import loads_json_without_duplicate_keys
 from aevryn.performance import PerformanceRegressionPayload
-from aevryn.performance_runner import (
-    compare_local_v2_performance_baseline,
-    write_local_v2_performance_baseline,
-)
 from aevryn.persistence import InMemoryProjectRepository
 from aevryn.persistence.models import UserRecord
 from aevryn.persistence.postgresql import PostgresqlProjectRepository
@@ -958,6 +953,22 @@ def _handle_performance_baseline(args: argparse.Namespace) -> int:
     return 0
 
 
+def compare_local_v2_performance_baseline(
+    previous_path: Path,
+) -> list[PerformanceRegressionPayload]:
+    """Compare local V2 performance baselines without loading test tooling at CLI import."""
+    from aevryn.performance_runner import compare_local_v2_performance_baseline as compare
+
+    return compare(previous_path)
+
+
+def write_local_v2_performance_baseline(output_path: Path) -> Path:
+    """Write the local V2 performance baseline without loading test tooling at CLI import."""
+    from aevryn.performance_runner import write_local_v2_performance_baseline as write
+
+    return write(output_path)
+
+
 def _print_performance_regressions(
     regressions: list[PerformanceRegressionPayload],
 ) -> None:
@@ -1189,6 +1200,8 @@ def _run_provider_api_workflow_smoke(
     timeout_seconds: float,
 ) -> dict[str, object]:
     """Run the synthetic provider-backed API workflow and return metadata only."""
+    from fastapi.testclient import TestClient
+
     now = "2026-06-28T00:00:00Z"
     soon = "2026-06-28T00:05:00Z"
     repository = InMemoryProjectRepository()
