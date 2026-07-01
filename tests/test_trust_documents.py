@@ -210,6 +210,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
         "2026-07-01 local production-style smoke passed",
+        "docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md",
         "Release-candidate run not complete.",
         "Public beta: Blocked",
     )
@@ -428,6 +429,7 @@ def test_production_infrastructure_readiness_document_tracks_gate_three() -> Non
         "`aevryn production-config-check` verifies the production startup contract",
         "startup_contract=ready",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
+        "docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
         "2026-07-01 local production-style smoke passed",
     )
@@ -864,6 +866,67 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
 
     for term in required_terms:
         assert term in document
+
+
+def test_cloud_run_deployment_document_tracks_hosted_api_runbook() -> None:
+    """Cloud Run deployment prep should preserve runtime and secret boundaries."""
+    document = read_doc("docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md")
+    dockerfile = read_doc("Dockerfile")
+    dockerignore = read_doc(".dockerignore")
+
+    required_terms = (
+        "Deployment target: Google Cloud Run",
+        "Status: Prepared",
+        "Public beta: Blocked",
+        "Cloud Run owns API runtime. Cloudflare owns edge, DNS, R2, and email.",
+        "Cloud Run Admin API",
+        "Artifact Registry API",
+        "Cloud Build API",
+        "Secret Manager API",
+        "Dockerfile",
+        ".dockerignore",
+        ".[platform,postgresql,object-storage,identity]",
+        "python -m aevryn.cli api",
+        "Cloud Run provides `PORT`.",
+        "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
+        "AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai",
+        "Secret-backed Cloud Run variables",
+        "AEVRYN_PROJECT_DATABASE_URL",
+        "AEVRYN_R2_SECRET_ACCESS_KEY",
+        "AEVRYN_SUPABASE_SERVICE_ROLE_KEY",
+        "Do not put secret values",
+        "gcloud builds submit",
+        "gcloud run deploy aevryn-api",
+        "curl.exe https://YOUR_CLOUD_RUN_URL/v2/health",
+        "api.aevryn.ai",
+        "hosted Cloud Run browser/API smoke has not passed",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+    docker_terms = (
+        "FROM python:3.13-slim",
+        "PORT=8080",
+        ".[platform,postgresql,object-storage,identity]",
+        "python -m aevryn.cli api --host 0.0.0.0",
+        "${AEVRYN_API_ALLOWED_ORIGINS:-https://app.aevryn.ai}",
+    )
+
+    for term in docker_terms:
+        assert term in dockerfile
+
+    ignored_terms = (
+        ".env",
+        ".env.*",
+        ".local/",
+        "runtime/",
+        "snapshots/",
+        "web/node_modules/",
+    )
+
+    for term in ignored_terms:
+        assert term in dockerignore
 
 
 def test_future_ideas_document_preserves_scope_boundary() -> None:

@@ -365,6 +365,7 @@ Local production contract check passed with deployment_env=production, startup_c
 2026-07-01 local smoke attempt verified fail-closed behavior when required environment variables are absent.
 2026-07-01 local production-style smoke passed for production config, PostgreSQL Project Database, and Cloudflare R2.
 The attempt is recorded in docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md.
+Cloud Run deployment prep is documented in docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md.
 Production-like deployment smoke still requires hosted environment execution.
 ```
 

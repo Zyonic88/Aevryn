@@ -191,12 +191,13 @@ Tracking docs:
 * `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md`
 * `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md`
 * `docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md`
+* `docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md`
 * `docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md`
 
 Status:
 
 ```text
-Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Hosted production-like smoke not complete.
+Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run deployment prep is documented. Hosted production-like smoke not complete.
 ```
 
 ---
