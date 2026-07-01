@@ -14,7 +14,6 @@ from typing import Any, cast
 from uuid import uuid4
 
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 from aevryn.api import (
     ALLOWED_ORIGINS_ENV,
@@ -1189,6 +1188,8 @@ def _run_provider_api_workflow_smoke(
     timeout_seconds: float,
 ) -> dict[str, object]:
     """Run the synthetic provider-backed API workflow and return metadata only."""
+    from fastapi.testclient import TestClient
+
     now = "2026-06-28T00:00:00Z"
     soon = "2026-06-28T00:05:00Z"
     repository = InMemoryProjectRepository()
