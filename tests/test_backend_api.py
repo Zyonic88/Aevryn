@@ -688,6 +688,17 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
             }
         )
 
+    with pytest.raises(ValueError, match=SUPABASE_JWKS_URL_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWT_ALGORITHM_ENV: "es256",
+            }
+        )
+
     with pytest.raises(ValueError, match=SUPABASE_JWT_SECRET_ENV):
         create_app_from_env(
             {

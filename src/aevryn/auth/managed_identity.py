@@ -80,7 +80,7 @@ class SupabaseJwtVerifier:
 
 
 class SupabaseJwksJwtDecoder:
-    """Decode and verify Supabase RS256 JWTs against a JWKS endpoint."""
+    """Decode and verify Supabase asymmetric JWTs against a JWKS endpoint."""
 
     def __init__(
         self,
@@ -107,16 +107,24 @@ class SupabaseJwksJwtDecoder:
     def decode(self, *, token: str, now: str) -> JsonMapping:
         """Return verified JWT claims."""
         header, payload, signed_content, signature = _parse_compact_jwt(token)
-        if header.get("alg") != "RS256":
-            raise InvalidSessionError("Supabase JWT must use RS256.")
+        algorithm = header.get("alg")
+        if algorithm not in {"ES256", "RS256"}:
+            raise InvalidSessionError("Supabase JWT must use ES256 or RS256.")
         kid = _claim_text(header, "kid")
         jwks = self._jwks_fetcher(self._jwks_url)
         key = _jwks_key_for_kid(jwks, kid)
-        _verify_rs256_signature(
-            key=key,
-            signed_content=signed_content,
-            signature=signature,
-        )
+        if algorithm == "ES256":
+            _verify_es256_signature(
+                key=key,
+                signed_content=signed_content,
+                signature=signature,
+            )
+        else:
+            _verify_rs256_signature(
+                key=key,
+                signed_content=signed_content,
+                signature=signature,
+            )
         _validate_supabase_claims(
             payload=payload,
             issuer=self._issuer,
@@ -352,6 +360,38 @@ def _verify_rs256_signature(
     public_key = rsa.RSAPublicNumbers(e=e, n=n).public_key()
     try:
         public_key.verify(signature, signed_content, padding.PKCS1v15(), hashes.SHA256())
+    except InvalidSignature as error:
+        raise InvalidSessionError("Supabase JWT signature is invalid.") from error
+
+
+def _verify_es256_signature(
+    *,
+    key: JsonMapping,
+    signed_content: bytes,
+    signature: bytes,
+) -> None:
+    """Verify an ES256 JWT signature using an EC JWK."""
+    if key.get("kty") != "EC" or key.get("crv") != "P-256":
+        raise InvalidSessionError("Supabase JWKS key type is unsupported.")
+    x = _int_from_jwk_part(key, "x")
+    y = _int_from_jwk_part(key, "y")
+    if len(signature) != 64:
+        raise InvalidSessionError("Supabase JWT signature is invalid.")
+    try:
+        from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric import ec, utils
+    except ImportError as error:
+        raise InvalidSessionError(
+            "cryptography is required for Supabase JWT verification."
+        ) from error
+    public_key = ec.EllipticCurvePublicNumbers(x=x, y=y, curve=ec.SECP256R1()).public_key()
+    der_signature = utils.encode_dss_signature(
+        int.from_bytes(signature[:32], "big"),
+        int.from_bytes(signature[32:], "big"),
+    )
+    try:
+        public_key.verify(der_signature, signed_content, ec.ECDSA(hashes.SHA256()))
     except InvalidSignature as error:
         raise InvalidSessionError("Supabase JWT signature is invalid.") from error
 

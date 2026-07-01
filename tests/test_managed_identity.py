@@ -10,7 +10,7 @@ from collections.abc import Mapping
 
 import pytest
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa, utils
 
 from aevryn.auth import (
     InvalidSessionError,
@@ -113,6 +113,33 @@ def test_supabase_jwks_decoder_verifies_rs256_token() -> None:
         jwks_url="https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json",
         issuer=ISSUER,
         jwks_fetcher=lambda _url: jwks_for_key(key, kid="supabase-key"),
+    )
+
+    claims = decoder.decode(token=token, now=NOW)
+
+    assert claims["sub"] == "external-user-1234"
+    assert claims["email"] == "creator@example.com"
+
+
+def test_supabase_jwks_decoder_verifies_es256_token() -> None:
+    """Supabase JWKS decoder should verify ES256 signing-key tokens."""
+    key = ec.generate_private_key(ec.SECP256R1())
+    token = signed_es256_test_jwt(
+        private_key=key,
+        kid="supabase-ec-key",
+        payload={
+            "iss": ISSUER,
+            "aud": "authenticated",
+            "sub": "external-user-1234",
+            "email": "creator@example.com",
+            "exp": 1_783_200_000,
+            "user_metadata": {"display_name": "Creator"},
+        },
+    )
+    decoder = SupabaseJwksJwtDecoder(
+        jwks_url="https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json",
+        issuer=ISSUER,
+        jwks_fetcher=lambda _url: jwks_for_ec_key(key, kid="supabase-ec-key"),
     )
 
     claims = decoder.decode(token=token, now=NOW)
@@ -340,6 +367,45 @@ def jwks_for_key(private_key: rsa.RSAPrivateKey, *, kid: str) -> dict[str, objec
                 "use": "sig",
                 "n": base64url_int(public_numbers.n),
                 "e": base64url_int(public_numbers.e),
+            }
+        ]
+    }
+
+
+def signed_es256_test_jwt(
+    *,
+    private_key: ec.EllipticCurvePrivateKey,
+    kid: str,
+    payload: Mapping[str, object],
+) -> str:
+    """Return a compact ES256 JWT for tests."""
+    header = {"alg": "ES256", "typ": "JWT", "kid": kid}
+    header_part = base64url_json(header)
+    payload_part = base64url_json(payload)
+    signed_content = f"{header_part}.{payload_part}".encode()
+    der_signature = private_key.sign(signed_content, ec.ECDSA(hashes.SHA256()))
+    r, s = utils.decode_dss_signature(der_signature)
+    signature = r.to_bytes(32, "big") + s.to_bytes(32, "big")
+    return f"{header_part}.{payload_part}.{base64url_bytes(signature)}"
+
+
+def jwks_for_ec_key(
+    private_key: ec.EllipticCurvePrivateKey,
+    *,
+    kid: str,
+) -> dict[str, object]:
+    """Return a JWKS document for a test P-256 key."""
+    public_numbers = private_key.public_key().public_numbers()
+    return {
+        "keys": [
+            {
+                "kty": "EC",
+                "kid": kid,
+                "alg": "ES256",
+                "use": "sig",
+                "crv": "P-256",
+                "x": base64url_int(public_numbers.x),
+                "y": base64url_int(public_numbers.y),
             }
         ]
     }
