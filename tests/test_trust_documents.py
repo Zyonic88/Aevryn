@@ -841,7 +841,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-01 hosted custom-domain API health smoke passed",
+        "Latest attempt: 2026-07-01 hosted frontend/API custom-domain smoke passed",
         "Production-like smoke proves configuration and workflow safety.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -871,10 +871,16 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "PASS for api.aevryn.ai custom-domain DNS.",
         "PASS for Google-managed certificate provisioning.",
         "PASS for custom-domain HTTPS health endpoint availability.",
+        "Hosted Frontend/API Custom-Domain Smoke",
+        "Frontend project: aevryn-web",
+        "https://app.aevryn.ai returned HTTP OK.",
+        "API CORS returned access-control-allow-origin: https://app.aevryn.ai.",
+        "PASS for Cloudflare Pages custom-domain frontend availability.",
+        "PASS for API CORS allowing the intended frontend origin.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
-        "frontend, managed-identity, and creator workflow smoke have not passed",
+        "managed-identity and creator workflow smoke have not passed",
     )
 
     for term in required_terms:
@@ -921,7 +927,10 @@ def test_cloud_run_deployment_document_tracks_hosted_api_runbook() -> None:
         "Result: https://api.aevryn.ai/v2/health returned HTTP OK",
         "api.aevryn.ai",
         "Hosted Cloud Run API health smoke has passed",
-        "frontend, managed-identity, and workflow smoke have not passed",
+        "Hosted frontend/API header smoke has passed.",
+        "Cloudflare Pages frontend is deployed at https://app.aevryn.ai.",
+        "API CORS allows Origin https://app.aevryn.ai.",
+        "managed-identity and creator workflow smoke have not passed",
     )
 
     for term in required_terms:

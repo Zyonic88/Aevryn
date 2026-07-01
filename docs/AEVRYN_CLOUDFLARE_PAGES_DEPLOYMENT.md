@@ -12,11 +12,13 @@ It is a release-candidate deployment runbook, not public-beta approval.
 
 ```text
 Deployment target: Cloudflare Pages
-Status: Prepared - local production build passed
+Status: Deployed - hosted frontend/API header smoke passed
 Public beta: Blocked
 ```
 
 The hosted API is available at `https://api.aevryn.ai/v2/health`.
+
+The hosted frontend is available at `https://app.aevryn.ai`.
 
 The frontend must be deployed with:
 
@@ -121,7 +123,7 @@ $env:CLOUDFLARE_API_TOKEN="<stored outside repo>"
 Create the Pages project once:
 
 ```powershell
-npx.cmd wrangler pages project create aevryn-app --production-branch master
+npx.cmd wrangler pages project create aevryn-web --production-branch master
 ```
 
 Build and deploy:
@@ -130,7 +132,7 @@ Build and deploy:
 cd C:\Users\enigm\Documents\Aevryn\web
 $env:VITE_AEVRYN_API_URL="https://api.aevryn.ai"
 npm.cmd run build
-npx.cmd wrangler pages deploy dist --project-name aevryn-app --branch master
+npx.cmd wrangler pages deploy dist --project-name aevryn-web --branch master
 ```
 
 Record the Pages deployment URL returned by Wrangler.
@@ -144,7 +146,7 @@ Use this path for repeatable release-candidate and beta deployments.
 Recommended Cloudflare Pages settings:
 
 ```text
-Project name: aevryn-app
+Project name: aevryn-web
 Production branch: master
 Root directory: web
 Build command: npm.cmd run build
@@ -170,7 +172,7 @@ Target frontend domain:
 app.aevryn.ai
 ```
 
-Add `app.aevryn.ai` as a Cloudflare Pages custom domain for the `aevryn-app` project.
+Add `app.aevryn.ai` as a Cloudflare Pages custom domain for the `aevryn-web` project.
 
 Expected result:
 
@@ -199,11 +201,23 @@ Then use a browser to verify:
 * errors remain creator-facing and metadata-only
 * no secrets or source prose appear in browser console output
 
+Hosted frontend/API header smoke result:
+
+```text
+Date: 2026-07-01
+Pages project: aevryn-web
+Preview URL: https://84f1e9e9.aevryn-web.pages.dev
+Custom domain: https://app.aevryn.ai
+Result: https://app.aevryn.ai returned HTTP OK
+API CORS result: https://api.aevryn.ai/v2/health allowed Origin https://app.aevryn.ai
+Secrets printed: 0
+```
+
 ---
 
 # Public Beta Decision
 
 ```text
 Public beta: Blocked
-Reason: Cloudflare Pages frontend has not completed hosted browser/API smoke.
+Reason: Cloudflare Pages frontend/API header smoke passed, but managed identity and creator workflow smoke have not passed.
 ```
