@@ -24,6 +24,8 @@ Hosted custom-domain API health smoke has passed.
 
 Hosted browser/API, managed-identity, and workflow smoke are still required.
 
+Cloudflare Pages frontend deployment is tracked in `docs/AEVRYN_CLOUDFLARE_PAGES_DEPLOYMENT.md`.
+
 ---
 
 # Core Rule
@@ -287,6 +289,7 @@ Remaining hosted smoke:
 
 ```text
 Cloudflare Pages frontend is not connected to the hosted API.
+Local frontend production build passed with VITE_AEVRYN_API_URL=https://api.aevryn.ai.
 Managed identity browser flow has not been smoke-tested against Cloud Run.
 Creator workflow smoke has not been run against Cloud Run.
 ```
