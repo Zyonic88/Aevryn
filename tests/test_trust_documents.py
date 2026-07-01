@@ -517,7 +517,8 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
         "security monitoring alerts",
         "incident response routing",
         "Hosted alert routing runbook is documented.",
-        "Hosted alert notification delivery test remains open.",
+        "Synthetic GitHub-hosted alert path was tested through issue #10.",
+        "Email inbox receipt from GitHub notification settings remains unverified.",
         "metadata-only",
     )
 
@@ -531,7 +532,7 @@ def test_security_alert_routing_document_tracks_human_alert_paths() -> None:
 
     required_terms = (
         "Gate: Security Alert Routing",
-        "Status: Routing runbook documented; hosted delivery verification pending",
+        "Status: Routing runbook documented; synthetic GitHub alert path tested",
         "Public beta: Blocked",
         "Alerts must route to a responsible human without exposing private user stories.",
         "support@aevryn.ai",
@@ -549,7 +550,10 @@ def test_security_alert_routing_document_tracks_human_alert_paths() -> None:
         "GitHub CodeQL code scanning",
         "GitHub Actions release gates",
         "At least one synthetic hosted alert or equivalent notification path is tested.",
-        "Hosted alert notification delivery test remains open.",
+        "Synthetic Hosted Alert Drill",
+        "https://github.com/Zyonic88/Aevryn/issues/10",
+        "GitHub-hosted issue alert path verified with metadata-only evidence.",
+        "Email inbox receipt from GitHub notification settings remains unverified.",
     )
 
     for term in required_terms:

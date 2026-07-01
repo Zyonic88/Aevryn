@@ -228,7 +228,8 @@ GitHub branch protection is configured for master.
 GitHub dependency graph, Dependabot alerts, Dependabot security updates, secret scanning, push protection, private vulnerability reporting, and default CodeQL are enabled.
 Protected-path verification was exercised through PR #9: direct pushes to master were blocked, required hosted checks ran, hosted checks caught failures before merge, and final hosted checks passed after fixes.
 Hosted alert routing runbook is documented.
-Hosted alert notification delivery test remains open.
+Synthetic GitHub-hosted alert path was tested through issue #10.
+Email inbox receipt from GitHub notification settings remains unverified.
 ```
 
 ---

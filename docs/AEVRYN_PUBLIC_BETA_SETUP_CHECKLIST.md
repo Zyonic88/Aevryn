@@ -94,7 +94,7 @@ Tracking docs:
 Status:
 
 ```text
-Workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, pull request template, branch protection, required checks, secret scanning, push protection, dependency alerts, private vulnerability reporting, and default CodeQL are configured. Protected-path drill was exercised through PR #9 and final hosted checks passed. Hosted alert routing runbook is documented; notification delivery testing remains open.
+Workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, pull request template, branch protection, required checks, secret scanning, push protection, dependency alerts, private vulnerability reporting, and default CodeQL are configured. Protected-path drill was exercised through PR #9 and final hosted checks passed. Hosted alert routing runbook is documented; synthetic GitHub-hosted alert path was tested through issue #10. Email inbox receipt from GitHub notification settings remains unverified.
 ```
 
 ---

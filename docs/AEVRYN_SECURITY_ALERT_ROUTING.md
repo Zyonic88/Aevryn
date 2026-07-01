@@ -12,11 +12,11 @@ It is an operational runbook, not a product feature.
 
 ```text
 Gate: Security Alert Routing
-Status: Routing runbook documented; hosted delivery verification pending
+Status: Routing runbook documented; synthetic GitHub alert path tested
 Public beta: Blocked
 ```
 
-Public beta remains blocked until hosted alert delivery is tested and recorded.
+Public beta remains blocked until hosted alert routing is fully reviewed in the release-candidate run record.
 
 ---
 
@@ -261,6 +261,33 @@ Before public beta:
 
 ---
 
+# Synthetic Hosted Alert Drill
+
+Synthetic hosted alert:
+
+```text
+GitHub issue: https://github.com/Zyonic88/Aevryn/issues/10
+Title: Synthetic alert routing test
+Created: 2026-07-01T00:18:09Z
+State: Closed after verification
+Result: GitHub-hosted issue alert path verified with metadata-only evidence.
+```
+
+Verified:
+
+* The issue was created in the hosted GitHub repository.
+* The issue body contained no secrets, source prose, user data, credentials, private URLs, hostnames, usernames, or machine-local paths.
+* The issue was visible through the GitHub API.
+* The issue was closed after the routing drill was recorded.
+
+Not yet verified:
+
+* Email inbox receipt from GitHub notification settings.
+
+If email receipt is required for public beta signoff, the project owner must confirm that GitHub notification email reached the intended inbox.
+
+---
+
 # Current Progress
 
 ```text
@@ -269,7 +296,8 @@ GitHub branch protection, secret scanning, push protection, Dependabot alerts, p
 Repository CI/security gates are configured and required on master.
 Protected-path drill was exercised through PR #9.
 Routing matrix is documented.
-Hosted alert notification delivery test remains open.
+Synthetic GitHub-hosted alert path was tested through issue #10.
+Email inbox receipt from GitHub notification settings remains unverified.
 ```
 
 ---
