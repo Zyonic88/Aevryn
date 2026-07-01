@@ -273,6 +273,36 @@ def test_project_storage_api_does_not_require_deployment_api_key() -> None:
     assert created.json()["project_id"] == "project_alpha"
 
 
+def test_import_inspect_requires_user_session_when_authentication_is_configured() -> None:
+    """Browser import inspection should use the user session, not a deployment API key."""
+    client = TestClient(
+        create_app(
+            api_keys=("deployment-key",),
+            authentication_service=auth_service(),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    payload = {
+        "source_id": "api_demo",
+        "filename": "chapter.txt",
+        "content_base64": import_content_base64(
+            "Chapter 1\nMira checked the harbor compass."
+        ),
+    }
+
+    no_session = client.post("/v2/imports/inspect", json=payload)
+    with_session = client.post(
+        "/v2/imports/inspect",
+        headers=auth_headers("token_001"),
+        json=payload,
+    )
+
+    assert no_session.status_code == 401
+    assert no_session.json()["error"] == "session_required"
+    assert with_session.status_code == 200
+    assert with_session.json()["source_id"] == "api_demo"
+
+
 def test_project_settings_api_reads_and_updates_settings() -> None:
     """Project settings API should default and persist project-level settings."""
     repository = InMemoryProjectRepository()
@@ -2211,6 +2241,11 @@ class RecordingWorkerHandler:
 def auth_headers(token: str) -> dict[str, str]:
     """Return authorization headers for API tests."""
     return {"Authorization": f"Bearer {token}", "X-Aevryn-Now": SOON}
+
+
+def import_content_base64(text: str) -> str:
+    """Return base64-encoded import source for API tests."""
+    return base64.b64encode(text.encode("utf-8")).decode("ascii")
 
 
 

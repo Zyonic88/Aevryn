@@ -1188,7 +1188,6 @@ def test_api_key_auth_rejects_missing_key_for_workflow_routes() -> None:
     client = TestClient(create_app(api_keys=("secret-key",)))
 
     workflow_routes = (
-        "/v2/imports/inspect",
         "/v2/extraction-prompts",
         "/v2/extractions/apply",
         "/v2/canon/preview",
@@ -1219,13 +1218,9 @@ def test_api_key_auth_rejects_invalid_key_for_workflow_routes() -> None:
     client = TestClient(create_app(api_keys=("secret-key",)))
 
     response = client.post(
-        "/v2/imports/inspect",
+        "/v2/extraction-prompts",
         headers={"X-Aevryn-API-Key": "wrong-key"},
-        json={
-            "source_id": "api_demo",
-            "filename": "chapter.txt",
-            "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
-        },
+        json={},
     )
 
     assert response.status_code == 403
@@ -1240,17 +1235,13 @@ def test_api_key_auth_accepts_explicit_header_for_workflow_routes() -> None:
     client = TestClient(create_app(api_keys=("secret-key",)))
 
     response = client.post(
-        "/v2/imports/inspect",
+        "/v2/extraction-prompts",
         headers={"X-Aevryn-API-Key": "secret-key"},
-        json={
-            "source_id": "api_demo",
-            "filename": "chapter.txt",
-            "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
-        },
+        json={},
     )
 
-    assert response.status_code == 200
-    assert response.json()["source_id"] == "api_demo"
+    assert response.status_code == 422
+    assert response.json()["error"] == "invalid_request"
 
 
 def test_api_key_auth_accepts_bearer_header_for_workflow_routes() -> None:
@@ -1258,17 +1249,13 @@ def test_api_key_auth_accepts_bearer_header_for_workflow_routes() -> None:
     client = TestClient(create_app(api_keys=("secret-key",)))
 
     response = client.post(
-        "/v2/imports/inspect",
+        "/v2/extraction-prompts",
         headers={"Authorization": "Bearer secret-key"},
-        json={
-            "source_id": "api_demo",
-            "filename": "chapter.txt",
-            "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
-        },
+        json={},
     )
 
-    assert response.status_code == 200
-    assert response.json()["source_id"] == "api_demo"
+    assert response.status_code == 422
+    assert response.json()["error"] == "invalid_request"
 
 
 def test_create_app_from_env_configures_api_keys() -> None:
