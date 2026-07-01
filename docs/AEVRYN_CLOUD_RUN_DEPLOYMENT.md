@@ -24,7 +24,9 @@ Hosted custom-domain API health smoke has passed.
 
 Hosted frontend/API header smoke has passed.
 
-Managed-identity browser flow and creator workflow smoke are still required.
+Unauthenticated browser-route/API protection checks have passed.
+
+Managed-identity login completion and creator workflow smoke are still required.
 
 Cloudflare Pages frontend deployment is tracked in `docs/AEVRYN_CLOUDFLARE_PAGES_DEPLOYMENT.md`.
 
@@ -293,7 +295,11 @@ Remaining hosted smoke:
 Local frontend production build passed with VITE_AEVRYN_API_URL=https://api.aevryn.ai.
 Cloudflare Pages frontend is deployed at https://app.aevryn.ai.
 API CORS allows Origin https://app.aevryn.ai.
-Managed identity browser flow has not been smoke-tested against Cloud Run.
+Login/register pages load at https://app.aevryn.ai.
+Unauthenticated /dashboard redirects to /login.
+Unauthenticated GET /v2/projects returns 401 session_required.
+Synthetic fake login returns "Managed identity provider owns login."
+Managed identity login completion has not passed against Cloud Run.
 Creator workflow smoke has not been run against Cloud Run.
 ```
 
@@ -319,5 +325,5 @@ Do not route public beta traffic until the hosted smoke has passed and the relea
 
 ```text
 Public beta: Blocked
-Reason: Cloud Run API health smoke, custom-domain API health smoke, and hosted frontend/API header smoke passed, but managed-identity and creator workflow smoke have not passed.
+Reason: Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API header smoke, and unauthenticated browser-route/API protection checks passed, but managed-identity login completion and creator workflow smoke have not passed.
 ```

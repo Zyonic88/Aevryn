@@ -841,7 +841,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-01 hosted frontend/API custom-domain smoke passed",
+        "Latest attempt: 2026-07-01 hosted browser-flow smoke blocked on managed identity login",
         "Production-like smoke proves configuration and workflow safety.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -877,10 +877,18 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "API CORS returned access-control-allow-origin: https://app.aevryn.ai.",
         "PASS for Cloudflare Pages custom-domain frontend availability.",
         "PASS for API CORS allowing the intended frontend origin.",
+        "Hosted Browser-Flow Smoke",
+        "Login page loaded.",
+        "Register page loaded.",
+        "Unauthenticated /dashboard access redirected to /login.",
+        "Synthetic fake login stayed on /login and returned: Managed identity provider owns login.",
+        "Unauthenticated GET /v2/projects returned 401 session_required.",
+        "PASS for protected API route requiring bearer managed identity.",
+        "BLOCKED for managed identity login completion.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
-        "managed-identity and creator workflow smoke have not passed",
+        "managed-identity login completion and creator workflow smoke have not passed",
     )
 
     for term in required_terms:
@@ -928,9 +936,12 @@ def test_cloud_run_deployment_document_tracks_hosted_api_runbook() -> None:
         "api.aevryn.ai",
         "Hosted Cloud Run API health smoke has passed",
         "Hosted frontend/API header smoke has passed.",
+        "Unauthenticated browser-route/API protection checks have passed.",
         "Cloudflare Pages frontend is deployed at https://app.aevryn.ai.",
         "API CORS allows Origin https://app.aevryn.ai.",
-        "managed-identity and creator workflow smoke have not passed",
+        "Unauthenticated GET /v2/projects returns 401 session_required.",
+        "Synthetic fake login returns \"Managed identity provider owns login.\"",
+        "managed-identity login completion and creator workflow smoke have not passed",
     )
 
     for term in required_terms:
