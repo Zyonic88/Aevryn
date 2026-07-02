@@ -1892,7 +1892,7 @@ def test_project_outputs_humanize_legacy_presentation_machine_ids() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["world_sheet"]["entity_sections"][0]["items"] == [
-        "Zhao Chen is located in Entity 5"
+        "Zhao Chen is located in North Star Academy"
     ]
     assert payload["prompt_packs"][0]["image_prompt"]["items"] == [
         "Character: Zhao Chen"
