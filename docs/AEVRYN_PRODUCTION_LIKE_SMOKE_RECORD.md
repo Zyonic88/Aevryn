@@ -497,7 +497,7 @@ Interpretation:
 ```text
 PASS for preventing hosted browsers from calling the protected worker processor.
 PASS for hosted-safe API unreachable copy.
-PASS for the hosted alpha auto-process bridge contract.
+PASS for the hosted alpha nonblocking auto-process bridge contract.
 OPEN for deploying and smoke-testing the bridge on Cloud Run.
 OPEN for replacing the alpha bridge with a production-safe persistent worker runner.
 ```

@@ -7,6 +7,7 @@ import binascii
 import json
 import logging
 import os
+import threading
 import tempfile
 import time
 import uuid
@@ -1413,15 +1414,15 @@ def create_app(
                 import_id=import_id,
                 queued_at=request_body.now,
             )
+            run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
             if auto_process_import_runs:
                 handler = _require_background_job_handler(background_job_handler)
-                _process_submitted_import_run(
+                _start_submitted_import_worker(
                     repository,
                     queue,
                     handler,
                     request_body.now,
                 )
-            run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
         except HTTPException:
             raise
         except (DuplicateRecordError, DuplicateJobError) as error:
@@ -3621,13 +3622,29 @@ def _worker_process_response(summary: BackgroundWorkerRunSummary) -> WorkerProce
     )
 
 
+def _start_submitted_import_worker(
+    repository: ProjectRepository,
+    queue: BackgroundJobQueue,
+    handler: BackgroundJobHandler,
+    submitted_at: str,
+) -> None:
+    """Start one hosted-alpha worker drain without blocking the browser response."""
+    worker_thread = threading.Thread(
+        target=_process_submitted_import_run,
+        args=(repository, queue, handler, submitted_at),
+        daemon=True,
+        name="aevryn-submitted-import-worker",
+    )
+    worker_thread.start()
+
+
 def _process_submitted_import_run(
     repository: ProjectRepository,
     queue: BackgroundJobQueue,
     handler: BackgroundJobHandler,
     submitted_at: str,
 ) -> None:
-    """Drain one submitted import job after the API response is accepted."""
+    """Drain one submitted import job for the hosted alpha worker bridge."""
     try:
         summary = BackgroundWorker(
             repository=repository,

@@ -123,10 +123,10 @@ The hosted alpha may enable:
 AEVRYN_WORKER_AUTO_PROCESS_SUBMISSIONS=true
 ```
 
-When enabled, the API still records a pending run and enqueues a worker job. The
-API then drains one server-side worker job before returning the submitted run
-response. The browser never calls the worker drain endpoint and never receives
-worker credentials.
+When enabled, the API records a pending run, enqueues a worker job, starts one
+server-side worker drain, and returns the submitted run response without waiting
+for provider-backed extraction to finish. The browser never calls the worker
+drain endpoint and never receives worker credentials.
 
 This is an alpha bridge for the current process-local queue. It is not the final
 production worker posture.
