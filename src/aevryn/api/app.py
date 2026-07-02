@@ -3632,8 +3632,14 @@ def _section_from_payload(
             display_names=display_names,
         ),
         items=tuple(
-            _readable_snapshot_text(item, display_names=display_names)
+            readable_item
             for item in _string_sequence_payload_value(payload, "items")
+            if (
+                readable_item := _readable_snapshot_text(
+                    item,
+                    display_names=display_names,
+                )
+            )
         ),
     )
 
@@ -3672,10 +3678,14 @@ def _readable_snapshot_relationship(
         and _snapshot_text_looks_entity_reference(target_id, display_names=display_names)
     ):
         return None
+    source_label = _snapshot_entity_label(source_id, display_names=display_names)
+    target_label = _snapshot_entity_label(target_id, display_names=display_names)
+    if source_label == target_label:
+        return ""
     return (
-        f"{_snapshot_entity_label(source_id, display_names=display_names)} "
+        f"{source_label} "
         f"{_snapshot_relationship_label(relationship_type)} "
-        f"{_snapshot_entity_label(target_id, display_names=display_names)}"
+        f"{target_label}"
     )
 
 
