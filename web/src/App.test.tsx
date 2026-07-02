@@ -2802,6 +2802,14 @@ describe("App shell routing", () => {
     expect(screen.getByText("Male")).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
+    expect(screen.getByText("8 normalized scenes; No review items")).toBeInTheDocument();
+    expect(
+      screen.getByText("7 reference decisions; 5 resolved / 1 ambiguous / 1 unresolved"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("source_alpha_chapter_001_scene_001; 2 candidates; 87% confidence"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.getByText("11 verified facts")).toBeInTheDocument();
   });
 
