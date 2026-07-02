@@ -638,8 +638,8 @@ def test_import_runs_api_submits_and_lists_pending_runs() -> None:
     assert listed.json()["runs"] == [submitted.json()]
 
 
-def test_import_runs_api_can_auto_process_submitted_runs_inline() -> None:
-    """Hosted alpha bridge should durably process one submitted run before returning."""
+def test_import_runs_api_can_auto_process_submitted_runs_after_response() -> None:
+    """Hosted alpha bridge should return a queued run before processing it."""
     repository = InMemoryProjectRepository()
     queue = InMemoryJobQueue()
     client = TestClient(
@@ -667,7 +667,7 @@ def test_import_runs_api_can_auto_process_submitted_runs_inline() -> None:
     )
 
     assert submitted.status_code == 200
-    assert submitted.json()["status"] == "succeeded"
+    assert submitted.json()["status"] == "pending"
     persisted_run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
     assert persisted_run.status == "succeeded"
     assert persisted_run.finished_at == NOW
