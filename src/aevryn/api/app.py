@@ -3728,6 +3728,23 @@ def _reconcile_orphaned_project_runs(
             continue
         job_id = _job_id_from_ref(run.job_ref)
         if not job_id or background_job_queue.has_job(job_id):
+            job_is_stale_running = (
+                job_id
+                and _queue_job_is_running(background_job_queue, job_id)
+                and _run_is_stale(run, now)
+            )
+            if job_is_stale_running:
+                repository.update_engine_run(
+                    replace(
+                        run,
+                        status="failed",
+                        status_updated_at=now,
+                        finished_at=now,
+                        error_summary=(
+                            "Processing timed out before completion. Retry is available."
+                        ),
+                    )
+                )
             continue
         repository.update_engine_run(
             replace(
@@ -3738,6 +3755,14 @@ def _reconcile_orphaned_project_runs(
                 error_summary="Processing stopped before completion. Retry is available.",
             )
         )
+
+
+def _queue_job_is_running(background_job_queue: BackgroundJobQueue, job_id: str) -> bool:
+    """Return true when an existing queue job is stuck in the running state."""
+    try:
+        return background_job_queue.get(job_id).status == "running"
+    except Exception:
+        return False
 
 
 def _job_id_from_ref(job_ref: str) -> str:
