@@ -430,6 +430,8 @@ def _canon_snapshot_payload(result: ProjectRunResult) -> str:
         "rejected_candidate_count": sum(
             len(summary.rejected_candidates) for summary in result.update_summaries
         ),
+        "translation": _translation_snapshot_payload(result),
+        "entity_resolution": _entity_resolution_snapshot_payload(result),
         "timeline_changes": _timeline_changes_payload(result, source_quotes=_source_quotes(result)),
         "presentation": _presentation_snapshot_payload(result),
         "update_summaries": tuple(
@@ -449,6 +451,51 @@ def _canon_snapshot_payload(result: ProjectRunResult) -> str:
         ),
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def _translation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]:
+    """Return metadata-only Translation Foundation snapshot details."""
+    return {
+        "unit_count": len(result.translation_units),
+        "issue_count": sum(len(unit.issues) for unit in result.translation_units),
+        "units": tuple(
+            {
+                "unit_id": unit.unit_id,
+                "source_language": unit.source_language,
+                "target_language": unit.target_language,
+                "mode": unit.mode,
+                "source_evidence_anchor_ids": unit.source_evidence_anchor_ids,
+                "issue_count": len(unit.issues),
+            }
+            for unit in result.translation_units
+        ),
+    }
+
+
+def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, object]:
+    """Return metadata-only Entity Resolution snapshot details."""
+    status_counts = {
+        "resolved": 0,
+        "ambiguous": 0,
+        "unresolved": 0,
+    }
+    for decision in result.identity_resolutions:
+        status_counts[decision.status] += 1
+    return {
+        "decision_count": len(result.identity_resolutions),
+        "status_counts": status_counts,
+        "decisions": tuple(
+            {
+                "status": decision.status,
+                "entity_id": decision.entity_id,
+                "confidence": decision.confidence,
+                "evidence_anchor_id": decision.reference.evidence_anchor_id,
+                "scene_id": decision.reference.scene_id,
+                "candidate_count": len(decision.candidates),
+            }
+            for decision in result.identity_resolutions
+        ),
+    }
 
 
 def _timeline_changes_payload(
@@ -823,7 +870,7 @@ def _continuity_record_payload(record: ContinuityRecord) -> dict[str, object]:
     return {
         "record_id": record.record_id,
         "record_type": record.record_type,
-        "description": record.description,
+        "description": _humanized_continuity_description(record.description),
         "evidence_id": record.evidence_id,
         "chapter_id": record.chapter_id,
         "scene_id": record.scene_id,
@@ -884,10 +931,11 @@ def _section_payload(
 ) -> dict[str, object]:
     """Return a JSON-ready presentation section without exact source prose."""
     return {
-        "title": section.title,
+        "title": _humanized_display_text(section.title),
         "items": tuple(
             _safe_display_text(item, source_quotes)
             for item in section.items
+            if _safe_display_text(item, source_quotes) != _SOURCE_BACKED_PLACEHOLDER
         ),
     }
 
@@ -899,9 +947,117 @@ def _safe_display_text(value: str, source_quotes: tuple[str, ...]) -> str:
         if len(quote) >= 20 and (
             quote in normalized or (len(normalized) >= 20 and normalized in quote)
         ):
-            return "Source-backed detail available through evidence controls."
+            return _SOURCE_BACKED_PLACEHOLDER
 
+    return _humanized_display_text(normalized)
+
+
+def _humanized_continuity_description(description: str) -> str:
+    """Return creator-readable continuity text from engine descriptions."""
+    normalized = " ".join(description.split())
+    if normalized.startswith("Entity accepted: "):
+        entity_id = normalized.removeprefix("Entity accepted: ")
+        return f"New entity: {_humanized_entity_id(entity_id)}"
+    if normalized.startswith("State valid from "):
+        return "State changed at this scene."
+    if " = " in normalized:
+        left, value = normalized.split(" = ", 1)
+        parts = left.split(" ", 1)
+        if len(parts) == 2:
+            entity_id, attribute = parts
+            return (
+                f"{_humanized_entity_id(entity_id)} "
+                f"{_humanized_attribute(attribute)}: "
+                f"{_humanized_display_text(value)}"
+            )
+    relationship_parts = normalized.split(" ")
+    if len(relationship_parts) == 3:
+        source_id, relationship_type, target_id = relationship_parts
+        return (
+            f"{_humanized_entity_id(source_id)} "
+            f"{_humanized_relationship(relationship_type)} "
+            f"{_humanized_entity_id(target_id)}"
+        )
+    return _humanized_display_text(normalized)
+
+
+def _humanized_display_text(value: str) -> str:
+    """Return display text with common machine tokens made readable."""
+    normalized = " ".join(value.split())
+    if _looks_like_machine_id(normalized):
+        return _humanized_entity_id(normalized)
+    if " " not in normalized and "_" in normalized:
+        return normalized.replace("_", " ")
     return normalized
+
+
+def _humanized_entity_id(entity_id: str) -> str:
+    """Return a readable label for common Aevryn entity IDs."""
+    prefixes = (
+        "character_",
+        "item_",
+        "location_",
+        "organization_",
+        "vehicle_",
+        "skill_",
+        "fact_",
+        "state_",
+        "event_",
+        "rel_",
+    )
+    text = entity_id
+    for prefix in prefixes:
+        if text.startswith(prefix):
+            text = text.removeprefix(prefix)
+            break
+    return _title_preserving_acronyms(text.replace("_", " "))
+
+
+def _humanized_attribute(attribute: str) -> str:
+    """Return a readable attribute label."""
+    return attribute.replace("_", " ")
+
+
+def _humanized_relationship(relationship_type: str) -> str:
+    """Return a readable relationship phrase."""
+    phrase = relationship_type.replace("_", " ")
+    if phrase in {"located in", "under entity"}:
+        return "is located in"
+    if phrase in {"owns", "owned by"}:
+        return "is connected to"
+    if phrase == "member of":
+        return "is a member of"
+    return phrase
+
+
+def _looks_like_machine_id(value: str) -> bool:
+    """Return whether a value is likely an internal Aevryn ID."""
+    return "_" in value and any(
+        value.startswith(prefix)
+        for prefix in (
+            "character_",
+            "item_",
+            "location_",
+            "organization_",
+            "vehicle_",
+            "skill_",
+            "fact_",
+            "state_",
+            "event_",
+            "rel_",
+        )
+    )
+
+
+def _title_preserving_acronyms(value: str) -> str:
+    """Title-case labels while preserving short all-caps-like tokens."""
+    words = []
+    for word in value.split():
+        if len(word) <= 3 and any(character.isdigit() for character in word):
+            words.append(word.upper())
+        else:
+            words.append(word.capitalize())
+    return " ".join(words)
 
 
 def _error_summary(error: Exception) -> str:

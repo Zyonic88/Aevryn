@@ -189,8 +189,11 @@ Everything the CLI can do, the API must be able to do.
 | 9 | Performance | Accepted | Budgets, baseline measurements, regression checks, and measured optimizations are in place. |
 | 10 | Internal Alpha | Accepted | Narrow private alpha path is ready with documented limitations. |
 | 11 | Security & Privacy Hardening | Accepted | Trust-gate docs, tests, scans, deletion/privacy boundaries, and hardening gates are complete; public beta still requires deployment-specific security decisions. |
+| 12 | Language And Identity Understanding | Active | Translation Foundation and Entity Resolution Foundation are now required V2 quality gates before release-candidate readiness can close. |
 
-V2 platform product development is complete for private/internal alpha. The active work track is V2 Release Candidate Readiness, not new V2 feature development.
+V2 platform product development was previously closed for private/internal alpha. Hosted alpha evidence has reopened V2 for two required story-understanding gates: Translation Foundation and Entity Resolution Foundation.
+
+The active product work track is Phase 12. V2 Release Candidate Readiness remains blocked until Phase 12 is accepted.
 
 ---
 
@@ -656,6 +659,35 @@ Phase 11 does not include new product features, public launch, payments, collabo
 
 ---
 
+## Phase 12 - Language And Identity Understanding
+
+Status: **Active**
+
+Phase 12 completion is governed by `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`.
+
+Phase 12 promotes two story-understanding systems into required V2 scope:
+
+* Translation Foundation
+* Entity Resolution Foundation
+
+Core rule:
+
+```text
+Translation preserves meaning.
+Resolution preserves identity.
+Canon decides truth.
+```
+
+Translation Foundation is defined in `docs/AEVRYN_TRANSLATION_ENGINE.md`.
+
+Entity Resolution is defined in `docs/AEVRYN_ENTITY_RESOLUTION.md`.
+
+Phase 12 exists because alpha testing showed that Aevryn can import and process chapters, but long-form accuracy depends on correctly preserving language meaning and entity identity across aliases, titles, descriptions, pronouns, scenes, and chapters.
+
+Phase 12 does not add media generation, publishing, payments, collaboration, broad frontend redesign, or a public translation product.
+
+---
+
 ## Version 2 Success Criteria
 
 A creator can:
@@ -678,10 +710,10 @@ without touching the CLI.
 Status:
 
 ```text
-Met for private/internal alpha.
+Blocked pending Phase 12 acceptance.
 ```
 
-Public beta remains blocked by production deployment, security, legal, and operating decisions listed in `docs/AEVRYN_V2_CLOSEOUT.md`.
+Public beta remains blocked by Phase 12, production deployment, security, legal, and operating decisions listed in `docs/AEVRYN_V2_CLOSEOUT.md`.
 
 ---
 

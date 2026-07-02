@@ -171,15 +171,17 @@ Localization mode adapts phrasing while preserving story facts.
 
 Subtitle/Narration mode optimizes for spoken or timed output.
 
-## V1 Boundary
+## Version 2 Boundary
 
-For V1, Translation is optional.
+For V1, Translation was optional.
 
-The core product remains continuity.
+For V2 release-candidate readiness, Translation Foundation is required because hosted alpha testing showed that language normalization and identity stability affect extraction quality.
 
-Translation should not block Canon, Timeline, Character, Scene, Prompt, or Export work.
+V2 Translation Foundation does not need to be a full public translation product.
 
-Build it only after the core continuity loop is stable across multiple chapters.
+It must provide the boundary, source-link preservation, glossary behavior, and deterministic tests required by `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`.
+
+Translation should improve Canon, Timeline, Character, Scene, Prompt, and Export quality without owning their truth.
 
 ## Core Rule
 
