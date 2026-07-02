@@ -638,6 +638,42 @@ def test_import_runs_api_submits_and_lists_pending_runs() -> None:
     assert listed.json()["runs"] == [submitted.json()]
 
 
+def test_import_runs_api_can_auto_process_submitted_runs_after_response() -> None:
+    """Hosted alpha bridge should process one submitted run without browser worker access."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=RecordingWorkerHandler(),
+            auto_process_import_runs=True,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+
+    assert submitted.status_code == 200
+    assert submitted.json()["status"] == "pending"
+    persisted_run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
+    assert persisted_run.status == "succeeded"
+    assert persisted_run.finished_at == NOW
+    assert queue.get("job_alpha").status == "succeeded"
+
+
 def test_import_runs_api_rejects_duplicate_and_cross_user_submissions() -> None:
     """Import run API should preserve identity and project ownership boundaries."""
     repository = InMemoryProjectRepository()

@@ -468,6 +468,7 @@ Regression coverage added:
 Hosted browser sessions queue processing runs without draining worker jobs from the browser.
 Localhost sessions retain browser worker draining for local alpha iteration.
 Network failures use hosted-safe wording instead of local API server wording.
+Backend can opt into a hosted alpha server-side worker drain after run submission.
 ```
 
 Commands run:
@@ -477,6 +478,8 @@ cd C:\Users\enigm\Documents\Aevryn\web
 npm.cmd test -- --run src/App.test.tsx src/api/client.test.ts
 npm.cmd test -- --run
 npm.cmd run build
+python -m pytest tests/test_auth_api.py -q
+python -m pytest
 ```
 
 Observed result:
@@ -485,6 +488,8 @@ Observed result:
 Focused frontend tests passed: 95 tests.
 Full frontend suite passed: 152 tests.
 Frontend production build passed.
+Focused backend auth/API tests passed: 45 tests.
+Full backend suite passed: 859 tests.
 ```
 
 Interpretation:
@@ -492,7 +497,9 @@ Interpretation:
 ```text
 PASS for preventing hosted browsers from calling the protected worker processor.
 PASS for hosted-safe API unreachable copy.
-OPEN for deploying and smoke-testing a production-safe managed worker runner.
+PASS for the hosted alpha auto-process bridge contract.
+OPEN for deploying and smoke-testing the bridge on Cloud Run.
+OPEN for replacing the alpha bridge with a production-safe persistent worker runner.
 ```
 
 No real user password, API key, storage credential, database URL, Supabase service-role key, worker key, session secret, source prose, full AI payload, private URL, username, or machine-local path was printed.

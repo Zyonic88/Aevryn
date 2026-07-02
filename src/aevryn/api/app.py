@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -232,6 +232,7 @@ WORKER_API_KEY_ENV = "AEVRYN_WORKER_API_KEY"
 WORKER_TIMEOUT_SECONDS_ENV = "AEVRYN_WORKER_TIMEOUT_SECONDS"
 WORKER_MAX_RETRIES_ENV = "AEVRYN_WORKER_MAX_RETRIES"
 WORKER_CONCURRENCY_ENV = "AEVRYN_WORKER_CONCURRENCY"
+WORKER_AUTO_PROCESS_SUBMISSIONS_ENV = "AEVRYN_WORKER_AUTO_PROCESS_SUBMISSIONS"
 LOG_DESTINATION_ENV = "AEVRYN_LOG_DESTINATION"
 MONITORING_DESTINATION_ENV = "AEVRYN_MONITORING_DESTINATION"
 LOG_RETENTION_DAYS_ENV = "AEVRYN_LOG_RETENTION_DAYS"
@@ -290,6 +291,10 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         background_job_handler=background_job_handler,
         import_content_store=import_content_store,
         storage_service=storage_service,
+        auto_process_import_runs=_env_flag_is_true(
+            active_environ,
+            WORKER_AUTO_PROCESS_SUBMISSIONS_ENV,
+        ),
     )
 
 
@@ -304,6 +309,7 @@ def create_app(
     background_job_handler: BackgroundJobHandler | None = None,
     import_content_store: ImportContentStore | None = None,
     storage_service: StorageService | None = None,
+    auto_process_import_runs: bool = False,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
 
@@ -316,6 +322,9 @@ def create_app(
         background_job_handler: Optional Phase 3 worker handler for queued jobs.
         import_content_store: Optional storage adapter for uploaded source bytes.
         storage_service: Optional storage adapter for generated exports.
+        auto_process_import_runs: Optional alpha bridge that starts one worker
+            drain after a run is submitted. Production persistent queue runners
+            should replace this bridge before public beta.
 
     Returns:
         Configured FastAPI application.
@@ -1343,6 +1352,7 @@ def create_app(
         import_id: str,
         request_body: EngineRunCreateRequest,
         request: Request,
+        background_tasks: BackgroundTasks,
     ) -> EngineRunOutput:
         """Submit a saved import for durable background engine processing."""
         repository = _require_project_repository(project_repository)
@@ -1404,6 +1414,15 @@ def create_app(
                 import_id=import_id,
                 queued_at=request_body.now,
             )
+            if auto_process_import_runs:
+                handler = _require_background_job_handler(background_job_handler)
+                background_tasks.add_task(
+                    _process_submitted_import_run,
+                    repository,
+                    queue,
+                    handler,
+                    request_body.now,
+                )
             run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
         except HTTPException:
             raise
@@ -2205,6 +2224,11 @@ def _require_positive_int_env(environ: Mapping[str, str], key: str) -> None:
         raise ValueError(f"{key} must be a positive integer.") from error
     if parsed < 1:
         raise ValueError(f"{key} must be a positive integer.")
+
+
+def _env_flag_is_true(environ: Mapping[str, str], key: str) -> bool:
+    """Return whether an environment flag is explicitly enabled."""
+    return environ.get(key, "").strip().lower() == "true"
 
 
 def _platform_services_from_env(
@@ -3596,6 +3620,36 @@ def _worker_process_response(summary: BackgroundWorkerRunSummary) -> WorkerProce
         claimed_jobs=summary.claimed_jobs,
         succeeded_jobs=summary.succeeded_jobs,
         failed_jobs=summary.failed_jobs,
+    )
+
+
+def _process_submitted_import_run(
+    repository: ProjectRepository,
+    queue: BackgroundJobQueue,
+    handler: BackgroundJobHandler,
+    submitted_at: str,
+) -> None:
+    """Drain one submitted import job after the API response is accepted."""
+    try:
+        summary = BackgroundWorker(
+            repository=repository,
+            queue=queue,
+            handler=handler,
+        ).process_available(
+            started_at=submitted_at,
+            finished_at=submitted_at,
+            max_jobs=1,
+        )
+    except Exception:
+        logger.exception("background_worker_submission_autoprocess_failed")
+        return
+    logger.info(
+        "background_worker_submission_autoprocess_completed",
+        extra={
+            "claimed_jobs": summary.claimed_jobs,
+            "succeeded_jobs": summary.succeeded_jobs,
+            "failed_jobs": summary.failed_jobs,
+        },
     )
 
 
