@@ -3032,12 +3032,19 @@ def _identity_review_items(
                     ),
                     candidate_count=_int_payload_value(decision, "candidate_count"),
                     confidence=_float_payload_value(decision, "confidence"),
-                    reason=_string_payload_value(decision, "reason"),
+                    reason=_identity_review_reason(status),
                 )
             )
         except (ValueError, ValidationError):
             continue
     return tuple(items[:12])
+
+
+def _identity_review_reason(status: str) -> str:
+    """Return stable metadata-only identity review copy."""
+    if status == "ambiguous":
+        return "Identity has multiple possible matches and needs review."
+    return "Identity could not be matched with enough evidence."
 
 
 def _output_surface_titles() -> tuple[tuple[str, str], ...]:

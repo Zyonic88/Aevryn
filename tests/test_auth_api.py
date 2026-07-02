@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -1722,7 +1723,7 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
             ),
             "candidate_count": 0,
             "confidence": 0.0,
-            "reason": "No identity profiles are available.",
+            "reason": "Identity could not be matched with enough evidence.",
         }
     ]
     assert payload["character_profiles"][0]["character_id"] == "character_mark"
@@ -1742,6 +1743,97 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     assert payload["timeline_changes"] == []
     assert "Mark carried a rusty dagger" not in response.text
     assert "serialized_output" not in response.text
+
+
+def test_project_outputs_identity_review_reasons_are_stable_metadata() -> None:
+    """Stored resolver reasons should not leak source-adjacent prose through outputs."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    repository.record_import(
+        ImportRecord(
+            import_id="import_alpha",
+            story_id="story_alpha",
+            source_id="source_alpha",
+            filename="chapter_001.txt",
+            source_format="txt",
+            storage_ref="storage://projects/project_alpha/imports/import_alpha/source.txt",
+            chapter_count=1,
+            scene_count=1,
+            evidence_anchor_count=1,
+            created_at=NOW,
+        )
+    )
+    repository.record_engine_run(
+        EngineRunRecord(
+            run_id="run_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="succeeded",
+            engine_version="aevryn_v1",
+            started_at=NOW,
+            status_updated_at=SOON,
+            finished_at=SOON,
+        )
+    )
+    repository.store_snapshot(
+        SnapshotRecord(
+            snapshot_id="snapshot_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            run_id="run_alpha",
+            snapshot_kind="canon",
+            content_type="application/json",
+            serialized_output=json.dumps(
+                {
+                    "source_id": "source_alpha",
+                    "title": "Alpha",
+                    "chapters": 1,
+                    "scenes": 1,
+                    "entity_resolution": {
+                        "decision_count": 1,
+                        "status_counts": {"resolved": 0, "ambiguous": 1, "unresolved": 0},
+                        "decisions": [
+                            {
+                                "status": "ambiguous",
+                                "chapter_id": "source_alpha_chapter_001",
+                                "scene_id": "source_alpha_chapter_001_scene_001",
+                                "evidence_anchor_id": "anchor_001",
+                                "candidate_count": 2,
+                                "confidence": 0.58,
+                                "reason": "Mark carried a rusty dagger in the original scene.",
+                            }
+                        ],
+                    },
+                }
+            ),
+            created_at=SOON,
+        )
+    )
+
+    response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
+
+    assert response.status_code == 200
+    review_items = response.json()["language_identity"]["identity_review_items"]
+    assert review_items == [
+        {
+            "status": "ambiguous",
+            "chapter_id": "source_alpha_chapter_001",
+            "scene_id": "source_alpha_chapter_001_scene_001",
+            "evidence_anchor_id": "anchor_001",
+            "candidate_count": 2,
+            "confidence": 0.58,
+            "reason": "Identity has multiple possible matches and needs review.",
+        }
+    ]
+    assert "Mark carried a rusty dagger" not in response.text
 
 
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:
