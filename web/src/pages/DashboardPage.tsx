@@ -59,6 +59,22 @@ export function DashboardPage() {
       );
     },
   });
+  const deleteProjectMutation = useMutation({
+    mutationFn: (projectId: string) =>
+      apiClient.deleteProject(
+        projectId,
+        requireSessionToken(session),
+        new Date().toISOString(),
+      ),
+    onSuccess(_result, projectId) {
+      queryClient.setQueryData(["projects", session?.session_token], {
+        projects: (projectsQuery.data?.projects ?? []).filter(
+          (project) => project.project_id !== projectId,
+        ),
+      });
+      queryClient.removeQueries({ queryKey: ["project", projectId] });
+    },
+  });
 
   const authRouteCount = useMemo(
     () => (capabilities.data ? countAuthRoutes(capabilities.data) : 0),
@@ -71,6 +87,16 @@ export function DashboardPage() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     createProjectMutation.mutate(projectName);
+  }
+
+  function requestProjectDeletion(projectId: string, projectTitle: string) {
+    if (!window.confirm(`Delete project ${projectTitle}?`)) {
+      return;
+    }
+    if (!window.confirm("Project data will be lost forever, are you sure?")) {
+      return;
+    }
+    deleteProjectMutation.mutate(projectId);
   }
 
   return (
@@ -150,6 +176,9 @@ export function DashboardPage() {
         {projectError ? <ErrorMessage>{projectError}</ErrorMessage> : null}
         {projectsQuery.isLoading ? <LoadingMessage>Loading projects.</LoadingMessage> : null}
         {projectsQuery.error ? <ErrorMessage>{projectsQuery.error.message}</ErrorMessage> : null}
+        {deleteProjectMutation.error ? (
+          <ErrorMessage>{deleteProjectMutation.error.message}</ErrorMessage>
+        ) : null}
         {!projectsQuery.isLoading && !projectsQuery.error && projects.length === 0 ? (
           <EmptyState title="No projects yet">
             Create a project to start importing story chapters.
@@ -158,10 +187,22 @@ export function DashboardPage() {
         {projects.length > 0 ? (
           <div className="project-list">
             {projects.map((project) => (
-              <Link key={project.id} to={`/projects/${project.id}`} className="project-row">
-                <strong>{project.name}</strong>
+              <div key={project.id} className="project-row project-row-action">
+                <Link to={`/projects/${project.id}`} className="project-select-link">
+                  <strong>{project.name}</strong>
+                </Link>
                 <span>Updated {formatDateTime(project.updatedAt)}</span>
-              </Link>
+                <button
+                  type="button"
+                  className="icon-button danger-button"
+                  aria-label={`Delete project ${project.name}`}
+                  title={`Delete project ${project.name}`}
+                  disabled={deleteProjectMutation.isPending}
+                  onClick={() => requestProjectDeletion(project.id, project.name)}
+                >
+                  x
+                </button>
+              </div>
             ))}
           </div>
         ) : null}

@@ -19,6 +19,7 @@ from aevryn.persistence.repository import (
     AccessDeniedError,
     DuplicateRecordError,
     PersistenceError,
+    ProjectDeletionResult,
     ProjectRepository,
     RecordNotFoundError,
 )
@@ -51,6 +52,7 @@ __all__ = [
     "PersistenceError",
     "PROJECT_DATABASE_SCHEMA",
     "PostgresqlProjectRepository",
+    "ProjectDeletionResult",
     "ProjectRecord",
     "ProjectRepository",
     "ProjectSettingsRecord",

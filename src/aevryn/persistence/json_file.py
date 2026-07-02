@@ -20,7 +20,11 @@ from aevryn.persistence.models import (
     StoryRecord,
     UserRecord,
 )
-from aevryn.persistence.repository import PersistenceError, RecordNotFoundError
+from aevryn.persistence.repository import (
+    PersistenceError,
+    ProjectDeletionResult,
+    RecordNotFoundError,
+)
 from aevryn.persistence.schema import PROJECT_DATABASE_SCHEMA
 
 logger = logging.getLogger(__name__)
@@ -48,6 +52,20 @@ class JsonProjectRepository(InMemoryProjectRepository):
     def create_project(self, project: ProjectRecord) -> None:
         """Persist a project record and flush the local store."""
         self._commit(lambda: super(JsonProjectRepository, self).create_project(project))
+
+    def delete_project(self, user_id: str, project_id: str) -> ProjectDeletionResult:
+        """Hard-delete a project and flush the local store."""
+        result = ProjectDeletionResult(deleted_imports=(), deleted_exports=())
+
+        def delete() -> None:
+            nonlocal result
+            result = super(JsonProjectRepository, self).delete_project(
+                user_id=user_id,
+                project_id=project_id,
+            )
+
+        self._commit(delete)
+        return result
 
     def create_story(self, story: StoryRecord) -> None:
         """Persist a story record and flush the local store."""

@@ -1501,6 +1501,55 @@ describe("App shell routing", () => {
     expect(screen.getByRole("link", { name: "Characters" })).toBeInTheDocument();
   });
 
+  it("deletes a project from the dashboard after two confirmations", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi
+      .spyOn(window, "confirm")
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(true);
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      if (url.endsWith(API_PATHS.projects)) {
+        return Promise.resolve(new Response(JSON.stringify({ projects: [projectAlphaPayload] })));
+      }
+      if (
+        url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`) &&
+        init?.method === "DELETE"
+      ) {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("link", { name: "Alpha" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete project Alpha" }));
+
+    await waitFor(() => expect(screen.queryByRole("link", { name: "Alpha" })).not.toBeInTheDocument());
+    expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete project Alpha?");
+    expect(confirmSpy).toHaveBeenNthCalledWith(
+      2,
+      "Project data will be lost forever, are you sure?",
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`${API_PATHS.projects}/project_alpha`),
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
   it("keeps the create button disabled for blank project names", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
