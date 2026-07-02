@@ -7,8 +7,8 @@ import binascii
 import json
 import logging
 import os
-import threading
 import tempfile
+import threading
 import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
