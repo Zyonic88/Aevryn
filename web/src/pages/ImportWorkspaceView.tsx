@@ -47,6 +47,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [isReadingSourceFile, setIsReadingSourceFile] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
+  const [submittingImportId, setSubmittingImportId] = useState<string | null>(null);
 
   const sourceFormats = useQuery({
     queryKey: ["source-formats"],
@@ -127,6 +128,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       );
     },
     onSuccess(run) {
+      setSubmittingImportId(null);
       queryClient.setQueryData(runQueryKey(project.id, session?.session_token), {
         runs: [
           run,
@@ -138,6 +140,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         return;
       }
       void refreshProcessingState(queryClient, project.id, activeStoryId, session?.session_token);
+    },
+    onError() {
+      setSubmittingImportId(null);
     },
   });
   const drainLocalWorker = useMutation({
@@ -314,6 +319,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     }
     submitRun.reset();
     drainLocalWorker.reset();
+    setSubmittingImportId(importRecord.import_id);
     submitRun.mutate(importRecord);
   }
 
@@ -599,7 +605,10 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             <div className="compact-list">
               {(importsQuery.data?.imports ?? []).map((importRecord, index) => {
                 const run = latestRunByImportId.get(importRecord.import_id);
-                const processingAction = importProcessingAction(run, submitRun.isPending);
+                const processingAction = importProcessingAction(
+                  run,
+                  submitRun.isPending && submittingImportId === importRecord.import_id,
+                );
                 return (
                   <div key={importRecord.import_id} className="compact-row">
                     <strong>{importCardTitle(index)}</strong>
