@@ -3090,20 +3090,91 @@ def _canon_snapshot_metadata(snapshot: SnapshotRecord) -> Mapping[str, object]:
 def _snapshot_display_names(payload: Mapping[str, object]) -> dict[str, str]:
     """Return display names available inside persisted presentation metadata."""
     presentation = _mapping_payload_value(payload, "presentation")
-    characters = presentation.get("characters")
-    if not isinstance(characters, list):
-        return {}
     display_names: dict[str, str] = {}
-    for character in characters:
-        if not isinstance(character, dict):
-            continue
-        character_id = _string_payload_value(character, "character_id")
-        display_name = _string_payload_value(character, "display_name")
-        if not character_id or not display_name:
-            continue
-        display_names[character_id] = display_name
-        display_names[character_id.lower()] = display_name
+    characters = presentation.get("characters")
+    if isinstance(characters, list):
+        for character in characters:
+            if not isinstance(character, dict):
+                continue
+            character_id = _string_payload_value(character, "character_id")
+            display_name = _string_payload_value(character, "display_name")
+            _snapshot_display_names_set(
+                display_names,
+                entity_id=character_id,
+                display_name=display_name,
+            )
+    _snapshot_display_names_from_world_sections(presentation, display_names)
     return display_names
+
+
+def _snapshot_display_names_set(
+    display_names: dict[str, str],
+    *,
+    entity_id: str,
+    display_name: str,
+) -> None:
+    """Store one display name using case-insensitive entity ID lookup."""
+    if not entity_id or not display_name:
+        return
+    display_names[entity_id] = display_name
+    display_names[entity_id.lower()] = display_name
+
+
+def _snapshot_display_names_from_world_sections(
+    presentation: Mapping[str, object],
+    display_names: dict[str, str],
+) -> None:
+    """Infer legacy non-character labels from world section titles."""
+    world = presentation.get("world")
+    if not isinstance(world, dict):
+        return
+    sections = world.get("entity_sections")
+    if not isinstance(sections, list):
+        return
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        section_name = _snapshot_section_entity_name(
+            _string_payload_value(section, "title")
+        )
+        items = _string_sequence_payload_value(section, "items")
+        for item in items:
+            inferred_entity_id = _legacy_world_section_entity_id(
+                item,
+                display_names=display_names,
+            )
+            if inferred_entity_id:
+                _snapshot_display_names_set(
+                    display_names,
+                    entity_id=inferred_entity_id,
+                    display_name=section_name,
+                )
+
+
+def _snapshot_section_entity_name(title: str) -> str:
+    """Return a world section title without its entity-type suffix."""
+    return re.sub(r"\s+\([^)]+\)$", "", title).strip() or title
+
+
+def _legacy_world_section_entity_id(
+    item: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
+    """Infer which old relationship token belongs to the current world section."""
+    parts = item.split(" ")
+    if len(parts) != 3:
+        return ""
+    source_id, relationship_type, target_id = parts
+    source_known = source_id in display_names or source_id.lower() in display_names
+    target_known = target_id in display_names or target_id.lower() in display_names
+    if source_known and not target_known:
+        return target_id
+    if target_known and not source_known:
+        return source_id
+    if relationship_type in {"part_of", "under_entity", "member_of", "located_in"}:
+        return target_id
+    return source_id
 
 
 def _snapshot_character_profiles(
