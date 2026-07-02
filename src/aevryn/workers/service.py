@@ -492,8 +492,10 @@ def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, o
                 "entity_id": decision.entity_id,
                 "confidence": decision.confidence,
                 "evidence_anchor_id": decision.reference.evidence_anchor_id,
+                "chapter_id": decision.reference.chapter_id,
                 "scene_id": decision.reference.scene_id,
                 "candidate_count": len(decision.candidates),
+                "reason": decision.reason,
             }
             for decision in result.identity_resolutions
         ),

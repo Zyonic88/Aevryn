@@ -536,6 +536,26 @@ const projectOutputsPayload = {
     identity_resolved_count: 5,
     identity_ambiguous_count: 1,
     identity_unresolved_count: 1,
+    identity_review_items: [
+      {
+        status: "ambiguous",
+        chapter_id: "source_alpha_chapter_001",
+        scene_id: "source_alpha_chapter_001_scene_001",
+        evidence_anchor_id: "anchor_001",
+        candidate_count: 2,
+        confidence: 0.87,
+        reason: "Multiple identity profiles have equal confidence.",
+      },
+      {
+        status: "unresolved",
+        chapter_id: "source_alpha_chapter_001",
+        scene_id: "source_alpha_chapter_001_scene_002",
+        evidence_anchor_id: "anchor_002",
+        candidate_count: 0,
+        confidence: 0,
+        reason: "No supported identity match was found.",
+      },
+    ],
   },
   character_profiles: [
     ...characterPreviewPayload.character_profiles,

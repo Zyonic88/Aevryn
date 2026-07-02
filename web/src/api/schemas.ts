@@ -237,6 +237,19 @@ export const projectLanguageIdentitySummarySchema = z
     identity_resolved_count: z.number(),
     identity_ambiguous_count: z.number(),
     identity_unresolved_count: z.number(),
+    identity_review_items: z
+      .array(
+        z.object({
+          status: z.string(),
+          chapter_id: z.string().default(""),
+          scene_id: z.string().default(""),
+          evidence_anchor_id: z.string(),
+          candidate_count: z.number(),
+          confidence: z.number(),
+          reason: z.string().default(""),
+        }),
+      )
+      .default([]),
   })
   .default({
     translation_unit_count: 0,
@@ -245,6 +258,7 @@ export const projectLanguageIdentitySummarySchema = z
     identity_resolved_count: 0,
     identity_ambiguous_count: 0,
     identity_unresolved_count: 0,
+    identity_review_items: [],
   });
 
 export const projectTimelineChangeSchema = z.object({

@@ -72,6 +72,7 @@ from aevryn.api.models import (
     ProductionPackOutput,
     ProjectCreateRequest,
     ProjectExportOptionOutput,
+    ProjectIdentityReviewItem,
     ProjectLanguageIdentitySummary,
     ProjectListResponse,
     ProjectOutput,
@@ -3001,7 +3002,42 @@ def _project_language_identity_summary(
         identity_resolved_count=_int_payload_value(status_counts, "resolved"),
         identity_ambiguous_count=_int_payload_value(status_counts, "ambiguous"),
         identity_unresolved_count=_int_payload_value(status_counts, "unresolved"),
+        identity_review_items=_identity_review_items(resolution),
     )
+
+
+def _identity_review_items(
+    resolution_payload: Mapping[str, object],
+) -> tuple[ProjectIdentityReviewItem, ...]:
+    """Return unresolved or ambiguous identity decisions without source text."""
+    decisions = resolution_payload.get("decisions")
+    if not isinstance(decisions, list):
+        return ()
+    items: list[ProjectIdentityReviewItem] = []
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            continue
+        status = _string_payload_value(decision, "status")
+        if status not in {"ambiguous", "unresolved"}:
+            continue
+        try:
+            items.append(
+                ProjectIdentityReviewItem(
+                    status=status,
+                    chapter_id=_string_payload_value(decision, "chapter_id"),
+                    scene_id=_string_payload_value(decision, "scene_id"),
+                    evidence_anchor_id=_string_payload_value(
+                        decision,
+                        "evidence_anchor_id",
+                    ),
+                    candidate_count=_int_payload_value(decision, "candidate_count"),
+                    confidence=_float_payload_value(decision, "confidence"),
+                    reason=_string_payload_value(decision, "reason"),
+                )
+            )
+        except (ValueError, ValidationError):
+            continue
+    return tuple(items[:12])
 
 
 def _output_surface_titles() -> tuple[tuple[str, str], ...]:
@@ -3393,6 +3429,17 @@ def _int_payload_value(payload: Mapping[str, object], key: str) -> int:
     if isinstance(value, int) and value >= 0:
         return value
     return 0
+
+
+def _float_payload_value(payload: Mapping[str, object], key: str) -> float:
+    """Return a bounded float payload value when present."""
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return 0.0
+    parsed = float(value)
+    if 0.0 <= parsed <= 1.0:
+        return parsed
+    return 0.0
 
 
 def _run_status_count(runs: Sequence[EngineRunRecord], status: str) -> int:

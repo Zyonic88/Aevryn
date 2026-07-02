@@ -170,8 +170,38 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
           {identityDetails}
         </span>
       </div>
+      {summary.identity_review_items.slice(0, 4).map((item) => (
+        <div className="compact-row" key={identityReviewKey(item)}>
+          <strong>{readableLabel(item.status)}</strong>
+          <span>{identityReviewLabel(item)}</span>
+        </div>
+      ))}
     </div>
   );
+}
+
+function identityReviewKey(
+  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
+): string {
+  return [
+    item.status,
+    item.chapter_id,
+    item.scene_id,
+    item.evidence_anchor_id,
+    item.candidate_count,
+  ].join(":");
+}
+
+function identityReviewLabel(
+  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
+): string {
+  const scope = item.scene_id || item.chapter_id || "Unknown scene";
+  const confidence = Math.round(item.confidence * 100);
+  const candidateLabel =
+    item.candidate_count === 1
+      ? "1 candidate"
+      : `${item.candidate_count.toLocaleString()} candidates`;
+  return `${scope}; ${candidateLabel}; ${confidence}% confidence`;
 }
 
 function ReadableSurfacePanels({

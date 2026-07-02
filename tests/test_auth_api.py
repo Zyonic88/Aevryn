@@ -1710,7 +1710,21 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
         "identity_resolved_count": 0,
         "identity_ambiguous_count": 0,
         "identity_unresolved_count": 1,
+        "identity_review_items": payload["language_identity"]["identity_review_items"],
     }
+    assert payload["language_identity"]["identity_review_items"] == [
+        {
+            "status": "unresolved",
+            "chapter_id": "source_alpha_chapter_001",
+            "scene_id": "source_alpha_chapter_001_scene_001",
+            "evidence_anchor_id": (
+                "source_alpha_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+            ),
+            "candidate_count": 0,
+            "confidence": 0.0,
+            "reason": "No identity profiles are available.",
+        }
+    ]
     assert payload["character_profiles"][0]["character_id"] == "character_mark"
     assert payload["character_profiles"][0]["display_name"] == "Mark"
     assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
