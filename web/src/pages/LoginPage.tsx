@@ -2,8 +2,9 @@ import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { apiClient, type LoginRequest } from "../api/client";
+import type { LoginRequest } from "../api/client";
 import { buildLoginPayload } from "../auth/formValidation";
+import { loginWithConfiguredAuth } from "../auth/managedIdentityAuth";
 import { recoveryPath } from "../auth/recoveryPath";
 import { useAuth } from "../auth/useAuth";
 import { ErrorMessage } from "../components/Feedback";
@@ -17,7 +18,7 @@ export function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const login = useMutation({
-    mutationFn: (payload: LoginRequest) => apiClient.login(payload),
+    mutationFn: (payload: LoginRequest) => loginWithConfiguredAuth(payload),
     onSuccess(session) {
       setSession(session);
       navigate(recoveryPath(location.state));

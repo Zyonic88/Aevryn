@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 from _pytest.logging import LogCaptureFixture
 
+from aevryn.canon import CanonDatabase, CanonUpdateSummary
+from aevryn.entity_resolution import ResolvedReference, SurfaceReference
 from aevryn.extraction import (
     ExtractedEntity,
     ExtractedFact,
@@ -18,6 +20,7 @@ from aevryn.extraction import (
     SceneExtractionInput,
 )
 from aevryn.import_storage import ImportContentStore
+from aevryn.importing import StoryImporter
 from aevryn.persistence import (
     DuplicateRecordError,
     EngineRunRecord,
@@ -29,6 +32,8 @@ from aevryn.persistence import (
     StoryRecord,
     UserRecord,
 )
+from aevryn.projects import ProjectRunResult
+from aevryn.translation import TranslatedUnit, TranslationIssue
 from aevryn.workers import (
     BackgroundJob,
     BackgroundJobHandler,
@@ -44,6 +49,7 @@ from aevryn.workers import (
     JobQueueError,
     ProjectImportSnapshotHandler,
 )
+from aevryn.workers.service import _canon_snapshot_payload
 
 NOW = "2026-06-27T00:00:00Z"
 STARTED = "2026-06-27T00:01:00Z"
@@ -859,6 +865,125 @@ def test_project_import_snapshot_handler_uses_injected_extractor() -> None:
         "value": "Sky Gate Keeper",
     }
     assert "Lyra opened the sky gate" not in snapshots[0].serialized_output
+
+
+def test_canon_snapshot_payload_stores_stable_identity_review_reasons() -> None:
+    """Phase 12 snapshot metadata should not persist resolver prose."""
+    imported_source = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo Story",
+        text="Chapter 1\n\nMark carried a rusty dagger.",
+    )
+    result = ProjectRunResult(
+        imported_source=imported_source,
+        database=CanonDatabase(),
+        extraction_results=(
+            ExtractionResult(scene_id="source_demo_chapter_001_scene_001"),
+        ),
+        update_summaries=(CanonUpdateSummary(),),
+        identity_resolutions=(
+            ResolvedReference(
+                reference=SurfaceReference(
+                    text="the dagger carrier",
+                    evidence_anchor_id=(
+                        "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+                    ),
+                    chapter_id="source_demo_chapter_001",
+                    scene_id="source_demo_chapter_001_scene_001",
+                ),
+                status="ambiguous",
+                confidence=0.58,
+                reason="Mark carried a rusty dagger in the original scene.",
+            ),
+        ),
+    )
+
+    snapshot_payload = _canon_snapshot_payload(result)
+
+    parsed_payload = json.loads(snapshot_payload)
+    assert parsed_payload["entity_resolution"]["decisions"] == [
+        {
+            "candidate_count": 0,
+            "chapter_id": "source_demo_chapter_001",
+            "confidence": 0.58,
+            "entity_id": None,
+            "evidence_anchor_id": (
+                "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+            ),
+            "reason": "Identity has multiple possible matches and needs review.",
+            "scene_id": "source_demo_chapter_001_scene_001",
+            "status": "ambiguous",
+        }
+    ]
+    assert "Mark carried a rusty dagger" not in snapshot_payload
+    assert "the dagger carrier" not in snapshot_payload
+
+
+def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> None:
+    """Phase 12 translation snapshots should persist metadata, not text."""
+    imported_source = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo Story",
+        text="Chapter 1\n\nMark carried a rusty dagger.",
+    )
+    result = ProjectRunResult(
+        imported_source=imported_source,
+        database=CanonDatabase(),
+        extraction_results=(
+            ExtractionResult(scene_id="source_demo_chapter_001_scene_001"),
+        ),
+        update_summaries=(CanonUpdateSummary(),),
+        translation_units=(
+            TranslatedUnit(
+                unit_id="translation_source_demo_chapter_001_scene_001",
+                source_language="zh",
+                target_language="en",
+                mode="clean_english",
+                normalized_text="The translated private sentence should stay out.",
+                source_evidence_anchor_ids=(
+                    "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor",
+                ),
+                issues=(
+                    TranslationIssue(
+                        issue_code="uncertain_term",
+                        source_term="private_source_term",
+                        message="This issue message should stay out of snapshots.",
+                        evidence_anchor_ids=(
+                            "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor",
+                        ),
+                    ),
+                ),
+                source_chapter_id="source_demo_chapter_001",
+                source_scene_id="source_demo_chapter_001_scene_001",
+            ),
+        ),
+    )
+
+    snapshot_payload = _canon_snapshot_payload(result)
+
+    parsed_payload = json.loads(snapshot_payload)
+    assert parsed_payload["translation"] == {
+        "issue_count": 1,
+        "unit_count": 1,
+        "units": [
+            {
+                "issue_count": 1,
+                "mode": "clean_english",
+                "source_chapter_id": "source_demo_chapter_001",
+                "source_evidence_anchor_ids": [
+                    "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor",
+                ],
+                "source_language": "zh",
+                "source_scene_id": "source_demo_chapter_001_scene_001",
+                "target_language": "en",
+                "unit_id": "translation_source_demo_chapter_001_scene_001",
+            }
+        ],
+    }
+    assert "Mark carried a rusty dagger" not in snapshot_payload
+    assert "The translated private sentence should stay out" not in snapshot_payload
+    assert "private_source_term" not in snapshot_payload
+    assert "This issue message should stay out" not in snapshot_payload
 
 
 def test_project_import_snapshot_handler_persists_scene_prompts_without_characters() -> None:

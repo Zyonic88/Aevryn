@@ -4,14 +4,13 @@ import { FormEvent, useState } from "react";
 import { apiClient, type ScenePreviewRequest } from "../api/client";
 import type { OutputSection, ScenePreview } from "../api/schemas";
 import { ErrorMessage } from "../components/Feedback";
+import { formatSceneScope } from "../formatting/display";
 import {
   DeveloperPreviewToggle,
   ProjectOutputSummaryPanel,
 } from "../output/ProjectOutputSummaryPanel";
-import {
-  buildScenePreviewPayload,
-  canSubmitScenePreviewInput,
-} from "../previewing/previewPayload";
+import { readableOutputItems } from "../output/readableOutput";
+import { buildScenePreviewPayload, canSubmitScenePreviewInput } from "../previewing/previewPayload";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
@@ -84,63 +83,63 @@ export function SceneWorkspaceView({ project }: { project: ProjectSummary }) {
         <section>
           <h2>Scene Preview</h2>
           <form className="import-form" onSubmit={submit}>
-          <div className="form-row-grid">
+            <div className="form-row-grid">
+              <label>
+                Source reference
+                <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              </label>
+              <label>
+                Filename
+                <input value={filename} onChange={(event) => setFilename(event.target.value)} />
+              </label>
+            </div>
             <label>
-              Source reference
-              <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              Title
+              <input value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
             <label>
-              Filename
-              <input value={filename} onChange={(event) => setFilename(event.target.value)} />
-            </label>
-          </div>
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            Source text
-            <textarea
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <label>
-            AI response JSON
-            <textarea
-              value={aiResponseText}
-              onChange={(event) => setAiResponseText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <div className="form-row-grid">
-            <label>
-              Character IDs
-              <input
-                value={characterIdsText}
-                onChange={(event) => setCharacterIdsText(event.target.value)}
-                placeholder="Optional: character_mark character_luna"
+              Source text
+              <textarea
+                value={sourceText}
+                onChange={(event) => setSourceText(event.target.value)}
+                rows={8}
               />
             </label>
             <label>
-              Scene ID
-              <input
-                value={sceneId}
-                onChange={(event) => setSceneId(event.target.value)}
-                placeholder="Optional scene ID"
+              AI response JSON
+              <textarea
+                value={aiResponseText}
+                onChange={(event) => setAiResponseText(event.target.value)}
+                rows={8}
               />
             </label>
-          </div>
-          {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
-          {previewScene.error ? <ErrorMessage>{previewScene.error.message}</ErrorMessage> : null}
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={!canSubmit || previewScene.isPending}
-          >
-            {previewScene.isPending ? "Building preview" : "Preview scene"}
-          </button>
+            <div className="form-row-grid">
+              <label>
+                Character IDs
+                <input
+                  value={characterIdsText}
+                  onChange={(event) => setCharacterIdsText(event.target.value)}
+                  placeholder="Optional: character_mark character_luna"
+                />
+              </label>
+              <label>
+                Scene ID
+                <input
+                  value={sceneId}
+                  onChange={(event) => setSceneId(event.target.value)}
+                  placeholder="Optional scene ID"
+                />
+              </label>
+            </div>
+            {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+            {previewScene.error ? <ErrorMessage>{previewScene.error.message}</ErrorMessage> : null}
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={!canSubmit || previewScene.isPending}
+            >
+              {previewScene.isPending ? "Building preview" : "Preview scene"}
+            </button>
           </form>
         </section>
       </DeveloperPreviewToggle>
@@ -156,7 +155,7 @@ function ScenePreviewResult({ result }: { result: ScenePreview }) {
     <section className="project-panel" aria-label="Scene preview result">
       <h2>{scene.title}</h2>
       <p className="result-summary">
-        {scene.chapter_label} for {result.scene_id}.
+        {scene.chapter_label} for {formatSceneScope(result.scene_id)}.
       </p>
       <div className="profile-section-grid">
         <SceneSection section={scene.location} />
@@ -173,12 +172,13 @@ function ScenePreviewResult({ result }: { result: ScenePreview }) {
 }
 
 function SceneSection({ section }: { section: OutputSection }) {
+  const items = readableOutputItems(section.items);
   return (
     <section className="profile-section">
       <h4>{section.title}</h4>
-      {section.items.length > 0 ? (
+      {items.length > 0 ? (
         <ul>
-          {section.items.map((item) => (
+          {items.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>

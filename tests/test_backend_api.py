@@ -52,6 +52,8 @@ from aevryn.api import (
     STORAGE_PROVIDER_ENV,
     SUPABASE_ANON_KEY_ENV,
     SUPABASE_JWKS_URL_ENV,
+    SUPABASE_JWT_ALGORITHM_ENV,
+    SUPABASE_JWT_SECRET_ENV,
     SUPABASE_SERVICE_ROLE_KEY_ENV,
     SUPABASE_URL_ENV,
     WORKER_API_KEY_ENV,
@@ -675,6 +677,39 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
             }
         )
 
+    with pytest.raises(ValueError, match=SUPABASE_JWT_ALGORITHM_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWT_ALGORITHM_ENV: "none",
+            }
+        )
+
+    with pytest.raises(ValueError, match=SUPABASE_JWKS_URL_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWT_ALGORITHM_ENV: "es256",
+            }
+        )
+
+    with pytest.raises(ValueError, match=SUPABASE_JWT_SECRET_ENV):
+        create_app_from_env(
+            {
+                **complete_until_identity,
+                IDENTITY_PROVIDER_ENV: "managed",
+                IDENTITY_PROVIDER_NAME_ENV: "supabase",
+                SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
+                SUPABASE_JWT_ALGORITHM_ENV: "hs256",
+            }
+        )
+
     with pytest.raises(ValueError, match=SUPABASE_ANON_KEY_ENV):
         create_app_from_env(
             {
@@ -682,9 +717,8 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
                 IDENTITY_PROVIDER_ENV: "managed",
                 IDENTITY_PROVIDER_NAME_ENV: "supabase",
                 SUPABASE_URL_ENV: "https://aevryn-dev.supabase.co",
-                SUPABASE_JWKS_URL_ENV: (
-                    "https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json"
-                ),
+                SUPABASE_JWT_ALGORITHM_ENV: "hs256",
+                SUPABASE_JWT_SECRET_ENV: "supabase-jwt-secret-placeholder",
             }
         )
 
@@ -1154,7 +1188,6 @@ def test_api_key_auth_rejects_missing_key_for_workflow_routes() -> None:
     client = TestClient(create_app(api_keys=("secret-key",)))
 
     workflow_routes = (
-        "/v2/imports/inspect",
         "/v2/extraction-prompts",
         "/v2/extractions/apply",
         "/v2/canon/preview",
@@ -1185,13 +1218,9 @@ def test_api_key_auth_rejects_invalid_key_for_workflow_routes() -> None:
     client = TestClient(create_app(api_keys=("secret-key",)))
 
     response = client.post(
-        "/v2/imports/inspect",
+        "/v2/extraction-prompts",
         headers={"X-Aevryn-API-Key": "wrong-key"},
-        json={
-            "source_id": "api_demo",
-            "filename": "chapter.txt",
-            "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
-        },
+        json={},
     )
 
     assert response.status_code == 403
@@ -1206,17 +1235,13 @@ def test_api_key_auth_accepts_explicit_header_for_workflow_routes() -> None:
     client = TestClient(create_app(api_keys=("secret-key",)))
 
     response = client.post(
-        "/v2/imports/inspect",
+        "/v2/extraction-prompts",
         headers={"X-Aevryn-API-Key": "secret-key"},
-        json={
-            "source_id": "api_demo",
-            "filename": "chapter.txt",
-            "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
-        },
+        json={},
     )
 
-    assert response.status_code == 200
-    assert response.json()["source_id"] == "api_demo"
+    assert response.status_code == 422
+    assert response.json()["error"] == "invalid_request"
 
 
 def test_api_key_auth_accepts_bearer_header_for_workflow_routes() -> None:
@@ -1224,17 +1249,13 @@ def test_api_key_auth_accepts_bearer_header_for_workflow_routes() -> None:
     client = TestClient(create_app(api_keys=("secret-key",)))
 
     response = client.post(
-        "/v2/imports/inspect",
+        "/v2/extraction-prompts",
         headers={"Authorization": "Bearer secret-key"},
-        json={
-            "source_id": "api_demo",
-            "filename": "chapter.txt",
-            "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
-        },
+        json={},
     )
 
-    assert response.status_code == 200
-    assert response.json()["source_id"] == "api_demo"
+    assert response.status_code == 422
+    assert response.json()["error"] == "invalid_request"
 
 
 def test_create_app_from_env_configures_api_keys() -> None:

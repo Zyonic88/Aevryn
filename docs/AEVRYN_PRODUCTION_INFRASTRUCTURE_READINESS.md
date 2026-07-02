@@ -272,6 +272,8 @@ Production startup requires AEVRYN_IDENTITY_PROVIDER=managed.
 Production startup requires AEVRYN_IDENTITY_PROVIDER_NAME=supabase.
 Production startup requires AEVRYN_SUPABASE_URL.
 Production startup requires AEVRYN_SUPABASE_JWKS_URL.
+Production startup supports AEVRYN_SUPABASE_JWT_ALGORITHM=es256, rs256, or hs256.
+Production startup requires AEVRYN_SUPABASE_JWT_SECRET when HS256 is selected.
 Production startup requires AEVRYN_SUPABASE_ANON_KEY.
 Production startup requires AEVRYN_SUPABASE_SERVICE_ROLE_KEY.
 Production startup requires AEVRYN_SESSION_AUTHORITY=bearer.
@@ -281,7 +283,9 @@ Production startup requires AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true.
 Supabase Auth is selected as the managed identity provider.
 Provider-neutral ManagedIdentityVerifier boundary is implemented.
 ManagedIdentityAuthenticationAdapter maps verified provider identities to stable Aevryn UserRecord ownership records.
+Supabase ES256 JWT/JWKS verification adapter is implemented for recommended asymmetric signing keys.
 Supabase RS256 JWT/JWKS verification adapter is implemented.
+Supabase HS256 JWT-secret verification adapter is implemented for projects issuing symmetric Supabase tokens.
 Production app factory wiring is implemented.
 Production-like smoke execution remains open.
 Public beta remains blocked until production-like smoke execution and release-candidate signoff are complete.

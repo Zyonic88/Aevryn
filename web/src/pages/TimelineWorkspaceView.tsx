@@ -4,10 +4,12 @@ import { FormEvent, useState } from "react";
 import { apiClient, type TimelinePreviewRequest } from "../api/client";
 import type { SceneMapEntry, TimelinePreview } from "../api/schemas";
 import { EmptyState, ErrorMessage } from "../components/Feedback";
+import { formatSceneScope } from "../formatting/display";
 import {
   DeveloperPreviewToggle,
   ProjectOutputSummaryPanel,
 } from "../output/ProjectOutputSummaryPanel";
+import { readableOutputItems } from "../output/readableOutput";
 import {
   buildTimelinePreviewPayload,
   canSubmitTimelinePreviewInput,
@@ -81,53 +83,55 @@ export function TimelineWorkspaceView({ project }: { project: ProjectSummary }) 
         <section>
           <h2>Timeline Preview</h2>
           <form className="import-form" onSubmit={submit}>
-          <div className="form-row-grid">
+            <div className="form-row-grid">
+              <label>
+                Source reference
+                <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              </label>
+              <label>
+                Filename
+                <input value={filename} onChange={(event) => setFilename(event.target.value)} />
+              </label>
+            </div>
             <label>
-              Source reference
-              <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              Title
+              <input value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
             <label>
-              Filename
-              <input value={filename} onChange={(event) => setFilename(event.target.value)} />
+              Source text
+              <textarea
+                value={sourceText}
+                onChange={(event) => setSourceText(event.target.value)}
+                rows={8}
+              />
             </label>
-          </div>
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            Source text
-            <textarea
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <label>
-            AI response JSON
-            <textarea
-              value={aiResponseText}
-              onChange={(event) => setAiResponseText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <label>
-            Scene ID
-            <input
-              value={sceneId}
-              onChange={(event) => setSceneId(event.target.value)}
-              placeholder="Optional scene ID"
-            />
-          </label>
-          {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
-          {previewTimeline.error ? <ErrorMessage>{previewTimeline.error.message}</ErrorMessage> : null}
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={!canSubmit || previewTimeline.isPending}
-          >
-            {previewTimeline.isPending ? "Building preview" : "Preview timeline"}
-          </button>
+            <label>
+              AI response JSON
+              <textarea
+                value={aiResponseText}
+                onChange={(event) => setAiResponseText(event.target.value)}
+                rows={8}
+              />
+            </label>
+            <label>
+              Scene ID
+              <input
+                value={sceneId}
+                onChange={(event) => setSceneId(event.target.value)}
+                placeholder="Optional scene ID"
+              />
+            </label>
+            {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+            {previewTimeline.error ? (
+              <ErrorMessage>{previewTimeline.error.message}</ErrorMessage>
+            ) : null}
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={!canSubmit || previewTimeline.isPending}
+            >
+              {previewTimeline.isPending ? "Building preview" : "Preview timeline"}
+            </button>
           </form>
         </section>
       </DeveloperPreviewToggle>
@@ -138,12 +142,14 @@ export function TimelineWorkspaceView({ project }: { project: ProjectSummary }) 
 }
 
 function TimelinePreviewResult({ result }: { result: TimelinePreview }) {
+  const acceptedStateChanges = readableOutputItems(result.accepted_state_change_ids);
   return (
     <section className="project-panel" aria-label="Timeline preview result">
       <h2>Timeline Order</h2>
       <p className="result-summary">
-        Current scene {result.current_scene_id} across {result.chapter_ids.length.toLocaleString()}{" "}
-        chapter{result.chapter_ids.length === 1 ? "" : "s"}.
+        Current scene {formatSceneScope(result.current_scene_id)} across{" "}
+        {result.chapter_ids.length.toLocaleString()} chapter
+        {result.chapter_ids.length === 1 ? "" : "s"}.
       </p>
       <dl className="metric-grid">
         <div>
@@ -174,11 +180,11 @@ function TimelinePreviewResult({ result }: { result: TimelinePreview }) {
           The API returned no scene order entries for this preview.
         </EmptyState>
       )}
-      {result.accepted_state_change_ids.length > 0 ? (
+      {acceptedStateChanges.length > 0 ? (
         <section className="profile-section">
           <h4>Accepted State Changes</h4>
           <ul>
-            {result.accepted_state_change_ids.map((stateChangeId) => (
+            {acceptedStateChanges.map((stateChangeId) => (
               <li key={stateChangeId}>{stateChangeId}</li>
             ))}
           </ul>
@@ -192,18 +198,12 @@ function TimelinePreviewResult({ result }: { result: TimelinePreview }) {
   );
 }
 
-function TimelineSceneRow({
-  scene,
-  isCurrent,
-}: {
-  scene: SceneMapEntry;
-  isCurrent: boolean;
-}) {
+function TimelineSceneRow({ scene, isCurrent }: { scene: SceneMapEntry; isCurrent: boolean }) {
   return (
     <article className={isCurrent ? "timeline-row timeline-row-current" : "timeline-row"}>
       <div>
         <strong>{scene.title}</strong>
-        <span>{scene.scene_id}</span>
+        <span>{formatSceneScope(scene.scene_id)}</span>
       </div>
       <p>
         Chapter {scene.chapter_index}, Scene {scene.scene_index}

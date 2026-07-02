@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -72,6 +72,8 @@ from aevryn.api.models import (
     ProductionPackOutput,
     ProjectCreateRequest,
     ProjectExportOptionOutput,
+    ProjectIdentityReviewItem,
+    ProjectLanguageIdentitySummary,
     ProjectListResponse,
     ProjectOutput,
     ProjectOutputCanonSummary,
@@ -122,8 +124,10 @@ from aevryn.auth import (
     InvalidResetTokenError,
     InvalidSessionError,
     JsonAuthenticationStore,
+    JwtDecoder,
     ManagedIdentityAuthenticationAdapter,
     PasswordPolicyError,
+    SupabaseHs256JwtDecoder,
     SupabaseJwksJwtDecoder,
     SupabaseJwtVerifier,
     supabase_issuer_from_url,
@@ -210,6 +214,8 @@ IDENTITY_PROVIDER_ENV = "AEVRYN_IDENTITY_PROVIDER"
 IDENTITY_PROVIDER_NAME_ENV = "AEVRYN_IDENTITY_PROVIDER_NAME"
 SUPABASE_URL_ENV = "AEVRYN_SUPABASE_URL"
 SUPABASE_JWKS_URL_ENV = "AEVRYN_SUPABASE_JWKS_URL"
+SUPABASE_JWT_ALGORITHM_ENV = "AEVRYN_SUPABASE_JWT_ALGORITHM"
+SUPABASE_JWT_SECRET_ENV = "AEVRYN_SUPABASE_JWT_SECRET"
 SUPABASE_ANON_KEY_ENV = "AEVRYN_SUPABASE_ANON_KEY"
 SUPABASE_SERVICE_ROLE_KEY_ENV = "AEVRYN_SUPABASE_SERVICE_ROLE_KEY"
 SESSION_AUTHORITY_ENV = "AEVRYN_SESSION_AUTHORITY"
@@ -228,6 +234,7 @@ WORKER_API_KEY_ENV = "AEVRYN_WORKER_API_KEY"
 WORKER_TIMEOUT_SECONDS_ENV = "AEVRYN_WORKER_TIMEOUT_SECONDS"
 WORKER_MAX_RETRIES_ENV = "AEVRYN_WORKER_MAX_RETRIES"
 WORKER_CONCURRENCY_ENV = "AEVRYN_WORKER_CONCURRENCY"
+WORKER_AUTO_PROCESS_SUBMISSIONS_ENV = "AEVRYN_WORKER_AUTO_PROCESS_SUBMISSIONS"
 LOG_DESTINATION_ENV = "AEVRYN_LOG_DESTINATION"
 MONITORING_DESTINATION_ENV = "AEVRYN_MONITORING_DESTINATION"
 LOG_RETENTION_DAYS_ENV = "AEVRYN_LOG_RETENTION_DAYS"
@@ -286,6 +293,10 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         background_job_handler=background_job_handler,
         import_content_store=import_content_store,
         storage_service=storage_service,
+        auto_process_import_runs=_env_flag_is_true(
+            active_environ,
+            WORKER_AUTO_PROCESS_SUBMISSIONS_ENV,
+        ),
     )
 
 
@@ -300,6 +311,7 @@ def create_app(
     background_job_handler: BackgroundJobHandler | None = None,
     import_content_store: ImportContentStore | None = None,
     storage_service: StorageService | None = None,
+    auto_process_import_runs: bool = False,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
 
@@ -312,6 +324,9 @@ def create_app(
         background_job_handler: Optional Phase 3 worker handler for queued jobs.
         import_content_store: Optional storage adapter for uploaded source bytes.
         storage_service: Optional storage adapter for generated exports.
+        auto_process_import_runs: Optional alpha bridge that starts one worker
+            drain after a run is submitted. Production persistent queue runners
+            should replace this bridge before public beta.
 
     Returns:
         Configured FastAPI application.
@@ -695,6 +710,45 @@ def create_app(
             ) from error
         except PersistenceError as error:
             raise _project_storage_error(error) from error
+
+    @app.delete(
+        "/v2/projects/{project_id}",
+        status_code=204,
+        tags=["Projects"],
+        operation_id="deleteV2Project",
+    )
+    def delete_project(project_id: str, request: Request) -> Response:
+        """Hard-delete a project and all stored metadata/content scoped to it."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            deletion = repository.delete_project(user_id=user.user_id, project_id=project_id)
+            if import_content_store is not None:
+                for import_record in deletion.deleted_imports:
+                    import_content_store.delete_import_content(import_record.storage_ref)
+            if storage_service is not None:
+                export_storage = ExportStorageService(
+                    repository=repository,
+                    storage=storage_service,
+                )
+                for export_record in deletion.deleted_exports:
+                    export_storage.delete_export_bytes(export_record)
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "project_delete_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return Response(status_code=204)
 
     @app.get(
         "/v2/projects/{project_id}/settings",
@@ -1339,6 +1393,7 @@ def create_app(
         import_id: str,
         request_body: EngineRunCreateRequest,
         request: Request,
+        background_tasks: BackgroundTasks,
     ) -> EngineRunOutput:
         """Submit a saved import for durable background engine processing."""
         repository = _require_project_repository(project_repository)
@@ -1400,6 +1455,15 @@ def create_app(
                 import_id=import_id,
                 queued_at=request_body.now,
             )
+            if auto_process_import_runs:
+                handler = _require_background_job_handler(background_job_handler)
+                background_tasks.add_task(
+                    _process_submitted_import_run,
+                    repository,
+                    queue,
+                    handler,
+                    request_body.now,
+                )
             run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
         except HTTPException:
             raise
@@ -1497,8 +1561,15 @@ def create_app(
         tags=["Import"],
         operation_id="postV2ImportsInspect",
     )
-    def inspect_import(request: ImportInspectRequest) -> ImportInspectResponse:
+    def inspect_import(
+        request: ImportInspectRequest,
+        http_request: Request,
+    ) -> ImportInspectResponse:
         """Inspect source structure through Project Manager and Story Import."""
+        _require_user_session_when_configured(
+            http_request,
+            authentication_service,
+        )
         started_at = time.perf_counter()
         imported_source, source_format = _import_request_source(request)
         response = _import_response(
@@ -2099,7 +2170,20 @@ def _require_production_identity_config(environ: Mapping[str, str]) -> None:
             "public-beta identity provider."
         )
     _require_https_url(environ, SUPABASE_URL_ENV)
-    _require_https_url(environ, SUPABASE_JWKS_URL_ENV)
+    jwt_algorithm = environ.get(SUPABASE_JWT_ALGORITHM_ENV, "rs256").strip().lower()
+    if jwt_algorithm in {"es256", "rs256"}:
+        _require_https_url(environ, SUPABASE_JWKS_URL_ENV)
+    elif jwt_algorithm == "hs256":
+        if not environ.get(SUPABASE_JWT_SECRET_ENV, "").strip():
+            raise ValueError(
+                "AEVRYN_SUPABASE_JWT_SECRET is required when "
+                "AEVRYN_SUPABASE_JWT_ALGORITHM=hs256."
+            )
+    else:
+        raise ValueError(
+            "AEVRYN_SUPABASE_JWT_ALGORITHM must be 'es256', 'rs256', or 'hs256' when "
+            "AEVRYN_IDENTITY_PROVIDER_NAME=supabase."
+        )
     if not environ.get(SUPABASE_ANON_KEY_ENV, "").strip():
         raise ValueError(
             "AEVRYN_SUPABASE_ANON_KEY is required when "
@@ -2181,6 +2265,11 @@ def _require_positive_int_env(environ: Mapping[str, str], key: str) -> None:
         raise ValueError(f"{key} must be a positive integer.") from error
     if parsed < 1:
         raise ValueError(f"{key} must be a positive integer.")
+
+
+def _env_flag_is_true(environ: Mapping[str, str], key: str) -> bool:
+    """Return whether an environment flag is explicitly enabled."""
+    return environ.get(key, "").strip().lower() == "true"
 
 
 def _platform_services_from_env(
@@ -2269,10 +2358,19 @@ def _production_authentication_service(
     environ: Mapping[str, str],
 ) -> ManagedIdentityAuthenticationAdapter:
     """Return the production managed identity authentication adapter."""
-    decoder = SupabaseJwksJwtDecoder(
-        jwks_url=environ.get(SUPABASE_JWKS_URL_ENV, ""),
-        issuer=supabase_issuer_from_url(environ.get(SUPABASE_URL_ENV, "")),
-    )
+    issuer = supabase_issuer_from_url(environ.get(SUPABASE_URL_ENV, ""))
+    jwt_algorithm = environ.get(SUPABASE_JWT_ALGORITHM_ENV, "rs256").strip().lower()
+    decoder: JwtDecoder
+    if jwt_algorithm == "hs256":
+        decoder = SupabaseHs256JwtDecoder(
+            jwt_secret=environ.get(SUPABASE_JWT_SECRET_ENV, ""),
+            issuer=issuer,
+        )
+    else:
+        decoder = SupabaseJwksJwtDecoder(
+            jwks_url=environ.get(SUPABASE_JWKS_URL_ENV, ""),
+            issuer=issuer,
+        )
     return ManagedIdentityAuthenticationAdapter(
         repository=repository,
         verifier=SupabaseJwtVerifier(decoder=decoder),
@@ -2499,6 +2597,8 @@ def _is_auth_protected_route(request: Request) -> bool:
     path = request.url.path
     if path.startswith("/v2/auth/"):
         return False
+    if path == "/v2/imports/inspect":
+        return False
     if path == "/v2/projects" or (
         path.startswith("/v2/projects/") and path != "/v2/projects/preview"
     ):
@@ -2518,6 +2618,16 @@ def _extract_api_key(request: Request) -> str:
         return token.strip()
 
     return ""
+
+
+def _require_user_session_when_configured(
+    request: Request,
+    authentication_service: AuthenticationService | ManagedIdentityAuthenticationAdapter | None,
+) -> None:
+    """Require a browser user session when platform authentication is enabled."""
+    if authentication_service is None:
+        return
+    _authenticated_user(request, authentication_service)
 
 
 def _require_authentication_service(
@@ -2754,6 +2864,7 @@ def _project_outputs_response(
         latest_engine_run=_project_status_run(latest_run) if latest_run else None,
         canon=canon_summary,
         surfaces=_project_output_surfaces(canon_summary),
+        language_identity=_project_language_identity_summary(canon_payload),
         character_profiles=_snapshot_character_profiles(canon_payload),
         world_sheet=_snapshot_world_sheet(canon_payload),
         timeline_changes=_snapshot_timeline_changes(canon_payload),
@@ -2875,6 +2986,65 @@ def _project_output_surfaces(
             summary="Export output can be prepared from the latest canon snapshot.",
         ),
     )
+
+
+def _project_language_identity_summary(
+    payload: Mapping[str, object],
+) -> ProjectLanguageIdentitySummary:
+    """Return metadata-only Phase 12 readiness details from snapshot metadata."""
+    translation = _mapping_payload_value(payload, "translation")
+    resolution = _mapping_payload_value(payload, "entity_resolution")
+    status_counts = _mapping_payload_value(resolution, "status_counts")
+    return ProjectLanguageIdentitySummary(
+        translation_unit_count=_int_payload_value(translation, "unit_count"),
+        translation_review_count=_int_payload_value(translation, "issue_count"),
+        identity_decision_count=_int_payload_value(resolution, "decision_count"),
+        identity_resolved_count=_int_payload_value(status_counts, "resolved"),
+        identity_ambiguous_count=_int_payload_value(status_counts, "ambiguous"),
+        identity_unresolved_count=_int_payload_value(status_counts, "unresolved"),
+        identity_review_items=_identity_review_items(resolution),
+    )
+
+
+def _identity_review_items(
+    resolution_payload: Mapping[str, object],
+) -> tuple[ProjectIdentityReviewItem, ...]:
+    """Return unresolved or ambiguous identity decisions without source text."""
+    decisions = resolution_payload.get("decisions")
+    if not isinstance(decisions, list):
+        return ()
+    items: list[ProjectIdentityReviewItem] = []
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            continue
+        status = _string_payload_value(decision, "status")
+        if status not in {"ambiguous", "unresolved"}:
+            continue
+        try:
+            items.append(
+                ProjectIdentityReviewItem(
+                    status=status,
+                    chapter_id=_string_payload_value(decision, "chapter_id"),
+                    scene_id=_string_payload_value(decision, "scene_id"),
+                    evidence_anchor_id=_string_payload_value(
+                        decision,
+                        "evidence_anchor_id",
+                    ),
+                    candidate_count=_int_payload_value(decision, "candidate_count"),
+                    confidence=_float_payload_value(decision, "confidence"),
+                    reason=_identity_review_reason(status),
+                )
+            )
+        except (ValueError, ValidationError):
+            continue
+    return tuple(items[:12])
+
+
+def _identity_review_reason(status: str) -> str:
+    """Return stable metadata-only identity review copy."""
+    if status == "ambiguous":
+        return "Identity has multiple possible matches and needs review."
+    return "Identity could not be matched with enough evidence."
 
 
 def _output_surface_titles() -> tuple[tuple[str, str], ...]:
@@ -3268,6 +3438,17 @@ def _int_payload_value(payload: Mapping[str, object], key: str) -> int:
     return 0
 
 
+def _float_payload_value(payload: Mapping[str, object], key: str) -> float:
+    """Return a bounded float payload value when present."""
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return 0.0
+    parsed = float(value)
+    if 0.0 <= parsed <= 1.0:
+        return parsed
+    return 0.0
+
+
 def _run_status_count(runs: Sequence[EngineRunRecord], status: str) -> int:
     """Return count of runs in one lifecycle status."""
     return sum(1 for run in runs if run.status == status)
@@ -3554,6 +3735,37 @@ def _worker_process_response(summary: BackgroundWorkerRunSummary) -> WorkerProce
     )
 
 
+def _process_submitted_import_run(
+    repository: ProjectRepository,
+    queue: BackgroundJobQueue,
+    handler: BackgroundJobHandler,
+    submitted_at: str,
+) -> None:
+    """Drain one submitted import job for the hosted alpha worker bridge."""
+    logger.info("background_worker_submission_autoprocess_started")
+    try:
+        summary = BackgroundWorker(
+            repository=repository,
+            queue=queue,
+            handler=handler,
+        ).process_available(
+            started_at=submitted_at,
+            finished_at=submitted_at,
+            max_jobs=1,
+        )
+    except Exception:
+        logger.exception("background_worker_submission_autoprocess_failed")
+        return
+    logger.info(
+        "background_worker_submission_autoprocess_completed",
+        extra={
+            "claimed_jobs": summary.claimed_jobs,
+            "succeeded_jobs": summary.succeeded_jobs,
+            "failed_jobs": summary.failed_jobs,
+        },
+    )
+
+
 def _import_record(
     request: ImportCreateRequest,
     project_id: str,
@@ -3630,6 +3842,23 @@ def _reconcile_orphaned_project_runs(
             continue
         job_id = _job_id_from_ref(run.job_ref)
         if not job_id or background_job_queue.has_job(job_id):
+            job_is_stale_running = (
+                job_id
+                and _queue_job_is_running(background_job_queue, job_id)
+                and _run_is_stale(run, now)
+            )
+            if job_is_stale_running:
+                repository.update_engine_run(
+                    replace(
+                        run,
+                        status="failed",
+                        status_updated_at=now,
+                        finished_at=now,
+                        error_summary=(
+                            "Processing timed out before completion. Retry is available."
+                        ),
+                    )
+                )
             continue
         repository.update_engine_run(
             replace(
@@ -3640,6 +3869,14 @@ def _reconcile_orphaned_project_runs(
                 error_summary="Processing stopped before completion. Retry is available.",
             )
         )
+
+
+def _queue_job_is_running(background_job_queue: BackgroundJobQueue, job_id: str) -> bool:
+    """Return true when an existing queue job is stuck in the running state."""
+    try:
+        return background_job_queue.get(job_id).status == "running"
+    except Exception:
+        return False
 
 
 def _job_id_from_ref(job_ref: str) -> str:
@@ -3837,6 +4074,14 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="GET",
             path="/v2/projects/{project_id}",
             purpose="Return durable project metadata for the authenticated user.",
+        ),
+        ApiRouteCapability(
+            method="DELETE",
+            path="/v2/projects/{project_id}",
+            purpose=(
+                "Hard-delete a project and all scoped story/import/run/snapshot/export "
+                "metadata."
+            ),
         ),
         ApiRouteCapability(
             method="GET",

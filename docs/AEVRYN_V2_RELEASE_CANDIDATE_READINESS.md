@@ -9,8 +9,9 @@ This document defines the work required after V2 product development and before 
 # Decision
 
 ```text
-V2 product development is complete.
-V2 Release Candidate Readiness is the active work track.
+V2 product development was previously complete.
+V2 product development is reopened for Phase 12 Language And Identity Understanding.
+V2 Release Candidate Readiness is blocked until Phase 12 is accepted.
 Public beta is not approved yet.
 ```
 
@@ -19,6 +20,8 @@ Release Candidate Readiness is not Version 3.
 It is the bridge between a working private-alpha product and a public-facing product that strangers can trust with unpublished creative work.
 
 External setup work that cannot be completed by repository code alone is consolidated in `docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md`.
+
+Phase 12 acceptance is defined in `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`.
 
 ---
 
@@ -52,6 +55,12 @@ Release Candidate Readiness includes:
 * support and security contact paths
 * final alpha-to-beta manual test pass
 * release candidate signoff
+
+Release Candidate Readiness is gated by:
+
+* Translation Foundation acceptance
+* Entity Resolution Foundation acceptance
+* browser alpha verification of human-readable Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports surfaces
 
 Release Candidate Readiness does not include:
 

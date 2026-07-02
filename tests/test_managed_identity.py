@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import json
 from collections.abc import Mapping
 
 import pytest
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa, utils
 
 from aevryn.auth import (
     InvalidSessionError,
     JwtDecoder,
     ManagedIdentity,
     ManagedIdentityAuthenticationAdapter,
+    SupabaseHs256JwtDecoder,
     SupabaseJwksJwtDecoder,
     SupabaseJwtVerifier,
     managed_identity_user_id,
@@ -118,6 +121,58 @@ def test_supabase_jwks_decoder_verifies_rs256_token() -> None:
     assert claims["email"] == "creator@example.com"
 
 
+def test_supabase_jwks_decoder_verifies_es256_token() -> None:
+    """Supabase JWKS decoder should verify ES256 signing-key tokens."""
+    key = ec.generate_private_key(ec.SECP256R1())
+    token = signed_es256_test_jwt(
+        private_key=key,
+        kid="supabase-ec-key",
+        payload={
+            "iss": ISSUER,
+            "aud": "authenticated",
+            "sub": "external-user-1234",
+            "email": "creator@example.com",
+            "exp": 1_783_200_000,
+            "user_metadata": {"display_name": "Creator"},
+        },
+    )
+    decoder = SupabaseJwksJwtDecoder(
+        jwks_url="https://aevryn-dev.supabase.co/auth/v1/.well-known/jwks.json",
+        issuer=ISSUER,
+        jwks_fetcher=lambda _url: jwks_for_ec_key(key, kid="supabase-ec-key"),
+    )
+
+    claims = decoder.decode(token=token, now=NOW)
+
+    assert claims["sub"] == "external-user-1234"
+    assert claims["email"] == "creator@example.com"
+
+
+def test_supabase_hs256_decoder_verifies_symmetric_token() -> None:
+    """Supabase HS256 decoder should verify signature and required claims."""
+    token = signed_hs256_test_jwt(
+        key_material="supabase-jwt-secret",
+        payload={
+            "iss": ISSUER,
+            "aud": "authenticated",
+            "sub": "external-user-1234",
+            "email": "creator@example.com",
+            "exp": 1_783_200_000,
+            "user_metadata": {"display_name": "Creator"},
+        },
+    )
+    key_material = "supabase-jwt-secret"
+    decoder = SupabaseHs256JwtDecoder(
+        jwt_secret=key_material,
+        issuer=ISSUER,
+    )
+
+    claims = decoder.decode(token=token, now=NOW)
+
+    assert claims["sub"] == "external-user-1234"
+    assert claims["email"] == "creator@example.com"
+
+
 def test_supabase_jwks_decoder_rejects_invalid_tokens() -> None:
     """Supabase JWKS decoder should fail closed on malformed or invalid JWTs."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -158,6 +213,42 @@ def test_supabase_jwks_decoder_rejects_invalid_tokens() -> None:
     )
     with pytest.raises(InvalidSessionError, match="signature"):
         decoder.decode(token=wrong_signature, now=NOW)
+
+
+def test_supabase_hs256_decoder_rejects_invalid_tokens() -> None:
+    """Supabase HS256 decoder should fail closed on malformed or invalid JWTs."""
+    key_material = "supabase-jwt-secret"
+    decoder = SupabaseHs256JwtDecoder(
+        jwt_secret=key_material,
+        issuer=ISSUER,
+    )
+    wrong_signature = signed_hs256_test_jwt(
+        key_material="other-secret",
+        payload={
+            "iss": ISSUER,
+            "aud": "authenticated",
+            "sub": "external-user-1234",
+            "email": "creator@example.com",
+            "exp": 1_783_200_000,
+        },
+    )
+    wrong_algorithm = signed_test_jwt(
+        private_key=rsa.generate_private_key(public_exponent=65537, key_size=2048),
+        kid="supabase-key",
+        payload={
+            "iss": ISSUER,
+            "aud": "authenticated",
+            "sub": "external-user-1234",
+            "email": "creator@example.com",
+            "exp": 1_783_200_000,
+        },
+    )
+
+    with pytest.raises(InvalidSessionError, match="signature"):
+        decoder.decode(token=wrong_signature, now=NOW)
+
+    with pytest.raises(InvalidSessionError, match="HS256"):
+        decoder.decode(token=wrong_algorithm, now=NOW)
 
 
 def test_supabase_issuer_from_url_builds_auth_issuer() -> None:
@@ -254,6 +345,16 @@ def signed_test_jwt(
     return f"{header_part}.{payload_part}.{base64url_bytes(signature)}"
 
 
+def signed_hs256_test_jwt(*, key_material: str, payload: Mapping[str, object]) -> str:
+    """Return a compact HS256 JWT for tests."""
+    header = {"alg": "HS256", "typ": "JWT"}
+    header_part = base64url_json(header)
+    payload_part = base64url_json(payload)
+    signed_content = f"{header_part}.{payload_part}".encode()
+    signature = hmac.new(key_material.encode(), signed_content, hashlib.sha256).digest()
+    return f"{header_part}.{payload_part}.{base64url_bytes(signature)}"
+
+
 def jwks_for_key(private_key: rsa.RSAPrivateKey, *, kid: str) -> dict[str, object]:
     """Return a JWKS document for a test RSA key."""
     public_numbers = private_key.public_key().public_numbers()
@@ -266,6 +367,45 @@ def jwks_for_key(private_key: rsa.RSAPrivateKey, *, kid: str) -> dict[str, objec
                 "use": "sig",
                 "n": base64url_int(public_numbers.n),
                 "e": base64url_int(public_numbers.e),
+            }
+        ]
+    }
+
+
+def signed_es256_test_jwt(
+    *,
+    private_key: ec.EllipticCurvePrivateKey,
+    kid: str,
+    payload: Mapping[str, object],
+) -> str:
+    """Return a compact ES256 JWT for tests."""
+    header = {"alg": "ES256", "typ": "JWT", "kid": kid}
+    header_part = base64url_json(header)
+    payload_part = base64url_json(payload)
+    signed_content = f"{header_part}.{payload_part}".encode()
+    der_signature = private_key.sign(signed_content, ec.ECDSA(hashes.SHA256()))
+    r, s = utils.decode_dss_signature(der_signature)
+    signature = r.to_bytes(32, "big") + s.to_bytes(32, "big")
+    return f"{header_part}.{payload_part}.{base64url_bytes(signature)}"
+
+
+def jwks_for_ec_key(
+    private_key: ec.EllipticCurvePrivateKey,
+    *,
+    kid: str,
+) -> dict[str, object]:
+    """Return a JWKS document for a test P-256 key."""
+    public_numbers = private_key.public_key().public_numbers()
+    return {
+        "keys": [
+            {
+                "kty": "EC",
+                "kid": kid,
+                "alg": "ES256",
+                "use": "sig",
+                "crv": "P-256",
+                "x": base64url_int(public_numbers.x),
+                "y": base64url_int(public_numbers.y),
             }
         ]
     }

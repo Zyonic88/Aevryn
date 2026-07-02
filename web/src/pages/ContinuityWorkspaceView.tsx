@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { apiClient, type ContinuityPreviewRequest } from "../api/client";
 import type { ContinuityPreview, ContinuityRecord, ContinuityScene } from "../api/schemas";
 import { EmptyState, ErrorMessage } from "../components/Feedback";
+import { formatEvidenceScope, formatSceneScope } from "../formatting/display";
 import {
   DeveloperPreviewToggle,
   ProjectOutputSummaryPanel,
@@ -74,9 +75,7 @@ export function ContinuityWorkspaceView({ project }: { project: ProjectSummary }
       previewContinuity.mutate(payload);
     } catch (error) {
       setPreviewResult(null);
-      setFormError(
-        error instanceof Error ? error.message : "Continuity preview form is invalid.",
-      );
+      setFormError(error instanceof Error ? error.message : "Continuity preview form is invalid.");
     }
   }
 
@@ -93,55 +92,55 @@ export function ContinuityWorkspaceView({ project }: { project: ProjectSummary }
         <section>
           <h2>Continuity Preview</h2>
           <form className="import-form" onSubmit={submit}>
-          <div className="form-row-grid">
+            <div className="form-row-grid">
+              <label>
+                Source reference
+                <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              </label>
+              <label>
+                Filename
+                <input value={filename} onChange={(event) => setFilename(event.target.value)} />
+              </label>
+            </div>
             <label>
-              Source reference
-              <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              Title
+              <input value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
             <label>
-              Filename
-              <input value={filename} onChange={(event) => setFilename(event.target.value)} />
+              Source text
+              <textarea
+                value={sourceText}
+                onChange={(event) => setSourceText(event.target.value)}
+                rows={8}
+              />
             </label>
-          </div>
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            Source text
-            <textarea
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <label>
-            AI response JSON
-            <textarea
-              value={aiResponseText}
-              onChange={(event) => setAiResponseText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <label>
-            Scene ID
-            <input
-              value={sceneId}
-              onChange={(event) => setSceneId(event.target.value)}
-              placeholder="Optional scene ID"
-            />
-          </label>
-          {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
-          {previewContinuity.error ? (
-            <ErrorMessage>{previewContinuity.error.message}</ErrorMessage>
-          ) : null}
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={!canSubmit || previewContinuity.isPending}
-          >
-            {previewContinuity.isPending ? "Building preview" : "Preview continuity"}
-          </button>
+            <label>
+              AI response JSON
+              <textarea
+                value={aiResponseText}
+                onChange={(event) => setAiResponseText(event.target.value)}
+                rows={8}
+              />
+            </label>
+            <label>
+              Scene ID
+              <input
+                value={sceneId}
+                onChange={(event) => setSceneId(event.target.value)}
+                placeholder="Optional scene ID"
+              />
+            </label>
+            {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+            {previewContinuity.error ? (
+              <ErrorMessage>{previewContinuity.error.message}</ErrorMessage>
+            ) : null}
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={!canSubmit || previewContinuity.isPending}
+            >
+              {previewContinuity.isPending ? "Building preview" : "Preview continuity"}
+            </button>
           </form>
         </section>
       </DeveloperPreviewToggle>
@@ -180,7 +179,7 @@ function ContinuitySceneCard({ scene }: { scene: ContinuityScene }) {
     <article className="profile-card">
       <header>
         <p className="eyebrow">Scene</p>
-        <h3>{scene.scene_id}</h3>
+        <h3>{formatSceneScope(scene.scene_id)}</h3>
       </header>
       <dl className="metric-grid continuity-metrics">
         {bucketKeys().map((bucket) => (
@@ -192,24 +191,14 @@ function ContinuitySceneCard({ scene }: { scene: ContinuityScene }) {
       </dl>
       <div className="profile-section-grid">
         {bucketKeys().map((bucket) => (
-          <ContinuityBucket
-            key={bucket}
-            title={bucketLabels[bucket]}
-            records={scene[bucket]}
-          />
+          <ContinuityBucket key={bucket} title={bucketLabels[bucket]} records={scene[bucket]} />
         ))}
       </div>
     </article>
   );
 }
 
-function ContinuityBucket({
-  title,
-  records,
-}: {
-  title: string;
-  records: ContinuityRecord[];
-}) {
+function ContinuityBucket({ title, records }: { title: string; records: ContinuityRecord[] }) {
   return (
     <section className="profile-section">
       <h4>{title}</h4>
@@ -220,7 +209,7 @@ function ContinuityBucket({
               <strong>{record.record_type}</strong>:{" "}
               {readableOutputItems([record.description])[0] ?? "Unknown"}
               <span className="continuity-evidence">
-                {record.chapter_id} / {record.scene_id} / {record.evidence_id}
+                Evidence from {formatEvidenceScope(record)}
               </span>
             </li>
           ))}

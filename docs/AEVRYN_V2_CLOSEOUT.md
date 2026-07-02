@@ -2,14 +2,15 @@
 
 > Built by **Aetherra Labs**
 
-This document records the Version 2 completion decision.
+This document records the Version 2 completion decision and the later alpha-testing decision that reopened V2 for language and identity quality gates.
 
 ---
 
 # Decision
 
 ```text
-Version 2 product development is complete for private/internal alpha.
+Version 2 product development was previously complete for private/internal alpha.
+Version 2 is reopened for Phase 12 Language And Identity Understanding.
 Version 2 is not public-beta approved yet.
 ```
 
@@ -30,11 +31,18 @@ Register
 
 without touching the CLI.
 
+Hosted alpha testing showed that two originally future-facing systems are now required before V2 can close for release-candidate readiness:
+
+* Translation Foundation
+* Entity Resolution Foundation
+
+Those systems are tracked by `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`.
+
 ---
 
 # What Complete Means
 
-V2 complete means:
+V2 complete previously meant:
 
 * all planned V2 phases are accepted
 * the platform has an authenticated web/API workflow
@@ -46,7 +54,11 @@ V2 complete means:
 * private alpha recovery paths have been exercised
 * Phase 11 security, privacy, dependency, secret-scan, static-scan, and trust-document gates are accepted
 
-V2 complete does not mean public launch.
+That decision is superseded by Phase 12.
+
+V2 is not complete again until Phase 12 is accepted.
+
+V2 complete still does not mean public launch.
 
 ---
 
@@ -76,7 +88,7 @@ Required before public beta:
 
 # Release Candidate Readiness
 
-The next work track should be named:
+After Phase 12 is accepted, the next work track should return to:
 
 ```text
 V2 Release Candidate Readiness
@@ -84,7 +96,7 @@ V2 Release Candidate Readiness
 
 The readiness contract is defined in `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md`.
 
-That work is not V2 feature development.
+That work is not V2 feature development, but it remains blocked while Phase 12 is active.
 
 It is production readiness:
 
@@ -102,7 +114,7 @@ It is production readiness:
 
 Version 3 must not begin by quietly expanding V2.
 
-V3 begins after V2 release candidate readiness is understood and the team explicitly decides to start production expansion.
+V3 begins after V2 Phase 12 and V2 release candidate readiness are understood and the team explicitly decides to start production expansion.
 
 V3 candidate systems include media generation, publishing, payments, subscriptions, teams, and collaboration. Those systems are out of scope for V2 closeout.
 
@@ -111,8 +123,8 @@ V3 candidate systems include media generation, publishing, payments, subscriptio
 # Final V2 Status
 
 ```text
-V2 Platform: Complete for private/internal alpha.
-V2 Release Candidate Readiness: Next work track.
+V2 Platform: Reopened for Phase 12 Language And Identity Understanding.
+V2 Release Candidate Readiness: Blocked pending Phase 12 acceptance.
 Public beta: Blocked pending production deployment/security/legal decisions.
 Version 3: Not started.
 ```

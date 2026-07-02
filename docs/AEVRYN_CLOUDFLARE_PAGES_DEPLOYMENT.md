@@ -24,7 +24,13 @@ The frontend must be deployed with:
 
 ```text
 VITE_AEVRYN_API_URL=https://api.aevryn.ai
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<browser-safe Supabase anon key>
 ```
+
+`VITE_SUPABASE_ANON_KEY` is a browser-safe public key used only for Supabase Auth.
+
+Never configure the Supabase service-role key in Cloudflare Pages.
 
 ---
 
@@ -131,6 +137,8 @@ Build and deploy:
 ```powershell
 cd C:\Users\enigm\Documents\Aevryn\web
 $env:VITE_AEVRYN_API_URL="https://api.aevryn.ai"
+$env:VITE_SUPABASE_URL="https://<project-ref>.supabase.co"
+$env:VITE_SUPABASE_ANON_KEY="<browser-safe Supabase anon key>"
 npm.cmd run build
 npx.cmd wrangler pages deploy dist --project-name aevryn-web --branch master
 ```
@@ -152,6 +160,8 @@ Root directory: web
 Build command: npm.cmd run build
 Build output directory: dist
 Environment variable: VITE_AEVRYN_API_URL=https://api.aevryn.ai
+Environment variable: VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+Environment variable: VITE_SUPABASE_ANON_KEY=<browser-safe Supabase anon key>
 ```
 
 If Cloudflare's Linux builder is used, the build command may be:
@@ -160,7 +170,9 @@ If Cloudflare's Linux builder is used, the build command may be:
 npm run build
 ```
 
-Do not configure secrets in the frontend Pages environment unless a future browser-safe public value is explicitly required.
+Do not configure secrets in the frontend Pages environment.
+
+Only browser-safe public values belong in Pages environment variables.
 
 ---
 

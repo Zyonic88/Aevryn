@@ -12,6 +12,7 @@ from aevryn import (
     ExtractedEntity,
     ExtractedFact,
     ExtractionResult,
+    GlossaryTerm,
     SceneExtractionInput,
 )
 from aevryn.core import Story
@@ -166,6 +167,20 @@ class EmptyExtractor:
         return ExtractionResult(scene_id=scene.scene_id)
 
 
+class RecordingTextExtractor:
+    """Extractor test double that records the scene input it receives."""
+
+    def __init__(self) -> None:
+        self.scene_texts: list[str] = []
+        self.anchor_ids: list[tuple[str, ...]] = []
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Record text and anchors without producing candidates."""
+        self.scene_texts.append(scene.text)
+        self.anchor_ids.append(scene.evidence_anchor_ids)
+        return ExtractionResult(scene_id=scene.scene_id)
+
+
 class WrongSceneExtractor:
     """Extractor test double that returns mismatched scene IDs."""
 
@@ -186,6 +201,380 @@ def test_runner_accepts_pluggable_extractor() -> None:
 
     assert result.extraction_results[0].entities == ()
     assert result.update_summaries[0].accepted_entities == ()
+
+
+def test_runner_feeds_translation_normalized_text_to_extraction() -> None:
+    """Extraction may consume normalized text while preserving original anchors."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    extractor = RecordingTextExtractor()
+
+    result = runner.run_imported_source(
+        imported_source=imported_source,
+        extractor=extractor,
+        translation_glossary=(
+            GlossaryTerm(
+                source_term="iron sword",
+                preferred_term="Iron Blade",
+                evidence_anchor_id=imported_source.anchors[-1].anchor_id,
+            ),
+        ),
+    )
+
+    assert extractor.scene_texts == ["Mark bought an Iron Blade."]
+    assert extractor.anchor_ids == [(imported_source.anchors[-1].anchor_id,)]
+    assert result.translation_units[0].normalized_text == "Mark bought an Iron Blade."
+    assert result.translation_units[0].source_scene_id == "demo_chapter_001_scene_001"
+    assert result.extraction_results[0].scene_id == "demo_chapter_001_scene_001"
+
+
+def test_runner_builds_phase12_translation_and_identity_metadata() -> None:
+    """Phase 12 metadata should exist without changing Canon acceptance."""
+    runner = AevrynProjectRunner()
+    result = runner.run_demo_text_file(path=source_file(), source_id="demo")
+
+    assert len(result.translation_units) == len(result.extraction_results)
+    assert result.translation_units[0].source_evidence_anchor_ids
+    assert result.identity_resolutions
+    assert all(
+        decision.reference.evidence_anchor_id
+        for decision in result.identity_resolutions
+    )
+    assert {
+        entity_id
+        for summary in result.update_summaries
+        for entity_id in summary.accepted_entities
+    } == {"character_mark", "item_iron_sword", "item_rusty_dagger"}
+
+
+def test_runner_resolves_later_descriptive_entity_to_prior_identity() -> None:
+    """High-confidence cross-scene identity matches should avoid duplicate entities."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_gender_female",
+                        "entity_id": "character_charlotte",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_charlotte_title_general",
+                        "entity_id": "character_charlotte",
+                        "attribute": "title",
+                        "value": "General",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_001_scene_002": {
+                "entities": [
+                    {
+                        "entity_id": "character_female_general",
+                        "entity_type": "character",
+                        "display_name": "Female General",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_female_general_status_alert",
+                        "entity_id": "character_female_general",
+                        "attribute": "status",
+                        "value": "Alert",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[0].accepted_entities == ("character_charlotte",)
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_charlotte"
+    assert result.database.retrieve_entity("character_female_general") is None
+    status_fact = result.database.retrieve_current_fact("character_charlotte", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Alert"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_charlotte"
+        and decision.reference.text == "Female General"
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_carries_identity_resolution_across_chapters() -> None:
+    """Identity profiles should carry from earlier chapters into later chapters."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_gender_female",
+                        "entity_id": "character_charlotte",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_charlotte_title_general",
+                        "entity_id": "character_charlotte",
+                        "attribute": "title",
+                        "value": "General",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_002_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_female_general",
+                        "entity_type": "character",
+                        "display_name": "Female General",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_female_general_status_returned",
+                        "entity_id": "character_female_general",
+                        "attribute": "status",
+                        "value": "Returned",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[0].accepted_entities == ("character_charlotte",)
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_charlotte"
+    assert result.database.retrieve_entity("character_female_general") is None
+    status_fact = result.database.retrieve_current_fact("character_charlotte", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Returned"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_charlotte"
+        and decision.reference.chapter_id == "demo_chapter_002"
+        and decision.reference.text == "Female General"
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_resolves_same_scene_description_to_named_identity() -> None:
+    """Same-scene descriptive aliases should merge when one named profile supports them."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_white_haired_beauty",
+                        "entity_type": "character",
+                        "display_name": "White-haired Beauty",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_description_beauty",
+                        "entity_id": "character_charlotte",
+                        "attribute": "description",
+                        "value": "White-haired Beauty",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_white_haired_beauty_status_smiling",
+                        "entity_id": "character_white_haired_beauty",
+                        "attribute": "status",
+                        "value": "Smiling",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[0].accepted_entities == ("character_charlotte",)
+    assert result.extraction_results[0].entities[0].entity_id == "character_charlotte"
+    assert len(result.extraction_results[0].entities) == 1
+    status_fact = result.database.retrieve_current_fact("character_charlotte", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Smiling"
+    assert result.database.retrieve_entity("character_white_haired_beauty") is None
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_charlotte"
+        and decision.reference.text == "White-haired Beauty"
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_keeps_same_scene_ambiguous_description_unmerged() -> None:
+    """Same-scene descriptions should not merge when multiple characters fit."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_elaine",
+                        "entity_type": "character",
+                        "display_name": "Elaine",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_female_general",
+                        "entity_type": "character",
+                        "display_name": "Female General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_gender_female",
+                        "entity_id": "character_charlotte",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_charlotte_title_general",
+                        "entity_id": "character_charlotte",
+                        "attribute": "title",
+                        "value": "General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_elaine_gender_female",
+                        "entity_id": "character_elaine",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_elaine_title_general",
+                        "entity_id": "character_elaine",
+                        "attribute": "title",
+                        "value": "General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert "character_female_general" in result.update_summaries[0].accepted_entities
+    assert result.database.retrieve_entity("character_female_general") is not None
+    assert any(
+        decision.status == "ambiguous"
+        and decision.reference.text == "Female General"
+        and {candidate.entity_id for candidate in decision.candidates}
+        == {"character_charlotte", "character_elaine"}
+        for decision in result.identity_resolutions
+    )
 
 
 def test_runner_rejects_empty_imported_source() -> None:

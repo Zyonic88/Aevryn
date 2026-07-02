@@ -17,3 +17,40 @@ export function formatRunStatus(value: string): string {
   }
   return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;
 }
+
+export function formatSceneScope(sceneId: string): string {
+  const sceneMatch = sceneId.match(/(?:^|_)chapter_(\d+)_scene_(\d+)$/iu);
+  if (sceneMatch) {
+    return `Chapter ${Number(sceneMatch[1])}, Scene ${Number(sceneMatch[2])}`;
+  }
+
+  const simpleSceneMatch = sceneId.match(/^scene_(\d+)$/iu);
+  if (simpleSceneMatch) {
+    return `Scene ${Number(simpleSceneMatch[1])}`;
+  }
+
+  return "Scene";
+}
+
+export function formatChapterScope(chapterId: string): string {
+  const chapterMatch = chapterId.match(/(?:^|_)chapter_(\d+)$/iu);
+  if (chapterMatch) {
+    return `Chapter ${Number(chapterMatch[1])}`;
+  }
+
+  return "Chapter";
+}
+
+export function formatEvidenceScope({
+  chapter_id,
+  scene_id,
+}: {
+  chapter_id: string;
+  scene_id: string;
+}): string {
+  const sceneScope = formatSceneScope(scene_id);
+  if (sceneScope !== "Scene") {
+    return sceneScope;
+  }
+  return formatChapterScope(chapter_id);
+}
