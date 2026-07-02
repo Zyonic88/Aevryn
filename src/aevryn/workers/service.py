@@ -495,11 +495,20 @@ def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, o
                 "chapter_id": decision.reference.chapter_id,
                 "scene_id": decision.reference.scene_id,
                 "candidate_count": len(decision.candidates),
-                "reason": decision.reason,
+                "reason": _identity_snapshot_reason(decision.status),
             }
             for decision in result.identity_resolutions
         ),
     }
+
+
+def _identity_snapshot_reason(status: str) -> str:
+    """Return stable metadata-only identity review copy for persisted snapshots."""
+    if status == "ambiguous":
+        return "Identity has multiple possible matches and needs review."
+    if status == "unresolved":
+        return "Identity could not be matched with enough evidence."
+    return "Identity was resolved with available evidence."
 
 
 def _timeline_changes_payload(
