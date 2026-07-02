@@ -216,7 +216,11 @@ def test_run_performance_baseline_measures_real_v2_boundaries() -> None:
     snapshot = run_performance_baseline(
         {
             "import_inspect": lambda: _assert_ok(
-                client.post("/v2/imports/inspect", json=_inspect_payload())
+                client.post(
+                    "/v2/imports/inspect",
+                    headers=_auth_headers(),
+                    json=_inspect_payload(),
+                )
             ),
             "import_save": lambda: _assert_ok(
                 client.post(

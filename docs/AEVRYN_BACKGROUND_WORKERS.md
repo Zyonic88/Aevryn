@@ -115,6 +115,25 @@ This foundation proves the contract without requiring Redis, Celery, RQ, Dramati
 
 Production queue infrastructure can replace the queue adapter later without changing engine authority.
 
+## Hosted Alpha Auto-Process Bridge
+
+The hosted alpha may enable:
+
+```text
+AEVRYN_WORKER_AUTO_PROCESS_SUBMISSIONS=true
+```
+
+When enabled, the API records a pending run, enqueues a worker job, starts one
+server-side worker drain, and returns the submitted run response without waiting
+for provider-backed extraction to finish. The browser never calls the worker
+drain endpoint and never receives worker credentials.
+
+This is an alpha bridge for the current process-local queue. It is not the final
+production worker posture.
+
+Before public beta, replace this bridge with a persistent managed queue runner
+that survives API instance restarts and does not depend on process-local memory.
+
 ---
 
 # Job Lifecycle

@@ -13,12 +13,19 @@ from aevryn.canon import CanonDatabase, CanonUpdater, CanonUpdateSummary
 from aevryn.canon.policies import is_additive_fact_attribute
 from aevryn.characters import CanonCharacterCard, CharacterCardBuilder
 from aevryn.core import Fact
+from aevryn.entity_resolution import (
+    EntityIdentityProfile,
+    EntityResolutionEngine,
+    ResolvedReference,
+    SurfaceReference,
+)
 from aevryn.extraction import (
     EntityExtractionEngine,
     EvidenceBoundedAIExtractor,
     ExtractedEntity,
     ExtractedFact,
     ExtractedRelationship,
+    ExtractedStateChange,
     ExtractionResult,
     SceneEvidenceAnchor,
     SceneExtractionInput,
@@ -33,6 +40,12 @@ from aevryn.importing import (
 )
 from aevryn.prompts import CanonPromptBuilder, PromptBundle
 from aevryn.scenes import CanonSceneContext, SceneContextBuilder
+from aevryn.translation import (
+    GlossaryTerm,
+    TranslatedUnit,
+    TranslationEngine,
+    TranslationUnit,
+)
 from aevryn.world import WorldState, WorldStateBuilder
 
 logger = logging.getLogger(__name__)
@@ -47,12 +60,16 @@ class ProjectRunResult:
         database: In-memory Canon Database populated by accepted candidates.
         extraction_results: Candidate extraction results in scene order.
         update_summaries: Canon update summaries in scene order.
+        translation_units: Translation Foundation metadata in scene order.
+        identity_resolutions: Entity Resolution metadata for extracted entities.
     """
 
     imported_source: ImportedSource
     database: CanonDatabase
     extraction_results: tuple[ExtractionResult, ...]
     update_summaries: tuple[CanonUpdateSummary, ...]
+    translation_units: tuple[TranslatedUnit, ...] = ()
+    identity_resolutions: tuple[ResolvedReference, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate project workflow result alignment."""
@@ -201,6 +218,7 @@ class AevrynProjectRunner:
         imported_source: ImportedSource,
         extractor: SceneExtractor,
         reject_unknown_anchor_candidates: bool = False,
+        translation_glossary: tuple[GlossaryTerm, ...] = (),
     ) -> ProjectRunResult:
         """Run extraction and canon updating over imported source.
 
@@ -215,27 +233,52 @@ class AevrynProjectRunner:
             Project run result containing imported source, candidates, and Canon.
         """
         self._require_imported_scenes(imported_source)
-        extraction_results = EntityExtractionEngine(
+        translation_units = self.build_translation_units(
+            imported_source,
+            glossary=translation_glossary,
+        )
+        raw_extraction_results = EntityExtractionEngine(
             extractor=extractor,
             unknown_anchor_policy=(
                 "reject_candidate" if reject_unknown_anchor_candidates else "raise"
             ),
-        ).extract_imported_source(imported_source)
+        ).extract_imported_source(
+            imported_source,
+            normalized_scene_text_by_id=_translated_scene_text_by_id(translation_units),
+        )
         database = CanonDatabase()
         updater = CanonUpdater(database=database)
         anchors_by_scene = _anchors_by_scene(imported_source.anchors)
-        summaries = tuple(
-            updater.apply_extraction_result(
+        extraction_results: list[ExtractionResult] = []
+        summaries: list[CanonUpdateSummary] = []
+        identity_resolutions: list[ResolvedReference] = []
+        identity_profiles: tuple[EntityIdentityProfile, ...] = ()
+        for raw_extraction_result in raw_extraction_results:
+            extraction_result, decisions = self.resolve_extraction_result_identities(
+                raw_extraction_result,
+                identity_profiles=identity_profiles,
+            )
+            summary = updater.apply_extraction_result(
                 result=extraction_result,
                 anchors=anchors_by_scene.get(extraction_result.scene_id, ()),
             )
-            for extraction_result in extraction_results
-        )
+            extraction_results.append(extraction_result)
+            summaries.append(summary)
+            identity_resolutions.extend(decisions)
+            identity_profiles = _merged_identity_profiles(
+                identity_profiles,
+                _identity_profiles_from_accepted_extraction_result(
+                    result=extraction_result,
+                    summary=summary,
+                ),
+            )
         result = ProjectRunResult(
             imported_source=imported_source,
             database=database,
-            extraction_results=extraction_results,
-            update_summaries=summaries,
+            extraction_results=tuple(extraction_results),
+            update_summaries=tuple(summaries),
+            translation_units=translation_units,
+            identity_resolutions=tuple(identity_resolutions),
         )
         logger.info(
             "Ran imported source workflow",
@@ -293,6 +336,10 @@ class AevrynProjectRunner:
             )
         database = CanonDatabase()
         updater = CanonUpdater(database=database)
+        extraction_result, identity_resolutions = self.resolve_extraction_result_identities(
+            extraction_result,
+            identity_profiles=(),
+        )
         summary = updater.apply_extraction_result(
             result=extraction_result,
             anchors=anchors,
@@ -302,6 +349,11 @@ class AevrynProjectRunner:
             database=database,
             extraction_results=(extraction_result,),
             update_summaries=(summary,),
+            translation_units=self.build_translation_units(
+                imported_source,
+                scene_id=requested_scene_id,
+            ),
+            identity_resolutions=identity_resolutions,
         )
         logger.info(
             "Ran imported scene workflow",
@@ -354,6 +406,147 @@ class AevrynProjectRunner:
                     )
 
         raise ValueError(f"Unknown scene: {requested_scene_id}")
+
+    def build_translation_units(
+        self,
+        imported_source: ImportedSource,
+        scene_id: str | None = None,
+        glossary: tuple[GlossaryTerm, ...] = (),
+    ) -> tuple[TranslatedUnit, ...]:
+        """Build Translation Foundation units without changing source structure."""
+        requested_scene_ids = {scene_id} if scene_id is not None else None
+        units: list[TranslationUnit] = []
+        for chapter in imported_source.story.chapters:
+            for scene in chapter.scenes:
+                if requested_scene_ids is not None and scene.scene_id not in requested_scene_ids:
+                    continue
+                anchors = tuple(
+                    anchor
+                    for anchor in imported_source.anchors
+                    if anchor.scene_id == scene.scene_id
+                )
+                units.append(
+                    TranslationUnit(
+                        unit_id=f"translation_{scene.scene_id}",
+                        source_text="\n\n".join(scene.paragraphs),
+                        evidence_anchor_ids=tuple(anchor.anchor_id for anchor in anchors),
+                        source_chapter_id=chapter.chapter_id,
+                        source_scene_id=scene.scene_id,
+                    )
+                )
+        if requested_scene_ids is not None and not units:
+            raise ValueError(f"Unknown scene: {scene_id}")
+        return TranslationEngine().normalize_units(tuple(units), glossary=glossary)
+
+    def resolve_extracted_identities(
+        self,
+        extraction_results: tuple[ExtractionResult, ...],
+    ) -> tuple[ResolvedReference, ...]:
+        """Build Entity Resolution decisions from extracted entity candidates."""
+        profiles = _identity_profiles_from_extraction_results(extraction_results)
+        references = tuple(
+            SurfaceReference(
+                text=entity.display_name,
+                evidence_anchor_id=entity.evidence_anchor_id,
+                scene_id=result.scene_id,
+                chapter_id=_chapter_id_from_scene_id(result.scene_id),
+            )
+            for result in extraction_results
+            for entity in result.entities
+        )
+        return EntityResolutionEngine().resolve_references(references, profiles)
+
+    def resolve_extraction_result_identities(
+        self,
+        extraction_result: ExtractionResult,
+        *,
+        identity_profiles: tuple[EntityIdentityProfile, ...],
+    ) -> tuple[ExtractionResult, tuple[ResolvedReference, ...]]:
+        """Rewrite high-confidence identity references to prior accepted entities."""
+        local_identity_profiles = _identity_profiles_from_extraction_results(
+            (extraction_result,)
+        )
+        resolver = EntityResolutionEngine()
+        decisions = tuple(
+            resolver.resolve_reference(
+                SurfaceReference(
+                    text=entity.display_name,
+                    evidence_anchor_id=entity.evidence_anchor_id,
+                    scene_id=extraction_result.scene_id,
+                    chapter_id=_chapter_id_from_scene_id(extraction_result.scene_id),
+                ),
+                _resolution_profiles_for_entity(
+                    entity=entity,
+                    identity_profiles=_merged_identity_profiles(
+                        identity_profiles,
+                        local_identity_profiles,
+                    ),
+                ),
+            )
+            for entity in extraction_result.entities
+        )
+        entity_id_map = {
+            entity.entity_id: decision.entity_id
+            for entity, decision in zip(
+                extraction_result.entities,
+                decisions,
+                strict=True,
+            )
+            if decision.status == "resolved"
+            and decision.entity_id is not None
+            and decision.entity_id != entity.entity_id
+        }
+        if not entity_id_map:
+            return extraction_result, decisions
+
+        rewritten_entities = tuple(
+            entity
+            for entity in extraction_result.entities
+            if entity.entity_id not in entity_id_map
+        )
+        rewritten_facts = tuple(
+            _rewritten_fact_for_resolved_identity(fact, entity_id_map[fact.entity_id])
+            if fact.entity_id in entity_id_map
+            else fact
+            for fact in extraction_result.facts
+        )
+        rewritten_relationships = tuple(
+            ExtractedRelationship(
+                source_entity_id=entity_id_map.get(
+                    relationship.source_entity_id,
+                    relationship.source_entity_id,
+                ),
+                relationship_type=relationship.relationship_type,
+                target_entity_id=entity_id_map.get(
+                    relationship.target_entity_id,
+                    relationship.target_entity_id,
+                ),
+                evidence_anchor_id=relationship.evidence_anchor_id,
+                confidence=relationship.confidence,
+            )
+            for relationship in extraction_result.relationships
+        )
+        rewritten_state_changes = tuple(
+            ExtractedStateChange(
+                entity_id=entity_id_map.get(state_change.entity_id, state_change.entity_id),
+                attribute=state_change.attribute,
+                value=state_change.value,
+                valid_from_anchor_id=state_change.valid_from_anchor_id,
+                confidence=state_change.confidence,
+                valid_until_anchor_id=state_change.valid_until_anchor_id,
+            )
+            for state_change in extraction_result.state_changes
+        )
+        return (
+            ExtractionResult(
+                scene_id=extraction_result.scene_id,
+                entities=rewritten_entities,
+                facts=rewritten_facts,
+                relationships=rewritten_relationships,
+                state_changes=rewritten_state_changes,
+            ),
+            decisions,
+        )
 
     def build_character_card(
         self,
@@ -911,6 +1104,234 @@ def _anchors_by_scene(
         scene_id: tuple(scene_anchors)
         for scene_id, scene_anchors in grouped.items()
     }
+
+
+def _identity_profiles_from_extraction_results(
+    extraction_results: tuple[ExtractionResult, ...],
+) -> tuple[EntityIdentityProfile, ...]:
+    """Return deterministic identity profiles from extracted entity candidates."""
+    entities_by_id: dict[str, ExtractedEntity] = {}
+    aliases_by_id: dict[str, set[str]] = {}
+    titles_by_id: dict[str, set[str]] = {}
+    descriptions_by_id: dict[str, set[str]] = {}
+    evidence_by_id: dict[str, set[str]] = {}
+
+    for result in extraction_results:
+        for entity in result.entities:
+            entities_by_id.setdefault(entity.entity_id, entity)
+            evidence_by_id.setdefault(entity.entity_id, set()).add(entity.evidence_anchor_id)
+        for fact in result.facts:
+            if fact.entity_id not in entities_by_id:
+                continue
+            evidence_by_id.setdefault(fact.entity_id, set()).add(fact.evidence_anchor_id)
+            attribute = fact.attribute.lower()
+            if attribute in {"display_name", "name", "alias"}:
+                aliases_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+            elif attribute in {"title", "role", "profession"}:
+                titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+            elif attribute in {"description", "appearance", "race", "species"}:
+                descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+
+    return tuple(
+        _identity_profile_from_parts(
+            entity=entity,
+            aliases=aliases_by_id.get(entity.entity_id, set()),
+            titles=titles_by_id.get(entity.entity_id, set()),
+            descriptions=descriptions_by_id.get(entity.entity_id, set()),
+            evidence_anchor_ids=evidence_by_id.get(entity.entity_id, set()),
+        )
+        for entity in sorted(entities_by_id.values(), key=lambda item: item.entity_id)
+    )
+
+
+def _translated_scene_text_by_id(
+    translation_units: tuple[TranslatedUnit, ...],
+) -> dict[str, str]:
+    """Return normalized scene text keyed by source scene ID."""
+    return {
+        unit.source_scene_id: unit.normalized_text
+        for unit in translation_units
+        if unit.source_scene_id
+    }
+
+
+def _chapter_id_from_scene_id(scene_id: str) -> str:
+    """Return the imported chapter ID prefix for a stable scene ID."""
+    marker = "_scene_"
+    if marker not in scene_id:
+        return ""
+    return scene_id.split(marker, maxsplit=1)[0]
+
+
+def _resolution_profiles_for_entity(
+    *,
+    entity: ExtractedEntity,
+    identity_profiles: tuple[EntityIdentityProfile, ...],
+) -> tuple[EntityIdentityProfile, ...]:
+    """Return compatible profiles for resolving one extracted entity."""
+    return tuple(
+        profile
+        for profile in identity_profiles
+        if profile.entity_id != entity.entity_id
+        and profile.entity_type == entity.entity_type
+        and profile.entity_type == "character"
+    )
+
+
+def _identity_profiles_from_accepted_extraction_result(
+    *,
+    result: ExtractionResult,
+    summary: CanonUpdateSummary,
+) -> tuple[EntityIdentityProfile, ...]:
+    """Return identity profiles from candidates accepted into Canon."""
+    accepted_entity_ids = set(summary.accepted_entities)
+    if not accepted_entity_ids:
+        return ()
+
+    entities_by_id = {
+        entity.entity_id: entity
+        for entity in result.entities
+        if entity.entity_id in accepted_entity_ids
+    }
+    aliases_by_id: dict[str, set[str]] = {}
+    titles_by_id: dict[str, set[str]] = {}
+    descriptions_by_id: dict[str, set[str]] = {}
+    evidence_by_id: dict[str, set[str]] = {
+        entity_id: {entity.evidence_anchor_id}
+        for entity_id, entity in entities_by_id.items()
+    }
+
+    for fact in result.facts:
+        if fact.entity_id not in accepted_entity_ids:
+            continue
+        evidence_by_id.setdefault(fact.entity_id, set()).add(fact.evidence_anchor_id)
+        _add_identity_profile_fact(
+            fact=fact,
+            aliases_by_id=aliases_by_id,
+            titles_by_id=titles_by_id,
+            descriptions_by_id=descriptions_by_id,
+        )
+
+    return tuple(
+        _identity_profile_from_parts(
+            entity=entity,
+            aliases=aliases_by_id.get(entity.entity_id, set()),
+            titles=titles_by_id.get(entity.entity_id, set()),
+            descriptions=descriptions_by_id.get(entity.entity_id, set()),
+            evidence_anchor_ids=evidence_by_id.get(entity.entity_id, set()),
+        )
+        for entity in sorted(entities_by_id.values(), key=lambda item: item.entity_id)
+    )
+
+
+def _merged_identity_profiles(
+    existing: tuple[EntityIdentityProfile, ...],
+    additions: tuple[EntityIdentityProfile, ...],
+) -> tuple[EntityIdentityProfile, ...]:
+    """Merge identity profiles by entity ID without losing surface references."""
+    profiles_by_id = {profile.entity_id: profile for profile in existing}
+    for addition in additions:
+        current = profiles_by_id.get(addition.entity_id)
+        if current is None:
+            profiles_by_id[addition.entity_id] = addition
+            continue
+        profiles_by_id[addition.entity_id] = EntityIdentityProfile(
+            entity_id=current.entity_id,
+            canonical_name=current.canonical_name,
+            entity_type=current.entity_type,
+            aliases=tuple(sorted(set(current.aliases).union(addition.aliases))),
+            titles=tuple(sorted(set(current.titles).union(addition.titles))),
+            descriptions=tuple(
+                sorted(set(current.descriptions).union(addition.descriptions))
+            ),
+            pronouns=tuple(sorted(set(current.pronouns).union(addition.pronouns))),
+            evidence_anchor_ids=tuple(
+                sorted(
+                    set(current.evidence_anchor_ids).union(
+                        addition.evidence_anchor_ids
+                    )
+                )
+            ),
+        )
+    return tuple(profiles_by_id[entity_id] for entity_id in sorted(profiles_by_id))
+
+
+def _identity_profile_from_parts(
+    *,
+    entity: ExtractedEntity,
+    aliases: set[str],
+    titles: set[str],
+    descriptions: set[str],
+    evidence_anchor_ids: set[str],
+) -> EntityIdentityProfile:
+    """Create one identity profile with useful composite descriptions."""
+    composite_descriptions = set(descriptions)
+    genders = {
+        description
+        for description in descriptions
+        if description.lower() in {"male", "female", "man", "woman"}
+    }
+    for gender in genders:
+        for title in titles:
+            composite_descriptions.add(f"{gender} {title}")
+
+    return EntityIdentityProfile(
+        entity_id=entity.entity_id,
+        canonical_name=entity.display_name,
+        entity_type=entity.entity_type,
+        aliases=tuple(sorted(aliases)),
+        titles=tuple(sorted(titles)),
+        descriptions=tuple(sorted(composite_descriptions)),
+        evidence_anchor_ids=tuple(sorted(evidence_anchor_ids)),
+    )
+
+
+def _add_identity_profile_fact(
+    *,
+    fact: ExtractedFact,
+    aliases_by_id: dict[str, set[str]],
+    titles_by_id: dict[str, set[str]],
+    descriptions_by_id: dict[str, set[str]],
+) -> None:
+    """Route an accepted fact into identity-profile fields."""
+    attribute = fact.attribute.lower()
+    if attribute in {"display_name", "name", "alias"}:
+        aliases_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+    elif attribute in {"title", "role", "profession"}:
+        titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+    elif attribute in {"description", "appearance", "race", "species", "gender", "sex"}:
+        descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+
+
+def _rewritten_fact_for_resolved_identity(
+    fact: ExtractedFact,
+    resolved_entity_id: str,
+) -> ExtractedFact:
+    """Return a fact rewritten to a resolved entity ID."""
+    return ExtractedFact(
+        fact_id=(
+            "fact_"
+            f"{resolved_entity_id}_"
+            f"{fact.attribute}_"
+            f"{_machine_suffix(fact.value)}_"
+            f"{fact.evidence_anchor_id}"
+        ),
+        entity_id=resolved_entity_id,
+        attribute=fact.attribute,
+        value=fact.value,
+        evidence_anchor_id=fact.evidence_anchor_id,
+        confidence=fact.confidence,
+    )
+
+
+def _machine_suffix(value: str) -> str:
+    """Return a stable machine-token suffix from human text."""
+    normalized = "".join(
+        character.lower() if character.isalnum() else "_"
+        for character in value
+    )
+    collapsed = "_".join(part for part in normalized.split("_") if part)
+    return collapsed[:80] or "value"
 
 
 def _require_text(value: str, field_name: str) -> None:

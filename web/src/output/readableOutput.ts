@@ -29,6 +29,10 @@ export function readableOutputItem(item: string): string {
   if (fact) {
     return `${readableLabel(fact[1])}: ${readableFactValue(fact[2])}`;
   }
+  const stateChangeId = withoutAnchorPrefix.match(/^state_fact_(.+)$/i);
+  if (stateChangeId) {
+    return `State change: ${readableValue(stateChangeId[1])}`;
+  }
   const relationship = readableRelationship(withoutAnchorPrefix);
   return relationship ?? readableFreeText(withoutAnchorPrefix);
 }
@@ -52,7 +56,9 @@ function toSentence(value: string): string {
 }
 
 function readableEntity(value: string): string {
-  const kindMatch = value.match(/^(character|entity|location|organization|building|item|skill|vehicle)_(.+)$/i);
+  const kindMatch = value.match(
+    /^(character|entity|location|organization|building|item|skill|vehicle)_(.+)$/i,
+  );
   if (!kindMatch) {
     return readableValue(value);
   }

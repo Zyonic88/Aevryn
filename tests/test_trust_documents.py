@@ -128,15 +128,19 @@ def test_v2_closeout_document_separates_completion_from_public_beta() -> None:
     document = read_doc("docs/AEVRYN_V2_CLOSEOUT.md")
 
     required_terms = (
-        "Version 2 product development is complete for private/internal alpha.",
+        "Version 2 product development was previously complete for private/internal alpha.",
+        "Version 2 is reopened for Phase 12 Language And Identity Understanding.",
         "Version 2 is not public-beta approved yet.",
         "without touching the CLI",
+        "Translation Foundation",
+        "Entity Resolution Foundation",
+        "docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md",
         "V2 Release Candidate Readiness",
         "production identity provider decision",
         "production secret manager",
         "rate limiting at the deployment edge or API gateway",
         "attorney-reviewed Terms of Service",
-        "V2 Platform: Complete for private/internal alpha.",
+        "V2 Platform: Reopened for Phase 12 Language And Identity Understanding.",
         "Version 3: Not started.",
     )
 
@@ -149,9 +153,12 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
     document = read_doc("docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md")
 
     required_terms = (
-        "V2 Release Candidate Readiness is the active work track.",
+        "V2 Release Candidate Readiness is blocked until Phase 12 is accepted.",
         "Public beta is not approved yet.",
         "Release Candidate Readiness is not Version 3.",
+        "docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md",
+        "Translation Foundation acceptance",
+        "Entity Resolution Foundation acceptance",
         "Gate 1 - Public-Facing Trust Documentation",
         "Gate 2 - Legal Review",
         "Gate 3 - Production Infrastructure",
@@ -174,6 +181,42 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
 
     for term in required_terms:
         assert term in document
+
+
+def test_v2_language_identity_documents_define_required_boundaries() -> None:
+    """Phase 12 docs should define translation and entity-resolution authority."""
+    required_documents = {
+        "docs/AEVRYN_ENTITY_RESOLUTION.md": (
+            "Extraction proposes entities.",
+            "Resolution determines identity.",
+            "Canon decides truth.",
+            "alias detection",
+            "pronoun resolution",
+            "confidence score",
+            "surface-reference tracking",
+            "Ambiguous stays ambiguous.",
+        ),
+        "docs/AEVRYN_TRANSLATION_ENGINE.md": (
+            "Translate for meaning.",
+            "Preserve canon.",
+            "Never change story facts.",
+            "translated scene text that still points back to original source anchors",
+            "For V2 release-candidate readiness, Translation Foundation is required",
+        ),
+        "docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md": (
+            "Language And Identity Understanding",
+            "Translation preserves meaning.",
+            "Resolution preserves identity.",
+            "Canon decides truth.",
+            "ambiguous references remain unresolved candidates",
+            "no full source prose is logged",
+        ),
+    }
+
+    for relative_path, terms in required_documents.items():
+        document = read_doc(relative_path)
+        for term in terms:
+            assert term in document, f"{term!r} missing from {relative_path}"
 
 
 def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
@@ -841,7 +884,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-01 hosted browser-flow smoke blocked on managed identity login",
+        "Latest attempt: 2026-07-01 hosted managed identity and project smoke passed",
         "Production-like smoke proves configuration and workflow safety.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -885,10 +928,25 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Unauthenticated GET /v2/projects returned 401 session_required.",
         "PASS for protected API route requiring bearer managed identity.",
         "BLOCKED for managed identity login completion.",
+        "Hosted Managed Identity And Project Smoke",
+        "managed identity login and authenticated project create/read/list passed",
+        "PASS for managed identity login completion.",
+        "PASS for authenticated project creation.",
+        "PASS for authenticated project detail read.",
+        "PASS for authenticated project list read.",
+        "OPEN for import processing workflow smoke in the hosted environment.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
-        "managed-identity login completion and creator workflow smoke have not passed",
+        (
+            "managed-identity login completion, and authenticated project "
+            "create/read/list smoke passed"
+        ),
+        (
+            "Hosted import processing, monitoring workflow status, export preview, "
+            "production-safe worker posture, log review, and final release-candidate "
+            "signoff have not passed."
+        ),
     )
 
     for term in required_terms:

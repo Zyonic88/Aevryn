@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import Literal, Protocol
 
 from aevryn.extraction.models import (
@@ -51,11 +52,15 @@ class EntityExtractionEngine:
     def extract_imported_source(
         self,
         imported_source: ImportedSource,
+        normalized_scene_text_by_id: Mapping[str, str] | None = None,
     ) -> tuple[ExtractionResult, ...]:
         """Extract candidates from every imported scene.
 
         Parameters:
             imported_source: Source structure produced by Story Import.
+            normalized_scene_text_by_id: Optional translated or normalized scene
+                text keyed by imported scene ID. Evidence anchors still come from
+                the original import.
 
         Returns:
             Extraction results in scene order.
@@ -64,7 +69,12 @@ class EntityExtractionEngine:
         results = tuple(
             self.extract_scene(
                 scene_id=scene.scene_id,
-                text="\n\n".join(scene.paragraphs),
+                text=(
+                    normalized_scene_text_by_id.get(scene.scene_id)
+                    if normalized_scene_text_by_id is not None
+                    else None
+                )
+                or "\n\n".join(scene.paragraphs),
                 anchors=anchors_by_scene.get(scene.scene_id, ()),
             )
             for chapter in imported_source.story.chapters

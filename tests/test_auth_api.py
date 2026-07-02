@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -30,7 +31,7 @@ from aevryn.persistence import (
     RecordNotFoundError,
     SnapshotRecord,
 )
-from aevryn.storage import LocalFilesystemStorage
+from aevryn.storage import LocalFilesystemStorage, StorageObjectNotFoundError
 from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
 from aevryn.workers.models import BackgroundJob
 
@@ -271,6 +272,36 @@ def test_project_storage_api_does_not_require_deployment_api_key() -> None:
 
     assert created.status_code == 200
     assert created.json()["project_id"] == "project_alpha"
+
+
+def test_import_inspect_requires_user_session_when_authentication_is_configured() -> None:
+    """Browser import inspection should use the user session, not a deployment API key."""
+    client = TestClient(
+        create_app(
+            api_keys=("deployment-key",),
+            authentication_service=auth_service(),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    payload = {
+        "source_id": "api_demo",
+        "filename": "chapter.txt",
+        "content_base64": import_content_base64(
+            "Chapter 1\nMira checked the harbor compass."
+        ),
+    }
+
+    no_session = client.post("/v2/imports/inspect", json=payload)
+    with_session = client.post(
+        "/v2/imports/inspect",
+        headers=auth_headers("token_001"),
+        json=payload,
+    )
+
+    assert no_session.status_code == 401
+    assert no_session.json()["error"] == "session_required"
+    assert with_session.status_code == 200
+    assert with_session.json()["source_id"] == "api_demo"
 
 
 def test_project_settings_api_reads_and_updates_settings() -> None:
@@ -608,6 +639,42 @@ def test_import_runs_api_submits_and_lists_pending_runs() -> None:
     assert listed.json()["runs"] == [submitted.json()]
 
 
+def test_import_runs_api_can_auto_process_submitted_runs_after_response() -> None:
+    """Hosted alpha bridge should return a queued run before processing it."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=RecordingWorkerHandler(),
+            auto_process_import_runs=True,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+
+    assert submitted.status_code == 200
+    assert submitted.json()["status"] == "pending"
+    persisted_run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
+    assert persisted_run.status == "succeeded"
+    assert persisted_run.finished_at == NOW
+    assert queue.get("job_alpha").status == "succeeded"
+
+
 def test_import_runs_api_rejects_duplicate_and_cross_user_submissions() -> None:
     """Import run API should preserve identity and project ownership boundaries."""
     repository = InMemoryProjectRepository()
@@ -767,6 +834,95 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
         repository.get_export("user_owner", "export_alpha")
     with pytest.raises(ImportContentNotFoundError):
         content_store.read_import_content(storage_ref)
+
+
+def test_delete_project_api_hard_deletes_metadata_and_private_bytes(tmp_path: Path) -> None:
+    """Project deletion should remove scoped metadata, imports, and export objects."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    content_store = InMemoryImportContentStore()
+    storage = LocalFilesystemStorage(tmp_path / "storage")
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=content_store,
+            ),
+            import_content_store=content_store,
+            storage_service=storage,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    import_storage_ref = created_import.json()["storage_ref"]
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
+    export_storage_ref = "storage://projects/project_alpha/exports/export_alpha/canon.md"
+    storage.save_object(
+        storage_ref=export_storage_ref,
+        content=b"canon export",
+        content_type="text/markdown; charset=utf-8",
+        metadata={"filename": "canon.md"},
+    )
+    repository.record_export(
+        ExportRecord(
+            export_id="export_alpha",
+            project_id="project_alpha",
+            snapshot_id="snapshot_run_alpha_canon",
+            export_kind="canon",
+            export_format="markdown",
+            filename="canon.md",
+            content_type="text/markdown; charset=utf-8",
+            storage_ref=export_storage_ref,
+            created_at="2026-06-27T00:45:00Z",
+        )
+    )
+
+    response = client.delete(
+        "/v2/projects/project_alpha",
+        headers=auth_headers("token_001"),
+    )
+
+    assert response.status_code == 204
+    listed_projects = client.get("/v2/projects", headers=auth_headers("token_001"))
+    assert listed_projects.json() == {"projects": []}
+    missing_project = client.get(
+        "/v2/projects/project_alpha",
+        headers=auth_headers("token_001"),
+    )
+    assert missing_project.status_code == 404
+    with pytest.raises(RecordNotFoundError):
+        repository.get_story("user_owner", "story_alpha")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_import("user_owner", "import_alpha")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_engine_run("user_owner", "run_alpha")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_snapshot("user_owner", "snapshot_run_alpha_canon")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_export("user_owner", "export_alpha")
+    with pytest.raises(ImportContentNotFoundError):
+        content_store.read_import_content(import_storage_ref)
+    with pytest.raises(StorageObjectNotFoundError):
+        storage.read_object(export_storage_ref)
 
 
 def test_phase11_project_surfaces_fail_closed_across_users() -> None:
@@ -1100,6 +1256,49 @@ def test_project_runs_api_marks_missing_queue_jobs_failed_after_restart() -> Non
     assert runs[0]["status"] == "failed"
     assert runs[0]["error_summary"] == (
         "Processing stopped before completion. Retry is available."
+    )
+
+
+def test_project_runs_api_marks_stale_running_queue_jobs_failed() -> None:
+    """A stranded running queue job should not keep an import blocked forever."""
+    repository = InMemoryProjectRepository()
+    authentication_service = auth_service(repository=repository)
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=authentication_service,
+            project_repository=repository,
+            background_job_queue=queue,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    assert queue.claim_next(claimed_at=SOON) is not None
+    assert queue.has_job("job_alpha")
+
+    listed = client.get(
+        "/v2/projects/project_alpha/runs",
+        headers=auth_headers("token_001"),
+    )
+
+    assert listed.status_code == 200
+    runs = listed.json()["runs"]
+    assert runs[0]["run_id"] == "run_alpha"
+    assert runs[0]["status"] == "failed"
+    assert runs[0]["error_summary"] == (
+        "Processing timed out before completion. Retry is available."
     )
 
 
@@ -1505,6 +1704,28 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
         "No accepted world relationships have been extracted yet."
     )
     assert payload["surfaces"][3]["item_count"] == 1
+    assert payload["language_identity"] == {
+        "translation_unit_count": 1,
+        "translation_review_count": 0,
+        "identity_decision_count": 1,
+        "identity_resolved_count": 0,
+        "identity_ambiguous_count": 0,
+        "identity_unresolved_count": 1,
+        "identity_review_items": payload["language_identity"]["identity_review_items"],
+    }
+    assert payload["language_identity"]["identity_review_items"] == [
+        {
+            "status": "unresolved",
+            "chapter_id": "source_alpha_chapter_001",
+            "scene_id": "source_alpha_chapter_001_scene_001",
+            "evidence_anchor_id": (
+                "source_alpha_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+            ),
+            "candidate_count": 0,
+            "confidence": 0.0,
+            "reason": "Identity could not be matched with enough evidence.",
+        }
+    ]
     assert payload["character_profiles"][0]["character_id"] == "character_mark"
     assert payload["character_profiles"][0]["display_name"] == "Mark"
     assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
@@ -1522,6 +1743,97 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     assert payload["timeline_changes"] == []
     assert "Mark carried a rusty dagger" not in response.text
     assert "serialized_output" not in response.text
+
+
+def test_project_outputs_identity_review_reasons_are_stable_metadata() -> None:
+    """Stored resolver reasons should not leak source-adjacent prose through outputs."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    repository.record_import(
+        ImportRecord(
+            import_id="import_alpha",
+            story_id="story_alpha",
+            source_id="source_alpha",
+            filename="chapter_001.txt",
+            source_format="txt",
+            storage_ref="storage://projects/project_alpha/imports/import_alpha/source.txt",
+            chapter_count=1,
+            scene_count=1,
+            evidence_anchor_count=1,
+            created_at=NOW,
+        )
+    )
+    repository.record_engine_run(
+        EngineRunRecord(
+            run_id="run_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="succeeded",
+            engine_version="aevryn_v1",
+            started_at=NOW,
+            status_updated_at=SOON,
+            finished_at=SOON,
+        )
+    )
+    repository.store_snapshot(
+        SnapshotRecord(
+            snapshot_id="snapshot_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            run_id="run_alpha",
+            snapshot_kind="canon",
+            content_type="application/json",
+            serialized_output=json.dumps(
+                {
+                    "source_id": "source_alpha",
+                    "title": "Alpha",
+                    "chapters": 1,
+                    "scenes": 1,
+                    "entity_resolution": {
+                        "decision_count": 1,
+                        "status_counts": {"resolved": 0, "ambiguous": 1, "unresolved": 0},
+                        "decisions": [
+                            {
+                                "status": "ambiguous",
+                                "chapter_id": "source_alpha_chapter_001",
+                                "scene_id": "source_alpha_chapter_001_scene_001",
+                                "evidence_anchor_id": "anchor_001",
+                                "candidate_count": 2,
+                                "confidence": 0.58,
+                                "reason": "Mark carried a rusty dagger in the original scene.",
+                            }
+                        ],
+                    },
+                }
+            ),
+            created_at=SOON,
+        )
+    )
+
+    response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
+
+    assert response.status_code == 200
+    review_items = response.json()["language_identity"]["identity_review_items"]
+    assert review_items == [
+        {
+            "status": "ambiguous",
+            "chapter_id": "source_alpha_chapter_001",
+            "scene_id": "source_alpha_chapter_001_scene_001",
+            "evidence_anchor_id": "anchor_001",
+            "candidate_count": 2,
+            "confidence": 0.58,
+            "reason": "Identity has multiple possible matches and needs review.",
+        }
+    ]
+    assert "Mark carried a rusty dagger" not in response.text
 
 
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:
@@ -2076,6 +2388,7 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert paths["/v2/projects"]["get"]["operationId"] == "getV2Projects"
     assert paths["/v2/projects"]["post"]["operationId"] == "postV2Projects"
     assert paths["/v2/projects/{project_id}"]["get"]["operationId"] == "getV2Project"
+    assert paths["/v2/projects/{project_id}"]["delete"]["operationId"] == "deleteV2Project"
     assert paths["/v2/projects/{project_id}/settings"]["get"]["operationId"] == (
         "getV2ProjectSettings"
     )
@@ -2211,6 +2524,11 @@ class RecordingWorkerHandler:
 def auth_headers(token: str) -> dict[str, str]:
     """Return authorization headers for API tests."""
     return {"Authorization": f"Bearer {token}", "X-Aevryn-Now": SOON}
+
+
+def import_content_base64(text: str) -> str:
+    """Return base64-encoded import source for API tests."""
+    return base64.b64encode(text.encode("utf-8")).decode("ascii")
 
 
 

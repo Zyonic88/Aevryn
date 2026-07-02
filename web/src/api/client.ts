@@ -181,6 +181,40 @@ export type ExportPreviewRequest = ImportInspectRequest & {
   world_entity_ids?: string[];
 };
 
+export type JsonPostResponse = {
+  ok: boolean;
+  status: number;
+  payload: unknown;
+};
+
+export async function postJson(
+  url: string,
+  {
+    headers,
+    body,
+  }: {
+    headers: HeadersInit;
+    body: unknown;
+  },
+): Promise<JsonPostResponse> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new ApiError(friendlyNetworkMessage(error), 0, "network_error");
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    payload: await readOptionalJsonPayload(response),
+  };
+}
+
 export class AevrynApiClient {
   readonly baseUrl: string;
 
@@ -200,9 +234,14 @@ export class AevrynApiClient {
     return this.request(API_PATHS.sourceFormats, sourceFormatsSchema);
   }
 
-  inspectImport(payload: ImportInspectRequest): Promise<ImportInspect> {
+  inspectImport(
+    payload: ImportInspectRequest,
+    sessionToken?: string,
+    now?: string,
+  ): Promise<ImportInspect> {
     return this.request(API_PATHS.importsInspect, importInspectSchema, {
       method: "POST",
+      headers: sessionToken && now ? authHeaders(sessionToken, now) : undefined,
       body: JSON.stringify(payload),
     });
   }
@@ -285,7 +324,11 @@ export class AevrynApiClient {
     });
   }
 
-  createProject(payload: ProjectCreateRequest, sessionToken: string, now: string): Promise<Project> {
+  createProject(
+    payload: ProjectCreateRequest,
+    sessionToken: string,
+    now: string,
+  ): Promise<Project> {
     return this.request(API_PATHS.projects, projectSchema, {
       method: "POST",
       headers: authHeaders(sessionToken, now),
@@ -294,7 +337,14 @@ export class AevrynApiClient {
   }
 
   getProject(projectId: string, sessionToken: string, now: string): Promise<Project> {
-    return this.request(`${API_PATHS.projects}/${encodeURIComponent(projectId)}`, projectSchema, {
+    return this.request(projectPath(projectId), projectSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  async deleteProject(projectId: string, sessionToken: string, now: string): Promise<void> {
+    await this.requestNoContent(projectPath(projectId), {
+      method: "DELETE",
       headers: authHeaders(sessionToken, now),
     });
   }
@@ -413,13 +463,9 @@ export class AevrynApiClient {
     now: string,
     snapshotKind?: string,
   ): Promise<SnapshotList> {
-    return this.request(
-      storySnapshotsPath(projectId, storyId, snapshotKind),
-      snapshotListSchema,
-      {
-        headers: authHeaders(sessionToken, now),
-      },
-    );
+    return this.request(storySnapshotsPath(projectId, storyId, snapshotKind), snapshotListSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
   }
 
   submitImportRun(
@@ -459,11 +505,7 @@ export class AevrynApiClient {
     try {
       response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
     } catch (error) {
-      throw new ApiError(
-        friendlyNetworkMessage(error),
-        0,
-        "network_error",
-      );
+      throw new ApiError(friendlyNetworkMessage(error), 0, "network_error");
     }
 
     const payload = await readJsonPayload(response);
@@ -497,11 +539,7 @@ export class AevrynApiClient {
     try {
       response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
     } catch (error) {
-      throw new ApiError(
-        friendlyNetworkMessage(error),
-        0,
-        "network_error",
-      );
+      throw new ApiError(friendlyNetworkMessage(error), 0, "network_error");
     }
 
     if (!response.ok) {
@@ -526,7 +564,11 @@ function authHeaders(sessionToken: string, now: string): HeadersInit {
 }
 
 function projectSettingsPath(projectId: string): string {
-  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/settings`;
+  return `${projectPath(projectId)}/settings`;
+}
+
+function projectPath(projectId: string): string {
+  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}`;
 }
 
 function projectStoriesPath(projectId: string): string {
@@ -557,11 +599,7 @@ function projectSnapshotsPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/snapshots`;
 }
 
-function storySnapshotsPath(
-  projectId: string,
-  storyId: string,
-  snapshotKind?: string,
-): string {
+function storySnapshotsPath(projectId: string, storyId: string, snapshotKind?: string): string {
   const path = `${projectStoryPath(projectId, storyId)}/snapshots`;
   if (!snapshotKind) {
     return path;
@@ -584,6 +622,14 @@ async function readJsonPayload(response: Response): Promise<unknown> {
   }
 }
 
+async function readOptionalJsonPayload(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
+}
+
 function messageFromUnknown(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
@@ -591,7 +637,7 @@ function messageFromUnknown(error: unknown, fallback: string): string {
 function friendlyNetworkMessage(error: unknown): string {
   const message = messageFromUnknown(error, "Aevryn API is unreachable.");
   if (message.toLowerCase() === "failed to fetch") {
-    return "Aevryn API is unreachable. Check that the local API server is running and try again.";
+    return "Aevryn API is unreachable. Try again, then check service status if it continues.";
   }
   return message;
 }

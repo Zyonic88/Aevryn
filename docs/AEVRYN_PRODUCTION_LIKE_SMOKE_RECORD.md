@@ -14,7 +14,7 @@ It is separate from the final release-candidate run record because smoke attempt
 Record type: Production-Like Smoke Attempt Log
 Status: Started
 Public beta: Blocked
-Latest attempt: 2026-07-01 hosted browser-flow smoke blocked on managed identity login
+Latest attempt: 2026-07-01 hosted managed identity and project smoke passed
 ```
 
 Production-like smoke is partially complete.
@@ -29,9 +29,9 @@ Local frontend gates have passed with the hosted API base URL configured.
 
 Hosted frontend/API custom-domain header smoke has passed.
 
-Hosted browser-flow smoke verified login/register availability, protected frontend-route redirects, protected API-route authentication, and clean browser console output.
+Hosted browser-flow smoke verified login/register availability, protected frontend-route redirects, protected API-route authentication, managed-identity login completion, authenticated project create/read/list, and clean browser console output.
 
-Managed-identity login completion and creator workflow smoke are still not complete.
+Hosted import processing, monitoring workflow status, export preview, production-safe worker posture, log review, and final release-candidate signoff are still not complete.
 
 ---
 
@@ -391,6 +391,121 @@ No real user credentials, API key, storage credential, database URL, Supabase se
 
 ---
 
+# Attempt 2026-07-01 - Hosted Managed Identity And Project Smoke
+
+Environment:
+
+```text
+Execution surface: in-app browser against hosted frontend and API
+Frontend custom domain: https://app.aevryn.ai
+API custom domain: https://api.aevryn.ai
+Managed identity provider: Supabase Auth
+Result: managed identity login and authenticated project create/read/list passed
+```
+
+Browser actions:
+
+```text
+Logged in with a Supabase-managed test user.
+Opened https://app.aevryn.ai/dashboard.
+Created project RC Smoke Test Project.
+Opened the created project workspace.
+Returned to dashboard and verified the project appears in the project list.
+```
+
+Observed result:
+
+```text
+Dashboard loaded while authenticated.
+API Health returned status ok, engine Aevryn, API v2, storage configured.
+API Capabilities loaded with 43 routes, 5 auth routes, and 7 supported formats.
+Projects route no longer returned Supabase JWT algorithm errors.
+Empty project state displayed before project creation.
+Created project route loaded at /projects/project_39860ae9_3f6f_4f5c_a487_ab907ea5918e.
+Project workspace displayed the expected Overview, Story, Import, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, Exports, and Settings sections.
+Dashboard project list displayed RC Smoke Test Project after creation.
+Browser console warnings/errors: none observed.
+```
+
+Interpretation:
+
+```text
+PASS for managed identity login completion.
+PASS for authenticated project creation.
+PASS for authenticated project detail read.
+PASS for authenticated project list read.
+PASS for clean browser console output during the checked flow.
+OPEN for import processing workflow smoke in the hosted environment.
+OPEN for monitoring status and export preview smoke in the hosted environment.
+```
+
+No real user password, API key, storage credential, database URL, Supabase service-role key, worker key, session secret, source prose, full AI payload, private URL, username, or machine-local path was printed.
+
+---
+
+# Attempt 2026-07-02 - Hosted Import Worker Boundary Regression
+
+Environment:
+
+```text
+Execution surface: local test runner and production frontend build
+Frontend behavior under test: hosted browser import processing
+Result: hosted browser no longer calls protected worker-drain endpoint
+```
+
+Observed production issue:
+
+```text
+Hosted login, project creation, ten-chapter import inspection, and import save passed.
+Submitting processing created the run successfully.
+The hosted browser then called POST /v2/workers/process and received 401 Unauthorized.
+The browser surfaced the old local-development API-unreachable wording.
+```
+
+Regression coverage added:
+
+```text
+Hosted browser sessions queue processing runs without draining worker jobs from the browser.
+Localhost sessions retain browser worker draining for local alpha iteration.
+Network failures use hosted-safe wording instead of local API server wording.
+Backend can opt into a hosted alpha server-side worker drain during run submission.
+```
+
+Commands run:
+
+```powershell
+cd C:\Users\enigm\Documents\Aevryn\web
+npm.cmd test -- --run src/App.test.tsx src/api/client.test.ts
+npm.cmd test -- --run
+npm.cmd run build
+python -m pytest tests/test_auth_api.py -q
+python -m pytest
+```
+
+Observed result:
+
+```text
+Focused frontend tests passed: 95 tests.
+Full frontend suite passed: 152 tests.
+Frontend production build passed.
+Focused backend auth/API tests passed: 45 tests.
+Full backend suite passed: 859 tests.
+```
+
+Interpretation:
+
+```text
+PASS for preventing hosted browsers from calling the protected worker processor.
+PASS for hosted-safe API unreachable copy.
+PASS for the hosted alpha nonblocking auto-process bridge contract.
+OPEN for deploying and smoke-testing the bridge on Cloud Run.
+OPEN for replacing the alpha bridge with a production-safe persistent worker runner.
+```
+
+No real user password, API key, storage credential, database URL, Supabase service-role key, worker key, session secret, source prose, full AI payload, private URL, username, or machine-local path was printed.
+
+---
+
 # Required Successful Smoke
 
 A successful production-like smoke must record:
@@ -402,11 +517,12 @@ A successful production-like smoke must record:
 | R2 storage smoke | write/read/delete tiny synthetic private object succeeds | Passed locally |
 | API startup | production app starts with local-only adapters rejected | Passed on Cloud Run |
 | HTTPS/CORS | public origins are explicit and HTTPS-only | Health endpoint passed on Cloud Run and api.aevryn.ai; app.aevryn.ai frontend header smoke and API CORS origin check passed |
-| Managed identity | protected routes require managed identity tokens | Protected frontend and API routes passed while unauthenticated; provider login completion blocked |
+| Managed identity | protected routes require managed identity tokens | Passed for unauthenticated redirects/API 401 and hosted Supabase login completion |
 | Worker processing | import processing completes through production-safe worker posture | Not run in production-like environment |
 | Monitoring | workflow state is observable through metadata-only status | Not run in production-like environment |
 | Export preview | export preview works through storage-reference boundaries | Not run in production-like environment |
-| Logs | no manuscripts, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths | Not run in production-like environment |
+| Authenticated project workflow | create/read/list project metadata through hosted API | Passed for RC Smoke Test Project |
+| Logs | no manuscripts, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths | Passed for the checked hosted browser/API smoke; still required for import/worker smoke |
 
 ---
 
@@ -429,5 +545,5 @@ Then run the browser/API smoke against the production-like API and record the re
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, and unauthenticated browser-route/API protection checks passed, but managed-identity login completion and creator workflow smoke have not passed.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, and authenticated project create/read/list smoke passed. Hosted import processing, monitoring workflow status, export preview, production-safe worker posture, log review, and final release-candidate signoff have not passed.
 ```

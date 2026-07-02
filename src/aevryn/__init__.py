@@ -36,6 +36,13 @@ from aevryn.characters import (
     CharacterFact,
     NotACharacterError,
 )
+from aevryn.entity_resolution import (
+    EntityIdentityProfile,
+    EntityResolutionEngine,
+    ResolutionCandidate,
+    ResolvedReference,
+    SurfaceReference,
+)
 from aevryn.export import ExportEngine
 from aevryn.export_storage import ExportStorageService, ExportWriteRequest
 from aevryn.extraction import (
@@ -133,6 +140,13 @@ from aevryn.timeline import (
     TimelineScene,
     TimelineStateChange,
 )
+from aevryn.translation import (
+    GlossaryTerm,
+    TranslatedUnit,
+    TranslationEngine,
+    TranslationIssue,
+    TranslationUnit,
+)
 from aevryn.world import WorldEntityFact, WorldEntityState, WorldState, WorldStateBuilder
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -197,6 +211,8 @@ __all__ = [
     "DuplicateStateChangeError",
     "EntityType",
     "EntityExtractionEngine",
+    "EntityIdentityProfile",
+    "EntityResolutionEngine",
     "Evidence",
     "EvidenceAnchor",
     "EpubText",
@@ -207,6 +223,7 @@ __all__ = [
     "ExtractedEntity",
     "ExtractedRelationship",
     "ExtractionResult",
+    "GlossaryTerm",
     "OpenAIResponsesAIExtractionClient",
     "OpenAIResponsesTransport",
     "ImportedSentence",
@@ -227,6 +244,8 @@ __all__ = [
     "ExtractedFact",
     "ExtractedStateChange",
     "PromptEngine",
+    "ResolutionCandidate",
+    "ResolvedReference",
     "AevrynProjectRunner",
     "SceneContext",
     "SceneSheetView",
@@ -239,6 +258,7 @@ __all__ = [
     "SceneExtractionInput",
     "SceneExtractor",
     "StaticAIExtractionClient",
+    "SurfaceReference",
     "UrllibOpenAIResponsesTransport",
     "SceneEnvironmentSnapshot",
     "SourceParagraph",
@@ -252,6 +272,10 @@ __all__ = [
     "TimelineEvent",
     "TimelineScene",
     "TimelineStateChange",
+    "TranslatedUnit",
+    "TranslationEngine",
+    "TranslationIssue",
+    "TranslationUnit",
     "UnknownEntityError",
     "WorldEntityFact",
     "WorldEntityState",

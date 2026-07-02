@@ -277,6 +277,46 @@ def test_repository_hard_deletes_story_scoped_records() -> None:
         repository.get_export("user_demo", "export_demo")
 
 
+def test_repository_hard_deletes_project_scoped_records() -> None:
+    """Project deletion should remove stories, runs, snapshots, exports, and settings."""
+    repository = seeded_repository()
+    repository.record_import(import_record())
+    repository.record_engine_run(engine_run_record())
+    repository.store_snapshot(snapshot_record())
+    repository.record_export(export_record())
+    repository.save_project_settings(
+        ProjectSettingsRecord(
+            project_id="project_demo",
+            default_export_format="json",
+            locale="en-US",
+        )
+    )
+
+    deleted = repository.delete_project("user_demo", "project_demo")
+
+    assert tuple(import_record.import_id for import_record in deleted.deleted_imports) == (
+        "import_demo",
+    )
+    assert tuple(export_record.export_id for export_record in deleted.deleted_exports) == (
+        "export_demo",
+    )
+    assert repository.list_projects_for_user("user_demo") == ()
+    with pytest.raises(RecordNotFoundError):
+        repository.get_project("user_demo", "project_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_story("user_demo", "story_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_import("user_demo", "import_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_engine_run("user_demo", "run_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_snapshot("user_demo", "snapshot_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_export("user_demo", "export_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_project_settings("user_demo", "project_demo")
+
+
 def test_json_project_repository_persists_records_across_instances(
     tmp_path: Path,
 ) -> None:
@@ -339,6 +379,37 @@ def test_postgresql_project_repository_requires_psycopg_when_no_factory(
 
     with pytest.raises(PersistenceError, match="psycopg is required"):
         PostgresqlProjectRepository("postgresql://example.invalid/aevryn")
+
+
+def test_postgresql_default_connection_disables_prepared_statements(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Production poolers should not receive psycopg prepared statement names."""
+    observed: dict[str, object] = {}
+
+    class FakePsycopg:
+        """Minimal module exposing connect."""
+
+        @staticmethod
+        def connect(database_url: str, **kwargs: object) -> object:
+            observed["database_url"] = database_url
+            observed.update(kwargs)
+            return object()
+
+    def fake_import_module(module_name: str) -> object:
+        if module_name == "psycopg":
+            return FakePsycopg
+        raise AssertionError(f"Unexpected import: {module_name}")
+
+    monkeypatch.setattr("aevryn.persistence.postgresql.importlib.import_module", fake_import_module)
+
+    connect = postgresql._default_connect_factory()
+    connect("postgresql://example.invalid/aevryn")
+
+    assert observed == {
+        "database_url": "postgresql://example.invalid/aevryn",
+        "prepare_threshold": None,
+    }
 
 
 def test_postgresql_jsonb_values_are_wrapped_for_psycopg(

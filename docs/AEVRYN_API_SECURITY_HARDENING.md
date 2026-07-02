@@ -107,7 +107,9 @@ When `AEVRYN_DEPLOYMENT_ENV=production`, the app refuses to start unless these a
 * `AEVRYN_IDENTITY_PROVIDER=managed`
 * `AEVRYN_IDENTITY_PROVIDER_NAME=supabase`
 * `AEVRYN_SUPABASE_URL`
+* `AEVRYN_SUPABASE_JWT_ALGORITHM`
 * `AEVRYN_SUPABASE_JWKS_URL`
+* `AEVRYN_SUPABASE_JWT_SECRET` when HS256 is selected
 * `AEVRYN_SUPABASE_ANON_KEY`
 * `AEVRYN_SUPABASE_SERVICE_ROLE_KEY`
 * `AEVRYN_SESSION_AUTHORITY=bearer`
@@ -117,7 +119,7 @@ When `AEVRYN_DEPLOYMENT_ENV=production`, the app refuses to start unless these a
 
 This prevents accidental public startup with stateless storage, local source-byte storage, local JSON authentication, local-only secrets, in-memory worker queues, local-only logs, ambiguous monitoring, non-redacted logging posture, missing Cloudflare R2 storage credentials, missing HTTPS/HSTS edge posture, missing browser-origin policy, missing managed identity provider details, missing password reset, missing account deletion handoff, missing session secret, ambiguous environment separation, or unprotected workflow routes.
 
-Supabase Auth is selected for managed production identity. Production startup wires Supabase bearer-token verification through the managed identity boundary when the full production contract is configured.
+Supabase Auth is selected for managed production identity. Production startup wires Supabase bearer-token verification through the managed identity boundary when the full production contract is configured. ES256/JWKS verification is the preferred public-beta mode, RS256/JWKS verification is supported for RSA signing keys, and HS256 verification is supported only when explicitly selected and backed by a deployment-managed JWT secret.
 
 Production mode rejects `AEVRYN_PROJECT_DATABASE_PATH` because local JSON Project Database storage is not allowed for public deployment.
 Production mode rejects `AEVRYN_IMPORT_STORAGE_PATH` because local filesystem source-byte storage is not allowed for public deployment.
