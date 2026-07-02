@@ -449,6 +449,7 @@ class AevrynProjectRunner:
                 text=entity.display_name,
                 evidence_anchor_id=entity.evidence_anchor_id,
                 scene_id=result.scene_id,
+                chapter_id=_chapter_id_from_scene_id(result.scene_id),
             )
             for result in extraction_results
             for entity in result.entities
@@ -472,6 +473,7 @@ class AevrynProjectRunner:
                     text=entity.display_name,
                     evidence_anchor_id=entity.evidence_anchor_id,
                     scene_id=extraction_result.scene_id,
+                    chapter_id=_chapter_id_from_scene_id(extraction_result.scene_id),
                 ),
                 _resolution_profiles_for_entity(
                     entity=entity,
@@ -1151,6 +1153,14 @@ def _translated_scene_text_by_id(
         for unit in translation_units
         if unit.source_scene_id
     }
+
+
+def _chapter_id_from_scene_id(scene_id: str) -> str:
+    """Return the imported chapter ID prefix for a stable scene ID."""
+    marker = "_scene_"
+    if marker not in scene_id:
+        return ""
+    return scene_id.split(marker, maxsplit=1)[0]
 
 
 def _resolution_profiles_for_entity(
