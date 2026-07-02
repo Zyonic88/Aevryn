@@ -1836,6 +1836,75 @@ def test_project_outputs_identity_review_reasons_are_stable_metadata() -> None:
     assert "Mark carried a rusty dagger" not in response.text
 
 
+def test_project_outputs_humanize_legacy_presentation_machine_ids() -> None:
+    """Older snapshots should not expose raw extraction IDs in output surfaces."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    repository.record_import(
+        ImportRecord(
+            import_id="import_alpha",
+            story_id="story_alpha",
+            source_id="source_alpha",
+            filename="chapter_001.txt",
+            source_format="txt",
+            storage_ref="storage://projects/project_alpha/imports/import_alpha/source.txt",
+            chapter_count=1,
+            scene_count=1,
+            evidence_anchor_count=1,
+            created_at=NOW,
+        )
+    )
+    repository.record_engine_run(
+        EngineRunRecord(
+            run_id="run_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="succeeded",
+            engine_version="aevryn_v1",
+            started_at=NOW,
+            status_updated_at=SOON,
+            finished_at=SOON,
+        )
+    )
+    repository.store_snapshot(
+        SnapshotRecord(
+            snapshot_id="snapshot_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            run_id="run_alpha",
+            snapshot_kind="canon",
+            content_type="application/json",
+            serialized_output=json.dumps(_legacy_machine_id_snapshot_payload()),
+            created_at=SOON,
+        )
+    )
+
+    response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["world_sheet"]["entity_sections"][0]["items"] == [
+        "Zhao Chen is located in Entity 5"
+    ]
+    assert payload["prompt_packs"][0]["image_prompt"]["items"] == [
+        "Character: Zhao Chen"
+    ]
+    assert payload["continuity_report"]["scenes"][0]["updated"][0]["description"] == (
+        "State changed at this scene."
+    )
+    assert "Character: Zhao Chen (E1)" not in response.text
+    assert "State Valid From Event" not in response.text
+    assert "Aevryn Import Bundle" not in response.text
+
+
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:
     """Worker processing should not fabricate snapshots without source bytes."""
     repository = InMemoryProjectRepository()
@@ -2468,6 +2537,105 @@ def import_create_payload() -> dict[str, str]:
         "content_base64": base64.b64encode(b"Chapter 1\nMark carried a dagger.").decode("ascii"),
         "title": "Alpha Source",
         "now": NOW,
+    }
+
+
+def _legacy_machine_id_snapshot_payload() -> dict[str, object]:
+    """Return old-style presentation metadata with visible machine IDs."""
+    section = {"title": "Unknown", "items": ["Unknown"]}
+    scene = {
+        "scene_id": "source_alpha_chapter_001_scene_001",
+        "title": "Scene 1",
+        "chapter_label": "Chapter 1",
+        "location": section,
+        "characters_present": {"title": "Characters Present", "items": ["Zhao Chen"]},
+        "mood": section,
+        "purpose": section,
+        "visual_highlights": section,
+        "continuity_changes": section,
+        "environment": section,
+        "evidence_summary": "1 verified evidence references",
+    }
+    return {
+        "source_id": "source_alpha",
+        "title": "Alpha",
+        "chapters": 1,
+        "scenes": 1,
+        "scene_ids": ("source_alpha_chapter_001_scene_001",),
+        "accepted_entity_count": 1,
+        "accepted_fact_count": 1,
+        "accepted_relationship_count": 1,
+        "accepted_state_change_count": 1,
+        "presentation": {
+            "characters": [
+                {
+                    "character_id": "E1",
+                    "display_name": "Zhao Chen",
+                    "subtitle": "Unknown",
+                    "race": section,
+                    "gender": section,
+                    "status": section,
+                    "current_goal": section,
+                    "current_equipment": section,
+                    "current_abilities": section,
+                    "current_assets": section,
+                    "territory": section,
+                    "relationships": section,
+                    "current_limitations": section,
+                    "recent_changes": section,
+                    "evidence_summary": "1 verified facts",
+                }
+            ],
+            "world": {
+                "chapter_label": "Chapter 1",
+                "entity_sections": [
+                    {
+                        "title": "North Star Academy (location)",
+                        "items": ["E1 located_in E5"],
+                    }
+                ],
+                "evidence_summary": "1 verified evidence references",
+            },
+            "scenes": [scene],
+            "prompt_packs": [
+                {
+                    "scene": scene,
+                    "image_prompt": {
+                        "title": "Image Prompt",
+                        "items": ["Character: Zhao Chen (E1)"],
+                    },
+                    "narration_prompt": section,
+                    "camera_prompt": section,
+                    "animation_prompt": section,
+                }
+            ],
+            "continuity_report": {
+                "source_id": "source_alpha",
+                "scenes": [
+                    {
+                        "scene_id": "source_alpha_chapter_001_scene_001",
+                        "new": [],
+                        "updated": [
+                            {
+                                "record_id": "record_alpha",
+                                "record_type": "state",
+                                "description": (
+                                    "State Valid From Event Fact E1 Current Location "
+                                    "North Star Academy Evidence Aevryn Import Bundle "
+                                    "Chapter 001 Scene 001 Paragraph 001 Sentence 001 Anchor"
+                                ),
+                                "evidence_id": "anchor_alpha",
+                                "chapter_id": "source_alpha_chapter_001",
+                                "scene_id": "source_alpha_chapter_001_scene_001",
+                            }
+                        ],
+                        "still_known": [],
+                        "invalidated": [],
+                    }
+                ],
+            },
+            "export_options": [],
+        },
     }
 
 

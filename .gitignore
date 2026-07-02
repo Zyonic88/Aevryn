@@ -16,6 +16,7 @@ web/dist/
 
 # Test and coverage output
 .pytest_cache/
+.tmp/
 .coverage
 coverage.xml
 htmlcov/
