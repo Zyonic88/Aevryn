@@ -14,12 +14,15 @@ def test_translation_normalization_preserves_source_anchor_links() -> None:
         evidence_anchor_ids=("anchor_001", "anchor_002"),
         source_language="en",
         target_language="en",
+        source_chapter_id="chapter_001",
+        source_scene_id="scene_001",
     )
 
     result = engine.normalize_unit(unit)
 
     assert result.normalized_text == "Zhao Chen activated the Super Starfleet System."
     assert result.source_evidence_anchor_ids == ("anchor_001", "anchor_002")
+    assert result.source_scene_id == "scene_001"
     assert result.issues == ()
 
 
@@ -86,4 +89,3 @@ def test_translation_units_reject_duplicate_anchor_links() -> None:
             source_text="Text",
             evidence_anchor_ids=("anchor_001", "anchor_001"),
         )
-

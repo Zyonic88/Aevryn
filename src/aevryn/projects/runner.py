@@ -40,7 +40,12 @@ from aevryn.importing import (
 )
 from aevryn.prompts import CanonPromptBuilder, PromptBundle
 from aevryn.scenes import CanonSceneContext, SceneContextBuilder
-from aevryn.translation import TranslatedUnit, TranslationEngine, TranslationUnit
+from aevryn.translation import (
+    GlossaryTerm,
+    TranslatedUnit,
+    TranslationEngine,
+    TranslationUnit,
+)
 from aevryn.world import WorldState, WorldStateBuilder
 
 logger = logging.getLogger(__name__)
@@ -213,6 +218,7 @@ class AevrynProjectRunner:
         imported_source: ImportedSource,
         extractor: SceneExtractor,
         reject_unknown_anchor_candidates: bool = False,
+        translation_glossary: tuple[GlossaryTerm, ...] = (),
     ) -> ProjectRunResult:
         """Run extraction and canon updating over imported source.
 
@@ -227,13 +233,19 @@ class AevrynProjectRunner:
             Project run result containing imported source, candidates, and Canon.
         """
         self._require_imported_scenes(imported_source)
-        translation_units = self.build_translation_units(imported_source)
+        translation_units = self.build_translation_units(
+            imported_source,
+            glossary=translation_glossary,
+        )
         raw_extraction_results = EntityExtractionEngine(
             extractor=extractor,
             unknown_anchor_policy=(
                 "reject_candidate" if reject_unknown_anchor_candidates else "raise"
             ),
-        ).extract_imported_source(imported_source)
+        ).extract_imported_source(
+            imported_source,
+            normalized_scene_text_by_id=_translated_scene_text_by_id(translation_units),
+        )
         database = CanonDatabase()
         updater = CanonUpdater(database=database)
         anchors_by_scene = _anchors_by_scene(imported_source.anchors)
@@ -399,6 +411,7 @@ class AevrynProjectRunner:
         self,
         imported_source: ImportedSource,
         scene_id: str | None = None,
+        glossary: tuple[GlossaryTerm, ...] = (),
     ) -> tuple[TranslatedUnit, ...]:
         """Build Translation Foundation units without changing source structure."""
         requested_scene_ids = {scene_id} if scene_id is not None else None
@@ -417,11 +430,13 @@ class AevrynProjectRunner:
                         unit_id=f"translation_{scene.scene_id}",
                         source_text="\n\n".join(scene.paragraphs),
                         evidence_anchor_ids=tuple(anchor.anchor_id for anchor in anchors),
+                        source_chapter_id=chapter.chapter_id,
+                        source_scene_id=scene.scene_id,
                     )
                 )
         if requested_scene_ids is not None and not units:
             raise ValueError(f"Unknown scene: {scene_id}")
-        return TranslationEngine().normalize_units(tuple(units))
+        return TranslationEngine().normalize_units(tuple(units), glossary=glossary)
 
     def resolve_extracted_identities(
         self,
@@ -1125,6 +1140,17 @@ def _identity_profiles_from_extraction_results(
         )
         for entity in sorted(entities_by_id.values(), key=lambda item: item.entity_id)
     )
+
+
+def _translated_scene_text_by_id(
+    translation_units: tuple[TranslatedUnit, ...],
+) -> dict[str, str]:
+    """Return normalized scene text keyed by source scene ID."""
+    return {
+        unit.source_scene_id: unit.normalized_text
+        for unit in translation_units
+        if unit.source_scene_id
+    }
 
 
 def _resolution_profiles_for_entity(

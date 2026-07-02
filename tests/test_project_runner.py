@@ -12,6 +12,7 @@ from aevryn import (
     ExtractedEntity,
     ExtractedFact,
     ExtractionResult,
+    GlossaryTerm,
     SceneExtractionInput,
 )
 from aevryn.core import Story
@@ -166,6 +167,20 @@ class EmptyExtractor:
         return ExtractionResult(scene_id=scene.scene_id)
 
 
+class RecordingTextExtractor:
+    """Extractor test double that records the scene input it receives."""
+
+    def __init__(self) -> None:
+        self.scene_texts: list[str] = []
+        self.anchor_ids: list[tuple[str, ...]] = []
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Record text and anchors without producing candidates."""
+        self.scene_texts.append(scene.text)
+        self.anchor_ids.append(scene.evidence_anchor_ids)
+        return ExtractionResult(scene_id=scene.scene_id)
+
+
 class WrongSceneExtractor:
     """Extractor test double that returns mismatched scene IDs."""
 
@@ -186,6 +201,34 @@ def test_runner_accepts_pluggable_extractor() -> None:
 
     assert result.extraction_results[0].entities == ()
     assert result.update_summaries[0].accepted_entities == ()
+
+
+def test_runner_feeds_translation_normalized_text_to_extraction() -> None:
+    """Extraction may consume normalized text while preserving original anchors."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    extractor = RecordingTextExtractor()
+
+    result = runner.run_imported_source(
+        imported_source=imported_source,
+        extractor=extractor,
+        translation_glossary=(
+            GlossaryTerm(
+                source_term="iron sword",
+                preferred_term="Iron Blade",
+                evidence_anchor_id=imported_source.anchors[-1].anchor_id,
+            ),
+        ),
+    )
+
+    assert extractor.scene_texts == ["Mark bought an Iron Blade."]
+    assert extractor.anchor_ids == [(imported_source.anchors[-1].anchor_id,)]
+    assert result.translation_units[0].normalized_text == "Mark bought an Iron Blade."
+    assert result.translation_units[0].source_scene_id == "demo_chapter_001_scene_001"
+    assert result.extraction_results[0].scene_id == "demo_chapter_001_scene_001"
 
 
 def test_runner_builds_phase12_translation_and_identity_metadata() -> None:

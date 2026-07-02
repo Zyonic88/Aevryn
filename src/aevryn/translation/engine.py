@@ -53,6 +53,8 @@ class TranslationEngine:
             normalized_text=_normalize_spacing(text),
             source_evidence_anchor_ids=unit.evidence_anchor_ids,
             issues=tuple(issues),
+            source_chapter_id=unit.source_chapter_id,
+            source_scene_id=unit.source_scene_id,
         )
 
     def normalize_units(
@@ -87,4 +89,3 @@ def _replace_term(text: str, source_term: str, preferred_term: str) -> str:
 def _normalize_spacing(text: str) -> str:
     """Collapse excess whitespace while preserving sentence text."""
     return " ".join(text.split())
-

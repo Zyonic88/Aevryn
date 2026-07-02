@@ -39,6 +39,8 @@ class TranslationUnit:
     evidence_anchor_ids: tuple[str, ...]
     source_language: str = "auto"
     target_language: str = "en"
+    source_chapter_id: str = ""
+    source_scene_id: str = ""
 
     def __post_init__(self) -> None:
         _require_machine_token(self.unit_id, "Translation unit ID")
@@ -53,6 +55,13 @@ class TranslationUnit:
         )
         _require_language_token(self.source_language, "Translation source language")
         _require_language_token(self.target_language, "Translation target language")
+        if self.source_chapter_id:
+            _require_machine_token(
+                self.source_chapter_id,
+                "Translation source chapter ID",
+            )
+        if self.source_scene_id:
+            _require_machine_token(self.source_scene_id, "Translation source scene ID")
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +102,8 @@ class TranslatedUnit:
     normalized_text: str
     source_evidence_anchor_ids: tuple[str, ...]
     issues: tuple[TranslationIssue, ...] = ()
+    source_chapter_id: str = ""
+    source_scene_id: str = ""
 
     def __post_init__(self) -> None:
         _require_machine_token(self.unit_id, "Translated unit ID")
@@ -109,6 +120,13 @@ class TranslatedUnit:
             self.source_evidence_anchor_ids,
             "Translated unit source evidence anchor IDs",
         )
+        if self.source_chapter_id:
+            _require_machine_token(
+                self.source_chapter_id,
+                "Translated unit source chapter ID",
+            )
+        if self.source_scene_id:
+            _require_machine_token(self.source_scene_id, "Translated unit source scene ID")
 
 
 def _normalized_text(value: str, field_name: str) -> str:
@@ -140,4 +158,3 @@ def _require_language_token(value: str, field_name: str) -> None:
     _require_machine_token(value, field_name)
     if not all(character.isalnum() or character in {"-", "_"} for character in value):
         raise ValueError(f"{field_name} is invalid.")
-

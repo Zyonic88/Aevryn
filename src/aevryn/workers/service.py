@@ -464,6 +464,8 @@ def _translation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]
                 "source_language": unit.source_language,
                 "target_language": unit.target_language,
                 "mode": unit.mode,
+                "source_chapter_id": unit.source_chapter_id,
+                "source_scene_id": unit.source_scene_id,
                 "source_evidence_anchor_ids": unit.source_evidence_anchor_ids,
                 "issue_count": len(unit.issues),
             }
