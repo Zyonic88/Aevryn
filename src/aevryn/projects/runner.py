@@ -447,17 +447,26 @@ class AevrynProjectRunner:
         identity_profiles: tuple[EntityIdentityProfile, ...],
     ) -> tuple[ExtractionResult, tuple[ResolvedReference, ...]]:
         """Rewrite high-confidence identity references to prior accepted entities."""
-        references = tuple(
-            SurfaceReference(
-                text=entity.display_name,
-                evidence_anchor_id=entity.evidence_anchor_id,
-                scene_id=extraction_result.scene_id,
+        local_identity_profiles = _identity_profiles_from_extraction_results(
+            (extraction_result,)
+        )
+        resolver = EntityResolutionEngine()
+        decisions = tuple(
+            resolver.resolve_reference(
+                SurfaceReference(
+                    text=entity.display_name,
+                    evidence_anchor_id=entity.evidence_anchor_id,
+                    scene_id=extraction_result.scene_id,
+                ),
+                _resolution_profiles_for_entity(
+                    entity=entity,
+                    identity_profiles=_merged_identity_profiles(
+                        identity_profiles,
+                        local_identity_profiles,
+                    ),
+                ),
             )
             for entity in extraction_result.entities
-        )
-        decisions = EntityResolutionEngine().resolve_references(
-            references,
-            identity_profiles,
         )
         entity_id_map = {
             entity.entity_id: decision.entity_id
@@ -1107,16 +1116,29 @@ def _identity_profiles_from_extraction_results(
                 descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
 
     return tuple(
-        EntityIdentityProfile(
-            entity_id=entity.entity_id,
-            canonical_name=entity.display_name,
-            entity_type=entity.entity_type,
-            aliases=tuple(sorted(aliases_by_id.get(entity.entity_id, ()))),
-            titles=tuple(sorted(titles_by_id.get(entity.entity_id, ()))),
-            descriptions=tuple(sorted(descriptions_by_id.get(entity.entity_id, ()))),
-            evidence_anchor_ids=tuple(sorted(evidence_by_id.get(entity.entity_id, ()))),
+        _identity_profile_from_parts(
+            entity=entity,
+            aliases=aliases_by_id.get(entity.entity_id, set()),
+            titles=titles_by_id.get(entity.entity_id, set()),
+            descriptions=descriptions_by_id.get(entity.entity_id, set()),
+            evidence_anchor_ids=evidence_by_id.get(entity.entity_id, set()),
         )
         for entity in sorted(entities_by_id.values(), key=lambda item: item.entity_id)
+    )
+
+
+def _resolution_profiles_for_entity(
+    *,
+    entity: ExtractedEntity,
+    identity_profiles: tuple[EntityIdentityProfile, ...],
+) -> tuple[EntityIdentityProfile, ...]:
+    """Return compatible profiles for resolving one extracted entity."""
+    return tuple(
+        profile
+        for profile in identity_profiles
+        if profile.entity_id != entity.entity_id
+        and profile.entity_type == entity.entity_type
+        and profile.entity_type == "character"
     )
 
 
