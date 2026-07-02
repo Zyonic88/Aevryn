@@ -739,7 +739,12 @@ def create_app(
                 status_code=404,
                 detail={"error": "project_not_found", "detail": "Project not found."},
             ) from error
-        except (PersistenceError, ValueError) as error:
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "project_delete_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
             raise _project_storage_error(error) from error
         return Response(status_code=204)
 
