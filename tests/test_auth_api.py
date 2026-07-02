@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import logging
-import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -639,8 +638,8 @@ def test_import_runs_api_submits_and_lists_pending_runs() -> None:
     assert listed.json()["runs"] == [submitted.json()]
 
 
-def test_import_runs_api_can_auto_process_submitted_runs_after_response() -> None:
-    """Hosted alpha bridge should process one submitted run without blocking response."""
+def test_import_runs_api_can_auto_process_submitted_runs_inline() -> None:
+    """Hosted alpha bridge should durably process one submitted run before returning."""
     repository = InMemoryProjectRepository()
     queue = InMemoryJobQueue()
     client = TestClient(
@@ -668,15 +667,8 @@ def test_import_runs_api_can_auto_process_submitted_runs_after_response() -> Non
     )
 
     assert submitted.status_code == 200
-    assert submitted.json()["status"] == "pending"
-    deadline = time.monotonic() + 1.0
-    while time.monotonic() < deadline:
-        persisted_run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
-        if persisted_run.status == "succeeded":
-            break
-        time.sleep(0.01)
-    else:
-        persisted_run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
+    assert submitted.json()["status"] == "succeeded"
+    persisted_run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
     assert persisted_run.status == "succeeded"
     assert persisted_run.finished_at == NOW
     assert queue.get("job_alpha").status == "succeeded"
