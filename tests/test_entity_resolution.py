@@ -115,6 +115,62 @@ def test_low_confidence_description_remains_unresolved_candidate() -> None:
     assert decision.candidates[0].confidence < 0.75
 
 
+def test_near_tied_high_confidence_matches_remain_ambiguous() -> None:
+    """Near-tied strong matches should not silently merge identities."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Charlotte", "anchor_035"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_charlotte",
+                canonical_name="Charlotte",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                aliases=("Charlotte",),
+                evidence_anchor_ids=("anchor_002",),
+            ),
+        ),
+    )
+
+    assert decision.status == "ambiguous"
+    assert decision.entity_id is None
+    assert decision.confidence == 0.99
+    assert tuple(candidate.entity_id for candidate in decision.candidates) == (
+        "character_charlotte",
+        "character_mira",
+    )
+
+
+def test_clear_high_confidence_match_can_still_resolve_over_weaker_candidate() -> None:
+    """A strong match should resolve when competing candidates are not close."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Charlotte", "anchor_036"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_charlotte",
+                canonical_name="Charlotte",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                descriptions=("brave Charlotte ally",),
+                evidence_anchor_ids=("anchor_002",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_charlotte"
+    assert decision.confidence == 0.99
+
+
 def test_surface_reference_preserves_source_anchor() -> None:
     """Resolution decisions should keep the original evidence anchor visible."""
     engine = EntityResolutionEngine()

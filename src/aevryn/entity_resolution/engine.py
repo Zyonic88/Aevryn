@@ -10,6 +10,7 @@ from aevryn.entity_resolution.models import (
 )
 
 RESOLUTION_THRESHOLD = 0.75
+AMBIGUITY_MARGIN = 0.05
 
 
 class EntityResolutionEngine:
@@ -82,6 +83,20 @@ class EntityResolutionEngine:
                     reason="Pronoun reference did not have exactly one contextual candidate.",
                 )
             top = pronoun_candidates[0]
+
+        if (
+            len(candidates) > 1
+            and top.confidence >= RESOLUTION_THRESHOLD
+            and candidates[1].confidence >= RESOLUTION_THRESHOLD
+            and top.confidence - candidates[1].confidence <= AMBIGUITY_MARGIN
+        ):
+            return ResolvedReference(
+                reference=reference,
+                status="ambiguous",
+                confidence=top.confidence,
+                candidates=candidates,
+                reason="Multiple identity profiles are within the ambiguity margin.",
+            )
 
         if top.confidence < RESOLUTION_THRESHOLD:
             return ResolvedReference(
