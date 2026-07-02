@@ -467,6 +467,34 @@ class ProjectOutputSurface(BaseModel):
     item_count: int = 0
 
 
+class ProjectIdentityReviewItem(BaseModel):
+    """Metadata-only unresolved or ambiguous identity reference."""
+
+    model_config = ConfigDict(frozen=True)
+
+    status: str
+    chapter_id: str = ""
+    scene_id: str = ""
+    evidence_anchor_id: str
+    candidate_count: int = 0
+    confidence: float = 0.0
+    reason: str = ""
+
+
+class ProjectLanguageIdentitySummary(BaseModel):
+    """Metadata-only Phase 12 language and identity summary."""
+
+    model_config = ConfigDict(frozen=True)
+
+    translation_unit_count: int = 0
+    translation_review_count: int = 0
+    identity_decision_count: int = 0
+    identity_resolved_count: int = 0
+    identity_ambiguous_count: int = 0
+    identity_unresolved_count: int = 0
+    identity_review_items: tuple[ProjectIdentityReviewItem, ...] = ()
+
+
 class ProjectTimelineChangeOutput(BaseModel):
     """One creator-facing state change in story order."""
 
@@ -494,6 +522,7 @@ class ProjectOutputsResponse(BaseModel):
     latest_engine_run: ProjectStatusRun | None = None
     canon: ProjectOutputCanonSummary
     surfaces: tuple[ProjectOutputSurface, ...]
+    language_identity: ProjectLanguageIdentitySummary = ProjectLanguageIdentitySummary()
     character_profiles: tuple[CharacterProfileOutput, ...] = ()
     world_sheet: WorldSheetOutput | None = None
     timeline_changes: tuple[ProjectTimelineChangeOutput, ...] = ()

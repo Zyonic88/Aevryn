@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { apiClient, type PromptPreviewRequest } from "../api/client";
 import type { OutputSection, PromptPreview } from "../api/schemas";
 import { ErrorMessage } from "../components/Feedback";
+import { formatSceneScope } from "../formatting/display";
 import {
   DeveloperPreviewToggle,
   ProjectOutputSummaryPanel,
@@ -68,9 +69,7 @@ export function PromptWorkspaceView({ project }: { project: ProjectSummary }) {
       previewPrompts.mutate(payload);
     } catch (error) {
       setPreviewResult(null);
-      setFormError(
-        error instanceof Error ? error.message : "Prompt pack preview form is invalid.",
-      );
+      setFormError(error instanceof Error ? error.message : "Prompt pack preview form is invalid.");
     }
   }
 
@@ -87,63 +86,65 @@ export function PromptWorkspaceView({ project }: { project: ProjectSummary }) {
         <section>
           <h2>Prompt Pack Preview</h2>
           <form className="import-form" onSubmit={submit}>
-          <div className="form-row-grid">
+            <div className="form-row-grid">
+              <label>
+                Source reference
+                <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              </label>
+              <label>
+                Filename
+                <input value={filename} onChange={(event) => setFilename(event.target.value)} />
+              </label>
+            </div>
             <label>
-              Source reference
-              <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              Title
+              <input value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
             <label>
-              Filename
-              <input value={filename} onChange={(event) => setFilename(event.target.value)} />
-            </label>
-          </div>
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            Source text
-            <textarea
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <label>
-            AI response JSON
-            <textarea
-              value={aiResponseText}
-              onChange={(event) => setAiResponseText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <div className="form-row-grid">
-            <label>
-              Character IDs
-              <input
-                value={characterIdsText}
-                onChange={(event) => setCharacterIdsText(event.target.value)}
-                placeholder="Optional: character_mark character_luna"
+              Source text
+              <textarea
+                value={sourceText}
+                onChange={(event) => setSourceText(event.target.value)}
+                rows={8}
               />
             </label>
             <label>
-              Scene ID
-              <input
-                value={sceneId}
-                onChange={(event) => setSceneId(event.target.value)}
-                placeholder="Optional scene ID"
+              AI response JSON
+              <textarea
+                value={aiResponseText}
+                onChange={(event) => setAiResponseText(event.target.value)}
+                rows={8}
               />
             </label>
-          </div>
-          {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
-          {previewPrompts.error ? <ErrorMessage>{previewPrompts.error.message}</ErrorMessage> : null}
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={!canSubmit || previewPrompts.isPending}
-          >
-            {previewPrompts.isPending ? "Building preview" : "Preview prompt pack"}
-          </button>
+            <div className="form-row-grid">
+              <label>
+                Character IDs
+                <input
+                  value={characterIdsText}
+                  onChange={(event) => setCharacterIdsText(event.target.value)}
+                  placeholder="Optional: character_mark character_luna"
+                />
+              </label>
+              <label>
+                Scene ID
+                <input
+                  value={sceneId}
+                  onChange={(event) => setSceneId(event.target.value)}
+                  placeholder="Optional scene ID"
+                />
+              </label>
+            </div>
+            {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+            {previewPrompts.error ? (
+              <ErrorMessage>{previewPrompts.error.message}</ErrorMessage>
+            ) : null}
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={!canSubmit || previewPrompts.isPending}
+            >
+              {previewPrompts.isPending ? "Building preview" : "Preview prompt pack"}
+            </button>
           </form>
         </section>
       </DeveloperPreviewToggle>
@@ -159,7 +160,7 @@ function PromptPreviewResult({ result }: { result: PromptPreview }) {
     <section className="project-panel" aria-label="Prompt pack preview result">
       <h2>Production Pack</h2>
       <p className="result-summary">
-        {pack.scene.title} for {result.scene_id}.
+        {pack.scene.title} for {formatSceneScope(result.scene_id)}.
       </p>
       <div className="prompt-pack-grid">
         <PromptSection section={pack.image_prompt} />
@@ -170,7 +171,7 @@ function PromptPreviewResult({ result }: { result: PromptPreview }) {
       <section className="profile-section prompt-scene-context">
         <h4>Scene Context</h4>
         <p>
-          {pack.scene.chapter_label} / {pack.scene.scene_id}
+          {pack.scene.chapter_label} / {formatSceneScope(pack.scene.scene_id)}
         </p>
         <p className="evidence-note">{pack.scene.evidence_summary}</p>
       </section>

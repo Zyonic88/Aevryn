@@ -21,13 +21,7 @@ import type { ProjectSummary } from "../projects/projectStore";
 import { readableOutputItems, readablePromptText } from "./readableOutput";
 
 type OutputSurface =
-  | "characters"
-  | "world"
-  | "timeline"
-  | "scenes"
-  | "continuity"
-  | "prompts"
-  | "exports";
+  "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
 
 export function ProjectOutputSummaryPanel({
   project,
@@ -63,11 +57,7 @@ export function ProjectOutputSummaryPanel({
   return <ProjectOutputSummary outputs={outputsQuery.data} surface={surface} />;
 }
 
-export function DeveloperPreviewToggle({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function DeveloperPreviewToggle({ children }: { children: ReactNode }) {
   return (
     <details className="project-panel">
       <summary>Developer preview</summary>
@@ -89,7 +79,9 @@ function ProjectOutputSummary({
     return (
       <section className="project-panel" aria-label="Processed project output">
         <h2>Processed Project Results</h2>
-        <EmptyState title={processingActive ? "Processing project output" : "No processed output yet"}>
+        <EmptyState
+          title={processingActive ? "Processing project output" : "No processed output yet"}
+        >
           {processingActive
             ? "Aevryn is processing this import. Results will appear here when the canon snapshot is ready."
             : "Save an import, submit processing, and wait for a canon snapshot."}
@@ -109,19 +101,15 @@ function ProjectOutputSummary({
         <Metric
           label="Run"
           value={
-            outputs.latest_engine_run
-              ? formatRunStatus(outputs.latest_engine_run.status)
-              : "No run"
+            outputs.latest_engine_run ? formatRunStatus(outputs.latest_engine_run.status) : "No run"
           }
         />
         <Metric label="Chapters" value={outputs.canon.chapters.toLocaleString()} />
         <Metric label="Scenes" value={outputs.canon.scenes.toLocaleString()} />
-        <Metric
-          label="Evidence"
-          value={outputs.canon.evidence_anchor_count.toLocaleString()}
-        />
+        <Metric label="Evidence" value={outputs.canon.evidence_anchor_count.toLocaleString()} />
         <Metric label="Snapshot" value={formatDateTime(outputs.canon.created_at)} />
       </dl>
+      <LanguageIdentityStatus outputs={outputs} />
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
       <ReadableSurfacePanels surface={surface} outputs={outputs} />
       {surfaceSummary.status === "waiting" ? (
@@ -132,6 +120,117 @@ function ProjectOutputSummary({
       ) : null}
     </section>
   );
+}
+
+function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
+  const summary = outputs.language_identity;
+  const hasPhase12Metadata =
+    summary.translation_unit_count > 0 || summary.identity_decision_count > 0;
+  if (!hasPhase12Metadata) {
+    return null;
+  }
+  const identityDetails = [
+    `${summary.identity_resolved_count.toLocaleString()} resolved`,
+    `${summary.identity_ambiguous_count.toLocaleString()} ambiguous`,
+    `${summary.identity_unresolved_count.toLocaleString()} unresolved`,
+  ].join(" / ");
+  const translationStatus =
+    summary.translation_review_count > 0
+      ? `${summary.translation_review_count.toLocaleString()} review items`
+      : "No review items";
+  return (
+    <div
+      className="compact-list language-identity-status"
+      aria-label="Language and identity status"
+    >
+      <div className="compact-row">
+        <strong>Language</strong>
+        <span>
+          {summary.translation_unit_count.toLocaleString()} normalized scenes; {translationStatus}
+        </span>
+      </div>
+      <div className="compact-row">
+        <strong>Identity</strong>
+        <span>
+          {summary.identity_decision_count.toLocaleString()} reference decisions; {identityDetails}
+        </span>
+      </div>
+      {summary.identity_review_items.slice(0, 4).map((item) => (
+        <div className="compact-row" key={identityReviewKey(item)}>
+          <strong>{identityReviewStatusLabel(item.status)}</strong>
+          <span>{identityReviewLabel(item)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function identityReviewKey(
+  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
+): string {
+  return [
+    item.status,
+    item.chapter_id,
+    item.scene_id,
+    item.evidence_anchor_id,
+    item.candidate_count,
+  ].join(":");
+}
+
+function identityReviewLabel(
+  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
+): string {
+  const scope = readableSceneScope(item);
+  const confidence = Math.round(item.confidence * 100);
+  const candidateLabel = identityCandidateLabel(item);
+  const confidenceLabel = confidence > 0 ? `; ${confidence}% confidence` : "";
+  return `${scope}; ${candidateLabel}${confidenceLabel}; ${identityReviewAction(item.status)}`;
+}
+
+function identityReviewStatusLabel(status: string): string {
+  if (status === "ambiguous") {
+    return "Needs review";
+  }
+  if (status === "unresolved") {
+    return "Unresolved reference";
+  }
+  return readableLabel(status);
+}
+
+function identityCandidateLabel(
+  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
+): string {
+  if (item.candidate_count === 0) {
+    return "no supported match";
+  }
+  if (item.candidate_count === 1) {
+    return "1 possible match";
+  }
+  return `${item.candidate_count.toLocaleString()} possible matches`;
+}
+
+function identityReviewAction(status: string): string {
+  if (status === "ambiguous") {
+    return "Aevryn did not merge this reference";
+  }
+  if (status === "unresolved") {
+    return "Aevryn left this reference unresolved";
+  }
+  return "Aevryn marked this reference for review";
+}
+
+function readableSceneScope(
+  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
+): string {
+  const sceneMatch = item.scene_id.match(/_chapter_(\d+)_scene_(\d+)$/);
+  if (sceneMatch) {
+    return `Chapter ${Number(sceneMatch[1])}, Scene ${Number(sceneMatch[2])}`;
+  }
+  const chapterMatch = item.chapter_id.match(/_chapter_(\d+)$/);
+  if (chapterMatch) {
+    return `Chapter ${Number(chapterMatch[1])}`;
+  }
+  return "Unknown scene";
 }
 
 function ReadableSurfacePanels({
@@ -196,9 +295,15 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
       current_assets: mergeSection(existingProfile.current_assets, profile.current_assets),
       territory: mergeSection(existingProfile.territory, profile.territory),
       relationships: mergeSection(existingProfile.relationships, profile.relationships),
-      current_limitations: mergeSection(existingProfile.current_limitations, profile.current_limitations),
+      current_limitations: mergeSection(
+        existingProfile.current_limitations,
+        profile.current_limitations,
+      ),
       recent_changes: mergeSection(existingProfile.recent_changes, profile.recent_changes),
-      evidence_summary: mergedEvidenceSummary(existingProfile.evidence_summary, profile.evidence_summary),
+      evidence_summary: mergedEvidenceSummary(
+        existingProfile.evidence_summary,
+        profile.evidence_summary,
+      ),
     });
   }
   return Array.from(profilesByName.values());
@@ -264,7 +369,8 @@ function characterRecentChanges(profile: CharacterProfile): OutputSection {
   return {
     title: profile.recent_changes.title,
     items: readableOutputItems(profile.recent_changes.items).filter(
-      (item) => !item.startsWith("Name: ") && !item.startsWith("Race: ") && !item.startsWith("Gender: "),
+      (item) =>
+        !item.startsWith("Name: ") && !item.startsWith("Race: ") && !item.startsWith("Gender: "),
     ),
   };
 }
@@ -343,13 +449,15 @@ function SceneSheetsPanel({ scenes }: { scenes: SceneSheet[] }) {
 }
 
 function ContinuityPanel({ report }: { report: ContinuityReport }) {
-  const visibleScenes = report.scenes.filter(
-    (scene) =>
-      scene.new.length > 0 ||
-      scene.updated.length > 0 ||
-      scene.still_known.length > 0 ||
-      scene.invalidated.length > 0,
-  ).slice(0, 12);
+  const visibleScenes = report.scenes
+    .filter(
+      (scene) =>
+        scene.new.length > 0 ||
+        scene.updated.length > 0 ||
+        scene.still_known.length > 0 ||
+        scene.invalidated.length > 0,
+    )
+    .slice(0, 12);
   if (visibleScenes.length === 0) {
     return (
       <EmptyState title="No continuity changes">
@@ -449,13 +557,16 @@ function groupedTimelineChanges(changes: ProjectTimelineChange[]): Array<{
   subtitle: string;
   changes: ProjectTimelineChange[];
 }> {
-  const groups = new Map<string, {
-    chapterIndex: number;
-    sceneIndex: number;
-    title: string;
-    subtitle: string;
-    changes: ProjectTimelineChange[];
-  }>();
+  const groups = new Map<
+    string,
+    {
+      chapterIndex: number;
+      sceneIndex: number;
+      title: string;
+      subtitle: string;
+      changes: ProjectTimelineChange[];
+    }
+  >();
   for (const change of changes) {
     const key = `${change.chapter_index}:${change.scene_index}`;
     const existingGroup = groups.get(key);
@@ -585,9 +696,7 @@ function detailItems(
   return common;
 }
 
-function chapterSpreadLabel(
-  counts: ProjectOutputs["canon"]["chapter_scene_counts"],
-): string {
+function chapterSpreadLabel(counts: ProjectOutputs["canon"]["chapter_scene_counts"]): string {
   if (counts.length === 0) {
     return "No chapter scene metadata";
   }

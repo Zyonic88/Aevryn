@@ -114,6 +114,16 @@ const sourceFormatsPayload = {
   ],
 };
 
+function isImportRunSubmitPath(url: string, projectId: string, storyId: string): boolean {
+  const importRunsPrefix = `${API_PATHS.projects}/${projectId}/stories/${storyId}/imports/`;
+  return url.includes(importRunsPrefix) && url.endsWith("/runs");
+}
+
+function importIdFromRunSubmitPath(url: string): string {
+  const match = /\/imports\/([^/]+)\/runs$/u.exec(url);
+  return match ? decodeURIComponent(match[1]) : importRecordPayload.import_id;
+}
+
 const importInspectPayload = {
   source_id: "source_alpha",
   source_format: "txt",
@@ -376,7 +386,7 @@ const snapshotPayload = {
   run_id: engineRunPayload.run_id,
   snapshot_kind: "canon",
   content_type: "application/json",
-  serialized_output: "{\"source_id\":\"source_alpha\"}",
+  serialized_output: '{"source_id":"source_alpha"}',
   created_at: projectAlpha.updatedAt,
 };
 const projectStatusPayload = {
@@ -483,7 +493,8 @@ const projectOutputsPayload = {
       surface: "characters",
       title: "Characters",
       status: "ready",
-      summary: "2 accepted character or entity records are available from the latest canon snapshot.",
+      summary:
+        "2 accepted character or entity records are available from the latest canon snapshot.",
       item_count: 2,
     },
     {
@@ -529,6 +540,34 @@ const projectOutputsPayload = {
       item_count: 8,
     },
   ],
+  language_identity: {
+    translation_unit_count: 8,
+    translation_review_count: 0,
+    identity_decision_count: 7,
+    identity_resolved_count: 5,
+    identity_ambiguous_count: 1,
+    identity_unresolved_count: 1,
+    identity_review_items: [
+      {
+        status: "ambiguous",
+        chapter_id: "source_alpha_chapter_001",
+        scene_id: "source_alpha_chapter_001_scene_001",
+        evidence_anchor_id: "anchor_001",
+        candidate_count: 2,
+        confidence: 0.87,
+        reason: "Multiple identity profiles have equal confidence.",
+      },
+      {
+        status: "unresolved",
+        chapter_id: "source_alpha_chapter_001",
+        scene_id: "source_alpha_chapter_001_scene_002",
+        evidence_anchor_id: "anchor_002",
+        candidate_count: 0,
+        confidence: 0,
+        reason: "No supported identity match was found.",
+      },
+    ],
+  },
   character_profiles: [
     ...characterPreviewPayload.character_profiles,
     {
@@ -701,15 +740,14 @@ describe("App shell routing", () => {
           return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
         }
         if (
-          url.endsWith(
-            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
-          )
+          isImportRunSubmitPath(url, projectAlphaPayload.project_id, storyAlphaPayload.story_id)
         ) {
           const body = JSON.parse(String(init?.body));
           return Promise.resolve(
             new Response(
               JSON.stringify({
                 ...engineRunPayload,
+                import_id: importIdFromRunSubmitPath(url),
                 run_id: body.run_id,
                 job_ref: `queue://${body.job_id}`,
                 started_at: body.now,
@@ -969,9 +1007,9 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument();
-    expect(await screen.findByRole("region", { name: "Current project run state" })).toHaveTextContent(
-      "succeeded",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Current project run state" }),
+    ).toHaveTextContent("succeeded");
   });
 
   it("redirects authenticated users away from auth screens", async () => {
@@ -1110,9 +1148,9 @@ describe("App shell routing", () => {
     await waitFor(() => expect(dashboardHealth).toHaveTextContent("ok"));
     await user.click(await screen.findByRole("link", { name: /Alpha/ }));
     await user.click(await screen.findByRole("link", { name: "View monitoring" }));
-    expect(await screen.findByRole("region", { name: "Current project run state" })).toHaveTextContent(
-      "succeeded",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Current project run state" }),
+    ).toHaveTextContent("succeeded");
 
     const healthCalls = fetchMock.mock.calls.filter(([input]) =>
       String(input).endsWith(API_PATHS.health),
@@ -1134,9 +1172,7 @@ describe("App shell routing", () => {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
         if (url.endsWith(API_PATHS.projects)) {
-          return Promise.resolve(
-            new Response(JSON.stringify({ projects: [projectAlphaPayload] })),
-          );
+          return Promise.resolve(new Response(JSON.stringify({ projects: [projectAlphaPayload] })));
         }
         if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
           return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
@@ -1221,35 +1257,35 @@ describe("App shell routing", () => {
     expect(await screen.findByText("Canon snapshot ready")).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "View monitoring" }));
-    expect(await screen.findByRole("region", { name: "Current project run state" })).toHaveTextContent(
-      "Succeeded",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Current project run state" }),
+    ).toHaveTextContent("Succeeded");
     expect(screen.getByRole("region", { name: "Snapshot availability" })).toHaveTextContent(
       "Canon snapshot ready",
     );
 
     await user.click(screen.getByRole("link", { name: "Characters" }));
-    expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
-      "2 accepted character or entity records",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Processed project output" }),
+    ).toHaveTextContent("2 accepted character or entity records");
     expect(screen.getByLabelText("Source text")).not.toBeVisible();
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview characters" }));
     expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "World" }));
-    expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
-      "1 accepted world relationship",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Processed project output" }),
+    ).toHaveTextContent("1 accepted world relationship");
     expect(screen.getByLabelText("AI response JSON")).not.toBeVisible();
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview world" }));
     expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Timeline" }));
-    expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
-      "2 accepted state changes",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Processed project output" }),
+    ).toHaveTextContent("2 accepted state changes");
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Chapter 1, Scene 1",
     );
@@ -1261,9 +1297,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Scenes" }));
-    expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
-      "8 processed scenes",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Processed project output" }),
+    ).toHaveTextContent("8 processed scenes");
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Processed Scene 7",
     );
@@ -1275,9 +1311,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Continuity" }));
-    expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
-      "4 accepted facts",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Processed project output" }),
+    ).toHaveTextContent("4 accepted facts");
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Current Weapon: Rusty Dagger.",
     );
@@ -1286,9 +1322,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Prompt Packs" }));
-    expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
-      "1 extraction result",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Processed project output" }),
+    ).toHaveTextContent("1 extraction result");
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Image Prompt",
     );
@@ -1297,9 +1333,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Exports" }));
-    expect(await screen.findByRole("region", { name: "Processed project output" })).toHaveTextContent(
-      "8 processed scenes",
-    );
+    expect(
+      await screen.findByRole("region", { name: "Processed project output" }),
+    ).toHaveTextContent("8 processed scenes");
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Production Pack",
     );
@@ -1349,7 +1385,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("Project status unavailable.");
     expect(screen.queryByRole("region", { name: "Export availability" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Recent workflow events" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Recent workflow events" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders the dashboard shell for authenticated users", async () => {
@@ -1538,7 +1576,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("link", { name: "Alpha" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Delete project Alpha" }));
 
-    await waitFor(() => expect(screen.queryByRole("link", { name: "Alpha" })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByRole("link", { name: "Alpha" })).not.toBeInTheDocument(),
+    );
     expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete project Alpha?");
     expect(confirmSpy).toHaveBeenNthCalledWith(
       2,
@@ -1690,10 +1730,7 @@ describe("App shell routing", () => {
 
     for (const [index, upload] of supportedUploads.entries()) {
       const content = `Chapter 1\nUploaded from ${upload.filename}.`;
-      await user.upload(
-        screen.getByLabelText("Source file"),
-        new File([content], upload.filename),
-      );
+      await user.upload(screen.getByLabelText("Source file"), new File([content], upload.filename));
       await waitFor(() =>
         expect(screen.getAllByText(new RegExp(upload.filename, "u")).length).toBeGreaterThanOrEqual(
           1,
@@ -1816,8 +1853,10 @@ describe("App shell routing", () => {
       new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
       new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
     ]);
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    expect(await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors.")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Inspect import" }));
+    expect(
+      await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors."),
+    ).toBeInTheDocument();
     expect(screen.queryByText("19 scenes ready for review.")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Save import" }));
@@ -1825,6 +1864,107 @@ describe("App shell routing", () => {
     await waitFor(() => expect(savedImportId).toMatch(/^import_aevryn_import_bundle_/u));
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
     expect(savedImportId).not.toBe("import_alpha");
+  });
+
+  it("retries duplicate automatic import references with a new reference", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const savedImportIds: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          if (init?.method === "POST") {
+            const body = JSON.parse(String(init.body));
+            savedImportIds.push(body.import_id);
+            if (savedImportIds.length === 1) {
+              return Promise.resolve(
+                new Response(
+                  JSON.stringify({
+                    error: "duplicate_record",
+                    detail: `Duplicate import: ${body.import_id}`,
+                  }),
+                  { status: 409 },
+                ),
+              );
+            }
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  ...importRecordPayload,
+                  import_id: body.import_id,
+                  source_id: body.source_id,
+                  filename: body.filename,
+                  chapter_count: 10,
+                  scene_count: 19,
+                  evidence_anchor_count: 513,
+                  created_at: body.now,
+                }),
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.importsInspect)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...importInspectPayload,
+                chapters: 10,
+                scenes: 19,
+                evidence_anchors: 513,
+              }),
+            ),
+          );
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText(".txt");
+    await user.upload(screen.getByLabelText("Source file"), [
+      new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
+      new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
+    ]);
+    await user.click(await screen.findByRole("button", { name: "Inspect import" }));
+    await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors.");
+    await user.click(screen.getByRole("button", { name: "Save import" }));
+
+    await waitFor(() => expect(savedImportIds).toHaveLength(2));
+    expect(savedImportIds[0]).toMatch(/^import_aevryn_import_bundle_/u);
+    expect(savedImportIds[1]).toMatch(/^import_aevryn_import_bundle_/u);
+    expect(savedImportIds[1]).not.toBe(savedImportIds[0]);
+    expect(screen.queryByText(/Duplicate import:/u)).not.toBeInTheDocument();
   });
 
   it("asks before adding another import to an already populated story", async () => {
@@ -1937,13 +2077,12 @@ describe("App shell routing", () => {
           return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
         }
         if (
-          url.endsWith(
-            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
-          )
+          isImportRunSubmitPath(url, projectAlphaPayload.project_id, storyAlphaPayload.story_id)
         ) {
           const body = JSON.parse(String(init?.body));
           const run = {
             ...engineRunPayload,
+            import_id: importIdFromRunSubmitPath(url),
             run_id: body.run_id,
             job_ref: `queue://${body.job_id}`,
             started_at: body.now,
@@ -1956,11 +2095,7 @@ describe("App shell routing", () => {
               finished_at: body.now,
             },
           ];
-          return Promise.resolve(
-            new Response(
-              JSON.stringify(run),
-            ),
-          );
+          return Promise.resolve(new Response(JSON.stringify(run)));
         }
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
@@ -2069,13 +2204,12 @@ describe("App shell routing", () => {
         return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
       }
       if (
-        url.endsWith(
-          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
-        )
+        isImportRunSubmitPath(url, projectAlphaPayload.project_id, storyAlphaPayload.story_id)
       ) {
         const body = JSON.parse(String(init?.body));
         const run = {
           ...engineRunPayload,
+          import_id: importIdFromRunSubmitPath(url),
           run_id: body.run_id,
           job_ref: `queue://${body.job_id}`,
           started_at: body.now,
@@ -2292,13 +2426,12 @@ describe("App shell routing", () => {
         );
       }
       if (
-        url.endsWith(
-          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
-        )
+        isImportRunSubmitPath(url, projectAlphaPayload.project_id, storyAlphaPayload.story_id)
       ) {
         const body = JSON.parse(String(init?.body));
         submittedRun = {
           ...engineRunPayload,
+          import_id: importIdFromRunSubmitPath(url),
           run_id: body.run_id,
           status: "pending",
           job_ref: `queue://${body.job_id}`,
@@ -2336,7 +2469,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
     await user.click(await screen.findByRole("button", { name: "Save import" }));
     await screen.findByText("Chapter import");
-    await user.click(screen.getByRole("button", { name: "Submit processing" }));
+    await user.click(screen.getAllByRole("button", { name: "Submit processing" })[0]);
 
     expect(await screen.findByRole("button", { name: "Processing" })).toBeDisabled();
 
@@ -2363,13 +2496,17 @@ describe("App shell routing", () => {
           const body = JSON.parse(String(init.body));
           createdStoryId = body.story_id;
           createdStoryTitle = body.title;
-          return Promise.resolve(new Response(JSON.stringify({
-            story_id: body.story_id,
-            project_id: projectAlphaPayload.project_id,
-            title: body.title,
-            created_at: body.now,
-            updated_at: body.now,
-          })));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                story_id: body.story_id,
+                project_id: projectAlphaPayload.project_id,
+                title: body.title,
+                created_at: body.now,
+                updated_at: body.now,
+              }),
+            ),
+          );
         }
         if (createdStoryId) {
           return Promise.resolve(
@@ -2444,7 +2581,9 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Aevryn will create a story record when you save this import.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Aevryn will create a story record when you save this import."),
+    ).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
@@ -2774,6 +2913,24 @@ describe("App shell routing", () => {
     expect(screen.getByText("Male")).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
+    expect(screen.getByText("8 normalized scenes; No review items")).toBeInTheDocument();
+    expect(
+      screen.getByText("7 reference decisions; 5 resolved / 1 ambiguous / 1 unresolved"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Needs review")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Chapter 1, Scene 1; 2 possible matches; 87% confidence; Aevryn did not merge this reference",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Unresolved reference")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Chapter 1, Scene 2; no supported match; Aevryn left this reference unresolved",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getByText("11 verified facts")).toBeInTheDocument();
   });
 
@@ -2942,12 +3099,11 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
 
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
-    expect(screen.getByText("source_alpha_chapter_001_scene_001")).toBeInTheDocument();
-    expect(screen.getByText("source_alpha_chapter_002_scene_001")).toBeInTheDocument();
+    expect(screen.getAllByText("Chapter 1, Scene 1").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Chapter 2, Scene 1").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getByText("Current")).toBeInTheDocument();
-    expect(
-      screen.getByText("state_fact_character_mark_current_weapon_iron_sword"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("State change: Mark Current Weapon Iron Sword")).toBeInTheDocument();
   });
 
   it("previews scene sheets from the scenes workspace tab", async () => {
@@ -2969,8 +3125,9 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview scene" }));
 
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
-    expect(screen.getByText("Chapter 1 for source_alpha_chapter_001_scene_001.")).toBeInTheDocument();
+    expect(screen.getByText("Chapter 1 for Chapter 1, Scene 1.")).toBeInTheDocument();
     expect(screen.getAllByText("Hangar").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getAllByText("Mark").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Mark equipped Rusty Dagger").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);
@@ -2993,19 +3150,28 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "source_alpha_chapter_001_scene_001" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "source_alpha_chapter_002_scene_001" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Chapter 1, Scene 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Chapter 2, Scene 1" })).toBeInTheDocument();
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(
       screen.getAllByText((_content, element) => {
-        return element?.tagName === "LI" && element.textContent?.includes("Current Weapon: Rusty Dagger.");
+        return (
+          element?.tagName === "LI" &&
+          element.textContent?.includes("Current Weapon: Rusty Dagger.")
+        );
       }).length,
     ).toBeGreaterThanOrEqual(2);
     expect(
       screen.getAllByText((_content, element) => {
-        return element?.tagName === "LI" && element.textContent?.includes("Current Weapon: Iron Sword.");
+        return (
+          element?.tagName === "LI" && element.textContent?.includes("Current Weapon: Iron Sword.")
+        );
       }).length,
     ).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/source_alpha_anchor_002/u)).toBeInTheDocument();
+    expect(screen.getAllByText("Evidence from Chapter 2, Scene 1").length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(screen.queryByText(/source_alpha_anchor_002/u)).not.toBeInTheDocument();
   });
 
   it("previews production packs from the prompt packs workspace tab", async () => {
@@ -3027,11 +3193,20 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { name: "Image Prompt" }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole("heading", { name: "Narration Prompt" }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Generate this image using only accepted Aevryn canon/u).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Scene Summary: Mark prepares in the hangar/u).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Chapter 1 / source_alpha_chapter_001_scene_001")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Image Prompt" }).length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(
+      screen.getAllByRole("heading", { name: "Narration Prompt" }).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/Generate this image using only accepted Aevryn canon/u).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/Scene Summary: Mark prepares in the hangar/u).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Chapter 1 / Chapter 1, Scene 1")).toBeInTheDocument();
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);
   });
 
@@ -3174,11 +3349,15 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Character IDs"), "character_mark");
     await user.click(screen.getByRole("button", { name: "Preview export" }));
 
-    expect(await screen.findByRole("heading", { name: "source_alpha_production_pack.md" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "source_alpha_production_pack.md" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("production_pack")).toBeInTheDocument();
     expect(screen.getByText("markdown")).toBeInTheDocument();
     expect(screen.getByText("text/markdown; charset=utf-8")).toBeInTheDocument();
-    expect(screen.getAllByText(/Generate this image using only accepted Aevryn canon/u).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/Generate this image using only accepted Aevryn canon/u).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("clears stale export previews when local AI JSON validation fails", async () => {
@@ -3194,14 +3373,18 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Exports" })).toBeInTheDocument();
     await user.click(screen.getByText("Developer preview"));
     await user.click(screen.getByRole("button", { name: "Preview export" }));
-    expect(await screen.findByRole("heading", { name: "source_alpha_production_pack.md" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "source_alpha_production_pack.md" }),
+    ).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText("AI response JSON"));
     await user.type(screen.getByLabelText("AI response JSON"), "not json");
     await user.click(screen.getByRole("button", { name: "Preview export" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
-    expect(screen.queryByRole("heading", { name: "source_alpha_production_pack.md" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "source_alpha_production_pack.md" }),
+    ).not.toBeInTheDocument();
   });
 
   it("clears stale export previews when a later preview fails", async () => {
@@ -3245,13 +3428,17 @@ describe("App shell routing", () => {
     await screen.findByRole("heading", { name: "Exports" });
     await user.click(screen.getByText("Developer preview"));
     await user.click(screen.getByRole("button", { name: "Preview export" }));
-    expect(await screen.findByRole("heading", { name: "source_alpha_production_pack.md" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "source_alpha_production_pack.md" }),
+    ).toBeInTheDocument();
 
     failPreview = true;
     await user.click(screen.getByRole("button", { name: "Preview export" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Export preview failed.");
-    expect(screen.queryByRole("heading", { name: "source_alpha_production_pack.md" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "source_alpha_production_pack.md" }),
+    ).not.toBeInTheDocument();
   });
 
   it("clears stale export API errors before showing local validation errors", async () => {
@@ -3341,7 +3528,9 @@ describe("App shell routing", () => {
     await user.click(screen.getByText("Developer preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
-    expect(await screen.findByRole("heading", { name: "No continuity scenes" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "No continuity scenes" }),
+    ).toBeInTheDocument();
   });
 
   it("clears stale continuity reports when local AI JSON validation fails", async () => {
@@ -3897,10 +4086,7 @@ describe("App shell routing", () => {
       }
       return Promise.resolve(new Response("{}", { status: 404 }));
     });
-    vi.stubGlobal(
-      "fetch",
-      fetchMock,
-    );
+    vi.stubGlobal("fetch", fetchMock);
 
     render(
       <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
@@ -3913,7 +4099,8 @@ describe("App shell routing", () => {
     const deferredInputs = [
       {
         filename: "chapter.pdf",
-        message: ".pdf import is deferred. Requires deterministic PDF reading-order parser support.",
+        message:
+          ".pdf import is deferred. Requires deterministic PDF reading-order parser support.",
       },
       {
         filename: "chapter.mobi",
@@ -4061,10 +4248,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Delete Beta Story" }));
 
     expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete project Beta Story?");
-    expect(confirmSpy).toHaveBeenNthCalledWith(
-      2,
-      "Story data will be lost forever, are you sure?",
-    );
+    expect(confirmSpy).toHaveBeenNthCalledWith(2, "Story data will be lost forever, are you sure?");
     expect(await screen.findByText("Alpha Story")).toBeInTheDocument();
     expect(screen.queryByText("Beta Story")).not.toBeInTheDocument();
     expect(window.localStorage.getItem("aevryn.activeStory.project_alpha")).toBe("story_alpha");

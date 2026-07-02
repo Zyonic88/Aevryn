@@ -72,6 +72,8 @@ from aevryn.api.models import (
     ProductionPackOutput,
     ProjectCreateRequest,
     ProjectExportOptionOutput,
+    ProjectIdentityReviewItem,
+    ProjectLanguageIdentitySummary,
     ProjectListResponse,
     ProjectOutput,
     ProjectOutputCanonSummary,
@@ -2862,6 +2864,7 @@ def _project_outputs_response(
         latest_engine_run=_project_status_run(latest_run) if latest_run else None,
         canon=canon_summary,
         surfaces=_project_output_surfaces(canon_summary),
+        language_identity=_project_language_identity_summary(canon_payload),
         character_profiles=_snapshot_character_profiles(canon_payload),
         world_sheet=_snapshot_world_sheet(canon_payload),
         timeline_changes=_snapshot_timeline_changes(canon_payload),
@@ -2983,6 +2986,65 @@ def _project_output_surfaces(
             summary="Export output can be prepared from the latest canon snapshot.",
         ),
     )
+
+
+def _project_language_identity_summary(
+    payload: Mapping[str, object],
+) -> ProjectLanguageIdentitySummary:
+    """Return metadata-only Phase 12 readiness details from snapshot metadata."""
+    translation = _mapping_payload_value(payload, "translation")
+    resolution = _mapping_payload_value(payload, "entity_resolution")
+    status_counts = _mapping_payload_value(resolution, "status_counts")
+    return ProjectLanguageIdentitySummary(
+        translation_unit_count=_int_payload_value(translation, "unit_count"),
+        translation_review_count=_int_payload_value(translation, "issue_count"),
+        identity_decision_count=_int_payload_value(resolution, "decision_count"),
+        identity_resolved_count=_int_payload_value(status_counts, "resolved"),
+        identity_ambiguous_count=_int_payload_value(status_counts, "ambiguous"),
+        identity_unresolved_count=_int_payload_value(status_counts, "unresolved"),
+        identity_review_items=_identity_review_items(resolution),
+    )
+
+
+def _identity_review_items(
+    resolution_payload: Mapping[str, object],
+) -> tuple[ProjectIdentityReviewItem, ...]:
+    """Return unresolved or ambiguous identity decisions without source text."""
+    decisions = resolution_payload.get("decisions")
+    if not isinstance(decisions, list):
+        return ()
+    items: list[ProjectIdentityReviewItem] = []
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            continue
+        status = _string_payload_value(decision, "status")
+        if status not in {"ambiguous", "unresolved"}:
+            continue
+        try:
+            items.append(
+                ProjectIdentityReviewItem(
+                    status=status,
+                    chapter_id=_string_payload_value(decision, "chapter_id"),
+                    scene_id=_string_payload_value(decision, "scene_id"),
+                    evidence_anchor_id=_string_payload_value(
+                        decision,
+                        "evidence_anchor_id",
+                    ),
+                    candidate_count=_int_payload_value(decision, "candidate_count"),
+                    confidence=_float_payload_value(decision, "confidence"),
+                    reason=_identity_review_reason(status),
+                )
+            )
+        except (ValueError, ValidationError):
+            continue
+    return tuple(items[:12])
+
+
+def _identity_review_reason(status: str) -> str:
+    """Return stable metadata-only identity review copy."""
+    if status == "ambiguous":
+        return "Identity has multiple possible matches and needs review."
+    return "Identity could not be matched with enough evidence."
 
 
 def _output_surface_titles() -> tuple[tuple[str, str], ...]:
@@ -3374,6 +3436,17 @@ def _int_payload_value(payload: Mapping[str, object], key: str) -> int:
     if isinstance(value, int) and value >= 0:
         return value
     return 0
+
+
+def _float_payload_value(payload: Mapping[str, object], key: str) -> float:
+    """Return a bounded float payload value when present."""
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return 0.0
+    parsed = float(value)
+    if 0.0 <= parsed <= 1.0:
+        return parsed
+    return 0.0
 
 
 def _run_status_count(runs: Sequence[EngineRunRecord], status: str) -> int:
