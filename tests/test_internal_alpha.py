@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -198,11 +199,14 @@ def test_internal_alpha_worker_interruption_remains_observable_without_outputs()
     auth_headers = _register_alpha_user(client)
     _create_alpha_project_story_import_and_run(client, auth_headers)
 
-    claimed_job = queue.claim_next(claimed_at=SOON)
+    interrupted_at = datetime.now(UTC).isoformat(timespec="milliseconds").replace(
+        "+00:00", "Z"
+    )
+    claimed_job = queue.claim_next(claimed_at=interrupted_at)
     assert claimed_job is not None
     pending_run = repository.get_engine_run_for_worker("run_alpha")
     repository.update_engine_run(
-        replace(pending_run, status="running", status_updated_at=SOON)
+        replace(pending_run, status="running", status_updated_at=interrupted_at)
     )
 
     status = client.get("/v2/projects/project_alpha/status", headers=auth_headers)

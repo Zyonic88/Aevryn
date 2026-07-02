@@ -1169,6 +1169,49 @@ def test_project_runs_api_marks_missing_queue_jobs_failed_after_restart() -> Non
     )
 
 
+def test_project_runs_api_marks_stale_running_queue_jobs_failed() -> None:
+    """A stranded running queue job should not keep an import blocked forever."""
+    repository = InMemoryProjectRepository()
+    authentication_service = auth_service(repository=repository)
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=authentication_service,
+            project_repository=repository,
+            background_job_queue=queue,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    assert queue.claim_next(claimed_at=SOON) is not None
+    assert queue.has_job("job_alpha")
+
+    listed = client.get(
+        "/v2/projects/project_alpha/runs",
+        headers=auth_headers("token_001"),
+    )
+
+    assert listed.status_code == 200
+    runs = listed.json()["runs"]
+    assert runs[0]["run_id"] == "run_alpha"
+    assert runs[0]["status"] == "failed"
+    assert runs[0]["error_summary"] == (
+        "Processing timed out before completion. Retry is available."
+    )
+
+
 def test_import_runs_api_requires_configured_queue() -> None:
     """Import run submission should fail clearly when no queue is configured."""
     repository = InMemoryProjectRepository()
