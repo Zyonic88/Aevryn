@@ -112,7 +112,11 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           ...(runsQuery.data?.runs ?? []).filter((candidate) => candidate.run_id !== run.run_id),
         ],
       });
-      drainLocalWorker.mutate();
+      if (canDrainWorkerFromBrowser()) {
+        drainLocalWorker.mutate();
+        return;
+      }
+      void refreshProcessingState(queryClient, project.id, activeStoryId, session?.session_token);
     },
   });
   const drainLocalWorker = useMutation({
@@ -466,7 +470,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             <ErrorMessage>{createDefaultStory.error.message}</ErrorMessage>
           ) : null}
           {submitRun.error ? <ErrorMessage>{submitRun.error.message}</ErrorMessage> : null}
-          {drainLocalWorker.error ? (
+          {canDrainWorkerFromBrowser() && drainLocalWorker.error ? (
             <ErrorMessage>{drainLocalWorker.error.message}</ErrorMessage>
           ) : null}
           <button
@@ -857,6 +861,38 @@ function importProcessingAction(
     return { label: "Processed", disabled: true };
   }
   return { label: "Processing", disabled: true };
+}
+
+function canDrainWorkerFromBrowser(): boolean {
+  const configured = import.meta.env.VITE_AEVRYN_BROWSER_WORKER_DRAIN_ENABLED;
+  if (configured === "true") {
+    return true;
+  }
+  if (configured === "false") {
+    return false;
+  }
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
+
+async function refreshProcessingState(
+  queryClient: QueryClient,
+  projectId: string,
+  storyId: string,
+  sessionToken: string | undefined,
+): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: runQueryKey(projectId, sessionToken),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: snapshotQueryKey(projectId, storyId, sessionToken),
+    }),
+    queryClient.invalidateQueries({ queryKey: ["project-status", projectId] }),
+    queryClient.invalidateQueries({ queryKey: ["project-outputs", projectId] }),
+  ]);
 }
 
 function isActiveRun(run: EngineRun): boolean {

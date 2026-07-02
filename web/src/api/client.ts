@@ -626,7 +626,7 @@ function messageFromUnknown(error: unknown, fallback: string): string {
 function friendlyNetworkMessage(error: unknown): string {
   const message = messageFromUnknown(error, "Aevryn API is unreachable.");
   if (message.toLowerCase() === "failed to fetch") {
-    return "Aevryn API is unreachable. Check that the local API server is running and try again.";
+    return "Aevryn API is unreachable. Try again, then check service status if it continues.";
   }
   return message;
 }

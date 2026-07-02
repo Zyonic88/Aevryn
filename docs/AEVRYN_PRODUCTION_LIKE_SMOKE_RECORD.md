@@ -443,6 +443,62 @@ No real user password, API key, storage credential, database URL, Supabase servi
 
 ---
 
+# Attempt 2026-07-02 - Hosted Import Worker Boundary Regression
+
+Environment:
+
+```text
+Execution surface: local test runner and production frontend build
+Frontend behavior under test: hosted browser import processing
+Result: hosted browser no longer calls protected worker-drain endpoint
+```
+
+Observed production issue:
+
+```text
+Hosted login, project creation, ten-chapter import inspection, and import save passed.
+Submitting processing created the run successfully.
+The hosted browser then called POST /v2/workers/process and received 401 Unauthorized.
+The browser surfaced the old local-development API-unreachable wording.
+```
+
+Regression coverage added:
+
+```text
+Hosted browser sessions queue processing runs without draining worker jobs from the browser.
+Localhost sessions retain browser worker draining for local alpha iteration.
+Network failures use hosted-safe wording instead of local API server wording.
+```
+
+Commands run:
+
+```powershell
+cd C:\Users\enigm\Documents\Aevryn\web
+npm.cmd test -- --run src/App.test.tsx src/api/client.test.ts
+npm.cmd test -- --run
+npm.cmd run build
+```
+
+Observed result:
+
+```text
+Focused frontend tests passed: 95 tests.
+Full frontend suite passed: 152 tests.
+Frontend production build passed.
+```
+
+Interpretation:
+
+```text
+PASS for preventing hosted browsers from calling the protected worker processor.
+PASS for hosted-safe API unreachable copy.
+OPEN for deploying and smoke-testing a production-safe managed worker runner.
+```
+
+No real user password, API key, storage credential, database URL, Supabase service-role key, worker key, session secret, source prose, full AI payload, private URL, username, or machine-local path was printed.
+
+---
+
 # Required Successful Smoke
 
 A successful production-like smoke must record:
