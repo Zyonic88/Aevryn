@@ -27,7 +27,10 @@ class TranslationEngine:
         text = unit.source_text
         issues: list[TranslationIssue] = []
 
-        for term in sorted(glossary, key=lambda item: item.source_term.lower()):
+        for term in sorted(
+            glossary,
+            key=lambda item: (-len(item.source_term), item.source_term.lower()),
+        ):
             if term.review_required:
                 if _contains_term(text, term.source_term):
                     issues.append(
@@ -73,17 +76,22 @@ class TranslationEngine:
 
 def _contains_term(text: str, source_term: str) -> bool:
     """Return whether text contains a source term."""
-    return re.search(re.escape(source_term), text, flags=re.IGNORECASE) is not None
+    return re.search(_term_pattern(source_term), text, flags=re.IGNORECASE) is not None
 
 
 def _replace_term(text: str, source_term: str, preferred_term: str) -> str:
-    """Replace a glossary term without using ad hoc token splitting."""
+    """Replace a complete glossary term without using ad hoc token splitting."""
     return re.sub(
-        re.escape(source_term),
+        _term_pattern(source_term),
         preferred_term,
         text,
         flags=re.IGNORECASE,
     )
+
+
+def _term_pattern(source_term: str) -> str:
+    """Return a regex that matches a complete story term, not a substring."""
+    return rf"(?<![A-Za-z0-9]){re.escape(source_term)}(?![A-Za-z0-9])"
 
 
 def _normalize_spacing(text: str) -> str:
