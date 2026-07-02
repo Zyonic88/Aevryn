@@ -58,14 +58,20 @@ class EntityResolutionEngine:
             )
 
         if top.match_kind == "pronoun":
+            if not context_entity_ids:
+                return ResolvedReference(
+                    reference=reference,
+                    status="unresolved",
+                    confidence=top.confidence,
+                    candidates=candidates,
+                    reason="Pronoun reference requires contextual identity support.",
+                )
+            context_entity_id_set = set(context_entity_ids)
             pronoun_candidates = tuple(
                 candidate
                 for candidate in candidates
                 if candidate.match_kind == "pronoun"
-                and (
-                    not context_entity_ids
-                    or candidate.entity_id in set(context_entity_ids)
-                )
+                and candidate.entity_id in context_entity_id_set
             )
             if len(pronoun_candidates) != 1:
                 return ResolvedReference(
@@ -206,4 +212,3 @@ def _soft_description_score(
         if best is None or candidate.confidence > best.confidence:
             best = candidate
     return best
-

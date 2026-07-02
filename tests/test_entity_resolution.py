@@ -77,6 +77,21 @@ def test_pronoun_resolution_stays_ambiguous_with_multiple_context_candidates() -
     }
 
 
+def test_pronoun_resolution_requires_contextual_identity_support() -> None:
+    """Pronouns should not resolve from profile data alone."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("she", "anchor_025"),
+        (charlotte_profile(),),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.confidence == 0.87
+    assert decision.reason == "Pronoun reference requires contextual identity support."
+
+
 def test_low_confidence_description_remains_unresolved_candidate() -> None:
     """Soft matches should remain candidates instead of silently merging entities."""
     engine = EntityResolutionEngine()
@@ -126,4 +141,3 @@ def test_identity_profiles_reject_duplicate_aliases() -> None:
             canonical_name="Charlotte",
             aliases=("General Charlotte", "General Charlotte"),
         )
-
