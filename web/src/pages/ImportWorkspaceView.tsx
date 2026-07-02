@@ -16,12 +16,21 @@ import {
 } from "../importing/importPayload";
 import { formatRunStatus } from "../formatting/display";
 import { importResultTotalsLabel, importScenePreviewRows } from "../importing/importResult";
-import type { EngineRun, ImportInspect, ImportRecord, Snapshot, Story } from "../api/schemas";
+import type {
+  EngineRun,
+  EngineRunList,
+  ImportInspect,
+  ImportRecord,
+  Snapshot,
+  SnapshotList,
+  Story,
+} from "../api/schemas";
 import type { SourceFormats } from "../api/schemas";
 import type { ProjectSummary } from "../projects/projectStore";
 import { readActiveStoryId, saveActiveStoryId } from "../stories/activeStory";
 
 const DEFAULT_IMPORT_TEXT = "";
+const DEFAULT_ACTIVE_RUN_POLL_INTERVAL_MS = 5000;
 
 export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const { session } = useAuth();
@@ -69,6 +78,10 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     queryFn: () =>
       apiClient.listProjectRuns(project.id, requireSessionToken(session), new Date().toISOString()),
     enabled: session !== null && activeStoryId !== "",
+    refetchInterval: (query) =>
+      hasActiveStoryRuns((query.state.data as EngineRunList | undefined)?.runs ?? [], activeStoryId)
+        ? activeRunPollIntervalMs()
+        : false,
   });
   const snapshotsQuery = useQuery({
     queryKey: snapshotQueryKey(project.id, activeStoryId, session?.session_token),
@@ -81,6 +94,14 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         "canon",
       ),
     enabled: session !== null && activeStoryId !== "",
+    refetchInterval: (query) =>
+      shouldPollSnapshotsForRuns(
+        runsQuery.data?.runs ?? [],
+        (query.state.data as SnapshotList | undefined)?.snapshots ?? [],
+        activeStoryId,
+      )
+        ? activeRunPollIntervalMs()
+        : false,
   });
   const inspectImport = useMutation({
     mutationFn: (payload: ImportInspectRequest) =>
@@ -897,6 +918,33 @@ async function refreshProcessingState(
 
 function isActiveRun(run: EngineRun): boolean {
   return run.status !== "failed" && run.status !== "succeeded" && !isStaleActiveRun(run);
+}
+
+function hasActiveStoryRuns(runs: EngineRun[], storyId: string): boolean {
+  return runs.some((run) => run.story_id === storyId && isActiveRun(run));
+}
+
+function shouldPollSnapshotsForRuns(
+  runs: EngineRun[],
+  snapshots: Snapshot[],
+  storyId: string,
+): boolean {
+  const storyRuns = runs.filter((run) => run.story_id === storyId);
+  if (storyRuns.some(isActiveRun)) {
+    return true;
+  }
+  const snapshotRunIds = new Set(snapshots.map((snapshot) => snapshot.run_id));
+  return storyRuns.some(
+    (run) => run.status === "succeeded" && !snapshotRunIds.has(run.run_id),
+  );
+}
+
+function activeRunPollIntervalMs(): number {
+  const configured = Number(import.meta.env.VITE_AEVRYN_ACTIVE_RUN_POLL_INTERVAL_MS);
+  if (Number.isFinite(configured) && configured > 0) {
+    return configured;
+  }
+  return DEFAULT_ACTIVE_RUN_POLL_INTERVAL_MS;
 }
 
 function runSortTimestamp(run: EngineRun): string {
