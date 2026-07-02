@@ -852,6 +852,15 @@ describe("AevrynApiClient", () => {
     expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
   });
 
+  it("uses hosted-safe wording for fetch network failures", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(client.health()).rejects.toThrow(
+      "Aevryn API is unreachable. Try again, then check service status if it continues.",
+    );
+  });
+
   it("sends authenticated requests for snapshots", async () => {
     const fetchMock = vi
       .fn()

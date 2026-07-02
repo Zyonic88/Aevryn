@@ -788,6 +788,7 @@ describe("App shell routing", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     window.localStorage.clear();
   });
@@ -1965,6 +1966,103 @@ describe("App shell routing", () => {
       new File(["Chapter 2\nA new import can begin."], "chapter_002.txt"),
     );
     expect(await screen.findByRole("button", { name: "Inspect import" })).toBeEnabled();
+  });
+
+  it("does not drain worker jobs from hosted browser sessions", async () => {
+    vi.stubEnv("VITE_AEVRYN_BROWSER_WORKER_DRAIN_ENABLED", "false");
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const projectRuns: Record<string, unknown>[] = [];
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+        return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+        )
+      ) {
+        if (init?.method === "POST") {
+          const body = JSON.parse(String(init.body));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...importRecordPayload,
+                import_id: body.import_id,
+                source_id: body.source_id,
+                filename: body.filename,
+                created_at: body.now,
+              }),
+            ),
+          );
+        }
+        return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+        return Promise.resolve(new Response(JSON.stringify({ runs: projectRuns })));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+      }
+      if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+        return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+        )
+      ) {
+        return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
+        )
+      ) {
+        const body = JSON.parse(String(init?.body));
+        const run = {
+          ...engineRunPayload,
+          run_id: body.run_id,
+          job_ref: `queue://${body.job_id}`,
+          started_at: body.now,
+          status_updated_at: body.now,
+        };
+        projectRuns.unshift(run);
+        return Promise.resolve(new Response(JSON.stringify(run)));
+      }
+      if (url.endsWith(API_PATHS.sourceFormats)) {
+        return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+      }
+      if (url.endsWith(API_PATHS.importsInspect)) {
+        return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Source text"));
+    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await screen.findByText("Chapter import");
+    await user.click(screen.getByRole("button", { name: "Submit processing" }));
+
+    expect(await screen.findByText("Pending run")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Processing" })).toBeDisabled();
+    expect(
+      fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.workerProcess)),
+    ).toBe(false);
   });
 
   it("creates default story metadata while saving the first import from a fresh project", async () => {
