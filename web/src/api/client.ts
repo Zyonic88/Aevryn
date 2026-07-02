@@ -337,7 +337,14 @@ export class AevrynApiClient {
   }
 
   getProject(projectId: string, sessionToken: string, now: string): Promise<Project> {
-    return this.request(`${API_PATHS.projects}/${encodeURIComponent(projectId)}`, projectSchema, {
+    return this.request(projectPath(projectId), projectSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  async deleteProject(projectId: string, sessionToken: string, now: string): Promise<void> {
+    await this.requestNoContent(projectPath(projectId), {
+      method: "DELETE",
       headers: authHeaders(sessionToken, now),
     });
   }
@@ -557,7 +564,11 @@ function authHeaders(sessionToken: string, now: string): HeadersInit {
 }
 
 function projectSettingsPath(projectId: string): string {
-  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/settings`;
+  return `${projectPath(projectId)}/settings`;
+}
+
+function projectPath(projectId: string): string {
+  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}`;
 }
 
 function projectStoriesPath(projectId: string): string {

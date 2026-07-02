@@ -30,7 +30,7 @@ from aevryn.persistence import (
     RecordNotFoundError,
     SnapshotRecord,
 )
-from aevryn.storage import LocalFilesystemStorage
+from aevryn.storage import LocalFilesystemStorage, StorageObjectNotFoundError
 from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
 from aevryn.workers.models import BackgroundJob
 
@@ -833,6 +833,95 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
         repository.get_export("user_owner", "export_alpha")
     with pytest.raises(ImportContentNotFoundError):
         content_store.read_import_content(storage_ref)
+
+
+def test_delete_project_api_hard_deletes_metadata_and_private_bytes(tmp_path: Path) -> None:
+    """Project deletion should remove scoped metadata, imports, and export objects."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    content_store = InMemoryImportContentStore()
+    storage = LocalFilesystemStorage(tmp_path / "storage")
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=content_store,
+            ),
+            import_content_store=content_store,
+            storage_service=storage,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    import_storage_ref = created_import.json()["storage_ref"]
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
+    )
+    assert processed.status_code == 200
+    export_storage_ref = "storage://projects/project_alpha/exports/export_alpha/canon.md"
+    storage.save_object(
+        storage_ref=export_storage_ref,
+        content=b"canon export",
+        content_type="text/markdown; charset=utf-8",
+        metadata={"filename": "canon.md"},
+    )
+    repository.record_export(
+        ExportRecord(
+            export_id="export_alpha",
+            project_id="project_alpha",
+            snapshot_id="snapshot_run_alpha_canon",
+            export_kind="canon",
+            export_format="markdown",
+            filename="canon.md",
+            content_type="text/markdown; charset=utf-8",
+            storage_ref=export_storage_ref,
+            created_at="2026-06-27T00:45:00Z",
+        )
+    )
+
+    response = client.delete(
+        "/v2/projects/project_alpha",
+        headers=auth_headers("token_001"),
+    )
+
+    assert response.status_code == 204
+    listed_projects = client.get("/v2/projects", headers=auth_headers("token_001"))
+    assert listed_projects.json() == {"projects": []}
+    missing_project = client.get(
+        "/v2/projects/project_alpha",
+        headers=auth_headers("token_001"),
+    )
+    assert missing_project.status_code == 404
+    with pytest.raises(RecordNotFoundError):
+        repository.get_story("user_owner", "story_alpha")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_import("user_owner", "import_alpha")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_engine_run("user_owner", "run_alpha")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_snapshot("user_owner", "snapshot_run_alpha_canon")
+    with pytest.raises(RecordNotFoundError):
+        repository.get_export("user_owner", "export_alpha")
+    with pytest.raises(ImportContentNotFoundError):
+        content_store.read_import_content(import_storage_ref)
+    with pytest.raises(StorageObjectNotFoundError):
+        storage.read_object(export_storage_ref)
 
 
 def test_phase11_project_surfaces_fail_closed_across_users() -> None:
@@ -2185,6 +2274,7 @@ def test_project_storage_routes_are_reported_in_capabilities_and_openapi() -> No
     assert paths["/v2/projects"]["get"]["operationId"] == "getV2Projects"
     assert paths["/v2/projects"]["post"]["operationId"] == "postV2Projects"
     assert paths["/v2/projects/{project_id}"]["get"]["operationId"] == "getV2Project"
+    assert paths["/v2/projects/{project_id}"]["delete"]["operationId"] == "deleteV2Project"
     assert paths["/v2/projects/{project_id}/settings"]["get"]["operationId"] == (
         "getV2ProjectSettings"
     )

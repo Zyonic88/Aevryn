@@ -19,6 +19,7 @@ from aevryn.persistence.models import (
 from aevryn.persistence.repository import (
     AccessDeniedError,
     DuplicateRecordError,
+    ProjectDeletionResult,
     RecordNotFoundError,
 )
 
@@ -96,6 +97,81 @@ class InMemoryProjectRepository:
                 ),
                 key=lambda project: project.project_id,
             )
+        )
+
+    def delete_project(self, user_id: str, project_id: str) -> ProjectDeletionResult:
+        """Hard-delete a project and all metadata scoped to it."""
+        project = self.get_project(user_id=user_id, project_id=project_id)
+        story_ids = {
+            story.story_id
+            for story in self._stories.values()
+            if story.project_id == project.project_id
+        }
+        deleted_imports = tuple(
+            sorted(
+                (
+                    import_record
+                    for import_record in self._imports.values()
+                    if import_record.story_id in story_ids
+                ),
+                key=lambda import_record: import_record.import_id,
+            )
+        )
+        import_ids = {import_record.import_id for import_record in deleted_imports}
+        run_ids = {
+            run.run_id
+            for run in self._runs.values()
+            if run.project_id == project.project_id
+            or run.story_id in story_ids
+            or run.import_id in import_ids
+        }
+        snapshot_ids = {
+            snapshot.snapshot_id
+            for snapshot in self._snapshots.values()
+            if snapshot.project_id == project.project_id
+            or snapshot.story_id in story_ids
+            or snapshot.run_id in run_ids
+        }
+        deleted_exports = tuple(
+            sorted(
+                (
+                    export
+                    for export in self._exports.values()
+                    if export.project_id == project.project_id
+                    or export.snapshot_id in snapshot_ids
+                ),
+                key=lambda export: export.export_id,
+            )
+        )
+        export_ids = {export.export_id for export in deleted_exports}
+
+        for export_id in export_ids:
+            del self._exports[export_id]
+        for snapshot_id in snapshot_ids:
+            del self._snapshots[snapshot_id]
+        for run_id in run_ids:
+            del self._runs[run_id]
+        for import_id in import_ids:
+            del self._imports[import_id]
+        for story_id in story_ids:
+            del self._stories[story_id]
+        self._settings.pop(project.project_id, None)
+        del self._projects[project.project_id]
+        logger.debug(
+            "project_record_deleted",
+            extra={
+                "project_id": project.project_id,
+                "user_id": user_id,
+                "story_count": len(story_ids),
+                "import_count": len(deleted_imports),
+                "run_count": len(run_ids),
+                "snapshot_count": len(snapshot_ids),
+                "export_count": len(deleted_exports),
+            },
+        )
+        return ProjectDeletionResult(
+            deleted_imports=deleted_imports,
+            deleted_exports=deleted_exports,
         )
 
     def create_story(self, story: StoryRecord) -> None:

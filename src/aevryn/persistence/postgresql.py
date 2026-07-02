@@ -21,7 +21,11 @@ from aevryn.persistence.models import (
     StoryRecord,
     UserRecord,
 )
-from aevryn.persistence.repository import PersistenceError, RecordNotFoundError
+from aevryn.persistence.repository import (
+    PersistenceError,
+    ProjectDeletionResult,
+    RecordNotFoundError,
+)
 from aevryn.persistence.schema import (
     PROJECT_DATABASE_SCHEMA,
     ColumnDefinition,
@@ -94,6 +98,20 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
     def create_project(self, project: ProjectRecord) -> None:
         """Persist a project record and flush the PostgreSQL store."""
         self._commit(lambda: super(PostgresqlProjectRepository, self).create_project(project))
+
+    def delete_project(self, user_id: str, project_id: str) -> ProjectDeletionResult:
+        """Hard-delete a project and flush the PostgreSQL store."""
+        result = ProjectDeletionResult(deleted_imports=(), deleted_exports=())
+
+        def delete() -> None:
+            nonlocal result
+            result = super(PostgresqlProjectRepository, self).delete_project(
+                user_id=user_id,
+                project_id=project_id,
+            )
+
+        self._commit(delete)
+        return result
 
     def create_story(self, story: StoryRecord) -> None:
         """Persist a story record and flush the PostgreSQL store."""
@@ -310,7 +328,11 @@ def _default_connect_factory() -> ConnectFactory:
             "psycopg is required for the PostgreSQL Project Database adapter. "
             "Install the Aevryn postgresql optional dependencies."
         ) from error
-    return cast(ConnectFactory, psycopg.connect)
+
+    def connect(database_url: str) -> Any:
+        return psycopg.connect(database_url, prepare_threshold=None)
+
+    return cast(ConnectFactory, connect)
 
 
 def _create_table_if_not_exists_statements() -> tuple[str, ...]:

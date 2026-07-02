@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Protocol
 
 from aevryn.persistence.models import (
@@ -33,6 +34,14 @@ class AccessDeniedError(PersistenceError):
     """Raised when a record exists outside the requested ownership boundary."""
 
 
+@dataclass(frozen=True, slots=True)
+class ProjectDeletionResult:
+    """Records whose external bytes must be deleted after project metadata deletion."""
+
+    deleted_imports: tuple[ImportRecord, ...]
+    deleted_exports: tuple[ExportRecord, ...]
+
+
 class ProjectRepository(Protocol):
     """Persistence boundary for platform project records."""
 
@@ -53,6 +62,9 @@ class ProjectRepository(Protocol):
 
     def list_projects_for_user(self, user_id: str) -> tuple[ProjectRecord, ...]:
         """Return projects owned by a user in deterministic order."""
+
+    def delete_project(self, user_id: str, project_id: str) -> ProjectDeletionResult:
+        """Hard-delete a project and all metadata scoped to it."""
 
     def create_story(self, story: StoryRecord) -> None:
         """Persist a story inside an existing project."""

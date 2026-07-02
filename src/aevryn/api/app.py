@@ -709,6 +709,45 @@ def create_app(
         except PersistenceError as error:
             raise _project_storage_error(error) from error
 
+    @app.delete(
+        "/v2/projects/{project_id}",
+        status_code=204,
+        tags=["Projects"],
+        operation_id="deleteV2Project",
+    )
+    def delete_project(project_id: str, request: Request) -> Response:
+        """Hard-delete a project and all stored metadata/content scoped to it."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            deletion = repository.delete_project(user_id=user.user_id, project_id=project_id)
+            if import_content_store is not None:
+                for import_record in deletion.deleted_imports:
+                    import_content_store.delete_import_content(import_record.storage_ref)
+            if storage_service is not None:
+                export_storage = ExportStorageService(
+                    repository=repository,
+                    storage=storage_service,
+                )
+                for export_record in deletion.deleted_exports:
+                    export_storage.delete_export_bytes(export_record)
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "project_delete_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return Response(status_code=204)
+
     @app.get(
         "/v2/projects/{project_id}/settings",
         response_model=ProjectSettingsResponse,
@@ -3960,6 +3999,14 @@ def _route_capabilities() -> tuple[ApiRouteCapability, ...]:
             method="GET",
             path="/v2/projects/{project_id}",
             purpose="Return durable project metadata for the authenticated user.",
+        ),
+        ApiRouteCapability(
+            method="DELETE",
+            path="/v2/projects/{project_id}",
+            purpose=(
+                "Hard-delete a project and all scoped story/import/run/snapshot/export "
+                "metadata."
+            ),
         ),
         ApiRouteCapability(
             method="GET",
