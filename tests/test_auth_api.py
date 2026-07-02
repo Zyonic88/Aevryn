@@ -1703,6 +1703,14 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
         "No accepted world relationships have been extracted yet."
     )
     assert payload["surfaces"][3]["item_count"] == 1
+    assert payload["language_identity"] == {
+        "translation_unit_count": 1,
+        "translation_review_count": 0,
+        "identity_decision_count": 1,
+        "identity_resolved_count": 0,
+        "identity_ambiguous_count": 0,
+        "identity_unresolved_count": 1,
+    }
     assert payload["character_profiles"][0]["character_id"] == "character_mark"
     assert payload["character_profiles"][0]["display_name"] == "Mark"
     assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]

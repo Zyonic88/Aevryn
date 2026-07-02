@@ -72,6 +72,7 @@ from aevryn.api.models import (
     ProductionPackOutput,
     ProjectCreateRequest,
     ProjectExportOptionOutput,
+    ProjectLanguageIdentitySummary,
     ProjectListResponse,
     ProjectOutput,
     ProjectOutputCanonSummary,
@@ -2862,6 +2863,7 @@ def _project_outputs_response(
         latest_engine_run=_project_status_run(latest_run) if latest_run else None,
         canon=canon_summary,
         surfaces=_project_output_surfaces(canon_summary),
+        language_identity=_project_language_identity_summary(canon_payload),
         character_profiles=_snapshot_character_profiles(canon_payload),
         world_sheet=_snapshot_world_sheet(canon_payload),
         timeline_changes=_snapshot_timeline_changes(canon_payload),
@@ -2982,6 +2984,23 @@ def _project_output_surfaces(
             item_count=canon.scenes,
             summary="Export output can be prepared from the latest canon snapshot.",
         ),
+    )
+
+
+def _project_language_identity_summary(
+    payload: Mapping[str, object],
+) -> ProjectLanguageIdentitySummary:
+    """Return metadata-only Phase 12 readiness details from snapshot metadata."""
+    translation = _mapping_payload_value(payload, "translation")
+    resolution = _mapping_payload_value(payload, "entity_resolution")
+    status_counts = _mapping_payload_value(resolution, "status_counts")
+    return ProjectLanguageIdentitySummary(
+        translation_unit_count=_int_payload_value(translation, "unit_count"),
+        translation_review_count=_int_payload_value(translation, "issue_count"),
+        identity_decision_count=_int_payload_value(resolution, "decision_count"),
+        identity_resolved_count=_int_payload_value(status_counts, "resolved"),
+        identity_ambiguous_count=_int_payload_value(status_counts, "ambiguous"),
+        identity_unresolved_count=_int_payload_value(status_counts, "unresolved"),
     )
 
 

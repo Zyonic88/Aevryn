@@ -529,6 +529,14 @@ const projectOutputsPayload = {
       item_count: 8,
     },
   ],
+  language_identity: {
+    translation_unit_count: 8,
+    translation_review_count: 0,
+    identity_decision_count: 7,
+    identity_resolved_count: 5,
+    identity_ambiguous_count: 1,
+    identity_unresolved_count: 1,
+  },
   character_profiles: [
     ...characterPreviewPayload.character_profiles,
     {

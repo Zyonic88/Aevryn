@@ -229,6 +229,24 @@ export const projectOutputSurfaceSchema = z.object({
   item_count: z.number(),
 });
 
+export const projectLanguageIdentitySummarySchema = z
+  .object({
+    translation_unit_count: z.number(),
+    translation_review_count: z.number(),
+    identity_decision_count: z.number(),
+    identity_resolved_count: z.number(),
+    identity_ambiguous_count: z.number(),
+    identity_unresolved_count: z.number(),
+  })
+  .default({
+    translation_unit_count: 0,
+    translation_review_count: 0,
+    identity_decision_count: 0,
+    identity_resolved_count: 0,
+    identity_ambiguous_count: 0,
+    identity_unresolved_count: 0,
+  });
+
 export const projectTimelineChangeSchema = z.object({
   change_id: z.string(),
   chapter_index: z.number(),
@@ -254,6 +272,7 @@ export const projectOutputsSchema = z.object({
   latest_engine_run: projectStatusRunSchema.nullable(),
   canon: projectOutputCanonSummarySchema,
   surfaces: z.array(projectOutputSurfaceSchema),
+  language_identity: projectLanguageIdentitySummarySchema,
   character_profiles: z.array(z.lazy(() => characterProfileSchema)),
   world_sheet: z.lazy(() => worldSheetSchema).nullable(),
   timeline_changes: z.array(projectTimelineChangeSchema).default([]),
@@ -479,6 +498,9 @@ export type WorkerProcess = z.infer<typeof workerProcessSchema>;
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 export type ProjectOutputCanonSummary = z.infer<typeof projectOutputCanonSummarySchema>;
 export type ProjectOutputSurface = z.infer<typeof projectOutputSurfaceSchema>;
+export type ProjectLanguageIdentitySummary = z.infer<
+  typeof projectLanguageIdentitySummarySchema
+>;
 export type ProjectTimelineChange = z.infer<typeof projectTimelineChangeSchema>;
 export type ProjectExportOption = z.infer<typeof projectExportOptionSchema>;
 export type ProjectOutputs = z.infer<typeof projectOutputsSchema>;

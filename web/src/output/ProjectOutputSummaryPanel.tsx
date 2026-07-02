@@ -122,6 +122,7 @@ function ProjectOutputSummary({
         />
         <Metric label="Snapshot" value={formatDateTime(outputs.canon.created_at)} />
       </dl>
+      <LanguageIdentityStatus outputs={outputs} />
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
       <ReadableSurfacePanels surface={surface} outputs={outputs} />
       {surfaceSummary.status === "waiting" ? (
@@ -131,6 +132,45 @@ function ProjectOutputSummary({
         </EmptyState>
       ) : null}
     </section>
+  );
+}
+
+function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
+  const summary = outputs.language_identity;
+  const hasPhase12Metadata =
+    summary.translation_unit_count > 0 || summary.identity_decision_count > 0;
+  if (!hasPhase12Metadata) {
+    return null;
+  }
+  const identityDetails = [
+    `${summary.identity_resolved_count.toLocaleString()} resolved`,
+    `${summary.identity_ambiguous_count.toLocaleString()} ambiguous`,
+    `${summary.identity_unresolved_count.toLocaleString()} unresolved`,
+  ].join(" / ");
+  const translationStatus =
+    summary.translation_review_count > 0
+      ? `${summary.translation_review_count.toLocaleString()} review items`
+      : "No review items";
+  return (
+    <div
+      className="compact-list language-identity-status"
+      aria-label="Language and identity status"
+    >
+      <div className="compact-row">
+        <strong>Language</strong>
+        <span>
+          {summary.translation_unit_count.toLocaleString()} normalized scenes;{" "}
+          {translationStatus}
+        </span>
+      </div>
+      <div className="compact-row">
+        <strong>Identity</strong>
+        <span>
+          {summary.identity_decision_count.toLocaleString()} reference decisions;{" "}
+          {identityDetails}
+        </span>
+      </div>
+    </div>
   );
 }
 
