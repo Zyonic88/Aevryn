@@ -114,6 +114,16 @@ const sourceFormatsPayload = {
   ],
 };
 
+function isImportRunSubmitPath(url: string, projectId: string, storyId: string): boolean {
+  const importRunsPrefix = `${API_PATHS.projects}/${projectId}/stories/${storyId}/imports/`;
+  return url.includes(importRunsPrefix) && url.endsWith("/runs");
+}
+
+function importIdFromRunSubmitPath(url: string): string {
+  const match = /\/imports\/([^/]+)\/runs$/u.exec(url);
+  return match ? decodeURIComponent(match[1]) : importRecordPayload.import_id;
+}
+
 const importInspectPayload = {
   source_id: "source_alpha",
   source_format: "txt",
@@ -730,15 +740,14 @@ describe("App shell routing", () => {
           return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
         }
         if (
-          url.endsWith(
-            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
-          )
+          isImportRunSubmitPath(url, projectAlphaPayload.project_id, storyAlphaPayload.story_id)
         ) {
           const body = JSON.parse(String(init?.body));
           return Promise.resolve(
             new Response(
               JSON.stringify({
                 ...engineRunPayload,
+                import_id: importIdFromRunSubmitPath(url),
                 run_id: body.run_id,
                 job_ref: `queue://${body.job_id}`,
                 started_at: body.now,
@@ -1844,7 +1853,7 @@ describe("App shell routing", () => {
       new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
       new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
     ]);
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(await screen.findByRole("button", { name: "Inspect import" }));
     expect(
       await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors."),
     ).toBeInTheDocument();
@@ -1855,6 +1864,107 @@ describe("App shell routing", () => {
     await waitFor(() => expect(savedImportId).toMatch(/^import_aevryn_import_bundle_/u));
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
     expect(savedImportId).not.toBe("import_alpha");
+  });
+
+  it("retries duplicate automatic import references with a new reference", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const savedImportIds: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          if (init?.method === "POST") {
+            const body = JSON.parse(String(init.body));
+            savedImportIds.push(body.import_id);
+            if (savedImportIds.length === 1) {
+              return Promise.resolve(
+                new Response(
+                  JSON.stringify({
+                    error: "duplicate_record",
+                    detail: `Duplicate import: ${body.import_id}`,
+                  }),
+                  { status: 409 },
+                ),
+              );
+            }
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  ...importRecordPayload,
+                  import_id: body.import_id,
+                  source_id: body.source_id,
+                  filename: body.filename,
+                  chapter_count: 10,
+                  scene_count: 19,
+                  evidence_anchor_count: 513,
+                  created_at: body.now,
+                }),
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify({ imports: [] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(new Response(JSON.stringify({ runs: [] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.importsInspect)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...importInspectPayload,
+                chapters: 10,
+                scenes: 19,
+                evidence_anchors: 513,
+              }),
+            ),
+          );
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText(".txt");
+    await user.upload(screen.getByLabelText("Source file"), [
+      new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
+      new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
+    ]);
+    await user.click(await screen.findByRole("button", { name: "Inspect import" }));
+    await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors.");
+    await user.click(screen.getByRole("button", { name: "Save import" }));
+
+    await waitFor(() => expect(savedImportIds).toHaveLength(2));
+    expect(savedImportIds[0]).toMatch(/^import_aevryn_import_bundle_/u);
+    expect(savedImportIds[1]).toMatch(/^import_aevryn_import_bundle_/u);
+    expect(savedImportIds[1]).not.toBe(savedImportIds[0]);
+    expect(screen.queryByText(/Duplicate import:/u)).not.toBeInTheDocument();
   });
 
   it("asks before adding another import to an already populated story", async () => {
@@ -1967,13 +2077,12 @@ describe("App shell routing", () => {
           return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
         }
         if (
-          url.endsWith(
-            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
-          )
+          isImportRunSubmitPath(url, projectAlphaPayload.project_id, storyAlphaPayload.story_id)
         ) {
           const body = JSON.parse(String(init?.body));
           const run = {
             ...engineRunPayload,
+            import_id: importIdFromRunSubmitPath(url),
             run_id: body.run_id,
             job_ref: `queue://${body.job_id}`,
             started_at: body.now,
@@ -2095,13 +2204,12 @@ describe("App shell routing", () => {
         return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
       }
       if (
-        url.endsWith(
-          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
-        )
+        isImportRunSubmitPath(url, projectAlphaPayload.project_id, storyAlphaPayload.story_id)
       ) {
         const body = JSON.parse(String(init?.body));
         const run = {
           ...engineRunPayload,
+          import_id: importIdFromRunSubmitPath(url),
           run_id: body.run_id,
           job_ref: `queue://${body.job_id}`,
           started_at: body.now,
@@ -2318,13 +2426,12 @@ describe("App shell routing", () => {
         );
       }
       if (
-        url.endsWith(
-          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${importRecordPayload.import_id}/runs`,
-        )
+        isImportRunSubmitPath(url, projectAlphaPayload.project_id, storyAlphaPayload.story_id)
       ) {
         const body = JSON.parse(String(init?.body));
         submittedRun = {
           ...engineRunPayload,
+          import_id: importIdFromRunSubmitPath(url),
           run_id: body.run_id,
           status: "pending",
           job_ref: `queue://${body.job_id}`,
@@ -2362,7 +2469,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
     await user.click(await screen.findByRole("button", { name: "Save import" }));
     await screen.findByText("Chapter import");
-    await user.click(screen.getByRole("button", { name: "Submit processing" }));
+    await user.click(screen.getAllByRole("button", { name: "Submit processing" })[0]);
 
     expect(await screen.findByRole("button", { name: "Processing" })).toBeDisabled();
 
