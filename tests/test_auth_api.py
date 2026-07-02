@@ -2591,7 +2591,7 @@ def _legacy_machine_id_snapshot_payload() -> dict[str, object]:
                 "entity_sections": [
                     {
                         "title": "North Star Academy (location)",
-                        "items": ["E1 located_in E5"],
+                        "items": ["E5 part_of E5", "E1 located_in E5"],
                     }
                 ],
                 "evidence_summary": "1 verified evidence references",

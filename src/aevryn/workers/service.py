@@ -1080,10 +1080,15 @@ def _section_payload(
     return {
         "title": _humanized_display_text(section.title, display_names=display_names),
         "items": tuple(
-            _safe_display_text(item, source_quotes, display_names=display_names)
+            safe_item
             for item in section.items
-            if _safe_display_text(item, source_quotes, display_names=display_names)
-            != _SOURCE_BACKED_PLACEHOLDER
+            if (
+                safe_item := _safe_display_text(
+                    item,
+                    source_quotes,
+                    display_names=display_names,
+                )
+            ) != _SOURCE_BACKED_PLACEHOLDER
         ),
     }
 
@@ -1227,10 +1232,14 @@ def _humanized_relationship_line(
         and _looks_like_entity_reference(target_id, display_names=display_names)
     ):
         return None
+    source_label = _humanized_entity_id(source_id, display_names=display_names)
+    target_label = _humanized_entity_id(target_id, display_names=display_names)
+    if source_label == target_label:
+        return ""
     return (
-        f"{_humanized_entity_id(source_id, display_names=display_names)} "
+        f"{source_label} "
         f"{_humanized_relationship(relationship_type)} "
-        f"{_humanized_entity_id(target_id, display_names=display_names)}"
+        f"{target_label}"
     )
 
 
