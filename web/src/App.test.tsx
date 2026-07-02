@@ -2066,6 +2066,112 @@ describe("App shell routing", () => {
     ).toBe(false);
   });
 
+  it("keeps saved import processing state scoped to the submitted import row", async () => {
+    vi.stubEnv("VITE_AEVRYN_BROWSER_WORKER_DRAIN_ENABLED", "false");
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const secondImport = {
+      ...importRecordPayload,
+      import_id: "import_beta",
+      source_id: "source_beta",
+      filename: "chapter_002.txt",
+      storage_ref: "api_import://story_alpha/import_beta",
+    };
+    let resolveSubmittedRun: (() => void) | undefined;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+        return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+        )
+      ) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ imports: [importRecordPayload, secondImport] })),
+        );
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              runs: [
+                {
+                  ...engineRunPayload,
+                  status: "succeeded",
+                  finished_at: "2026-06-27T00:00:05.000Z",
+                },
+              ],
+            }),
+          ),
+        );
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+        )
+      ) {
+        return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+      }
+      if (
+        url.endsWith(
+          `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports/${secondImport.import_id}/runs`,
+        )
+      ) {
+        const body = JSON.parse(String(init?.body));
+        const pendingRun = {
+          ...engineRunPayload,
+          run_id: body.run_id,
+          import_id: secondImport.import_id,
+          status: "pending",
+          job_ref: `queue://${body.job_id}`,
+          started_at: body.now,
+          status_updated_at: body.now,
+          finished_at: null,
+        };
+        return new Promise<Response>((resolve) => {
+          resolveSubmittedRun = () => resolve(new Response(JSON.stringify(pendingRun)));
+        });
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+      }
+      if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+        return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+      }
+      if (url.endsWith(API_PATHS.sourceFormats)) {
+        return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Chapter import")).toBeInTheDocument();
+    expect(await screen.findByText("Chapter import 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Submit processing" }));
+
+    expect(await screen.findByRole("button", { name: "Submitting" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled();
+
+    resolveSubmittedRun?.();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Submit processing" })).toBeEnabled(),
+    );
+    expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled();
+  });
+
   it("polls hosted import runs until processing finishes", async () => {
     vi.stubEnv("VITE_AEVRYN_BROWSER_WORKER_DRAIN_ENABLED", "false");
     vi.stubEnv("VITE_AEVRYN_ACTIVE_RUN_POLL_INTERVAL_MS", "10");
