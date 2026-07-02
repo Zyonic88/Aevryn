@@ -2810,8 +2810,17 @@ describe("App shell routing", () => {
     expect(
       screen.getByText("7 reference decisions; 5 resolved / 1 ambiguous / 1 unresolved"),
     ).toBeInTheDocument();
+    expect(screen.getByText("Needs review")).toBeInTheDocument();
     expect(
-      screen.getByText("Chapter 1, Scene 1; 2 candidates; 87% confidence"),
+      screen.getByText(
+        "Chapter 1, Scene 1; 2 possible matches; 87% confidence; Aevryn did not merge this reference",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Unresolved reference")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Chapter 1, Scene 2; no supported match; Aevryn left this reference unresolved",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();

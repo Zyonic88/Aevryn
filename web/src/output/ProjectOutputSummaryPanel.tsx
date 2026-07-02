@@ -157,7 +157,7 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
       </div>
       {summary.identity_review_items.slice(0, 4).map((item) => (
         <div className="compact-row" key={identityReviewKey(item)}>
-          <strong>{readableLabel(item.status)}</strong>
+          <strong>{identityReviewStatusLabel(item.status)}</strong>
           <span>{identityReviewLabel(item)}</span>
         </div>
       ))}
@@ -182,11 +182,41 @@ function identityReviewLabel(
 ): string {
   const scope = readableSceneScope(item);
   const confidence = Math.round(item.confidence * 100);
-  const candidateLabel =
-    item.candidate_count === 1
-      ? "1 candidate"
-      : `${item.candidate_count.toLocaleString()} candidates`;
-  return `${scope}; ${candidateLabel}; ${confidence}% confidence`;
+  const candidateLabel = identityCandidateLabel(item);
+  const confidenceLabel = confidence > 0 ? `; ${confidence}% confidence` : "";
+  return `${scope}; ${candidateLabel}${confidenceLabel}; ${identityReviewAction(item.status)}`;
+}
+
+function identityReviewStatusLabel(status: string): string {
+  if (status === "ambiguous") {
+    return "Needs review";
+  }
+  if (status === "unresolved") {
+    return "Unresolved reference";
+  }
+  return readableLabel(status);
+}
+
+function identityCandidateLabel(
+  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
+): string {
+  if (item.candidate_count === 0) {
+    return "no supported match";
+  }
+  if (item.candidate_count === 1) {
+    return "1 possible match";
+  }
+  return `${item.candidate_count.toLocaleString()} possible matches`;
+}
+
+function identityReviewAction(status: string): string {
+  if (status === "ambiguous") {
+    return "Aevryn did not merge this reference";
+  }
+  if (status === "unresolved") {
+    return "Aevryn left this reference unresolved";
+  }
+  return "Aevryn marked this reference for review";
 }
 
 function readableSceneScope(
