@@ -468,7 +468,7 @@ Regression coverage added:
 Hosted browser sessions queue processing runs without draining worker jobs from the browser.
 Localhost sessions retain browser worker draining for local alpha iteration.
 Network failures use hosted-safe wording instead of local API server wording.
-Backend can opt into a hosted alpha server-side worker drain after run submission.
+Backend can opt into a hosted alpha server-side worker drain during run submission.
 ```
 
 Commands run:

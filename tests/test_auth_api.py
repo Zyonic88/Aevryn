@@ -638,7 +638,7 @@ def test_import_runs_api_submits_and_lists_pending_runs() -> None:
     assert listed.json()["runs"] == [submitted.json()]
 
 
-def test_import_runs_api_can_auto_process_submitted_runs_after_response() -> None:
+def test_import_runs_api_can_auto_process_submitted_runs_before_response() -> None:
     """Hosted alpha bridge should process one submitted run without browser worker access."""
     repository = InMemoryProjectRepository()
     queue = InMemoryJobQueue()
@@ -667,7 +667,7 @@ def test_import_runs_api_can_auto_process_submitted_runs_after_response() -> Non
     )
 
     assert submitted.status_code == 200
-    assert submitted.json()["status"] == "pending"
+    assert submitted.json()["status"] == "succeeded"
     persisted_run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
     assert persisted_run.status == "succeeded"
     assert persisted_run.finished_at == NOW
