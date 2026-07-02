@@ -466,6 +466,14 @@ class AevrynProjectRunner:
         local_identity_profiles = _identity_profiles_from_extraction_results(
             (extraction_result,)
         )
+        resolution_profiles = _merged_identity_profiles(
+            identity_profiles,
+            local_identity_profiles,
+        )
+        context_entity_ids = _resolution_context_entity_ids(
+            extraction_result=extraction_result,
+            existing_profiles=identity_profiles,
+        )
         resolver = EntityResolutionEngine()
         decisions = tuple(
             resolver.resolve_reference(
@@ -477,11 +485,9 @@ class AevrynProjectRunner:
                 ),
                 _resolution_profiles_for_entity(
                     entity=entity,
-                    identity_profiles=_merged_identity_profiles(
-                        identity_profiles,
-                        local_identity_profiles,
-                    ),
+                    identity_profiles=resolution_profiles,
                 ),
+                context_entity_ids=context_entity_ids,
             )
             for entity in extraction_result.entities
         )
@@ -1114,6 +1120,7 @@ def _identity_profiles_from_extraction_results(
     aliases_by_id: dict[str, set[str]] = {}
     titles_by_id: dict[str, set[str]] = {}
     descriptions_by_id: dict[str, set[str]] = {}
+    pronouns_by_id: dict[str, set[str]] = {}
     evidence_by_id: dict[str, set[str]] = {}
 
     for result in extraction_results:
@@ -1131,6 +1138,10 @@ def _identity_profiles_from_extraction_results(
                 titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
             elif attribute in {"description", "appearance", "race", "species"}:
                 descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+            elif attribute in {"gender", "sex"}:
+                pronouns = _pronouns_for_identity_fact_value(fact.value)
+                if pronouns:
+                    pronouns_by_id.setdefault(fact.entity_id, set()).update(pronouns)
 
     return tuple(
         _identity_profile_from_parts(
@@ -1138,6 +1149,7 @@ def _identity_profiles_from_extraction_results(
             aliases=aliases_by_id.get(entity.entity_id, set()),
             titles=titles_by_id.get(entity.entity_id, set()),
             descriptions=descriptions_by_id.get(entity.entity_id, set()),
+            pronouns=pronouns_by_id.get(entity.entity_id, set()),
             evidence_anchor_ids=evidence_by_id.get(entity.entity_id, set()),
         )
         for entity in sorted(entities_by_id.values(), key=lambda item: item.entity_id)
@@ -1178,6 +1190,38 @@ def _resolution_profiles_for_entity(
     )
 
 
+def _resolution_context_entity_ids(
+    *,
+    extraction_result: ExtractionResult,
+    existing_profiles: tuple[EntityIdentityProfile, ...],
+) -> tuple[str, ...]:
+    """Return context IDs that may support conservative pronoun resolution."""
+    context_ids = {profile.entity_id for profile in existing_profiles}
+    context_ids.update(
+        entity.entity_id
+        for entity in extraction_result.entities
+        if entity.entity_type == "character"
+        and not _is_pronoun_reference(entity.display_name)
+    )
+    return tuple(sorted(context_ids))
+
+
+def _is_pronoun_reference(value: str) -> bool:
+    """Return whether a display value is only a pronoun surface reference."""
+    return value.strip().lower() in {
+        "he",
+        "him",
+        "his",
+        "she",
+        "her",
+        "hers",
+        "they",
+        "them",
+        "their",
+        "theirs",
+    }
+
+
 def _identity_profiles_from_accepted_extraction_result(
     *,
     result: ExtractionResult,
@@ -1196,6 +1240,7 @@ def _identity_profiles_from_accepted_extraction_result(
     aliases_by_id: dict[str, set[str]] = {}
     titles_by_id: dict[str, set[str]] = {}
     descriptions_by_id: dict[str, set[str]] = {}
+    pronouns_by_id: dict[str, set[str]] = {}
     evidence_by_id: dict[str, set[str]] = {
         entity_id: {entity.evidence_anchor_id}
         for entity_id, entity in entities_by_id.items()
@@ -1210,6 +1255,7 @@ def _identity_profiles_from_accepted_extraction_result(
             aliases_by_id=aliases_by_id,
             titles_by_id=titles_by_id,
             descriptions_by_id=descriptions_by_id,
+            pronouns_by_id=pronouns_by_id,
         )
 
     return tuple(
@@ -1218,6 +1264,7 @@ def _identity_profiles_from_accepted_extraction_result(
             aliases=aliases_by_id.get(entity.entity_id, set()),
             titles=titles_by_id.get(entity.entity_id, set()),
             descriptions=descriptions_by_id.get(entity.entity_id, set()),
+            pronouns=pronouns_by_id.get(entity.entity_id, set()),
             evidence_anchor_ids=evidence_by_id.get(entity.entity_id, set()),
         )
         for entity in sorted(entities_by_id.values(), key=lambda item: item.entity_id)
@@ -1262,6 +1309,7 @@ def _identity_profile_from_parts(
     aliases: set[str],
     titles: set[str],
     descriptions: set[str],
+    pronouns: set[str],
     evidence_anchor_ids: set[str],
 ) -> EntityIdentityProfile:
     """Create one identity profile with useful composite descriptions."""
@@ -1282,6 +1330,7 @@ def _identity_profile_from_parts(
         aliases=tuple(sorted(aliases)),
         titles=tuple(sorted(titles)),
         descriptions=tuple(sorted(composite_descriptions)),
+        pronouns=tuple(sorted(pronouns)),
         evidence_anchor_ids=tuple(sorted(evidence_anchor_ids)),
     )
 
@@ -1292,6 +1341,7 @@ def _add_identity_profile_fact(
     aliases_by_id: dict[str, set[str]],
     titles_by_id: dict[str, set[str]],
     descriptions_by_id: dict[str, set[str]],
+    pronouns_by_id: dict[str, set[str]],
 ) -> None:
     """Route an accepted fact into identity-profile fields."""
     attribute = fact.attribute.lower()
@@ -1301,6 +1351,19 @@ def _add_identity_profile_fact(
         titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
     elif attribute in {"description", "appearance", "race", "species", "gender", "sex"}:
         descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+        pronouns = _pronouns_for_identity_fact_value(fact.value)
+        if pronouns:
+            pronouns_by_id.setdefault(fact.entity_id, set()).update(pronouns)
+
+
+def _pronouns_for_identity_fact_value(value: str) -> tuple[str, ...]:
+    """Return conservative pronoun hints from explicit gender or sex values."""
+    normalized = value.strip().lower()
+    if normalized in {"female", "woman", "girl"}:
+        return ("she", "her", "hers")
+    if normalized in {"male", "man", "boy"}:
+        return ("he", "him", "his")
+    return ()
 
 
 def _rewritten_fact_for_resolved_identity(

@@ -422,6 +422,174 @@ def test_runner_carries_identity_resolution_across_chapters() -> None:
     )
 
 
+def test_runner_resolves_pronoun_when_one_context_identity_is_supported() -> None:
+    """Pronoun-only entities should merge only when context has one clear identity."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_gender_female",
+                        "entity_id": "character_charlotte",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_002_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_she",
+                        "entity_type": "character",
+                        "display_name": "She",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_she_status_returned",
+                        "entity_id": "character_she",
+                        "attribute": "status",
+                        "value": "Returned",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_charlotte"
+    assert result.database.retrieve_entity("character_she") is None
+    status_fact = result.database.retrieve_current_fact("character_charlotte", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Returned"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_charlotte"
+        and decision.reference.text == "She"
+        and decision.reference.chapter_id == "demo_chapter_002"
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_keeps_pronoun_ambiguous_with_multiple_context_identities() -> None:
+    """Pronoun-only entities should not merge when multiple identities fit."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_elaine",
+                        "entity_type": "character",
+                        "display_name": "Elaine",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_gender_female",
+                        "entity_id": "character_charlotte",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_elaine_gender_female",
+                        "entity_id": "character_elaine",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_002_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_she",
+                        "entity_type": "character",
+                        "display_name": "She",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_she_status_returned",
+                        "entity_id": "character_she",
+                        "attribute": "status",
+                        "value": "Returned",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert "character_she" in result.update_summaries[1].accepted_entities
+    assert result.extraction_results[1].entities[0].entity_id == "character_she"
+    assert result.extraction_results[1].facts[0].entity_id == "character_she"
+    assert result.database.retrieve_entity("character_she") is not None
+    assert any(
+        decision.status == "ambiguous"
+        and decision.reference.text == "She"
+        and {candidate.entity_id for candidate in decision.candidates}
+        == {"character_charlotte", "character_elaine"}
+        for decision in result.identity_resolutions
+    )
+
+
 def test_runner_resolves_same_scene_description_to_named_identity() -> None:
     """Same-scene descriptive aliases should merge when one named profile supports them."""
     runner = AevrynProjectRunner()
