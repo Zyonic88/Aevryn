@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -1391,6 +1391,7 @@ def create_app(
         import_id: str,
         request_body: EngineRunCreateRequest,
         request: Request,
+        background_tasks: BackgroundTasks,
     ) -> EngineRunOutput:
         """Submit a saved import for durable background engine processing."""
         repository = _require_project_repository(project_repository)
@@ -1454,7 +1455,8 @@ def create_app(
             )
             if auto_process_import_runs:
                 handler = _require_background_job_handler(background_job_handler)
-                _process_submitted_import_run(
+                background_tasks.add_task(
+                    _process_submitted_import_run,
                     repository,
                     queue,
                     handler,
