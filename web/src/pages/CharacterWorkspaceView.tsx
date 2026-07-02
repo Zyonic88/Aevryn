@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { apiClient, type CharacterPreviewRequest } from "../api/client";
 import type { CharacterPreview, CharacterProfile, OutputSection } from "../api/schemas";
 import { EmptyState, ErrorMessage } from "../components/Feedback";
+import { formatSceneScope } from "../formatting/display";
 import {
   DeveloperPreviewToggle,
   ProjectOutputSummaryPanel,
@@ -85,65 +86,65 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
         <section>
           <h2>Character Preview</h2>
           <form className="import-form" onSubmit={submit}>
-          <div className="form-row-grid">
+            <div className="form-row-grid">
+              <label>
+                Source reference
+                <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              </label>
+              <label>
+                Filename
+                <input value={filename} onChange={(event) => setFilename(event.target.value)} />
+              </label>
+            </div>
             <label>
-              Source reference
-              <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+              Title
+              <input value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
             <label>
-              Filename
-              <input value={filename} onChange={(event) => setFilename(event.target.value)} />
-            </label>
-          </div>
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            Source text
-            <textarea
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <label>
-            AI response JSON
-            <textarea
-              value={aiResponseText}
-              onChange={(event) => setAiResponseText(event.target.value)}
-              rows={8}
-            />
-          </label>
-          <div className="form-row-grid">
-            <label>
-              Character IDs
-              <input
-                value={characterIdsText}
-                onChange={(event) => setCharacterIdsText(event.target.value)}
-                placeholder="Optional: character_mark character_luna"
+              Source text
+              <textarea
+                value={sourceText}
+                onChange={(event) => setSourceText(event.target.value)}
+                rows={8}
               />
             </label>
             <label>
-              Scene ID
-              <input
-                value={sceneId}
-                onChange={(event) => setSceneId(event.target.value)}
-                placeholder="Optional scene ID"
+              AI response JSON
+              <textarea
+                value={aiResponseText}
+                onChange={(event) => setAiResponseText(event.target.value)}
+                rows={8}
               />
             </label>
-          </div>
-          {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
-          {previewCharacters.error ? (
-            <ErrorMessage>{previewCharacters.error.message}</ErrorMessage>
-          ) : null}
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={!canSubmit || previewCharacters.isPending}
-          >
-            {previewCharacters.isPending ? "Building preview" : "Preview characters"}
-          </button>
+            <div className="form-row-grid">
+              <label>
+                Character IDs
+                <input
+                  value={characterIdsText}
+                  onChange={(event) => setCharacterIdsText(event.target.value)}
+                  placeholder="Optional: character_mark character_luna"
+                />
+              </label>
+              <label>
+                Scene ID
+                <input
+                  value={sceneId}
+                  onChange={(event) => setSceneId(event.target.value)}
+                  placeholder="Optional scene ID"
+                />
+              </label>
+            </div>
+            {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+            {previewCharacters.error ? (
+              <ErrorMessage>{previewCharacters.error.message}</ErrorMessage>
+            ) : null}
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={!canSubmit || previewCharacters.isPending}
+            >
+              {previewCharacters.isPending ? "Building preview" : "Preview characters"}
+            </button>
           </form>
         </section>
       </DeveloperPreviewToggle>
@@ -159,7 +160,7 @@ function CharacterPreviewResult({ result }: { result: CharacterPreview }) {
       <h2>Character Profiles</h2>
       <p className="result-summary">
         {result.character_profiles.length.toLocaleString()} character profile
-        {result.character_profiles.length === 1 ? "" : "s"} for {result.scene_id}.
+        {result.character_profiles.length === 1 ? "" : "s"} for {formatSceneScope(result.scene_id)}.
       </p>
       {result.character_profiles.length > 0 ? (
         <div className="profile-grid">

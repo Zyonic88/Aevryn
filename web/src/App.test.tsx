@@ -2983,12 +2983,11 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
 
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
-    expect(screen.getByText("source_alpha_chapter_001_scene_001")).toBeInTheDocument();
-    expect(screen.getByText("source_alpha_chapter_002_scene_001")).toBeInTheDocument();
+    expect(screen.getAllByText("Chapter 1, Scene 1").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Chapter 2, Scene 1").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getByText("Current")).toBeInTheDocument();
-    expect(
-      screen.getByText("state_fact_character_mark_current_weapon_iron_sword"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("State change: Mark Current Weapon Iron Sword")).toBeInTheDocument();
   });
 
   it("previews scene sheets from the scenes workspace tab", async () => {
@@ -3010,10 +3009,9 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview scene" }));
 
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
-    expect(
-      screen.getByText("Chapter 1 for source_alpha_chapter_001_scene_001."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Chapter 1 for Chapter 1, Scene 1.")).toBeInTheDocument();
     expect(screen.getAllByText("Hangar").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getAllByText("Mark").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Mark equipped Rusty Dagger").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);
@@ -3036,12 +3034,9 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "source_alpha_chapter_001_scene_001" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "source_alpha_chapter_002_scene_001" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Chapter 1, Scene 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Chapter 2, Scene 1" })).toBeInTheDocument();
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(
       screen.getAllByText((_content, element) => {
         return (
@@ -3057,7 +3052,10 @@ describe("App shell routing", () => {
         );
       }).length,
     ).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/source_alpha_anchor_002/u)).toBeInTheDocument();
+    expect(screen.getAllByText("Evidence from Chapter 2, Scene 1").length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(screen.queryByText(/source_alpha_anchor_002/u)).not.toBeInTheDocument();
   });
 
   it("previews production packs from the prompt packs workspace tab", async () => {
@@ -3091,7 +3089,8 @@ describe("App shell routing", () => {
     expect(
       screen.getAllByText(/Scene Summary: Mark prepares in the hangar/u).length,
     ).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Chapter 1 / source_alpha_chapter_001_scene_001")).toBeInTheDocument();
+    expect(screen.getByText("Chapter 1 / Chapter 1, Scene 1")).toBeInTheDocument();
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);
   });
 
