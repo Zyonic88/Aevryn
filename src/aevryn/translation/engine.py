@@ -26,9 +26,10 @@ class TranslationEngine:
         """Return a normalized unit that still points to original source anchors."""
         text = unit.source_text
         issues: list[TranslationIssue] = []
+        stable_glossary = _validated_glossary(glossary)
 
         for term in sorted(
-            glossary,
+            stable_glossary,
             key=lambda item: (-len(item.source_term), item.source_term.lower()),
         ):
             if term.review_required:
@@ -68,10 +69,22 @@ class TranslationEngine:
         mode: TranslationMode = "clean_english",
     ) -> tuple[TranslatedUnit, ...]:
         """Normalize multiple units deterministically."""
+        stable_glossary = _validated_glossary(glossary)
         return tuple(
-            self.normalize_unit(unit, glossary=glossary, mode=mode)
+            self.normalize_unit(unit, glossary=stable_glossary, mode=mode)
             for unit in units
         )
+
+
+def _validated_glossary(glossary: tuple[GlossaryTerm, ...]) -> tuple[GlossaryTerm, ...]:
+    """Reject duplicate source terms before order can affect normalization."""
+    seen_source_terms: set[str] = set()
+    for term in glossary:
+        normalized_source_term = term.source_term.casefold()
+        if normalized_source_term in seen_source_terms:
+            raise ValueError("Glossary source terms must be unique.")
+        seen_source_terms.add(normalized_source_term)
+    return glossary
 
 
 def _contains_term(text: str, source_term: str) -> bool:

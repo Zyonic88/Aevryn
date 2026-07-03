@@ -109,6 +109,33 @@ def test_translation_glossary_prefers_longer_overlapping_terms() -> None:
     )
 
 
+def test_translation_glossary_rejects_duplicate_source_terms() -> None:
+    """Duplicate glossary source terms should not make normalization order-dependent."""
+    engine = TranslationEngine()
+
+    with pytest.raises(ValueError, match="Glossary source terms must be unique"):
+        engine.normalize_unit(
+            TranslationUnit(
+                unit_id="unit_001_duplicate_terms",
+                source_text="Qi steadied her breath.",
+                evidence_anchor_ids=("anchor_013",),
+            ),
+            glossary=(
+                GlossaryTerm(
+                    source_term="qi",
+                    preferred_term="Qi",
+                    evidence_anchor_id="anchor_013",
+                ),
+                GlossaryTerm(
+                    source_term="QI",
+                    preferred_term="Mystic Energy",
+                    evidence_anchor_id="anchor_013",
+                    review_required=True,
+                ),
+            ),
+        )
+
+
 def test_uncertain_glossary_term_is_preserved_for_review() -> None:
     """Uncertain terms should stay in text and become review issues."""
     engine = TranslationEngine()
