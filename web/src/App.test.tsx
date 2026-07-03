@@ -2930,7 +2930,13 @@ describe("App shell routing", () => {
     expect(screen.getByText("Male")).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
-    expect(screen.getByText("8 normalized scenes; 1 review items")).toBeInTheDocument();
+    expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();
+    expect(screen.getAllByText("Glossary term needs review").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(
+        "Chapter 1, Scene 1; 1 source link preserved; Aevryn preserved an uncertain term for review.",
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText("7 reference decisions; 5 resolved / 1 ambiguous / 1 unresolved"),
     ).toBeInTheDocument();
