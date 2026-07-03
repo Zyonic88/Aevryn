@@ -31,6 +31,9 @@ import { readableOutputItems, readablePromptText } from "./readableOutput";
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
 
+const MAX_VISIBLE_PROMPT_PACKS = 6;
+const MAX_VISIBLE_PROMPT_DETAILS = 10;
+
 export function ProjectOutputSummaryPanel({
   project,
   surface,
@@ -464,24 +467,33 @@ function ContinuityBucket({
 }
 
 function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
+  const visiblePacks = packs.slice(0, MAX_VISIBLE_PROMPT_PACKS);
   return (
-    <div className="profile-grid" aria-label="Prompt packs">
-      {packs.map((pack) => (
-        <article className="profile-card" key={pack.scene.scene_id}>
-          <header>
-            <h3>{pack.scene.title}</h3>
-            <p>{pack.scene.chapter_label}</p>
-          </header>
-          <div className="profile-section-grid">
-            <PromptTextSection section={pack.image_prompt} />
-            <PromptTextSection section={pack.narration_prompt} />
-            <PromptTextSection section={pack.camera_prompt} />
-            <PromptTextSection section={pack.animation_prompt} />
-          </div>
-          <p className="evidence-note">{pack.scene.evidence_summary}</p>
-        </article>
-      ))}
-    </div>
+    <>
+      {packs.length > visiblePacks.length ? (
+        <p className="result-summary">
+          Showing {visiblePacks.length.toLocaleString()} of {packs.length.toLocaleString()} prompt
+          packs.
+        </p>
+      ) : null}
+      <div className="profile-grid" aria-label="Prompt packs">
+        {visiblePacks.map((pack) => (
+          <article className="profile-card" key={pack.scene.scene_id}>
+            <header>
+              <h3>{pack.scene.title}</h3>
+              <p>{pack.scene.chapter_label}</p>
+            </header>
+            <div className="profile-section-grid">
+              <PromptTextSection section={pack.image_prompt} />
+              <PromptTextSection section={pack.narration_prompt} />
+              <PromptTextSection section={pack.camera_prompt} />
+              <PromptTextSection section={pack.animation_prompt} />
+            </div>
+            <p className="evidence-note">{pack.scene.evidence_summary}</p>
+          </article>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -568,7 +580,7 @@ function PromptTextSection({ section }: { section: OutputSection }) {
   return (
     <section className="profile-section prompt-text-section">
       <h4>{section.title}</h4>
-      <p>{readablePromptText(section)}</p>
+      <p>{readablePromptText(section, { maxItems: MAX_VISIBLE_PROMPT_DETAILS })}</p>
     </section>
   );
 }

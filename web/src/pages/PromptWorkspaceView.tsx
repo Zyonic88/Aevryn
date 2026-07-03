@@ -183,7 +183,7 @@ function PromptSection({ section }: { section: OutputSection }) {
   return (
     <section className="profile-section prompt-text-section">
       <h4>{section.title}</h4>
-      <p>{readablePromptText(section)}</p>
+      <p>{readablePromptText(section, { maxItems: 10 })}</p>
     </section>
   );
 }
