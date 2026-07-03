@@ -185,7 +185,7 @@ function placeholderBody(tabId: WorkspaceTabId): string {
   if (tabId === "overview") {
     return "Use Story and Import to add chapters. Monitoring is available when you need workflow diagnostics.";
   }
-  return "This section will render API view models after the import workflow is hardened.";
+  return "This workspace section is not available yet.";
 }
 
 function requireProjectId(projectId: string | undefined): string {

@@ -1170,6 +1170,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.click(await screen.findByText("Diagnostics"));
     const dashboardHealth = await screen.findByRole("region", { name: "API Health" });
     await waitFor(() => expect(dashboardHealth).toHaveTextContent("ok"));
     await user.click(await screen.findByRole("link", { name: /Alpha/ }));
@@ -1448,7 +1449,8 @@ describe("App shell routing", () => {
     expect(window.localStorage.getItem("aevryn.session")).toBeNull();
   });
 
-  it("renders dashboard loading states as status messages", async () => {
+  it("renders dashboard loading states without showing diagnostics by default", async () => {
+    const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
     vi.stubGlobal(
       "fetch",
@@ -1462,13 +1464,19 @@ describe("App shell routing", () => {
     );
 
     const statuses = await screen.findAllByRole("status");
-    expect(statuses).toHaveLength(3);
-    expect(statuses[0]).toHaveTextContent("Checking API health.");
-    expect(statuses[1]).toHaveTextContent("Loading capabilities.");
-    expect(statuses[2]).toHaveTextContent("Loading projects.");
+    expect(statuses).toHaveLength(1);
+    expect(statuses[0]).toHaveTextContent("Loading projects.");
+
+    await user.click(screen.getByText("Diagnostics"));
+    const openStatuses = await screen.findAllByRole("status");
+    expect(openStatuses).toHaveLength(3);
+    expect(openStatuses[0]).toHaveTextContent("Loading projects.");
+    expect(openStatuses[1]).toHaveTextContent("Checking API health.");
+    expect(openStatuses[2]).toHaveTextContent("Loading capabilities.");
   });
 
   it("renders dashboard API errors as alerts", async () => {
+    const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
     vi.stubGlobal(
       "fetch",
@@ -1500,6 +1508,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.click(await screen.findByText("Diagnostics"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Health check failed.");
   });
 
@@ -4269,9 +4278,7 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Locale"), "en-GB");
     await user.click(screen.getByRole("button", { name: "Save settings" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Settings saved for project_alpha.",
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Settings saved.");
   });
 
   it("loads and creates stories from the story workspace tab", async () => {
