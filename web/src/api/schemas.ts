@@ -244,6 +244,8 @@ export const projectLanguageIdentitySummarySchema = z
           chapter_id: z.string().default(""),
           scene_id: z.string().default(""),
           evidence_anchor_id: z.string(),
+          reference_kind: z.string().default("reference"),
+          reference_label: z.string().default("Reference needing review"),
           candidate_count: z.number(),
           confidence: z.number(),
           reason: z.string().default(""),
