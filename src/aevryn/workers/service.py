@@ -496,12 +496,54 @@ def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, o
                 "evidence_anchor_id": decision.reference.evidence_anchor_id,
                 "chapter_id": decision.reference.chapter_id,
                 "scene_id": decision.reference.scene_id,
+                "reference_kind": _identity_reference_kind(decision.reference.text),
+                "reference_label": _identity_reference_label(decision.reference.text),
                 "candidate_count": len(decision.candidates),
                 "reason": _identity_snapshot_reason(decision.status),
             }
             for decision in result.identity_resolutions
         ),
     }
+
+
+def _identity_reference_kind(value: str) -> str:
+    """Classify an identity surface reference without storing source prose."""
+    normalized = value.strip().lower()
+    if normalized in {"he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs"}:
+        return "pronoun"
+    words = tuple(part for part in normalized.replace("-", " ").split() if part)
+    if not words:
+        return "unknown"
+    if len(words) == 1:
+        return "name"
+    if words[0] in {"the", "a", "an"}:
+        words = words[1:]
+    if words and words[-1] in {
+        "captain",
+        "commander",
+        "engineer",
+        "general",
+        "leader",
+        "officer",
+        "student",
+        "teacher",
+    }:
+        return "title"
+    return "description"
+
+
+def _identity_reference_label(value: str) -> str:
+    """Return creator-facing review copy for an identity surface reference."""
+    kind = _identity_reference_kind(value)
+    if kind == "pronoun":
+        return "Pronoun reference"
+    if kind == "name":
+        return "Name reference"
+    if kind == "title":
+        return "Title reference"
+    if kind == "description":
+        return "Description reference"
+    return "Reference needs review"
 
 
 def _identity_snapshot_reason(status: str) -> str:

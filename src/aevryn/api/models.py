@@ -476,6 +476,8 @@ class ProjectIdentityReviewItem(BaseModel):
     chapter_id: str = ""
     scene_id: str = ""
     evidence_anchor_id: str
+    reference_kind: str = "unknown"
+    reference_label: str = "Reference needs review"
     candidate_count: int = 0
     confidence: float = 0.0
     reason: str = ""
