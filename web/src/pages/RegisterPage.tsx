@@ -11,8 +11,8 @@ import { ErrorMessage } from "../components/Feedback";
 export function RegisterPage() {
   const navigate = useNavigate();
   const { setSession } = useAuth();
-  const [displayName, setDisplayName] = useState("Demo User");
-  const [email, setEmail] = useState("demo@example.com");
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -45,7 +45,7 @@ export function RegisterPage() {
     <main className="auth-screen">
       <section className="auth-panel">
         <div>
-          <p className="eyebrow">Aevryn Web Alpha Shell</p>
+          <p className="eyebrow">Aevryn</p>
           <h1>Create account</h1>
         </div>
         <form onSubmit={submit} className="form-stack">

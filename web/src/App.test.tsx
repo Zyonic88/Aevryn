@@ -863,6 +863,9 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
+    expect(screen.getByText("Aevryn")).toBeInTheDocument();
+    expect(screen.queryByText("Aevryn Web Alpha Shell")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toHaveValue("");
   });
 
   it("logs in through the auth API and stores the returned session", async () => {
@@ -874,6 +877,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
@@ -900,6 +904,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
@@ -937,6 +942,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "WrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
@@ -954,6 +960,11 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    expect(await screen.findByRole("heading", { name: "Create account" })).toBeInTheDocument();
+    expect(screen.getByText("Aevryn")).toBeInTheDocument();
+    expect(screen.queryByText("Aevryn Web Alpha Shell")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Display name")).toHaveValue("");
+    expect(screen.getByLabelText("Email")).toHaveValue("");
     await user.clear(screen.getByLabelText("Display name"));
     await user.type(screen.getByLabelText("Display name"), "  Demo   User  ");
     await user.clear(screen.getByLabelText("Email"));
@@ -985,7 +996,8 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    await user.clear(screen.getByLabelText("Password"));
+    await user.type(screen.getByLabelText("Display name"), "Demo User");
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "short");
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
@@ -1025,6 +1037,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
@@ -4296,6 +4309,10 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByText("Unknown workspace section")).toBeInTheDocument();
+    expect(
+      screen.getByText("This project exists, but that workspace section is not available."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Web Alpha Shell/)).not.toBeInTheDocument();
   });
 
   it("loads and saves project settings from the settings workspace tab", async () => {
