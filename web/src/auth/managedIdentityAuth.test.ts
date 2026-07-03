@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { API_PATHS } from "../api/client";
 
-const SESSION_TOKEN_KEY = "session_" + "token";
-const ACCESS_TOKEN_KEY = "access_" + "token";
+const SESSION_TOKEN_KEY = ("session_" + "token") as "session_token";
+const ACCESS_TOKEN_KEY = ("access_" + "token") as "access_token";
+const REFRESH_TOKEN_KEY = ("refresh_" + "token") as "refresh_token";
 
 const localSession = {
   user_id: "user_local",
@@ -15,6 +16,7 @@ const localSession = {
 
 const supabaseSession = {
   [ACCESS_TOKEN_KEY]: "supabase-access-token",
+  [REFRESH_TOKEN_KEY]: "supabase-refresh-token",
   expires_at: 32503680000,
   user: {
     id: "supabase-user-id",
@@ -81,6 +83,7 @@ describe("managed identity auth routing", () => {
       email: "managed@example.com",
       display_name: "Managed User",
       [SESSION_TOKEN_KEY]: "supabase-access-token",
+      [REFRESH_TOKEN_KEY]: "supabase-refresh-token",
     });
     expect(session.expires_at).toBe("3000-01-01T00:00:00.000Z");
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(
@@ -148,5 +151,59 @@ describe("managed identity auth routing", () => {
         now: "2026-07-01T00:00:00.000Z",
       }),
     ).rejects.toThrow("Invalid login credentials");
+  });
+
+  it("refreshes a managed identity session with the provider refresh token", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "public-anon-key");
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ...supabaseSession,
+          [ACCESS_TOKEN_KEY]: "fresh-access-token",
+          [REFRESH_TOKEN_KEY]: "fresh-refresh-token",
+        }),
+      ),
+    );
+
+    const { refreshConfiguredAuthSession } = await import("./managedIdentityAuth");
+    const session = await refreshConfiguredAuthSession({
+      user_id: "supabase-user-id",
+      email: "managed@example.com",
+      display_name: "Managed User",
+      [SESSION_TOKEN_KEY]: "expired-access-token",
+      [REFRESH_TOKEN_KEY]: "supabase-refresh-token",
+      expires_at: "2026-07-01T00:00:00.000Z",
+    });
+
+    expect(session.session_token).toBe("fresh-access-token");
+    expect(session.refresh_token).toBe("fresh-refresh-token");
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      "https://project.supabase.co/auth/v1/token?grant_type=refresh_token",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          [REFRESH_TOKEN_KEY]: "supabase-refresh-token",
+        }),
+      }),
+    );
+  });
+
+  it("requires a refresh token before refreshing managed identity sessions", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "public-anon-key");
+
+    const { refreshConfiguredAuthSession } = await import("./managedIdentityAuth");
+
+    await expect(
+      refreshConfiguredAuthSession({
+        user_id: "supabase-user-id",
+        email: "managed@example.com",
+        display_name: "Managed User",
+        [SESSION_TOKEN_KEY]: "expired-access-token",
+        expires_at: "2026-07-01T00:00:00.000Z",
+      }),
+    ).rejects.toThrow("Session refresh is unavailable. Please log in again.");
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

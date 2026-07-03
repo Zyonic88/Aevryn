@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   clearStoredSession,
+  isSessionRefreshable,
   isSessionExpired,
   readStoredSession,
   writeStoredSession,
@@ -53,6 +54,20 @@ describe("session storage", () => {
     expect(window.localStorage.getItem("aevryn.session")).toBeNull();
   });
 
+  it("keeps expired sessions when a refresh token is available", () => {
+    const refreshableSession = {
+      ...session,
+      refresh_token: "refresh-token",
+      expires_at: "2026-06-27T00:00:00.000Z",
+    };
+    window.localStorage.setItem("aevryn.session", JSON.stringify(refreshableSession));
+
+    expect(readStoredSession(window.localStorage, new Date("2026-06-27T00:00:01.000Z"))).toEqual(
+      refreshableSession,
+    );
+    expect(window.localStorage.getItem("aevryn.session")).not.toBeNull();
+  });
+
   it("returns null when browser storage cannot be read", () => {
     expect(readStoredSession(throwingStorage())).toBeNull();
   });
@@ -67,6 +82,11 @@ describe("session storage", () => {
 
   it("treats invalid expiration timestamps as expired", () => {
     expect(isSessionExpired({ ...session, expires_at: "not a date" })).toBe(true);
+  });
+
+  it("detects refreshable sessions", () => {
+    expect(isSessionRefreshable({ ...session, refresh_token: "refresh-token" })).toBe(true);
+    expect(isSessionRefreshable(session)).toBe(false);
   });
 });
 

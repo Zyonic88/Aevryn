@@ -49,6 +49,7 @@ export const authSessionSchema = z.object({
   email: z.string(),
   display_name: z.string(),
   session_token: z.string(),
+  refresh_token: z.string().optional(),
   expires_at: z.string(),
 });
 
