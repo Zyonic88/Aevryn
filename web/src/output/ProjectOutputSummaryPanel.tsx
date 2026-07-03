@@ -136,7 +136,7 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
   ].join(" / ");
   const translationStatus =
     summary.translation_review_count > 0
-      ? `${summary.translation_review_count.toLocaleString()} review items`
+      ? reviewItemCountLabel(summary.translation_review_count)
       : "No review items";
   return (
     <div
@@ -155,6 +155,12 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
           {summary.identity_decision_count.toLocaleString()} reference decisions; {identityDetails}
         </span>
       </div>
+      {summary.translation_review_items.slice(0, 4).map((item) => (
+        <div className="compact-row" key={translationReviewKey(item)}>
+          <strong>{item.issue_label}</strong>
+          <span>{translationReviewLabel(item)}</span>
+        </div>
+      ))}
       {summary.identity_review_items.slice(0, 4).map((item) => (
         <div className="compact-row" key={identityReviewKey(item)}>
           <strong>{identityReviewStatusLabel(item.status)}</strong>
@@ -163,6 +169,31 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
       ))}
     </div>
   );
+}
+
+function reviewItemCountLabel(count: number): string {
+  return count === 1 ? "1 review item" : `${count.toLocaleString()} review items`;
+}
+
+function translationReviewKey(
+  item: ProjectOutputs["language_identity"]["translation_review_items"][number],
+): string {
+  return [
+    item.issue_code,
+    item.chapter_id,
+    item.scene_id,
+    item.evidence_anchor_count,
+  ].join(":");
+}
+
+function translationReviewLabel(
+  item: ProjectOutputs["language_identity"]["translation_review_items"][number],
+): string {
+  const sourceLinkLabel =
+    item.evidence_anchor_count === 1
+      ? "1 source link preserved"
+      : `${item.evidence_anchor_count.toLocaleString()} source links preserved`;
+  return `${readableSceneScope(item)}; ${sourceLinkLabel}; ${item.reason || "Aevryn held this translation for review"}`;
 }
 
 function identityReviewKey(
@@ -220,7 +251,9 @@ function identityReviewAction(status: string): string {
 }
 
 function readableSceneScope(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
+  item:
+    | ProjectOutputs["language_identity"]["identity_review_items"][number]
+    | ProjectOutputs["language_identity"]["translation_review_items"][number],
 ): string {
   const sceneMatch = item.scene_id.match(/_chapter_(\d+)_scene_(\d+)$/);
   if (sceneMatch) {
