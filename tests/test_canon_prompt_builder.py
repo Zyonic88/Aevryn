@@ -3,14 +3,14 @@
 import pytest
 
 from aevryn import (
-    CanonPromptBuilder,
     CanonDatabase,
+    CanonPromptBuilder,
     CanonSceneContext,
     CharacterCardBuilder,
-    StoryImporter,
     SceneAnalysis,
     SceneAnalyzer,
     SceneContextBuilder,
+    StoryImporter,
 )
 from aevryn.core import Character, Entity, Evidence, Fact, StateChange, TimelineEvent
 from tests.test_scene_context_builder import build_database, build_imported_source
