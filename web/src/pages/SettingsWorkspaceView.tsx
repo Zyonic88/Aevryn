@@ -96,9 +96,7 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
           </label>
           {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
           {updateSettings.error ? <ErrorMessage>{updateSettings.error.message}</ErrorMessage> : null}
-          {savedSettings ? (
-            <p role="status">Settings saved for {savedSettings.project_id}.</p>
-          ) : null}
+          {savedSettings ? <p role="status">Settings saved.</p> : null}
           <button
             type="submit"
             className="primary-button"
