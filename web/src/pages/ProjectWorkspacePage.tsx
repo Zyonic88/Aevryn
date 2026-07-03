@@ -11,6 +11,7 @@ import { ContinuityWorkspaceView } from "./ContinuityWorkspaceView";
 import { ExportWorkspaceView } from "./ExportWorkspaceView";
 import { ImportWorkspaceView } from "./ImportWorkspaceView";
 import { MonitoringWorkspaceView } from "./MonitoringWorkspaceView";
+import { OverviewWorkspaceView } from "./OverviewWorkspaceView";
 import { PromptWorkspaceView } from "./PromptWorkspaceView";
 import { SceneWorkspaceView } from "./SceneWorkspaceView";
 import { SettingsWorkspaceView } from "./SettingsWorkspaceView";
@@ -111,6 +112,9 @@ function WorkspaceTabContent({
   label: string;
   project: ProjectSummary;
 }) {
+  if (tabId === "overview") {
+    return <OverviewWorkspaceView project={project} />;
+  }
   if (tabId === "import") {
     return <ImportWorkspaceView project={project} />;
   }

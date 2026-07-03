@@ -553,6 +553,8 @@ const projectOutputsPayload = {
         chapter_id: "source_alpha_chapter_001",
         scene_id: "source_alpha_chapter_001_scene_001",
         evidence_anchor_id: "anchor_001",
+        reference_kind: "title",
+        reference_label: "The general",
         candidate_count: 2,
         confidence: 0.87,
         reason: "Multiple identity profiles have equal confidence.",
@@ -562,6 +564,8 @@ const projectOutputsPayload = {
         chapter_id: "source_alpha_chapter_001",
         scene_id: "source_alpha_chapter_001_scene_002",
         evidence_anchor_id: "anchor_002",
+        reference_kind: "description",
+        reference_label: "the white-haired officer",
         candidate_count: 0,
         confidence: 0,
         reason: "No supported identity match was found.",
@@ -1133,6 +1137,9 @@ describe("App shell routing", () => {
       }
       if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
         return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+      }
+      if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+        return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
       }
       return Promise.resolve(new Response("{}", { status: 404 }));
     });
@@ -2932,6 +2939,30 @@ describe("App shell routing", () => {
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getByText("11 verified facts")).toBeInTheDocument();
+  });
+
+  it("renders a safe project overview with identity review metadata", async () => {
+    storeAuthenticatedProject();
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/overview"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Language And Identity" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Title: The general")).toBeInTheDocument();
+    expect(
+      screen.getByText("Chapter 1, Scene 1; 2 possible matches; 87% confidence; held for review"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Description: the white-haired officer")).toBeInTheDocument();
+    expect(
+      screen.getByText("Chapter 1, Scene 2; no supported match; left unresolved"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {
