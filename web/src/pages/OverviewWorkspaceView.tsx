@@ -6,6 +6,13 @@ import type { ProjectOutputs } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, LoadingMessage } from "../components/Feedback";
 import { formatDateTime, formatRunStatus } from "../formatting/display";
+import {
+  identityReviewDetails as identityReviewDetailsLabel,
+  identityReviewKey,
+  identityReviewTitle,
+  translationReviewDetails,
+  translationReviewKey,
+} from "../output/languageIdentityDisplay";
 import type { ProjectSummary } from "../projects/projectStore";
 
 export function OverviewWorkspaceView({ project }: { project: ProjectSummary }) {
@@ -124,7 +131,7 @@ function ProjectOverview({
             {outputs.language_identity.translation_review_items.slice(0, 6).map((item) => (
               <div className="compact-row" key={translationReviewKey(item)}>
                 <strong>{item.issue_label}</strong>
-                <span>{translationReviewDetails(item)}</span>
+                <span>{translationReviewDetails(item, "held for review")}</span>
               </div>
             ))}
           </div>
@@ -149,66 +156,10 @@ function identityReviewCount(summary: ProjectOutputs["language_identity"]): numb
   );
 }
 
-function translationReviewDetails(
-  item: ProjectOutputs["language_identity"]["translation_review_items"][number],
-): string {
-  const anchorLabel =
-    item.evidence_anchor_count === 1
-      ? "1 source link preserved"
-      : `${item.evidence_anchor_count.toLocaleString()} source links preserved`;
-  return `${readableSceneScope(item)}; ${anchorLabel}; ${item.reason || "held for review"}`;
-}
-
-function translationReviewKey(
-  item: ProjectOutputs["language_identity"]["translation_review_items"][number],
-): string {
-  return [
-    item.issue_code,
-    item.chapter_id,
-    item.scene_id,
-    item.evidence_anchor_count,
-  ].join(":");
-}
-
-function identityReviewTitle(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  const kind = readableLabel(item.reference_kind || "reference");
-  return `${kind}: ${item.reference_label || "Reference needing review"}`;
-}
-
 function identityReviewDetails(
   item: ProjectOutputs["language_identity"]["identity_review_items"][number],
 ): string {
-  const confidence = Math.round(item.confidence * 100);
-  const confidenceLabel = confidence > 0 ? `; ${confidence}% confidence` : "";
-  return `${readableSceneScope(item)}; ${identityCandidateLabel(item)}${confidenceLabel}; ${identityActionLabel(item.status)}`;
-}
-
-function identityReviewKey(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  return [
-    item.status,
-    item.chapter_id,
-    item.scene_id,
-    item.evidence_anchor_id,
-    item.reference_kind,
-    item.reference_label,
-    item.candidate_count,
-  ].join(":");
-}
-
-function identityCandidateLabel(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  if (item.candidate_count === 0) {
-    return "no supported match";
-  }
-  if (item.candidate_count === 1) {
-    return "1 possible match";
-  }
-  return `${item.candidate_count.toLocaleString()} possible matches`;
+  return identityReviewDetailsLabel(item, identityActionLabel(item.status));
 }
 
 function identityActionLabel(status: string): string {
@@ -219,30 +170,6 @@ function identityActionLabel(status: string): string {
     return "left unresolved";
   }
   return "marked for review";
-}
-
-function readableSceneScope(
-  item:
-    | ProjectOutputs["language_identity"]["identity_review_items"][number]
-    | ProjectOutputs["language_identity"]["translation_review_items"][number],
-): string {
-  const sceneMatch = item.scene_id.match(/_chapter_(\d+)_scene_(\d+)$/);
-  if (sceneMatch) {
-    return `Chapter ${Number(sceneMatch[1])}, Scene ${Number(sceneMatch[2])}`;
-  }
-  const chapterMatch = item.chapter_id.match(/_chapter_(\d+)$/);
-  if (chapterMatch) {
-    return `Chapter ${Number(chapterMatch[1])}`;
-  }
-  return "Scene evidence";
-}
-
-function readableLabel(value: string): string {
-  return value
-    .split("_")
-    .filter(Boolean)
-    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
-    .join(" ");
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

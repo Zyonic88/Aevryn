@@ -18,6 +18,14 @@ import { useAuth } from "../auth/useAuth";
 import { EmptyState, LoadingMessage } from "../components/Feedback";
 import { formatDateTime, formatRunStatus } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
+import {
+  identityReviewDetails,
+  identityReviewKey,
+  identityReviewStatusLabel,
+  reviewItemCountLabel,
+  translationReviewDetails,
+  translationReviewKey,
+} from "./languageIdentityDisplay";
 import { readableOutputItems, readablePromptText } from "./readableOutput";
 
 type OutputSurface =
@@ -158,86 +166,17 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
       {summary.translation_review_items.slice(0, 4).map((item) => (
         <div className="compact-row" key={translationReviewKey(item)}>
           <strong>{item.issue_label}</strong>
-          <span>{translationReviewLabel(item)}</span>
+          <span>{translationReviewDetails(item)}</span>
         </div>
       ))}
       {summary.identity_review_items.slice(0, 4).map((item) => (
         <div className="compact-row" key={identityReviewKey(item)}>
           <strong>{identityReviewStatusLabel(item.status)}</strong>
-          <span>{identityReviewLabel(item)}</span>
+          <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
         </div>
       ))}
     </div>
   );
-}
-
-function reviewItemCountLabel(count: number): string {
-  return count === 1 ? "1 review item" : `${count.toLocaleString()} review items`;
-}
-
-function translationReviewKey(
-  item: ProjectOutputs["language_identity"]["translation_review_items"][number],
-): string {
-  return [
-    item.issue_code,
-    item.chapter_id,
-    item.scene_id,
-    item.evidence_anchor_count,
-  ].join(":");
-}
-
-function translationReviewLabel(
-  item: ProjectOutputs["language_identity"]["translation_review_items"][number],
-): string {
-  const sourceLinkLabel =
-    item.evidence_anchor_count === 1
-      ? "1 source link preserved"
-      : `${item.evidence_anchor_count.toLocaleString()} source links preserved`;
-  return `${readableSceneScope(item)}; ${sourceLinkLabel}; ${item.reason || "Aevryn held this translation for review"}`;
-}
-
-function identityReviewKey(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  return [
-    item.status,
-    item.chapter_id,
-    item.scene_id,
-    item.evidence_anchor_id,
-    item.candidate_count,
-  ].join(":");
-}
-
-function identityReviewLabel(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  const scope = readableSceneScope(item);
-  const confidence = Math.round(item.confidence * 100);
-  const candidateLabel = identityCandidateLabel(item);
-  const confidenceLabel = confidence > 0 ? `; ${confidence}% confidence` : "";
-  return `${scope}; ${candidateLabel}${confidenceLabel}; ${identityReviewAction(item.status)}`;
-}
-
-function identityReviewStatusLabel(status: string): string {
-  if (status === "ambiguous") {
-    return "Needs review";
-  }
-  if (status === "unresolved") {
-    return "Unresolved reference";
-  }
-  return readableLabel(status);
-}
-
-function identityCandidateLabel(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  if (item.candidate_count === 0) {
-    return "no supported match";
-  }
-  if (item.candidate_count === 1) {
-    return "1 possible match";
-  }
-  return `${item.candidate_count.toLocaleString()} possible matches`;
 }
 
 function identityReviewAction(status: string): string {
@@ -248,22 +187,6 @@ function identityReviewAction(status: string): string {
     return "Aevryn left this reference unresolved";
   }
   return "Aevryn marked this reference for review";
-}
-
-function readableSceneScope(
-  item:
-    | ProjectOutputs["language_identity"]["identity_review_items"][number]
-    | ProjectOutputs["language_identity"]["translation_review_items"][number],
-): string {
-  const sceneMatch = item.scene_id.match(/_chapter_(\d+)_scene_(\d+)$/);
-  if (sceneMatch) {
-    return `Chapter ${Number(sceneMatch[1])}, Scene ${Number(sceneMatch[2])}`;
-  }
-  const chapterMatch = item.chapter_id.match(/_chapter_(\d+)$/);
-  if (chapterMatch) {
-    return `Chapter ${Number(chapterMatch[1])}`;
-  }
-  return "Unknown scene";
 }
 
 function ReadableSurfacePanels({
