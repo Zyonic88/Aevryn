@@ -470,10 +470,32 @@ def _translation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]
                 "source_scene_id": unit.source_scene_id,
                 "source_evidence_anchor_ids": unit.source_evidence_anchor_ids,
                 "issue_count": len(unit.issues),
+                "issues": tuple(
+                    {
+                        "issue_code": _translation_issue_code(issue.issue_code),
+                        "issue_label": _translation_issue_label(issue.issue_code),
+                        "evidence_anchor_count": len(issue.evidence_anchor_ids),
+                    }
+                    for issue in unit.issues
+                ),
             }
             for unit in result.translation_units
         ),
     }
+
+
+def _translation_issue_code(value: str) -> str:
+    """Return a stable translation issue code without storing source terms."""
+    if value == "translation_review_required":
+        return value
+    return "translation_review_required"
+
+
+def _translation_issue_label(value: str) -> str:
+    """Return metadata-only translation review label."""
+    if _translation_issue_code(value) == "translation_review_required":
+        return "Glossary term needs review"
+    return "Translation needs review"
 
 
 def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, object]:

@@ -119,6 +119,16 @@ function ProjectOverview({
         ) : (
           <p className="result-summary">No identity review items in the latest snapshot.</p>
         )}
+        {outputs.language_identity.translation_review_items.length > 0 ? (
+          <div className="compact-list" aria-label="Translation review items">
+            {outputs.language_identity.translation_review_items.slice(0, 6).map((item) => (
+              <div className="compact-row" key={translationReviewKey(item)}>
+                <strong>{item.issue_label}</strong>
+                <span>{translationReviewDetails(item)}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </section>
     </>
   );
@@ -132,7 +142,32 @@ function snapshotLabel(outputs: ProjectOutputs): string {
 }
 
 function identityReviewCount(summary: ProjectOutputs["language_identity"]): number {
-  return summary.identity_ambiguous_count + summary.identity_unresolved_count;
+  return (
+    summary.identity_ambiguous_count +
+    summary.identity_unresolved_count +
+    summary.translation_review_count
+  );
+}
+
+function translationReviewDetails(
+  item: ProjectOutputs["language_identity"]["translation_review_items"][number],
+): string {
+  const anchorLabel =
+    item.evidence_anchor_count === 1
+      ? "1 source link preserved"
+      : `${item.evidence_anchor_count.toLocaleString()} source links preserved`;
+  return `${readableSceneScope(item)}; ${anchorLabel}; ${item.reason || "held for review"}`;
+}
+
+function translationReviewKey(
+  item: ProjectOutputs["language_identity"]["translation_review_items"][number],
+): string {
+  return [
+    item.issue_code,
+    item.chapter_id,
+    item.scene_id,
+    item.evidence_anchor_count,
+  ].join(":");
 }
 
 function identityReviewTitle(
@@ -187,7 +222,9 @@ function identityActionLabel(status: string): string {
 }
 
 function readableSceneScope(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
+  item:
+    | ProjectOutputs["language_identity"]["identity_review_items"][number]
+    | ProjectOutputs["language_identity"]["translation_review_items"][number],
 ): string {
   const sceneMatch = item.scene_id.match(/_chapter_(\d+)_scene_(\d+)$/);
   if (sceneMatch) {

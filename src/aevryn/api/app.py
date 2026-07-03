@@ -94,6 +94,7 @@ from aevryn.api.models import (
     ProjectStatusSnapshots,
     ProjectStatusWorker,
     ProjectTimelineChangeOutput,
+    ProjectTranslationReviewItem,
     ProjectWorkflowEvent,
     PromptPreviewRequest,
     PromptPreviewResponse,
@@ -3006,12 +3007,73 @@ def _project_language_identity_summary(
     return ProjectLanguageIdentitySummary(
         translation_unit_count=_int_payload_value(translation, "unit_count"),
         translation_review_count=_int_payload_value(translation, "issue_count"),
+        translation_review_items=_translation_review_items(translation),
         identity_decision_count=_int_payload_value(resolution, "decision_count"),
         identity_resolved_count=_int_payload_value(status_counts, "resolved"),
         identity_ambiguous_count=_int_payload_value(status_counts, "ambiguous"),
         identity_unresolved_count=_int_payload_value(status_counts, "unresolved"),
         identity_review_items=_identity_review_items(resolution),
     )
+
+
+def _translation_review_items(
+    translation_payload: Mapping[str, object],
+) -> tuple[ProjectTranslationReviewItem, ...]:
+    """Return translation review issues without source terms or translated text."""
+    units = translation_payload.get("units")
+    if not isinstance(units, list):
+        return ()
+    items: list[ProjectTranslationReviewItem] = []
+    for unit in units:
+        if not isinstance(unit, dict):
+            continue
+        issues = unit.get("issues")
+        if not isinstance(issues, list):
+            continue
+        for issue in issues:
+            if not isinstance(issue, dict):
+                continue
+            issue_code = _translation_issue_code(
+                _string_payload_value(issue, "issue_code")
+            )
+            try:
+                items.append(
+                    ProjectTranslationReviewItem(
+                        issue_code=issue_code,
+                        issue_label=_translation_issue_label(issue_code),
+                        chapter_id=_string_payload_value(unit, "source_chapter_id"),
+                        scene_id=_string_payload_value(unit, "source_scene_id"),
+                        evidence_anchor_count=_int_payload_value(
+                            issue,
+                            "evidence_anchor_count",
+                        ),
+                        reason=_translation_review_reason(issue_code),
+                    )
+                )
+            except (ValueError, ValidationError):
+                continue
+    return tuple(items[:12])
+
+
+def _translation_issue_code(value: str) -> str:
+    """Return a stable bounded translation issue code."""
+    if value == "translation_review_required":
+        return value
+    return "translation_review_required"
+
+
+def _translation_issue_label(issue_code: str) -> str:
+    """Return creator-facing translation review copy."""
+    if issue_code == "translation_review_required":
+        return "Glossary term needs review"
+    return "Translation needs review"
+
+
+def _translation_review_reason(issue_code: str) -> str:
+    """Return stable metadata-only translation review copy."""
+    if issue_code == "translation_review_required":
+        return "Aevryn preserved an uncertain term for review."
+    return "Aevryn preserved uncertain translation context for review."
 
 
 def _identity_review_items(

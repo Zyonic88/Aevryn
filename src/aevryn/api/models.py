@@ -483,6 +483,19 @@ class ProjectIdentityReviewItem(BaseModel):
     reason: str = ""
 
 
+class ProjectTranslationReviewItem(BaseModel):
+    """Metadata-only translation issue that needs review."""
+
+    model_config = ConfigDict(frozen=True)
+
+    issue_code: str
+    issue_label: str
+    chapter_id: str = ""
+    scene_id: str = ""
+    evidence_anchor_count: int = 0
+    reason: str = ""
+
+
 class ProjectLanguageIdentitySummary(BaseModel):
     """Metadata-only Phase 12 language and identity summary."""
 
@@ -490,6 +503,7 @@ class ProjectLanguageIdentitySummary(BaseModel):
 
     translation_unit_count: int = 0
     translation_review_count: int = 0
+    translation_review_items: tuple[ProjectTranslationReviewItem, ...] = ()
     identity_decision_count: int = 0
     identity_resolved_count: int = 0
     identity_ambiguous_count: int = 0

@@ -1017,6 +1017,13 @@ def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> No
                 "source_scene_id": "source_demo_chapter_001_scene_001",
                 "target_language": "en",
                 "unit_id": "translation_source_demo_chapter_001_scene_001",
+                "issues": [
+                    {
+                        "evidence_anchor_count": 1,
+                        "issue_code": "translation_review_required",
+                        "issue_label": "Glossary term needs review",
+                    }
+                ],
             }
         ],
     }

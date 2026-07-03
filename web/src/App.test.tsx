@@ -542,7 +542,17 @@ const projectOutputsPayload = {
   ],
   language_identity: {
     translation_unit_count: 8,
-    translation_review_count: 0,
+    translation_review_count: 1,
+    translation_review_items: [
+      {
+        issue_code: "translation_review_required",
+        issue_label: "Glossary term needs review",
+        chapter_id: "source_alpha_chapter_001",
+        scene_id: "source_alpha_chapter_001_scene_001",
+        evidence_anchor_count: 1,
+        reason: "Aevryn preserved an uncertain term for review.",
+      },
+    ],
     identity_decision_count: 7,
     identity_resolved_count: 5,
     identity_ambiguous_count: 1,
@@ -2920,7 +2930,7 @@ describe("App shell routing", () => {
     expect(screen.getByText("Male")).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
-    expect(screen.getByText("8 normalized scenes; No review items")).toBeInTheDocument();
+    expect(screen.getByText("8 normalized scenes; 1 review items")).toBeInTheDocument();
     expect(
       screen.getByText("7 reference decisions; 5 resolved / 1 ambiguous / 1 unresolved"),
     ).toBeInTheDocument();
@@ -2960,6 +2970,12 @@ describe("App shell routing", () => {
     expect(screen.getByText("Description: the white-haired officer")).toBeInTheDocument();
     expect(
       screen.getByText("Chapter 1, Scene 2; no supported match; left unresolved"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Glossary term needs review")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Chapter 1, Scene 1; 1 source link preserved; Aevryn preserved an uncertain term for review.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
