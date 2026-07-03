@@ -643,6 +643,15 @@ const projectOutputsPayload = {
   ],
 };
 
+const manyPromptPacks = Array.from({ length: 8 }, (_, index) => ({
+  ...promptPreviewPayload.production_pack,
+  scene: {
+    ...promptPreviewPayload.production_pack.scene,
+    scene_id: `scene_${index + 1}`,
+    title: `Scene ${index + 1}`,
+  },
+}));
+
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
   window.localStorage.setItem("aevryn.projects", JSON.stringify([projectAlpha]));
@@ -2985,6 +2994,48 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
+  });
+
+  it("bounds rendered prompt packs so large projects stay responsive", async () => {
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...projectOutputsPayload,
+                prompt_packs: manyPromptPacks,
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/prompts"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole("region", { name: "Processed project output" }),
+    ).toHaveTextContent("Showing 6 of 8 prompt packs");
+    expect(screen.getByRole("heading", { name: "Scene 6" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Scene 7" })).not.toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {
