@@ -1721,6 +1721,8 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
             "evidence_anchor_id": (
                 "source_alpha_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
             ),
+            "reference_kind": "name",
+            "reference_label": "Name reference",
             "candidate_count": 0,
             "confidence": 0.0,
             "reason": "Identity could not be matched with enough evidence.",
@@ -1806,6 +1808,8 @@ def test_project_outputs_identity_review_reasons_are_stable_metadata() -> None:
                                 "chapter_id": "source_alpha_chapter_001",
                                 "scene_id": "source_alpha_chapter_001_scene_001",
                                 "evidence_anchor_id": "anchor_001",
+                                "reference_kind": "description",
+                                "reference_label": "Description reference",
                                 "candidate_count": 2,
                                 "confidence": 0.58,
                                 "reason": "Mark carried a rusty dagger in the original scene.",
@@ -1828,6 +1832,8 @@ def test_project_outputs_identity_review_reasons_are_stable_metadata() -> None:
             "chapter_id": "source_alpha_chapter_001",
             "scene_id": "source_alpha_chapter_001_scene_001",
             "evidence_anchor_id": "anchor_001",
+            "reference_kind": "description",
+            "reference_label": "Description reference",
             "candidate_count": 2,
             "confidence": 0.58,
             "reason": "Identity has multiple possible matches and needs review.",

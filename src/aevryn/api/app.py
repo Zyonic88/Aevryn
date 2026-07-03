@@ -3038,6 +3038,12 @@ def _identity_review_items(
                         decision,
                         "evidence_anchor_id",
                     ),
+                    reference_kind=_identity_review_reference_kind(
+                        _string_payload_value(decision, "reference_kind")
+                    ),
+                    reference_label=_identity_review_reference_label(
+                        _string_payload_value(decision, "reference_label")
+                    ),
                     candidate_count=_int_payload_value(decision, "candidate_count"),
                     confidence=_float_payload_value(decision, "confidence"),
                     reason=_identity_review_reason(status),
@@ -3046,6 +3052,25 @@ def _identity_review_items(
         except (ValueError, ValidationError):
             continue
     return tuple(items[:12])
+
+
+def _identity_review_reference_kind(value: str) -> str:
+    """Return a stable bounded identity reference kind."""
+    if value in {"name", "title", "description", "pronoun"}:
+        return value
+    return "unknown"
+
+
+def _identity_review_reference_label(value: str) -> str:
+    """Return safe identity review label copy."""
+    if value in {
+        "Name reference",
+        "Title reference",
+        "Description reference",
+        "Pronoun reference",
+    }:
+        return value
+    return "Reference needs review"
 
 
 def _identity_review_reason(status: str) -> str:

@@ -949,6 +949,8 @@ def test_canon_snapshot_payload_stores_stable_identity_review_reasons() -> None:
                 "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
             ),
             "reason": "Identity has multiple possible matches and needs review.",
+            "reference_kind": "description",
+            "reference_label": "Description reference",
             "scene_id": "source_demo_chapter_001_scene_001",
             "status": "ambiguous",
         }
