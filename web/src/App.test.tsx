@@ -2977,6 +2977,39 @@ describe("App shell routing", () => {
 
   it("renders a safe project overview with identity review metadata", async () => {
     storeAuthenticatedProject();
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              ...projectOutputsPayload,
+              language_identity: {
+                ...projectOutputsPayload.language_identity,
+                identity_review_items: [
+                  ...projectOutputsPayload.language_identity.identity_review_items,
+                  {
+                    ...projectOutputsPayload.language_identity.identity_review_items[1],
+                    evidence_anchor_id: "anchor_003",
+                  },
+                ],
+              },
+            }),
+          ),
+        );
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
     render(
       <MemoryRouter initialEntries={["/projects/project_alpha/overview"]}>
         <App />
@@ -2985,15 +3018,19 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: "Language And Identity" }),
+      await screen.findByRole("heading", { name: "Language and Identity" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View monitoring" })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/monitoring",
+    );
     expect(screen.getByText("Title: The general")).toBeInTheDocument();
     expect(
       screen.getByText("Chapter 1, Scene 1; 2 possible matches; 87% confidence; held for review"),
     ).toBeInTheDocument();
     expect(screen.getByText("Description: the white-haired officer")).toBeInTheDocument();
     expect(
-      screen.getByText("Chapter 1, Scene 2; no supported match; left unresolved"),
+      screen.getByText("Chapter 1, Scene 2; 2 similar references; no supported match; left unresolved"),
     ).toBeInTheDocument();
     expect(screen.getByText("Glossary term needs review")).toBeInTheDocument();
     expect(

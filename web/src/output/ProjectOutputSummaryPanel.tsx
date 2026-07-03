@@ -19,6 +19,7 @@ import { EmptyState, LoadingMessage } from "../components/Feedback";
 import { formatDateTime, formatRunStatus } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
 import {
+  compactIdentityReviewItems,
   identityReviewDetails,
   identityReviewKey,
   identityReviewStatusLabel,
@@ -172,7 +173,7 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
           <span>{translationReviewDetails(item)}</span>
         </div>
       ))}
-      {summary.identity_review_items.slice(0, 4).map((item) => (
+      {compactIdentityReviewItems(summary.identity_review_items, 4).map((item) => (
         <div className="compact-row" key={identityReviewKey(item)}>
           <strong>{identityReviewStatusLabel(item.status)}</strong>
           <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
