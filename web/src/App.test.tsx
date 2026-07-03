@@ -1023,7 +1023,7 @@ describe("App shell routing", () => {
     expect(window.localStorage.getItem("aevryn.session")).toBeNull();
   });
 
-  it("recovers the requested workspace route after session expiry and login", async () => {
+  it("lands on the dashboard after session expiry and login", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem(
       "aevryn.session",
@@ -1041,11 +1041,8 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
-    expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument();
-    expect(
-      await screen.findByRole("region", { name: "Current project run state" }),
-    ).toHaveTextContent("succeeded");
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Monitoring" })).not.toBeInTheDocument();
   });
 
   it("redirects authenticated users away from auth screens", async () => {
