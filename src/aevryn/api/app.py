@@ -3789,7 +3789,7 @@ def _snapshot_text_looks_anchor_derived(value: str) -> bool:
 def _strip_snapshot_internal_entity_suffixes(value: str) -> str:
     """Remove parenthesized internal entity IDs from old prompt lines."""
     return re.sub(
-        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill)_[A-Za-z0-9_]+)\)",
+        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)\)",
         "",
         value,
     )
@@ -3806,7 +3806,7 @@ def _replace_snapshot_entity_tokens(
         return _snapshot_entity_label(match.group(0), display_names=display_names)
 
     return re.sub(
-        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
+        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
         replacement,
         value,
     )
@@ -3844,6 +3844,7 @@ def _snapshot_entity_label(
         "organization_",
         "vehicle_",
         "skill_",
+        "system_",
     ):
         if entity_id.startswith(prefix):
             return _title_preserving_snapshot_acronyms(
@@ -3875,6 +3876,7 @@ def _snapshot_text_looks_prefixed_entity_id(value: str) -> bool:
             "organization_",
             "vehicle_",
             "skill_",
+            "system_",
         )
     )
 

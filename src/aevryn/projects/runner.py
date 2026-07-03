@@ -1313,12 +1313,18 @@ def _identity_profile_from_parts(
     evidence_anchor_ids: set[str],
 ) -> EntityIdentityProfile:
     """Create one identity profile with useful composite descriptions."""
+    composite_aliases = set(aliases)
     composite_descriptions = set(descriptions)
     genders = {
         description
         for description in descriptions
         if description.lower() in {"male", "female", "man", "woman"}
     }
+    name_surfaces = {entity.display_name, *aliases}
+    for title in titles:
+        for name in name_surfaces:
+            composite_aliases.add(f"{title} {name}")
+            composite_aliases.add(f"{name} {title}")
     for gender in genders:
         for title in titles:
             composite_descriptions.add(f"{gender} {title}")
@@ -1327,7 +1333,7 @@ def _identity_profile_from_parts(
         entity_id=entity.entity_id,
         canonical_name=entity.display_name,
         entity_type=entity.entity_type,
-        aliases=tuple(sorted(aliases)),
+        aliases=tuple(sorted(composite_aliases)),
         titles=tuple(sorted(titles)),
         descriptions=tuple(sorted(composite_descriptions)),
         pronouns=tuple(sorted(pronouns)),
