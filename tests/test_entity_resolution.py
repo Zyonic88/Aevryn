@@ -171,6 +171,25 @@ def test_clear_high_confidence_match_can_still_resolve_over_weaker_candidate() -
     assert decision.confidence == 0.99
 
 
+def test_duplicate_identity_profile_ids_are_rejected() -> None:
+    """Duplicate profile IDs should not create duplicate candidates for one identity."""
+    engine = EntityResolutionEngine()
+
+    with pytest.raises(ValueError, match="Entity identity profile IDs must be unique"):
+        engine.resolve_reference(
+            SurfaceReference("Charlotte", "anchor_037"),
+            (
+                charlotte_profile(),
+                EntityIdentityProfile(
+                    entity_id="character_charlotte",
+                    canonical_name="General Charlotte",
+                    aliases=("Charlotte",),
+                    evidence_anchor_ids=("anchor_002",),
+                ),
+            ),
+        )
+
+
 def test_surface_reference_preserves_source_anchor() -> None:
     """Resolution decisions should keep the original evidence anchor visible."""
     engine = EntityResolutionEngine()
