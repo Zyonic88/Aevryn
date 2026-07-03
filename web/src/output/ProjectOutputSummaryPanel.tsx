@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { apiClient } from "../api/client";
 import type {
@@ -32,7 +32,7 @@ import { readableOutputItems, readablePromptText } from "./readableOutput";
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
 
-const MAX_VISIBLE_PROMPT_PACKS = 6;
+const MAX_VISIBLE_PROMPT_SCENES = 24;
 const MAX_VISIBLE_PROMPT_DETAILS = 10;
 
 export function ProjectOutputSummaryPanel({
@@ -468,33 +468,60 @@ function ContinuityBucket({
 }
 
 function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
-  const visiblePacks = packs.slice(0, MAX_VISIBLE_PROMPT_PACKS);
+  const visiblePacks = packs.slice(0, MAX_VISIBLE_PROMPT_SCENES);
+  const [selectedSceneId, setSelectedSceneId] = useState(packs[0]?.scene.scene_id ?? "");
+  const selectedPack = packs.find((pack) => pack.scene.scene_id === selectedSceneId) ?? packs[0];
+  if (!selectedPack) {
+    return null;
+  }
+
   return (
-    <>
+    <div className="prompt-pack-browser">
       {packs.length > visiblePacks.length ? (
         <p className="result-summary">
           Showing {visiblePacks.length.toLocaleString()} of {packs.length.toLocaleString()} prompt
-          packs.
+          scenes. Select a scene to view its production prompts.
         </p>
       ) : null}
-      <div className="profile-grid" aria-label="Prompt packs">
-        {visiblePacks.map((pack) => (
-          <article className="profile-card" key={pack.scene.scene_id}>
-            <header>
-              <h3>{pack.scene.title}</h3>
-              <p>{pack.scene.chapter_label}</p>
-            </header>
-            <div className="profile-section-grid">
-              <PromptTextSection section={pack.image_prompt} />
-              <PromptTextSection section={pack.narration_prompt} />
-              <PromptTextSection section={pack.camera_prompt} />
-              <PromptTextSection section={pack.animation_prompt} />
-            </div>
-            <p className="evidence-note">{pack.scene.evidence_summary}</p>
-          </article>
-        ))}
+      <div className="prompt-pack-layout">
+        <div className="prompt-scene-list" aria-label="Prompt scenes">
+          {visiblePacks.map((pack) => (
+            <button
+              type="button"
+              className="prompt-scene-button"
+              aria-pressed={pack.scene.scene_id === selectedPack.scene.scene_id}
+              key={pack.scene.scene_id}
+              onClick={() => setSelectedSceneId(pack.scene.scene_id)}
+            >
+              <strong>{pack.scene.title}</strong>
+              <span>{pack.scene.chapter_label}</span>
+              <small>{pack.scene.evidence_summary}</small>
+            </button>
+          ))}
+        </div>
+        <article className="profile-card prompt-pack-detail" aria-label="Selected prompt pack">
+          <header>
+            <h3>{selectedPack.scene.title}</h3>
+            <p>{selectedPack.scene.chapter_label}</p>
+          </header>
+          <div className="profile-section-grid prompt-scene-context">
+            <PanelSection section={selectedPack.scene.characters_present} />
+            <PanelSection section={selectedPack.scene.location} />
+            <PanelSection section={selectedPack.scene.mood} />
+            <PanelSection section={selectedPack.scene.purpose} />
+            <PanelSection section={selectedPack.scene.visual_highlights} />
+            <PanelSection section={selectedPack.scene.environment} />
+          </div>
+          <div className="prompt-pack-grid">
+            <PromptTextSection section={selectedPack.image_prompt} full />
+            <PromptTextSection section={selectedPack.narration_prompt} full />
+            <PromptTextSection section={selectedPack.camera_prompt} full />
+            <PromptTextSection section={selectedPack.animation_prompt} full />
+          </div>
+          <p className="evidence-note">{selectedPack.scene.evidence_summary}</p>
+        </article>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -577,11 +604,24 @@ function PanelSection({ section }: { section: OutputSection }) {
   );
 }
 
-function PromptTextSection({ section }: { section: OutputSection }) {
+function PromptTextSection({ section, full = false }: { section: OutputSection; full?: boolean }) {
+  const promptText = readablePromptText(
+    section,
+    full ? {} : { maxItems: MAX_VISIBLE_PROMPT_DETAILS },
+  );
   return (
     <section className="profile-section prompt-text-section">
-      <h4>{section.title}</h4>
-      <p>{readablePromptText(section, { maxItems: MAX_VISIBLE_PROMPT_DETAILS })}</p>
+      <div className="prompt-section-heading">
+        <h4>{section.title}</h4>
+        <button
+          type="button"
+          className="text-button"
+          onClick={() => void navigator.clipboard?.writeText(promptText)}
+        >
+          Copy
+        </button>
+      </div>
+      <p>{promptText}</p>
     </section>
   );
 }

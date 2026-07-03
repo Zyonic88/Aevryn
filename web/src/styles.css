@@ -803,8 +803,63 @@ select:focus {
   gap: 16px;
 }
 
+.prompt-pack-browser,
+.prompt-pack-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.prompt-pack-layout {
+  grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.prompt-scene-list {
+  display: grid;
+  gap: 8px;
+}
+
+.prompt-scene-button {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  color: #263241;
+  background: #ffffff;
+  text-align: left;
+}
+
+.prompt-scene-button[aria-pressed="true"] {
+  border-color: #2d5f8f;
+  background: #eef5fb;
+}
+
+.prompt-scene-button span,
+.prompt-scene-button small {
+  color: #667386;
+  font-size: 13px;
+}
+
+.prompt-pack-detail {
+  min-width: 0;
+}
+
 .prompt-section li {
   overflow-wrap: anywhere;
+}
+
+.prompt-section-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.prompt-section-heading h4 {
+  margin-bottom: 0;
 }
 
 .prompt-text-section p {
@@ -848,6 +903,10 @@ select:focus {
   }
 
   .prompt-pack-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .prompt-pack-layout {
     grid-template-columns: 1fr;
   }
 

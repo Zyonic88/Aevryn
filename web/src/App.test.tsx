@@ -643,12 +643,19 @@ const projectOutputsPayload = {
   ],
 };
 
-const manyPromptPacks = Array.from({ length: 8 }, (_, index) => ({
+const manyPromptPacks = Array.from({ length: 28 }, (_, index) => ({
   ...promptPreviewPayload.production_pack,
   scene: {
     ...promptPreviewPayload.production_pack.scene,
     scene_id: `scene_${index + 1}`,
     title: `Scene ${index + 1}`,
+  },
+  image_prompt: {
+    ...promptPreviewPayload.production_pack.image_prompt,
+    items: [
+      ...promptPreviewPayload.production_pack.image_prompt.items,
+      `Scene ${index + 1} image prompt detail`,
+    ],
   },
 }));
 
@@ -3052,7 +3059,8 @@ describe("App shell routing", () => {
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
   });
 
-  it("bounds rendered prompt packs so large projects stay responsive", async () => {
+  it("renders a bounded prompt scene picker with one selected prompt pack", async () => {
+    const user = userEvent.setup();
     storeAuthenticatedProject();
     vi.stubGlobal(
       "fetch",
@@ -3089,9 +3097,19 @@ describe("App shell routing", () => {
 
     expect(
       await screen.findByRole("region", { name: "Processed project output" }),
-    ).toHaveTextContent("Showing 6 of 8 prompt packs");
-    expect(screen.getByRole("heading", { name: "Scene 6" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Scene 7" })).not.toBeInTheDocument();
+    ).toHaveTextContent("Showing 24 of 28 prompt scenes");
+    expect(screen.getByRole("button", { name: /Scene 24/u })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Scene 25/u })).not.toBeInTheDocument();
+
+    const selectedPack = screen.getByRole("article", { name: "Selected prompt pack" });
+    expect(within(selectedPack).getByRole("heading", { name: "Scene 1" })).toBeInTheDocument();
+    expect(within(selectedPack).getByText(/Scene 1 image prompt detail/u)).toBeInTheDocument();
+    expect(screen.queryByText(/Scene 2 image prompt detail/u)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^Scene 2\b/u }));
+
+    expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
+    expect(within(selectedPack).getByText(/Scene 2 image prompt detail/u)).toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {

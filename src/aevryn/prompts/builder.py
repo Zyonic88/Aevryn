@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import textwrap
 from collections.abc import Iterable
 
@@ -39,6 +40,56 @@ APPEARANCE_ATTRIBUTE_PARTS = frozenset(
         "texture",
         "uniform",
         "wing",
+    }
+)
+
+SCENE_VISUAL_ANCHOR_TERMS = frozenset(
+    {
+        "armor",
+        "banner",
+        "bed",
+        "blade",
+        "bridge",
+        "building",
+        "car",
+        "carriage",
+        "cave",
+        "chair",
+        "city",
+        "classroom",
+        "clothing",
+        "corridor",
+        "courtyard",
+        "desk",
+        "door",
+        "dress",
+        "field",
+        "forest",
+        "gate",
+        "hall",
+        "hangar",
+        "hologram",
+        "holographic",
+        "house",
+        "jacket",
+        "light",
+        "market",
+        "podium",
+        "projection",
+        "room",
+        "screen",
+        "ship",
+        "starship",
+        "street",
+        "table",
+        "teacher",
+        "temple",
+        "tower",
+        "uniform",
+        "vehicle",
+        "wall",
+        "warship",
+        "window",
     }
 )
 
@@ -118,6 +169,7 @@ class CanonPromptBuilder:
                     "vehicle design, logos, colors, or scenery details that are not "
                     "listed as known canon."
                 ),
+                self._scene_visual_anchor_section(context),
                 self._scene_directive_section(analysis),
                 self._image_subject_section(context),
                 self._image_setting_section(analysis),
@@ -168,6 +220,7 @@ class CanonPromptBuilder:
                 ),
                 self._scene_directive_section(analysis),
                 self._camera_direction_section(analysis),
+                self._scene_visual_anchor_section(context),
                 self._character_section(context),
                 self._visual_direction_section(analysis),
             )
@@ -191,6 +244,7 @@ class CanonPromptBuilder:
                 ),
                 self._scene_directive_section(analysis),
                 self._animation_direction_section(analysis),
+                self._scene_visual_anchor_section(context),
                 self._character_section(context),
                 self._visual_direction_section(analysis),
                 self._continuity_guard_section(analysis),
@@ -290,6 +344,49 @@ class CanonPromptBuilder:
                 f"- Conflict pressure: {CanonPromptBuilder._shorten(analysis.conflict)}",
             ]
         )
+
+    @staticmethod
+    def _scene_visual_anchor_section(context: CanonSceneContext) -> str:
+        """Return compact current-scene visual anchors from source structure."""
+        return "\n".join(
+            [
+                (
+                    "Scene-grounded visual anchors "
+                    "(prioritize these over retained background facts):"
+                ),
+                *CanonPromptBuilder._bullet_lines(
+                    CanonPromptBuilder._scene_visual_anchors(context)
+                ),
+            ]
+        )
+
+    @staticmethod
+    def _scene_visual_anchors(context: CanonSceneContext) -> tuple[str, ...]:
+        """Return short visual/action anchors from the current scene only."""
+        anchors: list[str] = []
+        for sentence in CanonPromptBuilder._scene_sentences(context.scene.paragraphs):
+            normalized_sentence = sentence.lower()
+            if any(term in normalized_sentence for term in SCENE_VISUAL_ANCHOR_TERMS):
+                anchors.append(CanonPromptBuilder._shorten(sentence, width=170))
+            if len(anchors) >= 6:
+                break
+
+        return tuple(CanonPromptBuilder._unique_values(anchors))
+
+    @staticmethod
+    def _scene_sentences(paragraphs: Iterable[str]) -> tuple[str, ...]:
+        """Return compact sentence-like units from scene paragraphs."""
+        sentences: list[str] = []
+        for paragraph in paragraphs:
+            normalized_paragraph = " ".join(paragraph.split())
+            if not normalized_paragraph:
+                continue
+            for sentence in re.split(r"(?<=[.!?])\s+", normalized_paragraph):
+                stripped_sentence = sentence.strip()
+                if stripped_sentence:
+                    sentences.append(stripped_sentence)
+
+        return tuple(sentences)
 
     @staticmethod
     def _visual_direction_section(analysis: SceneAnalysis) -> str:

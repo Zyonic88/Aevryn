@@ -4,13 +4,15 @@ import pytest
 
 from aevryn import (
     CanonPromptBuilder,
+    CanonDatabase,
     CanonSceneContext,
     CharacterCardBuilder,
+    StoryImporter,
     SceneAnalysis,
     SceneAnalyzer,
     SceneContextBuilder,
 )
-from aevryn.core import Fact, StateChange
+from aevryn.core import Character, Entity, Evidence, Fact, StateChange, TimelineEvent
 from tests.test_scene_context_builder import build_database, build_imported_source
 
 
@@ -79,7 +81,89 @@ def test_canon_prompt_builder_does_not_dump_full_scene_text() -> None:
     prompt = CanonPromptBuilder().build_image_prompt(build_context())
 
     assert "Paragraphs:" not in prompt
-    assert len(prompt) < 1800
+    assert len(prompt) < 2200
+
+
+def test_canon_prompt_builder_includes_current_scene_visual_anchors() -> None:
+    """Image prompts prioritize current-scene visual anchors over background objects."""
+    imported_source = StoryImporter().import_text(
+        source_id="source_visual",
+        title="Visual Story",
+        text=(
+            "Chapter 1\n"
+            "Mira sat in a classroom with white desks. "
+            "Holographic screens glowed in front of every student. "
+            "A floor-to-ceiling window showed a stormy sky. "
+            "Later, Mira received a dragon engine blueprint."
+        ),
+    )
+    scene = imported_source.story.chapters[0].scenes[0]
+    database = CanonDatabase()
+    database.store_character(
+        Character(
+            entity=Entity(
+                entity_id="character_mira",
+                entity_type="character",
+                display_name="Mira",
+            )
+        )
+    )
+    database.store_chapter(imported_source.story.chapters[0])
+    database.store_evidence(
+        Evidence(
+            evidence_id="evidence_visual",
+            source_id="source_visual",
+            chapter_id=scene.chapter_id,
+            scene_id=scene.scene_id,
+            paragraph_index=1,
+            sentence_index=4,
+            quote="Later, Mira received a dragon engine blueprint.",
+            confidence=1.0,
+        )
+    )
+    database.store_fact(
+        Fact(
+            fact_id="fact_mira_blueprint",
+            entity_id="character_mira",
+            attribute="current_asset",
+            value="Dragon engine blueprint",
+            evidence_id="evidence_visual",
+        )
+    )
+    database.store_timeline_event(
+        TimelineEvent(
+            event_id="event_visual",
+            chapter_id=scene.chapter_id,
+            scene_id=scene.scene_id,
+            description="Mira receives blueprint",
+            evidence_id="evidence_visual",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_mira_blueprint",
+            fact_id="fact_mira_blueprint",
+            valid_from_event_id="event_visual",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id=scene.scene_id,
+        character_ids=("character_mira",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "Scene-grounded visual anchors" in prompt
+    assert "Mira sat in a classroom with white desks." in prompt
+    assert "Holographic screens glowed in front of every student." in prompt
+    assert "A floor-to-ceiling window showed a stormy sky." in prompt
+    assert prompt.index("Scene-grounded visual anchors") < prompt.index(
+        "Dragon engine blueprint"
+    )
 
 
 def test_canon_prompt_builder_uses_scene_relevant_character_facts() -> None:
