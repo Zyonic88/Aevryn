@@ -294,8 +294,17 @@ class EvidenceBoundedAIExtractor:
                     "current_limitation, and status."
                 ),
                 (
+                    "Use entity_type=system only for named power systems, interfaces, "
+                    "game-like systems, or other non-physical governing mechanisms. "
+                    "Use entity_type=skill only for usable abilities, techniques, spells, "
+                    "talents, or powers. Use item, weapon, armor, vehicle, or building "
+                    "for physical things even when a system grants, prices, stores, or "
+                    "describes them."
+                ),
+                (
                     "Allowed entity_type values: armor, building, character, creature, "
-                    "item, location, organization, skill, timeline_event, vehicle, weapon."
+                    "item, location, organization, skill, system, timeline_event, vehicle, "
+                    "weapon."
                 ),
                 "Return JSON only with keys: entities, facts, relationships, state_changes.",
                 "",
@@ -602,6 +611,7 @@ def _extraction_response_schema() -> dict[str, object]:
             "location",
             "organization",
             "skill",
+            "system",
             "timeline_event",
             "vehicle",
             "weapon",

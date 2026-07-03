@@ -1251,6 +1251,7 @@ def _humanized_entity_id(
         "organization_",
         "vehicle_",
         "skill_",
+        "system_",
         "fact_",
         "state_",
         "event_",
@@ -1318,6 +1319,7 @@ def _looks_like_machine_id(value: str) -> bool:
             "organization_",
             "vehicle_",
             "skill_",
+            "system_",
             "fact_",
             "state_",
             "event_",
@@ -1357,7 +1359,7 @@ def _looks_like_anchor_derived_text(value: str) -> bool:
 def _strip_internal_entity_suffixes(value: str) -> str:
     """Remove parenthesized internal entity IDs from visible prompt lines."""
     return re.sub(
-        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill)_[A-Za-z0-9_]+)\)",
+        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)\)",
         "",
         value,
     )
@@ -1375,7 +1377,7 @@ def _replace_entity_tokens(
         return _humanized_entity_id(token, display_names=display_names)
 
     return re.sub(
-        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
+        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
         replacement,
         value,
     )
