@@ -94,8 +94,7 @@ export function ProjectWorkspacePage() {
           <WorkspaceTabContent tabId={activeTab.id} label={activeTab.label} project={project} />
         ) : (
           <EmptyState title="Unknown workspace section">
-            This project route is valid, but the requested section does not exist in the Web Alpha
-            Shell.
+            This project exists, but that workspace section is not available.
           </EmptyState>
         )}
       </section>
@@ -178,7 +177,7 @@ function placeholderTitle(tabId: WorkspaceTabId): string {
   if (tabId === "overview") {
     return "Project workspace is ready.";
   }
-  return "Engine output view placeholder.";
+  return "Workspace section unavailable.";
 }
 
 function placeholderBody(tabId: WorkspaceTabId): string {

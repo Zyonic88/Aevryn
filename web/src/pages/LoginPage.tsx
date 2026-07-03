@@ -13,7 +13,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setSession } = useAuth();
-  const [email, setEmail] = useState("demo@example.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -40,7 +40,7 @@ export function LoginPage() {
     <main className="auth-screen">
       <section className="auth-panel">
         <div>
-          <p className="eyebrow">Aevryn Web Alpha Shell</p>
+          <p className="eyebrow">Aevryn</p>
           <h1>Log in</h1>
         </div>
         <form onSubmit={submit} className="form-stack">
