@@ -1707,6 +1707,7 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     assert payload["language_identity"] == {
         "translation_unit_count": 1,
         "translation_review_count": 0,
+        "translation_review_items": [],
         "identity_decision_count": 1,
         "identity_resolved_count": 0,
         "identity_ambiguous_count": 0,
@@ -1840,6 +1841,108 @@ def test_project_outputs_identity_review_reasons_are_stable_metadata() -> None:
         }
     ]
     assert "Mark carried a rusty dagger" not in response.text
+
+
+def test_project_outputs_translation_review_items_are_stable_metadata() -> None:
+    """Translation review output should not expose source terms or issue prose."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    repository.record_import(
+        ImportRecord(
+            import_id="import_alpha",
+            story_id="story_alpha",
+            source_id="source_alpha",
+            filename="chapter_001.txt",
+            source_format="txt",
+            storage_ref="storage://projects/project_alpha/imports/import_alpha/source.txt",
+            chapter_count=1,
+            scene_count=1,
+            evidence_anchor_count=1,
+            created_at=NOW,
+        )
+    )
+    repository.record_engine_run(
+        EngineRunRecord(
+            run_id="run_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="succeeded",
+            engine_version="aevryn_v1",
+            started_at=NOW,
+            status_updated_at=SOON,
+            finished_at=SOON,
+        )
+    )
+    repository.store_snapshot(
+        SnapshotRecord(
+            snapshot_id="snapshot_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            run_id="run_alpha",
+            snapshot_kind="canon",
+            content_type="application/json",
+            serialized_output=json.dumps(
+                {
+                    "source_id": "source_alpha",
+                    "title": "Alpha",
+                    "chapters": 1,
+                    "scenes": 1,
+                    "translation": {
+                        "unit_count": 1,
+                        "issue_count": 1,
+                        "units": [
+                            {
+                                "unit_id": "translation_source_alpha_chapter_001_scene_001",
+                                "source_language": "zh",
+                                "target_language": "en",
+                                "mode": "clean_english",
+                                "source_chapter_id": "source_alpha_chapter_001",
+                                "source_scene_id": "source_alpha_chapter_001_scene_001",
+                                "source_evidence_anchor_ids": ["anchor_001"],
+                                "issue_count": 1,
+                                "issues": [
+                                    {
+                                        "issue_code": "translation_review_required",
+                                        "issue_label": "Glossary term needs review",
+                                        "evidence_anchor_count": 1,
+                                        "source_term": "private_source_term",
+                                        "message": "Private issue prose.",
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                }
+            ),
+            created_at=SOON,
+        )
+    )
+
+    response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
+
+    assert response.status_code == 200
+    summary = response.json()["language_identity"]
+    assert summary["translation_review_count"] == 1
+    assert summary["translation_review_items"] == [
+        {
+            "issue_code": "translation_review_required",
+            "issue_label": "Glossary term needs review",
+            "chapter_id": "source_alpha_chapter_001",
+            "scene_id": "source_alpha_chapter_001_scene_001",
+            "evidence_anchor_count": 1,
+            "reason": "Aevryn preserved an uncertain term for review.",
+        }
+    ]
+    assert "private_source_term" not in response.text
+    assert "Private issue prose" not in response.text
 
 
 def test_project_outputs_humanize_legacy_presentation_machine_ids() -> None:

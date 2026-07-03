@@ -233,6 +233,18 @@ export const projectLanguageIdentitySummarySchema = z
   .object({
     translation_unit_count: z.number(),
     translation_review_count: z.number(),
+    translation_review_items: z
+      .array(
+        z.object({
+          issue_code: z.string(),
+          issue_label: z.string(),
+          chapter_id: z.string().default(""),
+          scene_id: z.string().default(""),
+          evidence_anchor_count: z.number(),
+          reason: z.string().default(""),
+        }),
+      )
+      .default([]),
     identity_decision_count: z.number(),
     identity_resolved_count: z.number(),
     identity_ambiguous_count: z.number(),
@@ -256,6 +268,7 @@ export const projectLanguageIdentitySummarySchema = z
   .default({
     translation_unit_count: 0,
     translation_review_count: 0,
+    translation_review_items: [],
     identity_decision_count: 0,
     identity_resolved_count: 0,
     identity_ambiguous_count: 0,
