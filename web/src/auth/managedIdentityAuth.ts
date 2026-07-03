@@ -9,6 +9,7 @@ type SupabaseAuthUser = {
 
 type SupabaseAuthResponse = {
   access_token?: unknown;
+  refresh_token?: unknown;
   expires_at?: unknown;
   expires_in?: unknown;
   user?: SupabaseAuthUser | null;
@@ -54,6 +55,24 @@ export function registerWithConfiguredAuth(payload: RegisterRequest): Promise<Au
     },
     fallbackEmail: payload.email,
     fallbackDisplayName: payload.display_name,
+  });
+}
+
+export async function refreshConfiguredAuthSession(session: AuthSession): Promise<AuthSession> {
+  if (!isManagedIdentityAuthConfigured()) {
+    return session;
+  }
+  const refreshToken = textValue(session.refresh_token);
+  if (!refreshToken) {
+    throw new Error("Session refresh is unavailable. Please log in again.");
+  }
+  return supabasePasswordAuth({
+    path: "/auth/v1/token?grant_type=refresh_token",
+    body: {
+      refresh_token: refreshToken,
+    },
+    fallbackEmail: session.email,
+    fallbackDisplayName: session.display_name,
   });
 }
 
@@ -131,6 +150,7 @@ function authSessionFromSupabase(
     email,
     display_name: displayName,
     session_token: accessToken,
+    refresh_token: textValue(payload.refresh_token),
     expires_at: expiresAtFromSupabase(payload),
   };
 }
