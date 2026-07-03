@@ -7,6 +7,7 @@ import { useAuth } from "../auth/useAuth";
 import { EmptyState, LoadingMessage } from "../components/Feedback";
 import { formatDateTime, formatRunStatus } from "../formatting/display";
 import {
+  compactIdentityReviewItems,
   identityReviewDetails as identityReviewDetailsLabel,
   identityReviewKey,
   identityReviewTitle,
@@ -75,7 +76,7 @@ function ProjectOverview({
           <Metric label="Evidence" value={outputs.canon.evidence_anchor_count.toLocaleString()} />
           <Metric label="Snapshot" value={snapshotLabel(outputs)} />
         </dl>
-        <NavLink className="secondary-button" to="monitoring">
+        <NavLink className="secondary-button" to={`/projects/${project.id}/monitoring`}>
           View monitoring
         </NavLink>
       </section>
@@ -99,7 +100,7 @@ function ProjectOverview({
       </section>
 
       <section className="project-panel" aria-label="Language and identity overview">
-        <h2>Language And Identity</h2>
+        <h2>Language and Identity</h2>
         <dl className="metric-grid">
           <Metric
             label="Translation"
@@ -116,7 +117,7 @@ function ProjectOverview({
         </dl>
         {outputs.language_identity.identity_review_items.length > 0 ? (
           <div className="compact-list" aria-label="Identity review items">
-            {outputs.language_identity.identity_review_items.slice(0, 6).map((item) => (
+            {compactIdentityReviewItems(outputs.language_identity.identity_review_items, 6).map((item) => (
               <div className="compact-row" key={identityReviewKey(item)}>
                 <strong>{identityReviewTitle(item)}</strong>
                 <span>{identityReviewDetails(item)}</span>

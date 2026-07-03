@@ -4,6 +4,9 @@ export type TranslationReviewItem =
   ProjectOutputs["language_identity"]["translation_review_items"][number];
 export type IdentityReviewItem =
   ProjectOutputs["language_identity"]["identity_review_items"][number];
+export type CompactIdentityReviewItem = IdentityReviewItem & {
+  review_count?: number;
+};
 
 export function reviewItemCountLabel(count: number): string {
   return count === 1 ? "1 review item" : `${count.toLocaleString()} review items`;
@@ -29,30 +32,58 @@ export function translationReviewDetails(
   return `${readableSceneScope(item)}; ${sourceLinkLabel}; ${item.reason || fallbackReason}`;
 }
 
-export function identityReviewKey(item: IdentityReviewItem): string {
+export function compactIdentityReviewItems(
+  items: IdentityReviewItem[],
+  limit: number,
+): CompactIdentityReviewItem[] {
+  const compacted = new Map<string, CompactIdentityReviewItem>();
+  for (const item of items) {
+    const key = [
+      item.status,
+      item.chapter_id,
+      item.scene_id,
+      item.reference_kind,
+      item.reference_label,
+      item.candidate_count,
+      item.confidence,
+      item.reason,
+    ].join(":");
+    const existing = compacted.get(key);
+    if (existing) {
+      existing.review_count = (existing.review_count || 1) + 1;
+    } else {
+      compacted.set(key, { ...item, review_count: 1 });
+    }
+  }
+  return Array.from(compacted.values()).slice(0, limit);
+}
+
+export function identityReviewKey(item: CompactIdentityReviewItem): string {
   return [
     item.status,
     item.chapter_id,
     item.scene_id,
-    item.evidence_anchor_id,
     item.reference_kind,
     item.reference_label,
     item.candidate_count,
+    item.review_count || 1,
   ].join(":");
 }
 
-export function identityReviewTitle(item: IdentityReviewItem): string {
+export function identityReviewTitle(item: CompactIdentityReviewItem): string {
   const kind = readableLabel(item.reference_kind || "reference");
   return `${kind}: ${item.reference_label || "Reference needing review"}`;
 }
 
 export function identityReviewDetails(
-  item: IdentityReviewItem,
+  item: CompactIdentityReviewItem,
   actionLabel: string,
 ): string {
   const confidence = Math.round(item.confidence * 100);
   const confidenceLabel = confidence > 0 ? `; ${confidence}% confidence` : "";
-  return `${readableSceneScope(item)}; ${identityCandidateLabel(item)}${confidenceLabel}; ${actionLabel}`;
+  const reviewCountLabel =
+    (item.review_count || 1) > 1 ? `${item.review_count?.toLocaleString()} similar references; ` : "";
+  return `${readableSceneScope(item)}; ${reviewCountLabel}${identityCandidateLabel(item)}${confidenceLabel}; ${actionLabel}`;
 }
 
 export function identityReviewStatusLabel(status: string): string {
@@ -65,7 +96,7 @@ export function identityReviewStatusLabel(status: string): string {
   return readableLabel(status);
 }
 
-export function identityCandidateLabel(item: IdentityReviewItem): string {
+export function identityCandidateLabel(item: CompactIdentityReviewItem): string {
   if (item.candidate_count === 0) {
     return "no supported match";
   }
