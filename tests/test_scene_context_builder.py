@@ -209,6 +209,47 @@ def test_scene_context_builder_reconstructs_scene_state() -> None:
     assert context.snapshot.fact_ids == ("fact_008_weapon",)
 
 
+def test_scene_context_builder_includes_related_world_entity_facts() -> None:
+    """Scene context includes accepted facts for connected world entities."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_fact(
+        Fact(
+            fact_id="fact_sword_visual_design",
+            entity_id="item_iron_sword",
+            attribute="visual_design",
+            value="Chipped iron blade",
+            evidence_id="evidence_relationship",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_sword_visual_design",
+            fact_id="fact_sword_visual_design",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    builder = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    )
+
+    context = builder.build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    assert tuple(fact.fact_id for fact in context.active_facts) == (
+        "fact_008_weapon",
+        "fact_sword_visual_design",
+    )
+    assert context.snapshot.fact_ids == (
+        "fact_008_weapon",
+        "fact_sword_visual_design",
+    )
+
+
 def test_scene_context_builder_does_not_leak_future_relationships() -> None:
     """Scene context only includes relationships known by the requested chapter."""
     imported_source = build_imported_source()

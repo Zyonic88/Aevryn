@@ -157,15 +157,18 @@ function ScenePreviewResult({ result }: { result: ScenePreview }) {
       <p className="result-summary">
         {scene.chapter_label} for {formatSceneScope(result.scene_id)}.
       </p>
-      <div className="profile-section-grid">
-        <SceneSection section={scene.location} />
-        <SceneSection section={scene.characters_present} />
-        <SceneSection section={scene.mood} />
-        <SceneSection section={scene.purpose} />
-        <SceneSection section={scene.visual_highlights} />
-        <SceneSection section={scene.continuity_changes} />
-        <SceneSection section={scene.environment} />
-      </div>
+      <details className="profile-disclosure">
+        <summary>Scene details</summary>
+        <div className="profile-section-grid">
+          <SceneSection section={scene.location} />
+          <SceneSection section={scene.characters_present} />
+          <SceneSection section={scene.mood} />
+          <SceneSection section={scene.purpose} />
+          <SceneSection section={scene.visual_highlights} />
+          <SceneSection section={scene.continuity_changes} />
+          <SceneSection section={scene.environment} />
+        </div>
+      </details>
       <p className="evidence-note">{scene.evidence_summary}</p>
     </section>
   );

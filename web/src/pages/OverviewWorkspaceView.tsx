@@ -57,6 +57,7 @@ function ProjectOverview({
   outputs: ProjectOutputs;
 }) {
   const activeSurfaces = outputs.surfaces.filter((surface) => surface.item_count > 0);
+  const nextStep = recommendedNextStep(project.id, outputs);
   return (
     <>
       <section className="project-panel" aria-label="Project state overview">
@@ -79,6 +80,31 @@ function ProjectOverview({
         <NavLink className="secondary-button" to={`/projects/${project.id}/monitoring`}>
           View monitoring
         </NavLink>
+      </section>
+
+      <section className="project-panel" aria-label="Recommended next step">
+        <h2>Recommended Next Step</h2>
+        <div className="overview-next-step">
+          <div>
+            <strong>{nextStep.title}</strong>
+            <p>{nextStep.body}</p>
+          </div>
+          <NavLink className="secondary-button" to={nextStep.to}>
+            {nextStep.action}
+          </NavLink>
+        </div>
+      </section>
+
+      <section className="project-panel" aria-label="Workspace quick actions">
+        <h2>Quick Actions</h2>
+        <div className="quick-action-grid">
+          {overviewActions(project.id, outputs).map((action) => (
+            <NavLink key={action.to} to={action.to}>
+              <strong>{action.title}</strong>
+              <span>{action.detail}</span>
+            </NavLink>
+          ))}
+        </div>
       </section>
 
       <section className="project-panel" aria-label="Workspace output overview">
@@ -140,6 +166,108 @@ function ProjectOverview({
       </section>
     </>
   );
+}
+
+function recommendedNextStep(projectId: string, outputs: ProjectOutputs): OverviewAction {
+  const runStatus = outputs.latest_engine_run?.status ?? outputs.status;
+  if (!outputs.latest_import) {
+    return {
+      title: "Import chapters",
+      body: "Add source chapters before Aevryn can build Canon-backed outputs.",
+      action: "Open import",
+      to: `/projects/${projectId}/import`,
+    };
+  }
+  if (runStatus === "pending" || runStatus === "running") {
+    return {
+      title: "Watch processing",
+      body: "Aevryn is still processing the latest import. Monitoring shows API-provided workflow state.",
+      action: "View monitoring",
+      to: `/projects/${projectId}/monitoring`,
+    };
+  }
+  if (!outputs.canon.available) {
+    return {
+      title: "Process saved import",
+      body: "The project has import metadata, but no accepted Canon snapshot is ready yet.",
+      action: "Open import",
+      to: `/projects/${projectId}/import`,
+    };
+  }
+  if (identityReviewCount(outputs.language_identity) > 0) {
+    return {
+      title: "Review identity",
+      body: "Aevryn found references that need human review before they should influence creator-facing output.",
+      action: "Open characters",
+      to: `/projects/${projectId}/characters`,
+    };
+  }
+  if (surfaceItemCount(outputs, "prompts") > 0) {
+    return {
+      title: "Prepare prompt packs",
+      body: "Canon-backed scene context is available for image, narration, camera, and animation prompts.",
+      action: "Open prompt packs",
+      to: `/projects/${projectId}/prompts`,
+    };
+  }
+  return {
+    title: "Review project output",
+    body: "Aevryn has processed this project. Review workspace sections before exporting.",
+    action: "Open scenes",
+    to: `/projects/${projectId}/scenes`,
+  };
+}
+
+function overviewActions(projectId: string, outputs: ProjectOutputs): OverviewAction[] {
+  return [
+    {
+      title: "Story",
+      body: "",
+      detail: outputs.latest_import ? "Story metadata ready" : "Create or select a story",
+      action: "Open story",
+      to: `/projects/${projectId}/story`,
+    },
+    {
+      title: "Import",
+      body: "",
+      detail: outputs.latest_import ? "Latest import saved" : "Add chapters",
+      action: "Open import",
+      to: `/projects/${projectId}/import`,
+    },
+    {
+      title: "Characters",
+      body: "",
+      detail: `${surfaceItemCount(outputs, "characters").toLocaleString()} profiles`,
+      action: "Open characters",
+      to: `/projects/${projectId}/characters`,
+    },
+    {
+      title: "Prompt Packs",
+      body: "",
+      detail: `${surfaceItemCount(outputs, "prompts").toLocaleString()} scenes ready`,
+      action: "Open prompt packs",
+      to: `/projects/${projectId}/prompts`,
+    },
+    {
+      title: "Exports",
+      body: "",
+      detail: outputs.canon.available ? "Snapshot export available" : "No snapshot yet",
+      action: "Open exports",
+      to: `/projects/${projectId}/exports`,
+    },
+  ];
+}
+
+type OverviewAction = {
+  title: string;
+  body: string;
+  detail?: string;
+  action: string;
+  to: string;
+};
+
+function surfaceItemCount(outputs: ProjectOutputs, surface: string): number {
+  return outputs.surfaces.find((item) => item.surface === surface)?.item_count ?? 0;
 }
 
 function snapshotLabel(outputs: ProjectOutputs): string {

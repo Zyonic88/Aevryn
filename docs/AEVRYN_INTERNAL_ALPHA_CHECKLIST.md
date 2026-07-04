@@ -4,7 +4,7 @@
 
 Use this checklist for repeatable Phase 10 readiness runs.
 
-Internal alpha is private. This checklist does not approve public launch, billing, collaboration, media generation, or production cloud deployment.
+Internal alpha is private to Aetherra Labs owner/operator development and Codex-assisted verification. This checklist does not approve outside testers, public launch, billing, collaboration, media generation, or production cloud deployment.
 
 ---
 
@@ -40,7 +40,9 @@ Production database, identity provider, object storage, deployment, public launc
 
 Can the tester continue?
 
-Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, worker interruption observability, import retries, processed output review, and narrow private alpha testing with documented limitations.
+Can the internal operator continue?
+
+Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, worker interruption observability, import retries, processed output review, and continued internal alpha hardening with documented limitations.
 
 ---
 
@@ -71,7 +73,7 @@ Known Limitations:
 
 Smoke coverage is automated against deterministic local services and mocked frontend API responses; it is not a hosted-browser exploratory session.
 
-Can the tester continue?
+Can the internal operator continue?
 
 Yes. The happy path is covered without CLI use at the product-contract level.
 
@@ -101,7 +103,7 @@ Known Limitations:
 
 Performance baseline was generated locally and intentionally left as an ignored machine-local artifact. It is evidence for this readiness run, not a committed release baseline.
 
-Can the tester continue?
+Can the internal operator continue?
 
 Yes. Auth, storage, imports, workers, snapshots, monitoring, exports, and performance baseline generation are cooperating in automated gates.
 
@@ -111,7 +113,7 @@ Yes. Auth, storage, imports, workers, snapshots, monitoring, exports, and perfor
 
 Scope:
 
-Prove interrupted workflows are observable and recoverable enough for trusted private testing.
+Prove interrupted workflows are observable and recoverable enough for internal alpha hardening.
 
 Required checks:
 
@@ -133,7 +135,7 @@ Known Limitations:
 
 Automated coverage proves refresh recovery, session-expiry return, failed-run visibility, status API failure handling, and running worker interruption observability. It does not yet prove production worker restart/reclaim semantics because production worker infrastructure is out of Phase 10 scope.
 
-Can the tester continue?
+Can the internal operator continue?
 
 Yes for tested recovery paths. For a claimed running job after interruption, the user can continue by observing the backend-provided running state in Monitoring; automatic reclaim/retry is a later production-readiness concern.
 
@@ -143,21 +145,21 @@ Yes for tested recovery paths. For a claimed running job after interruption, the
 
 Scope:
 
-Full repeatable pre-alpha gate before inviting trusted testers.
+Full repeatable pre-alpha gate before public-beta readiness work.
 
 Required checks:
 
 * Smoke Test passed.
 * Integration Test passed.
 * Operational Readiness Test passed.
-* Known limitations are documented before tester invitation.
+* Known limitations are documented before public-beta readiness review.
 * Manual alpha checks passed or have explicit accepted limitations.
 * No Phase 10 non-goals were added.
-* Private tester instructions are clear enough to run without CLI knowledge.
+* Internal operator instructions are clear enough to run without CLI knowledge.
 
 Result:
 
-PASS FOR NARROW PRIVATE ALPHA. Automated gates passed, and manual browser passes proved registration, project creation, story creation, supported multi-file import, import save, run submission, local worker processing, Monitoring, snapshot availability, refresh recovery, project deletion, import retry after failures, and processed-output review for Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports. Follow-up contract hardening added processed Continuity, Prompt Packs, and Exports panels from persisted backend snapshots. Browser sanity testing found and fixed the local/demo prompt-pack fallback issue before closeout.
+PASS FOR INTERNAL ALPHA. Automated gates passed, and manual browser passes proved registration, project creation, story creation, supported multi-file import, import save, run submission, local worker processing, Monitoring, snapshot availability, refresh recovery, project deletion, import retry after failures, and processed-output review for Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports. Follow-up contract hardening added processed Continuity, Prompt Packs, and Exports panels from persisted backend snapshots. Browser sanity testing found and fixed the local/demo prompt-pack fallback issue before closeout.
 
 Known Limitations:
 
@@ -174,8 +176,8 @@ Manual browser pass findings:
 * Local/demo extraction can produce scene and prompt output with unknown canon fields; this is expected when no accepted AI facts exist and prevents the UI from inventing details.
 * Export output intentionally lists available export kinds and formats; full serialized export content remains behind explicit export preview.
 * Alpha AI extraction can still misclassify sparse race/gender evidence when source language is indirect; presentation now hides conflicting gender values instead of showing both.
-* Private tester instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
+* Internal alpha operator instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
 
-Can the tester continue?
+Can the internal operator continue?
 
-Yes for continued internal alpha development and narrow private alpha testing with trusted testers who understand the documented limitations. No public beta or untrusted manuscript intake until Phase 11 Security & Privacy Hardening is complete.
+Yes for continued internal alpha development. No outside testers, public beta, or untrusted manuscript intake until public-beta readiness gates are complete and signed off.

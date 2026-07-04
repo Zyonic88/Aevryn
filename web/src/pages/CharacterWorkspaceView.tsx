@@ -179,27 +179,45 @@ function CharacterPreviewResult({ result }: { result: CharacterPreview }) {
 
 function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
   return (
-    <article className="profile-card">
-      <header>
-        <h3>{profile.display_name}</h3>
-        <p>{profile.subtitle}</p>
+    <article className="profile-card character-profile-card">
+      <header className="character-profile-header">
+        <div className="character-portrait" aria-hidden="true">
+          {characterInitials(profile.display_name)}
+        </div>
+        <div>
+          <h3>{profile.display_name}</h3>
+          <p>{profile.subtitle}</p>
+        </div>
       </header>
-      <div className="profile-section-grid">
-        <ProfileSection section={profile.race} />
-        <ProfileSection section={profile.gender} />
-        <ProfileSection section={profile.status} />
-        <ProfileSection section={profile.current_goal} />
-        <ProfileSection section={profile.current_equipment} />
-        <ProfileSection section={profile.current_abilities} />
-        <ProfileSection section={profile.current_assets} />
-        <ProfileSection section={profile.territory} />
-        <ProfileSection section={profile.relationships} />
-        <ProfileSection section={profile.current_limitations} />
-        <ProfileSection section={profile.recent_changes} />
-      </div>
+      <details className="profile-disclosure">
+        <summary>Character details</summary>
+        <div className="profile-section-grid">
+          <ProfileSection section={profile.race} />
+          <ProfileSection section={profile.gender} />
+          <ProfileSection section={profile.status} />
+          <ProfileSection section={profile.current_goal} />
+          <ProfileSection section={profile.current_equipment} />
+          <ProfileSection section={profile.current_abilities} />
+          <ProfileSection section={profile.current_assets} />
+          <ProfileSection section={profile.territory} />
+          <ProfileSection section={profile.relationships} />
+          <ProfileSection section={profile.current_limitations} />
+          <ProfileSection section={profile.recent_changes} />
+        </div>
+      </details>
       <p className="evidence-note">{profile.evidence_summary}</p>
     </article>
   );
+}
+
+function characterInitials(name: string): string {
+  const initials = name
+    .split(/\s+/u)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+  return initials || "?";
 }
 
 function ProfileSection({ section }: { section: OutputSection }) {

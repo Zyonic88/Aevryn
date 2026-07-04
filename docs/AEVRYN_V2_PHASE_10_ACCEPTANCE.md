@@ -2,12 +2,12 @@
 
 > Built by **Aetherra Labs**
 
-Phase 10 makes Aevryn ready for private internal alpha.
+Phase 10 makes Aevryn ready for internal alpha.
 
 Core rule:
 
 ```text
-Private alpha readiness.
+Internal alpha readiness.
 Not public launch.
 ```
 
@@ -27,7 +27,7 @@ Phase 10 starts with:
 * a clear split between automated gates and manual alpha checks
 * a recovery plan for interrupted workflows
 * a versioned readiness test ladder
-* known limitations documented before testers hit them
+* known limitations documented before public-beta readiness review
 
 ---
 
@@ -41,7 +41,7 @@ Phase 10 is accepted when:
 * Recovery is covered as its own readiness layer, separate from failure display.
 * Recovery checks explain whether the user can continue after refresh, session expiry, worker interruption, failed runs, or network/API interruption.
 * Readiness tests are organized as Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test.
-* Readiness runs record result, known limitations, and whether the tester can continue.
+* Readiness runs record result, known limitations, and whether the internal operator can continue.
 * Backend workflow state remains API-owned.
 * Frontend does not infer backend workflow state.
 * Monitoring observes workflows and does not execute workflows.

@@ -88,7 +88,7 @@ class SceneContextBuilder:
             )
             for character_id in unique_character_ids
         )
-        active_facts = tuple(
+        character_facts = tuple(
             fact
             for character_id in unique_character_ids
             for fact in self._database.retrieve_state_at_scene(
@@ -115,6 +115,24 @@ class SceneContextBuilder:
                 character_ids=unique_character_ids,
             )
         )
+        context_entity_ids = self._context_entity_ids(
+            character_ids=unique_character_ids,
+            relationships=relationships,
+        )
+        world_facts = tuple(
+            fact
+            for entity_id in context_entity_ids
+            for fact in self._database.retrieve_state_at_scene(
+                entity_id=entity_id,
+                chapter_index=chapter_index,
+                scene_index=scene.scene_index,
+            )
+            if self._fact_is_scene_relevant(
+                fact=fact,
+                chapter_index=chapter_index,
+            )
+        )
+        active_facts = self._dedupe_facts((*character_facts, *world_facts))
         location_ids = self._location_ids_from_relationships(relationships)
         snapshot = SceneSnapshot(
             snapshot_id=f"snapshot_{scene.scene_id}",
@@ -177,6 +195,37 @@ class SceneContextBuilder:
             deduped.setdefault(entity_id, None)
 
         return tuple(deduped)
+
+    def _context_entity_ids(
+        self,
+        *,
+        character_ids: tuple[str, ...],
+        relationships: tuple[Relationship, ...],
+    ) -> tuple[str, ...]:
+        """Return non-character entities connected to the scene context."""
+        character_id_set = set(character_ids)
+        entity_ids: dict[str, None] = {}
+        for relationship in relationships:
+            for entity_id in (
+                relationship.source_entity_id,
+                relationship.target_entity_id,
+            ):
+                if entity_id in character_id_set:
+                    continue
+                entity = self._database.retrieve_entity(entity_id)
+                if entity is not None:
+                    entity_ids.setdefault(entity_id, None)
+
+        return tuple(entity_ids)
+
+    @staticmethod
+    def _dedupe_facts(facts: Iterable[Fact]) -> tuple[Fact, ...]:
+        """Return active facts without duplicate fact IDs."""
+        deduped: dict[str, Fact] = {}
+        for fact in facts:
+            deduped.setdefault(fact.fact_id, fact)
+
+        return tuple(deduped.values())
 
     def _location_ids_from_relationships(
         self,
