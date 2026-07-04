@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import textwrap
 from collections.abc import Iterable
 
@@ -39,6 +40,76 @@ APPEARANCE_ATTRIBUTE_PARTS = frozenset(
         "texture",
         "uniform",
         "wing",
+    }
+)
+
+SCENE_VISUAL_ANCHOR_TERMS = frozenset(
+    {
+        "armor",
+        "banner",
+        "bed",
+        "blade",
+        "bridge",
+        "building",
+        "car",
+        "carriage",
+        "cave",
+        "chair",
+        "city",
+        "classroom",
+        "clothing",
+        "corridor",
+        "courtyard",
+        "desk",
+        "door",
+        "dress",
+        "field",
+        "forest",
+        "gate",
+        "hall",
+        "hangar",
+        "hologram",
+        "holographic",
+        "house",
+        "jacket",
+        "light",
+        "market",
+        "podium",
+        "projection",
+        "room",
+        "screen",
+        "ship",
+        "starship",
+        "street",
+        "table",
+        "teacher",
+        "temple",
+        "tower",
+        "uniform",
+        "vehicle",
+        "wall",
+        "warship",
+        "window",
+    }
+)
+
+VISUAL_PRODUCTION_ATTRIBUTE_PARTS = frozenset(
+    {
+        "appearance",
+        "asset",
+        "blueprint",
+        "condition",
+        "design",
+        "environment",
+        "equipment",
+        "item",
+        "location",
+        "object",
+        "status",
+        "territory",
+        "vehicle",
+        "visual",
+        "weapon",
     }
 )
 
@@ -118,11 +189,19 @@ class CanonPromptBuilder:
                     "vehicle design, logos, colors, or scenery details that are not "
                     "listed as known canon."
                 ),
+                self._scene_production_brief_section(context, analysis),
+                self._scene_visual_anchor_section(context),
                 self._scene_directive_section(analysis),
                 self._image_subject_section(context),
+                self._world_context_section(context),
                 self._image_setting_section(analysis),
                 self._visual_direction_section(analysis),
+                self._composition_section(context, analysis),
+                self._lighting_section(analysis),
                 self._unknown_visuals_section(context=context, analysis=analysis),
+                self._do_not_include_section(context, analysis),
+                self._visible_text_guard_section(),
+                self._rendering_style_section(),
                 self._continuity_guard_section(analysis),
             )
         )
@@ -143,9 +222,11 @@ class CanonPromptBuilder:
                     "that are not supported by canon.\n"
                     "Narrate using only accepted canon facts."
                 ),
+                self._scene_production_brief_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._narration_direction_section(analysis),
                 self._character_section(context),
+                self._world_context_section(context),
                 self._continuity_guard_section(analysis),
             )
         )
@@ -166,10 +247,16 @@ class CanonPromptBuilder:
                     "invent new physical details.\n"
                     "Describe camera framing without inventing new canon."
                 ),
+                self._scene_production_brief_section(context, analysis),
                 self._scene_directive_section(analysis),
+                self._composition_section(context, analysis),
                 self._camera_direction_section(analysis),
+                self._scene_visual_anchor_section(context),
                 self._character_section(context),
+                self._world_context_section(context),
                 self._visual_direction_section(analysis),
+                self._lighting_section(analysis),
+                self._visible_text_guard_section(),
             )
         )
 
@@ -189,10 +276,15 @@ class CanonPromptBuilder:
                     "motion minimal and neutral.\n"
                     "Describe motion using only accepted scene facts."
                 ),
+                self._scene_production_brief_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._animation_direction_section(analysis),
+                self._scene_visual_anchor_section(context),
                 self._character_section(context),
+                self._world_context_section(context),
                 self._visual_direction_section(analysis),
+                self._do_not_include_section(context, analysis),
+                self._visible_text_guard_section(),
                 self._continuity_guard_section(analysis),
             )
         )
@@ -292,6 +384,79 @@ class CanonPromptBuilder:
         )
 
     @staticmethod
+    def _scene_production_brief_section(
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return a production-first scene brief for generation tools."""
+        character_names = tuple(card.display_name for card in context.character_cards)
+        visual_anchors = CanonPromptBuilder._scene_visual_anchors(context)
+        current_scene = (
+            visual_anchors[0]
+            if visual_anchors
+            else CanonPromptBuilder._source_summary(context)
+        )
+        return "\n".join(
+            [
+                "Scene production brief:",
+                f"- Current scene moment: {CanonPromptBuilder._shorten(current_scene, width=190)}",
+                f"- Primary setting: {CanonPromptBuilder._shorten(analysis.environment_summary)}",
+                (
+                    "- Characters present: "
+                    f"{', '.join(character_names) if character_names else 'Unknown'}"
+                ),
+                f"- Scene purpose: {CanonPromptBuilder._shorten(analysis.purpose)}",
+                (
+                    "- Generation priority: depict the current scene moment before "
+                    "retained background canon."
+                ),
+            ]
+        )
+
+    @staticmethod
+    def _scene_visual_anchor_section(context: CanonSceneContext) -> str:
+        """Return compact current-scene visual anchors from source structure."""
+        return "\n".join(
+            [
+                (
+                    "Scene-grounded visual anchors "
+                    "(prioritize these over retained background facts):"
+                ),
+                *CanonPromptBuilder._bullet_lines(
+                    CanonPromptBuilder._scene_visual_anchors(context)
+                ),
+            ]
+        )
+
+    @staticmethod
+    def _scene_visual_anchors(context: CanonSceneContext) -> tuple[str, ...]:
+        """Return short visual/action anchors from the current scene only."""
+        anchors: list[str] = []
+        for sentence in CanonPromptBuilder._scene_sentences(context.scene.paragraphs):
+            normalized_sentence = sentence.lower()
+            if any(term in normalized_sentence for term in SCENE_VISUAL_ANCHOR_TERMS):
+                anchors.append(CanonPromptBuilder._shorten(sentence, width=170))
+            if len(anchors) >= 6:
+                break
+
+        return tuple(CanonPromptBuilder._unique_values(anchors))
+
+    @staticmethod
+    def _scene_sentences(paragraphs: Iterable[str]) -> tuple[str, ...]:
+        """Return compact sentence-like units from scene paragraphs."""
+        sentences: list[str] = []
+        for paragraph in paragraphs:
+            normalized_paragraph = " ".join(paragraph.split())
+            if not normalized_paragraph:
+                continue
+            for sentence in re.split(r"(?<=[.!?])\s+", normalized_paragraph):
+                stripped_sentence = sentence.strip()
+                if stripped_sentence:
+                    sentences.append(stripped_sentence)
+
+        return tuple(sentences)
+
+    @staticmethod
     def _visual_direction_section(analysis: SceneAnalysis) -> str:
         """Return visual production details."""
         return "\n".join(
@@ -303,6 +468,131 @@ class CanonPromptBuilder:
                 "Character Goals:",
                 *CanonPromptBuilder._bullet_lines(analysis.character_goals),
             ]
+        )
+
+    def _world_context_section(self, context: CanonSceneContext) -> str:
+        """Return scene-relevant world, location, item, and relationship context."""
+        character_ids = {card.character_id for card in context.character_cards}
+        lines = ["World and scene object context:"]
+        world_fact_lines = [
+            self._world_fact_line(fact)
+            for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
+            if fact.entity_id not in character_ids
+            and self._is_visual_production_attribute(fact.attribute)
+        ]
+        relationship_lines = [
+            self._relationship_prompt_line(relationship)
+            for relationship in sorted(
+                context.relationships,
+                key=lambda relationship: relationship.relationship_id,
+            )
+        ]
+        lines.extend(
+            f"- {line}"
+            for line in self._unique_values((*world_fact_lines, *relationship_lines))[:10]
+        )
+
+        if len(lines) == 1:
+            lines.append("- No scene-specific world details accepted yet.")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def _composition_section(
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return composition guidance without inventing layout details."""
+        character_count = len(context.character_cards)
+        subject_guidance = (
+            "Frame the confirmed character as the primary subject."
+            if character_count == 1
+            else "Frame the confirmed characters without adding extras."
+            if character_count > 1
+            else "Frame the confirmed scene environment without adding characters."
+        )
+        visual_anchors = CanonPromptBuilder._scene_visual_anchors(context)
+        anchor_focus = (
+            CanonPromptBuilder._shorten(visual_anchors[0])
+            if visual_anchors
+            else CanonPromptBuilder._shorten(analysis.environment_summary)
+        )
+        return "\n".join(
+            [
+                "Composition:",
+                f"- Primary visual focus: {anchor_focus}",
+                f"- Subject placement: {subject_guidance}",
+                "- Arrange important objects only if they are listed as scene-relevant.",
+                "- Keep the scene readable instead of adding decorative background detail.",
+            ]
+        )
+
+    @staticmethod
+    def _lighting_section(analysis: SceneAnalysis) -> str:
+        """Return physical lighting guidance that does not redefine mood."""
+        return "\n".join(
+            [
+                "Lighting:",
+                (
+                    "- Use physical lighting implied by the accepted setting: "
+                    f"{CanonPromptBuilder._shorten(analysis.environment_summary)}"
+                ),
+                "- If lighting is not stated by canon, use neutral readable lighting.",
+                (
+                    "- Support the mood without changing facts: "
+                    f"{CanonPromptBuilder._shorten(analysis.mood)}"
+                ),
+            ]
+        )
+
+    @staticmethod
+    def _rendering_style_section() -> str:
+        """Return style guidance that stays subordinate to canon facts."""
+        return "\n".join(
+            [
+                "Rendering style:",
+                "- Canon-preserving production image.",
+                "- Clear subject and environment separation.",
+                "- Style must not override accepted Canon.",
+                "- Do not add watermark, credits, decorative text, or UI overlays.",
+            ]
+        )
+
+    @staticmethod
+    def _visible_text_guard_section() -> str:
+        """Return guidance that prevents prompt metadata from becoming image text."""
+        return "\n".join(
+            [
+                "Visible text and labels:",
+                (
+                    "- Do not render names, entity IDs, project labels, scene titles, "
+                    "prompt headings, captions, subtitles, or UI panels."
+                ),
+                (
+                    "- If a screen, sign, book, interface, or blueprint is canon, show it "
+                    "without readable text unless exact text is accepted canon."
+                ),
+                (
+                    "- Do not turn department, role, goal, or asset names into badges, "
+                    "signs, hologram labels, or clothing text."
+                ),
+            ]
+        )
+
+    @staticmethod
+    def _world_fact_line(fact: Fact) -> str:
+        """Return a compact world fact line for production prompts."""
+        return (
+            f"{fact.entity_id} {fact.attribute}: "
+            f"{CanonPromptBuilder._shorten(fact.value)}"
+        )
+
+    @staticmethod
+    def _relationship_prompt_line(relationship: Relationship) -> str:
+        """Return a compact relationship line for production prompts."""
+        return (
+            f"{relationship.source_entity_id} {relationship.relationship_type} "
+            f"{relationship.target_entity_id}"
         )
 
     @staticmethod
@@ -391,6 +681,27 @@ class CanonPromptBuilder:
                 "Unknown visual handling:",
                 *[f"- {unknown}" for unknown in unknowns],
                 "- Keep unknown details neutral and do not turn them into new canon.",
+            ]
+        )
+
+    @staticmethod
+    def _do_not_include_section(
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return generation exclusions that protect scene fidelity."""
+        del context
+        return "\n".join(
+            [
+                "Do not include unless supported by this scene:",
+                "- Later canon objects or rewards that are not visible in the current scene.",
+                "- Extra characters, officers, crowds, logos, uniforms, or vehicles.",
+                (
+                    "- Detailed faces, hair, body type, race, or gender markers "
+                    "unless canon states them."
+                ),
+                "- Background battles, exterior vistas, or technical diagrams unless listed above.",
+                *CanonPromptBuilder._bullet_lines(analysis.forbidden_elements),
             ]
         )
 
@@ -487,6 +798,15 @@ class CanonPromptBuilder:
         return any(
             part in normalized_attribute
             for part in PROMPT_METADATA_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
+    def _is_visual_production_attribute(attribute: str) -> bool:
+        """Return whether a world fact helps image or video generation."""
+        normalized_attribute = attribute.lower()
+        return any(
+            part in normalized_attribute
+            for part in VISUAL_PRODUCTION_ATTRIBUTE_PARTS
         )
 
     @staticmethod

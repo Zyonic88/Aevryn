@@ -176,15 +176,18 @@ function WorldEntitySection({ section }: { section: OutputSection }) {
       <header>
         <h3>{section.title}</h3>
       </header>
-      {items.length > 0 ? (
-        <ul className="world-item-list">
-          {items.map((item, index) => (
-            <li key={`${index}-${item}`}>{item}</li>
-          ))}
-        </ul>
-      ) : (
-        <p>Unknown</p>
-      )}
+      <details className="profile-disclosure">
+        <summary>World details</summary>
+        {items.length > 0 ? (
+          <ul className="world-item-list">
+            {items.map((item, index) => (
+              <li key={`${index}-${item}`}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>Unknown</p>
+        )}
+      </details>
     </article>
   );
 }

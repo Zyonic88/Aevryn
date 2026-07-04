@@ -1,5 +1,7 @@
 # Aevryn Prompt Engine
 
+See also: [Aevryn Prompting Philosophy](AEVRYN_PROMPTING_PHILOSOPHY.md).
+
 ## What Is It?
 
 The Prompt Engine turns Scene Analyzer output and Scene Engine context into production-ready prompt text and production packs.
@@ -28,6 +30,8 @@ It does not call AI services.
 
 It does not generate images.
 
+The prompt is the final presentation of structured story understanding. It is not a substitute for that understanding.
+
 ## Why Does It Exist?
 
 Creators need consistent prompts that match the current canon state of a scene.
@@ -41,6 +45,8 @@ The Prompt Engine exists so generated media can reference:
 * Active state changes
 
 The prompt should be based on Scene Analyzer output and accepted canon, not guesses.
+
+Prompt quality should improve because Aevryn understands the story better, not because the prompt text adds unsupported adjectives.
 
 ## What Authority Does It Own?
 
@@ -87,6 +93,44 @@ Production Pack list fields are whitespace-normalized before uniqueness checks.
 Production Pack list fields must not contain duplicate visible rows.
 
 `Unknown` is allowed when evidence is absent.
+
+## Production Prompt Rules
+
+Prompt sections must separate:
+
+* Story facts
+* Scene meaning
+* Character state
+* World and environment context
+* Important objects
+* Prompt-type direction
+* Forbidden elements
+
+Story facts come first.
+
+Scene meaning comes second.
+
+Style comes last.
+
+The Prompt Engine must prioritize current-scene truth over retained background canon.
+
+Scene production briefs should answer:
+
+* What is happening right now?
+* Where is it happening?
+* Who is present?
+* What world or object details matter?
+* What should not appear?
+
+Prompt Packs must consume resolved identities. Prompt generation does not perform entity resolution.
+
+Prompt Packs must consume normalized Canon and scene context. Prompt generation does not own translation.
+
+World, location, item, vehicle, system, and object details should enter prompts only through accepted scene context.
+
+Unknown information remains Unknown and must not be replaced by assumptions.
+
+Forbidden elements should be explicit enough to prevent generation tools from adding unsupported characters, objects, vehicles, logos, settings, or physical traits.
 
 ## What Does It NOT Own?
 

@@ -296,6 +296,19 @@ const exportPreviewPayload = {
   content: "# Scene 1\n\n## Image Prompt\nGenerate this image using only accepted Aevryn canon.",
 };
 
+const projectExportPayload = {
+  export_id: "export_alpha",
+  project_id: "project_alpha",
+  snapshot_id: "snapshot_run_alpha_canon",
+  export_kind: "canon",
+  export_format: "json",
+  filename: "alpha-canon-snapshot.json",
+  content_type: "application/json",
+  size: 128,
+  checksum: "checksum-alpha",
+  created_at: "2026-06-27T00:45:00.000Z",
+};
+
 const continuityPreviewPayload = {
   source_id: "api_demo",
   source_format: "txt",
@@ -571,6 +584,67 @@ describe("AevrynApiClient", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(`https://api.aevryn.ai${API_PATHS.exportsPreview}`);
     expect(init.method).toBe("POST");
     expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends authenticated requests for stored project exports", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ exports: [projectExportPayload] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify(projectExportPayload)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.listProjectExports("project_alpha", "session-token", "2026-06-27T00:00:00.000Z"),
+    ).resolves.toEqual({ exports: [projectExportPayload] });
+    await expect(
+      client.createProjectExport(
+        "project_alpha",
+        {
+          export_id: "export_alpha",
+          snapshot_id: "snapshot_run_alpha_canon",
+          export_format: "json",
+          filename: "alpha-canon-snapshot.json",
+          now: "2026-06-27T00:45:00.000Z",
+        },
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toEqual(projectExportPayload);
+
+    for (const [input, init] of fetchMock.mock.calls) {
+      expect(input).toBe(`https://api.aevryn.ai${API_PATHS.projects}/project_alpha/exports`);
+      const headers = init.headers as Headers;
+      expect(headers.get("Authorization")).toBe("Bearer session-token");
+      expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
+    }
+    expect(fetchMock.mock.calls[1][1].method).toBe("POST");
+  });
+
+  it("downloads stored project exports with authentication", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Blob(["{}"], { type: "application/json" }), {
+        headers: {
+          "Content-Disposition": 'attachment; filename="alpha-canon-snapshot.json"',
+          "Content-Type": "application/json",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    const result = await client.downloadProjectExport(
+      "project_alpha",
+      "export_alpha",
+      "session-token",
+      "2026-06-27T00:00:00.000Z",
+    );
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/exports/export_alpha/download`,
+    );
+    expect(result.filename).toBe("alpha-canon-snapshot.json");
+    expect(result.contentType).toBe("application/json");
   });
 
   it("sends JSON requests for continuity previews", async () => {

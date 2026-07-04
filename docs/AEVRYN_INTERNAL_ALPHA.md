@@ -2,7 +2,7 @@
 
 > Built by **Aetherra Labs**
 
-Phase 10 prepares Aevryn V2 for private internal alpha.
+Phase 10 prepares Aevryn V2 for internal alpha.
 
 Core rule:
 
@@ -13,7 +13,21 @@ Fix it.
 Do not launch it publicly.
 ```
 
-Internal alpha is not a marketing launch, billing launch, media-generation launch, or broad redesign phase.
+Internal alpha is not a marketing launch, billing launch, media-generation launch, broad redesign phase, private tester program, or public beta.
+
+---
+
+# Audience Boundary
+
+Internal alpha is limited to Aetherra Labs owner/operator development and Codex-assisted verification.
+
+It is not an invite-only tester program.
+
+It is not a public preview.
+
+It is not approval to accept outside manuscripts.
+
+Public beta is the first milestone where outside users may be invited to upload their own work, and it remains blocked until the public-beta gates are signed off.
 
 ---
 
@@ -34,7 +48,7 @@ Register
 -> Export
 ```
 
-Phase 10 proves that path is usable enough for trusted private testing.
+Phase 10 proves that path is usable enough for continued internal development and release-candidate hardening.
 
 ---
 
@@ -131,7 +145,7 @@ Use this ladder:
 * Smoke Test: fast confidence that the happy path works.
 * Integration Test: real subsystems cooperate across auth, storage, imports, workers, snapshots, monitoring, exports, and performance baselines.
 * Operational Readiness Test: interruption, recovery, observability, diagnostics, and safe failure behavior.
-* Release Candidate Test: full repeatable pre-alpha gate before inviting trusted testers.
+* Release Candidate Test: full repeatable pre-alpha gate before public-beta readiness work.
 
 Each ladder step should have a stable name, scope, owner, date, result, and known limitations. A failed higher-level test should not erase lower-level evidence; it should identify the next fix.
 
@@ -159,15 +173,15 @@ Manual alpha checks should cover the parts automation cannot fully judge yet:
 
 * whether the creator path feels understandable without CLI knowledge
 * whether loading, empty, and failure states explain what happened
-* whether Monitoring helps a tester recover when a workflow fails
-* whether output views are useful enough for private testing
+* whether Monitoring helps the internal operator recover when a workflow fails
+* whether output views are useful enough for internal alpha hardening
 * whether export previews produce a file shape a creator recognizes
 * whether known limitations are visible before they become confusing
-* whether interrupted workflows let the tester continue
+* whether interrupted workflows let the internal operator continue
 
 Manual checks must not expand Phase 10 into branding polish, public launch readiness, or media-generation scope.
 
-Private tester instructions live in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
+The former private tester guide is retained as an internal alpha operator guide in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
 
 ---
 

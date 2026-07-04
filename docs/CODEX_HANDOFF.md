@@ -173,8 +173,8 @@ Phase 10 starting point:
 
 - Phase 10 acceptance is governed by `docs/AEVRYN_V2_PHASE_10_ACCEPTANCE.md`
 - Internal alpha readiness is defined in `docs/AEVRYN_INTERNAL_ALPHA.md`
-- Repeatable private alpha readiness runs are recorded with `docs/AEVRYN_INTERNAL_ALPHA_CHECKLIST.md`
-- Treat Phase 10 as private internal alpha readiness, not public launch
+- Repeatable internal alpha readiness runs are recorded with `docs/AEVRYN_INTERNAL_ALPHA_CHECKLIST.md`
+- Treat Phase 10 as internal alpha readiness, not public launch
 - Verify the complete creator path: register, create project, upload story, wait for processing, view engine outputs, and export
 - Treat recovery as distinct from failure display: after browser refresh, session expiry, worker interruption, failed runs, or network/API interruption, answer whether the user can continue
 - Version readiness through Smoke Test, Integration Test, Operational Readiness Test, and Release Candidate Test gates
@@ -186,12 +186,12 @@ Phase 10 progress:
 - Internal alpha docs and readiness checklist exist.
 - Automated gates are green after alpha hardening through commit `a064bef`.
 - Import, processing, monitoring, refresh recovery, project deletion, and retry after extraction failures have been manually exercised through the browser.
-- Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports now render processed project output from persisted backend snapshots instead of requiring testers to use developer preview inputs.
+- Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports now render processed project output from persisted backend snapshots instead of requiring developer preview inputs.
 - Alpha extraction now dedupes duplicate relationship candidates and presentation hides conflicting gender values instead of showing both.
 - Browser sanity testing validated Continuity, Prompt Packs, and Exports against persisted backend snapshots.
 - Browser sanity testing found and fixed the local/demo prompt-pack fallback so scene and prompt panels stay available even when extraction accepts no canon facts.
-- Private tester instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
-- Phase 10 is ready for narrow private alpha testing with documented limitations; Phase 11 Security & Privacy Hardening is accepted, and public beta now depends on deployment-specific security follow-through.
+- Internal alpha operator instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
+- Phase 10 is ready for internal alpha hardening with documented limitations; no outside testers or untrusted manuscripts enter before public-beta readiness gates are complete. Phase 11 Security & Privacy Hardening is accepted, and public beta now depends on deployment-specific security follow-through.
 
 Phase 11 accepted security/privacy baseline:
 

@@ -83,7 +83,13 @@ export function DashboardPage() {
   );
 
   const normalizedProjectName = normalizeProjectName(projectName);
-  const projects = (projectsQuery.data?.projects ?? []).map(projectSummaryFromApiProject);
+  const projects = useMemo(
+    () =>
+      (projectsQuery.data?.projects ?? [])
+        .map(projectSummaryFromApiProject)
+        .sort(compareProjectActivity),
+    [projectsQuery.data?.projects],
+  );
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,7 +116,11 @@ export function DashboardPage() {
       <section className="project-panel">
         <div className="section-title-row">
           <h2>Projects</h2>
+          <span>{projectCountLabel(projects.length)}</span>
         </div>
+        <p className="field-note">
+          Open a project to continue working, or create a new story workspace.
+        </p>
         <form className="inline-form" onSubmit={submit}>
           <label>
             Project name
@@ -145,8 +155,9 @@ export function DashboardPage() {
               <div key={project.id} className="project-row project-row-action">
                 <Link to={`/projects/${project.id}`} className="project-select-link">
                   <strong>{project.name}</strong>
+                  <span>Updated {formatDateTime(project.updatedAt)}</span>
+                  <small>Open workspace</small>
                 </Link>
-                <span>Updated {formatDateTime(project.updatedAt)}</span>
                 <button
                   type="button"
                   className="icon-button danger-button"
@@ -222,6 +233,34 @@ export function DashboardPage() {
       </details>
     </div>
   );
+}
+
+function projectCountLabel(count: number): string {
+  if (count === 0) {
+    return "No projects";
+  }
+  if (count === 1) {
+    return "1 project";
+  }
+  return `${count.toLocaleString()} projects`;
+}
+
+function compareProjectActivity(
+  firstProject: { name: string; updatedAt: string },
+  secondProject: { name: string; updatedAt: string },
+): number {
+  const firstUpdated = Date.parse(firstProject.updatedAt);
+  const secondUpdated = Date.parse(secondProject.updatedAt);
+  if (Number.isFinite(firstUpdated) && Number.isFinite(secondUpdated)) {
+    return secondUpdated - firstUpdated;
+  }
+  if (Number.isFinite(secondUpdated)) {
+    return 1;
+  }
+  if (Number.isFinite(firstUpdated)) {
+    return -1;
+  }
+  return firstProject.name.localeCompare(secondProject.name);
 }
 
 function requireSessionToken(session: { session_token: string } | null): string {
