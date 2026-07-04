@@ -10,6 +10,7 @@ from aevryn.entity_resolution.models import (
 )
 
 RESOLUTION_THRESHOLD = 0.75
+AMBIGUITY_MARGIN = 0.05
 
 
 class EntityResolutionEngine:
@@ -23,7 +24,8 @@ class EntityResolutionEngine:
         context_entity_ids: tuple[str, ...] = (),
     ) -> ResolvedReference:
         """Resolve one surface reference against known profiles."""
-        if not profiles:
+        stable_profiles = _validated_profiles(profiles)
+        if not stable_profiles:
             return ResolvedReference(
                 reference=reference,
                 status="unresolved",
@@ -34,7 +36,7 @@ class EntityResolutionEngine:
             sorted(
                 (
                     candidate
-                    for profile in profiles
+                    for profile in stable_profiles
                     if (candidate := self._score_profile(reference, profile)) is not None
                 ),
                 key=lambda candidate: (-candidate.confidence, candidate.entity_id),
@@ -83,6 +85,20 @@ class EntityResolutionEngine:
                 )
             top = pronoun_candidates[0]
 
+        if (
+            len(candidates) > 1
+            and top.confidence >= RESOLUTION_THRESHOLD
+            and candidates[1].confidence >= RESOLUTION_THRESHOLD
+            and top.confidence - candidates[1].confidence <= AMBIGUITY_MARGIN
+        ):
+            return ResolvedReference(
+                reference=reference,
+                status="ambiguous",
+                confidence=top.confidence,
+                candidates=candidates,
+                reason="Multiple identity profiles are within the ambiguity margin.",
+            )
+
         if top.confidence < RESOLUTION_THRESHOLD:
             return ResolvedReference(
                 reference=reference,
@@ -109,10 +125,11 @@ class EntityResolutionEngine:
         context_entity_ids: tuple[str, ...] = (),
     ) -> tuple[ResolvedReference, ...]:
         """Resolve multiple references deterministically."""
+        stable_profiles = _validated_profiles(profiles)
         return tuple(
             self.resolve_reference(
                 reference,
-                profiles,
+                stable_profiles,
                 context_entity_ids=context_entity_ids,
             )
             for reference in references
@@ -169,6 +186,18 @@ class EntityResolutionEngine:
         if soft_score is None:
             return None
         return soft_score
+
+
+def _validated_profiles(
+    profiles: tuple[EntityIdentityProfile, ...],
+) -> tuple[EntityIdentityProfile, ...]:
+    """Reject duplicate identity profiles before scoring creates duplicate candidates."""
+    seen_entity_ids: set[str] = set()
+    for profile in profiles:
+        if profile.entity_id in seen_entity_ids:
+            raise ValueError("Entity identity profile IDs must be unique.")
+        seen_entity_ids.add(profile.entity_id)
+    return profiles
 
 
 def _normalized_phrase(value: str) -> str:

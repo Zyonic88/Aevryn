@@ -148,6 +148,8 @@ def test_ai_extractor_returns_evidence_bounded_candidates() -> None:
     assert "sister, brother" in client.prompt
     assert "Half-Beastman" in client.prompt
     assert "gender, race, species, role" in client.prompt
+    assert "Use entity_type=system only for named power systems" in client.prompt
+    assert "Use entity_type=skill only for usable abilities" in client.prompt
     assert anchor_id in client.prompt
 
 
@@ -207,6 +209,7 @@ def test_openai_responses_client_returns_output_text_without_network() -> None:
     }
     entity_schema = schema["properties"]["entities"]["items"]
     assert "character" in entity_schema["properties"]["entity_type"]["enum"]
+    assert "system" in entity_schema["properties"]["entity_type"]["enum"]
     assert transport.timeout_seconds == 30.0
     assert transport.max_response_bytes == 1_048_576
 

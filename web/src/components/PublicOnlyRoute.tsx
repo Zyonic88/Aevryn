@@ -4,8 +4,12 @@ import { recoveryPath } from "../auth/recoveryPath";
 import { useAuth } from "../auth/useAuth";
 
 export function PublicOnlyRoute() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isSessionRestoring } = useAuth();
   const location = useLocation();
+
+  if (isSessionRestoring) {
+    return null;
+  }
 
   if (isAuthenticated) {
     return <Navigate to={recoveryPath(location.state)} replace />;

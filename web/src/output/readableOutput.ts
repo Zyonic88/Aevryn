@@ -37,14 +37,22 @@ export function readableOutputItem(item: string): string {
   return relationship ?? readableFreeText(withoutAnchorPrefix);
 }
 
-export function readablePromptText(section: { items: string[] }): string {
+export function readablePromptText(
+  section: { items: string[] },
+  options: { maxItems?: number } = {},
+): string {
   const items = readableOutputItems(section.items)
     .filter((item) => item !== "Source-backed detail available through evidence controls.")
     .filter((item) => !/^Scene ID:/iu.test(item));
   if (items.length === 0) {
     return "Unknown.";
   }
-  return items.map(toSentence).join("\n\n");
+  const visibleItems = options.maxItems ? items.slice(0, options.maxItems) : items;
+  const overflow =
+    options.maxItems && items.length > options.maxItems
+      ? `\n\n${items.length - options.maxItems} more canon details available.`
+      : "";
+  return `${visibleItems.map(toSentence).join("\n\n")}${overflow}`;
 }
 
 function toSentence(value: string): string {

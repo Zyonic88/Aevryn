@@ -470,10 +470,32 @@ def _translation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]
                 "source_scene_id": unit.source_scene_id,
                 "source_evidence_anchor_ids": unit.source_evidence_anchor_ids,
                 "issue_count": len(unit.issues),
+                "issues": tuple(
+                    {
+                        "issue_code": _translation_issue_code(issue.issue_code),
+                        "issue_label": _translation_issue_label(issue.issue_code),
+                        "evidence_anchor_count": len(issue.evidence_anchor_ids),
+                    }
+                    for issue in unit.issues
+                ),
             }
             for unit in result.translation_units
         ),
     }
+
+
+def _translation_issue_code(value: str) -> str:
+    """Return a stable translation issue code without storing source terms."""
+    if value == "translation_review_required":
+        return value
+    return "translation_review_required"
+
+
+def _translation_issue_label(value: str) -> str:
+    """Return metadata-only translation review label."""
+    if _translation_issue_code(value) == "translation_review_required":
+        return "Glossary term needs review"
+    return "Translation needs review"
 
 
 def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, object]:
@@ -496,12 +518,54 @@ def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, o
                 "evidence_anchor_id": decision.reference.evidence_anchor_id,
                 "chapter_id": decision.reference.chapter_id,
                 "scene_id": decision.reference.scene_id,
+                "reference_kind": _identity_reference_kind(decision.reference.text),
+                "reference_label": _identity_reference_label(decision.reference.text),
                 "candidate_count": len(decision.candidates),
                 "reason": _identity_snapshot_reason(decision.status),
             }
             for decision in result.identity_resolutions
         ),
     }
+
+
+def _identity_reference_kind(value: str) -> str:
+    """Classify an identity surface reference without storing source prose."""
+    normalized = value.strip().lower()
+    if normalized in {"he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs"}:
+        return "pronoun"
+    words = tuple(part for part in normalized.replace("-", " ").split() if part)
+    if not words:
+        return "unknown"
+    if len(words) == 1:
+        return "name"
+    if words[0] in {"the", "a", "an"}:
+        words = words[1:]
+    if words and words[-1] in {
+        "captain",
+        "commander",
+        "engineer",
+        "general",
+        "leader",
+        "officer",
+        "student",
+        "teacher",
+    }:
+        return "title"
+    return "description"
+
+
+def _identity_reference_label(value: str) -> str:
+    """Return creator-facing review copy for an identity surface reference."""
+    kind = _identity_reference_kind(value)
+    if kind == "pronoun":
+        return "Pronoun reference"
+    if kind == "name":
+        return "Name reference"
+    if kind == "title":
+        return "Title reference"
+    if kind == "description":
+        return "Description reference"
+    return "Reference needs review"
 
 
 def _identity_snapshot_reason(status: str) -> str:
@@ -1080,10 +1144,15 @@ def _section_payload(
     return {
         "title": _humanized_display_text(section.title, display_names=display_names),
         "items": tuple(
-            _safe_display_text(item, source_quotes, display_names=display_names)
+            safe_item
             for item in section.items
-            if _safe_display_text(item, source_quotes, display_names=display_names)
-            != _SOURCE_BACKED_PLACEHOLDER
+            if (
+                safe_item := _safe_display_text(
+                    item,
+                    source_quotes,
+                    display_names=display_names,
+                )
+            ) != _SOURCE_BACKED_PLACEHOLDER
         ),
     }
 
@@ -1182,6 +1251,7 @@ def _humanized_entity_id(
         "organization_",
         "vehicle_",
         "skill_",
+        "system_",
         "fact_",
         "state_",
         "event_",
@@ -1227,10 +1297,14 @@ def _humanized_relationship_line(
         and _looks_like_entity_reference(target_id, display_names=display_names)
     ):
         return None
+    source_label = _humanized_entity_id(source_id, display_names=display_names)
+    target_label = _humanized_entity_id(target_id, display_names=display_names)
+    if source_label == target_label:
+        return ""
     return (
-        f"{_humanized_entity_id(source_id, display_names=display_names)} "
+        f"{source_label} "
         f"{_humanized_relationship(relationship_type)} "
-        f"{_humanized_entity_id(target_id, display_names=display_names)}"
+        f"{target_label}"
     )
 
 
@@ -1245,6 +1319,7 @@ def _looks_like_machine_id(value: str) -> bool:
             "organization_",
             "vehicle_",
             "skill_",
+            "system_",
             "fact_",
             "state_",
             "event_",
@@ -1284,7 +1359,7 @@ def _looks_like_anchor_derived_text(value: str) -> bool:
 def _strip_internal_entity_suffixes(value: str) -> str:
     """Remove parenthesized internal entity IDs from visible prompt lines."""
     return re.sub(
-        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill)_[A-Za-z0-9_]+)\)",
+        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)\)",
         "",
         value,
     )
@@ -1302,7 +1377,7 @@ def _replace_entity_tokens(
         return _humanized_entity_id(token, display_names=display_names)
 
     return re.sub(
-        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
+        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
         replacement,
         value,
     )

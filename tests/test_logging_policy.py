@@ -50,12 +50,12 @@ def test_repository_ignores_generated_reference_outputs() -> None:
     """Generated outputs and local snapshots should not be committed accidentally."""
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
 
-    assert "generated/" in gitignore
-    assert "runtime/" in gitignore
-    assert "output/" in gitignore
-    assert "exports/" in gitignore
-    assert "snapshots/*" in gitignore
-    assert "!snapshots/README.md" in gitignore
+    assert "/generated/" in gitignore
+    assert "/runtime/" in gitignore
+    assert "/output/" in gitignore
+    assert "/exports/" in gitignore
+    assert "/snapshots/*" in gitignore
+    assert "!/snapshots/README.md" in gitignore
 
 
 def test_package_installs_null_handler() -> None:

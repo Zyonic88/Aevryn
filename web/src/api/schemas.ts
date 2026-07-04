@@ -49,6 +49,7 @@ export const authSessionSchema = z.object({
   email: z.string(),
   display_name: z.string(),
   session_token: z.string(),
+  refresh_token: z.string().optional(),
   expires_at: z.string(),
 });
 
@@ -233,6 +234,18 @@ export const projectLanguageIdentitySummarySchema = z
   .object({
     translation_unit_count: z.number(),
     translation_review_count: z.number(),
+    translation_review_items: z
+      .array(
+        z.object({
+          issue_code: z.string(),
+          issue_label: z.string(),
+          chapter_id: z.string().default(""),
+          scene_id: z.string().default(""),
+          evidence_anchor_count: z.number(),
+          reason: z.string().default(""),
+        }),
+      )
+      .default([]),
     identity_decision_count: z.number(),
     identity_resolved_count: z.number(),
     identity_ambiguous_count: z.number(),
@@ -244,6 +257,8 @@ export const projectLanguageIdentitySummarySchema = z
           chapter_id: z.string().default(""),
           scene_id: z.string().default(""),
           evidence_anchor_id: z.string(),
+          reference_kind: z.string().default("reference"),
+          reference_label: z.string().default("Reference needing review"),
           candidate_count: z.number(),
           confidence: z.number(),
           reason: z.string().default(""),
@@ -254,6 +269,7 @@ export const projectLanguageIdentitySummarySchema = z
   .default({
     translation_unit_count: 0,
     translation_review_count: 0,
+    translation_review_items: [],
     identity_decision_count: 0,
     identity_resolved_count: 0,
     identity_ambiguous_count: 0,

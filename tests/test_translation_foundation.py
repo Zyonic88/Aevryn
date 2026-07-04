@@ -55,6 +55,87 @@ def test_translation_glossary_preserves_preferred_story_terms() -> None:
     assert "T3 Blizzard-class Light Interstellar Battlecruiser" in result.normalized_text
 
 
+def test_translation_glossary_matches_complete_terms_only() -> None:
+    """Glossary handling should not mutate unrelated longer words."""
+    engine = TranslationEngine()
+
+    result = engine.normalize_unit(
+        TranslationUnit(
+            unit_id="unit_001_complete_terms",
+            source_text="Qi steadied her breath, but the qilin statue did not move.",
+            evidence_anchor_ids=("anchor_011",),
+        ),
+        glossary=(
+            GlossaryTerm(
+                source_term="qi",
+                preferred_term="Qi",
+                evidence_anchor_id="anchor_011",
+            ),
+        ),
+    )
+
+    assert result.normalized_text == (
+        "Qi steadied her breath, but the qilin statue did not move."
+    )
+
+
+def test_translation_glossary_prefers_longer_overlapping_terms() -> None:
+    """Specific canon terms should win over shorter overlapping glossary terms."""
+    engine = TranslationEngine()
+
+    result = engine.normalize_unit(
+        TranslationUnit(
+            unit_id="unit_001_overlapping_terms",
+            source_text="The Super Starfleet System assigned a Starfleet reward.",
+            evidence_anchor_ids=("anchor_012",),
+        ),
+        glossary=(
+            GlossaryTerm(
+                source_term="Starfleet",
+                preferred_term="Starfleet",
+                evidence_anchor_id="anchor_012",
+            ),
+            GlossaryTerm(
+                source_term="Super Starfleet System",
+                preferred_term="Super Starfleet System",
+                evidence_anchor_id="anchor_012",
+                entity_id="skill_super_starfleet_system",
+            ),
+        ),
+    )
+
+    assert result.normalized_text == (
+        "The Super Starfleet System assigned a Starfleet reward."
+    )
+
+
+def test_translation_glossary_rejects_duplicate_source_terms() -> None:
+    """Duplicate glossary source terms should not make normalization order-dependent."""
+    engine = TranslationEngine()
+
+    with pytest.raises(ValueError, match="Glossary source terms must be unique"):
+        engine.normalize_unit(
+            TranslationUnit(
+                unit_id="unit_001_duplicate_terms",
+                source_text="Qi steadied her breath.",
+                evidence_anchor_ids=("anchor_013",),
+            ),
+            glossary=(
+                GlossaryTerm(
+                    source_term="qi",
+                    preferred_term="Qi",
+                    evidence_anchor_id="anchor_013",
+                ),
+                GlossaryTerm(
+                    source_term="QI",
+                    preferred_term="Mystic Energy",
+                    evidence_anchor_id="anchor_013",
+                    review_required=True,
+                ),
+            ),
+        )
+
+
 def test_uncertain_glossary_term_is_preserved_for_review() -> None:
     """Uncertain terms should stay in text and become review issues."""
     engine = TranslationEngine()

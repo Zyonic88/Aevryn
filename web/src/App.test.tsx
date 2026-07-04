@@ -542,7 +542,17 @@ const projectOutputsPayload = {
   ],
   language_identity: {
     translation_unit_count: 8,
-    translation_review_count: 0,
+    translation_review_count: 1,
+    translation_review_items: [
+      {
+        issue_code: "translation_review_required",
+        issue_label: "Glossary term needs review",
+        chapter_id: "source_alpha_chapter_001",
+        scene_id: "source_alpha_chapter_001_scene_001",
+        evidence_anchor_count: 1,
+        reason: "Aevryn preserved an uncertain term for review.",
+      },
+    ],
     identity_decision_count: 7,
     identity_resolved_count: 5,
     identity_ambiguous_count: 1,
@@ -553,6 +563,8 @@ const projectOutputsPayload = {
         chapter_id: "source_alpha_chapter_001",
         scene_id: "source_alpha_chapter_001_scene_001",
         evidence_anchor_id: "anchor_001",
+        reference_kind: "title",
+        reference_label: "The general",
         candidate_count: 2,
         confidence: 0.87,
         reason: "Multiple identity profiles have equal confidence.",
@@ -562,6 +574,8 @@ const projectOutputsPayload = {
         chapter_id: "source_alpha_chapter_001",
         scene_id: "source_alpha_chapter_001_scene_002",
         evidence_anchor_id: "anchor_002",
+        reference_kind: "description",
+        reference_label: "the white-haired officer",
         candidate_count: 0,
         confidence: 0,
         reason: "No supported identity match was found.",
@@ -628,6 +642,15 @@ const projectOutputsPayload = {
     },
   ],
 };
+
+const manyPromptPacks = Array.from({ length: 8 }, (_, index) => ({
+  ...promptPreviewPayload.production_pack,
+  scene: {
+    ...promptPreviewPayload.production_pack.scene,
+    scene_id: `scene_${index + 1}`,
+    title: `Scene ${index + 1}`,
+  },
+}));
 
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
@@ -840,6 +863,9 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
+    expect(screen.getByText("Aevryn")).toBeInTheDocument();
+    expect(screen.queryByText("Aevryn Web Alpha Shell")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toHaveValue("");
   });
 
   it("logs in through the auth API and stores the returned session", async () => {
@@ -851,6 +877,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
@@ -877,6 +904,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
@@ -914,6 +942,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "WrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
@@ -931,6 +960,11 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    expect(await screen.findByRole("heading", { name: "Create account" })).toBeInTheDocument();
+    expect(screen.getByText("Aevryn")).toBeInTheDocument();
+    expect(screen.queryByText("Aevryn Web Alpha Shell")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Display name")).toHaveValue("");
+    expect(screen.getByLabelText("Email")).toHaveValue("");
     await user.clear(screen.getByLabelText("Display name"));
     await user.type(screen.getByLabelText("Display name"), "  Demo   User  ");
     await user.clear(screen.getByLabelText("Email"));
@@ -962,7 +996,8 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    await user.clear(screen.getByLabelText("Password"));
+    await user.type(screen.getByLabelText("Display name"), "Demo User");
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "short");
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
@@ -1002,6 +1037,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
@@ -1134,6 +1170,9 @@ describe("App shell routing", () => {
       if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
         return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
       }
+      if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+        return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+      }
       return Promise.resolve(new Response("{}", { status: 404 }));
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -1144,6 +1183,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.click(await screen.findByText("Diagnostics"));
     const dashboardHealth = await screen.findByRole("region", { name: "API Health" });
     await waitFor(() => expect(dashboardHealth).toHaveTextContent("ok"));
     await user.click(await screen.findByRole("link", { name: /Alpha/ }));
@@ -1422,7 +1462,8 @@ describe("App shell routing", () => {
     expect(window.localStorage.getItem("aevryn.session")).toBeNull();
   });
 
-  it("renders dashboard loading states as status messages", async () => {
+  it("renders dashboard loading states without showing diagnostics by default", async () => {
+    const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
     vi.stubGlobal(
       "fetch",
@@ -1436,13 +1477,19 @@ describe("App shell routing", () => {
     );
 
     const statuses = await screen.findAllByRole("status");
-    expect(statuses).toHaveLength(3);
-    expect(statuses[0]).toHaveTextContent("Checking API health.");
-    expect(statuses[1]).toHaveTextContent("Loading capabilities.");
-    expect(statuses[2]).toHaveTextContent("Loading projects.");
+    expect(statuses).toHaveLength(1);
+    expect(statuses[0]).toHaveTextContent("Loading projects.");
+
+    await user.click(screen.getByText("Diagnostics"));
+    const openStatuses = await screen.findAllByRole("status");
+    expect(openStatuses).toHaveLength(3);
+    expect(openStatuses[0]).toHaveTextContent("Loading projects.");
+    expect(openStatuses[1]).toHaveTextContent("Checking API health.");
+    expect(openStatuses[2]).toHaveTextContent("Loading capabilities.");
   });
 
   it("renders dashboard API errors as alerts", async () => {
+    const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
     vi.stubGlobal(
       "fetch",
@@ -1474,6 +1521,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
+    await user.click(await screen.findByText("Diagnostics"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Health check failed.");
   });
 
@@ -2913,7 +2961,13 @@ describe("App shell routing", () => {
     expect(screen.getByText("Male")).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
-    expect(screen.getByText("8 normalized scenes; No review items")).toBeInTheDocument();
+    expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();
+    expect(screen.getAllByText("Glossary term needs review").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(
+        "Chapter 1, Scene 1; 1 source link preserved; Aevryn preserved an uncertain term for review.",
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText("7 reference decisions; 5 resolved / 1 ambiguous / 1 unresolved"),
     ).toBeInTheDocument();
@@ -2932,6 +2986,115 @@ describe("App shell routing", () => {
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getByText("11 verified facts")).toBeInTheDocument();
+  });
+
+  it("renders a safe project overview with identity review metadata", async () => {
+    storeAuthenticatedProject();
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              ...projectOutputsPayload,
+              language_identity: {
+                ...projectOutputsPayload.language_identity,
+                identity_review_items: [
+                  ...projectOutputsPayload.language_identity.identity_review_items,
+                  {
+                    ...projectOutputsPayload.language_identity.identity_review_items[1],
+                    evidence_anchor_id: "anchor_003",
+                  },
+                ],
+              },
+            }),
+          ),
+        );
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    });
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/overview"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Language and Identity" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View monitoring" })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/monitoring",
+    );
+    expect(screen.getByText("Title: The general")).toBeInTheDocument();
+    expect(
+      screen.getByText("Chapter 1, Scene 1; 2 possible matches; 87% confidence; held for review"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Description: the white-haired officer")).toBeInTheDocument();
+    expect(
+      screen.getByText("Chapter 1, Scene 2; 2 similar references; no supported match; left unresolved"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Glossary term needs review")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Chapter 1, Scene 1; 1 source link preserved; Aevryn preserved an uncertain term for review.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
+    expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
+  });
+
+  it("bounds rendered prompt packs so large projects stay responsive", async () => {
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...projectOutputsPayload,
+                prompt_packs: manyPromptPacks,
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/prompts"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole("region", { name: "Processed project output" }),
+    ).toHaveTextContent("Showing 6 of 8 prompt packs");
+    expect(screen.getByRole("heading", { name: "Scene 6" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Scene 7" })).not.toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {
@@ -4146,6 +4309,10 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByText("Unknown workspace section")).toBeInTheDocument();
+    expect(
+      screen.getByText("This project exists, but that workspace section is not available."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Web Alpha Shell/)).not.toBeInTheDocument();
   });
 
   it("loads and saves project settings from the settings workspace tab", async () => {
@@ -4165,9 +4332,7 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Locale"), "en-GB");
     await user.click(screen.getByRole("button", { name: "Save settings" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Settings saved for project_alpha.",
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Settings saved.");
   });
 
   it("loads and creates stories from the story workspace tab", async () => {

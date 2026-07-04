@@ -181,6 +181,44 @@ class ReusedFactIdExtractor:
         )
 
 
+class ReusedInSceneFactIdExtractor:
+    """Extractor that reuses one fact ID for different facts in one scene."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return conflicting fact candidates with one generic ID."""
+        first_anchor = scene.evidence_anchor_ids[0]
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_mark",
+                    entity_type="character",
+                    display_name="Mark",
+                    evidence_anchor_id=first_anchor,
+                    confidence=0.95,
+                ),
+            ),
+            facts=(
+                ExtractedFact(
+                    fact_id="fact_1",
+                    entity_id="character_mark",
+                    attribute="current_weapon",
+                    value="Iron Sword",
+                    evidence_anchor_id=first_anchor,
+                    confidence=0.9,
+                ),
+                ExtractedFact(
+                    fact_id="fact_1",
+                    entity_id="character_mark",
+                    attribute="current_equipment",
+                    value="Iron Sword",
+                    evidence_anchor_id=first_anchor,
+                    confidence=0.88,
+                ),
+            ),
+        )
+
+
 class BadConfidenceExtractor:
     """Extractor that returns an invalid confidence score."""
 
@@ -407,7 +445,6 @@ def test_extraction_rejects_wrong_result_scene_id() -> None:
     ("duplicate_kind", "message"),
     (
         ("entity", "duplicate entity IDs"),
-        ("fact", "duplicate fact IDs"),
         ("state_change", "duplicate state-change candidates"),
     ),
 )
@@ -427,6 +464,38 @@ def test_extraction_rejects_duplicate_candidates(
 
     with pytest.raises(ValueError, match=message):
         engine.extract_imported_source(imported)
+
+
+def test_extraction_dedupes_exact_duplicate_fact_candidates() -> None:
+    """Repeated identical facts should not fail a provider-backed run."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=DuplicateCandidateExtractor("fact"))
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert tuple(fact.fact_id for fact in result.facts) == ("fact_mark_weapon",)
+
+
+def test_extraction_rewrites_same_scene_fact_id_collisions() -> None:
+    """Generic AI fact IDs are made unique inside one scene before Canon sees them."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ReusedInSceneFactIdExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    fact_ids = tuple(fact.fact_id for fact in result.facts)
+    assert len(fact_ids) == 2
+    assert len(set(fact_ids)) == 2
+    assert "fact_1" not in fact_ids
+    assert all(fact_id.startswith("fact_character_mark_") for fact_id in fact_ids)
 
 
 def test_extraction_dedupes_duplicate_relationship_candidates() -> None:

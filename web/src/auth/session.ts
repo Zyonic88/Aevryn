@@ -14,7 +14,10 @@ export function readStoredSession(
   }
   try {
     const parsedSession = authSessionSchema.safeParse(JSON.parse(rawSession));
-    if (!parsedSession.success || isSessionExpired(parsedSession.data, now)) {
+    if (
+      !parsedSession.success ||
+      (isSessionExpired(parsedSession.data, now) && !isSessionRefreshable(parsedSession.data))
+    ) {
       safeRemoveItem(storage, SESSION_STORAGE_KEY);
       return null;
     }
@@ -42,6 +45,10 @@ export function isSessionExpired(session: StoredSession, now: Date = new Date())
     return true;
   }
   return expiresAt <= now.getTime();
+}
+
+export function isSessionRefreshable(session: StoredSession): boolean {
+  return typeof session.refresh_token === "string" && session.refresh_token.trim().length > 0;
 }
 
 function safeGetItem(storage: Storage, key: string): string | null {

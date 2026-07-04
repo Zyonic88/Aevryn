@@ -949,6 +949,8 @@ def test_canon_snapshot_payload_stores_stable_identity_review_reasons() -> None:
                 "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
             ),
             "reason": "Identity has multiple possible matches and needs review.",
+            "reference_kind": "description",
+            "reference_label": "Description reference",
             "scene_id": "source_demo_chapter_001_scene_001",
             "status": "ambiguous",
         }
@@ -1015,6 +1017,13 @@ def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> No
                 "source_scene_id": "source_demo_chapter_001_scene_001",
                 "target_language": "en",
                 "unit_id": "translation_source_demo_chapter_001_scene_001",
+                "issues": [
+                    {
+                        "evidence_anchor_count": 1,
+                        "issue_code": "translation_review_required",
+                        "issue_label": "Glossary term needs review",
+                    }
+                ],
             }
         ],
     }

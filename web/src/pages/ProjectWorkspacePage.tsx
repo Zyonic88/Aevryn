@@ -11,6 +11,7 @@ import { ContinuityWorkspaceView } from "./ContinuityWorkspaceView";
 import { ExportWorkspaceView } from "./ExportWorkspaceView";
 import { ImportWorkspaceView } from "./ImportWorkspaceView";
 import { MonitoringWorkspaceView } from "./MonitoringWorkspaceView";
+import { OverviewWorkspaceView } from "./OverviewWorkspaceView";
 import { PromptWorkspaceView } from "./PromptWorkspaceView";
 import { SceneWorkspaceView } from "./SceneWorkspaceView";
 import { SettingsWorkspaceView } from "./SettingsWorkspaceView";
@@ -93,8 +94,7 @@ export function ProjectWorkspacePage() {
           <WorkspaceTabContent tabId={activeTab.id} label={activeTab.label} project={project} />
         ) : (
           <EmptyState title="Unknown workspace section">
-            This project route is valid, but the requested section does not exist in the Web Alpha
-            Shell.
+            This project exists, but that workspace section is not available.
           </EmptyState>
         )}
       </section>
@@ -111,6 +111,9 @@ function WorkspaceTabContent({
   label: string;
   project: ProjectSummary;
 }) {
+  if (tabId === "overview") {
+    return <OverviewWorkspaceView project={project} />;
+  }
   if (tabId === "import") {
     return <ImportWorkspaceView project={project} />;
   }
@@ -174,14 +177,14 @@ function placeholderTitle(tabId: WorkspaceTabId): string {
   if (tabId === "overview") {
     return "Project workspace is ready.";
   }
-  return "Engine output view placeholder.";
+  return "Workspace section unavailable.";
 }
 
 function placeholderBody(tabId: WorkspaceTabId): string {
   if (tabId === "overview") {
     return "Use Story and Import to add chapters. Monitoring is available when you need workflow diagnostics.";
   }
-  return "This section will render API view models after the import workflow is hardened.";
+  return "This workspace section is not available yet.";
 }
 
 function requireProjectId(projectId: string | undefined): string {

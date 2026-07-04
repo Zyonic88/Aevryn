@@ -214,7 +214,8 @@ input:focus {
 }
 
 .page-heading,
-.project-panel {
+.project-panel,
+.diagnostics-panel {
   grid-column: 1 / -1;
 }
 
@@ -234,6 +235,26 @@ input:focus {
   margin: 0 0 14px;
   color: #171d27;
   font-size: 18px;
+}
+
+.diagnostics-panel {
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.diagnostics-panel summary {
+  padding: 14px 18px;
+  color: #384557;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 0 18px 18px;
 }
 
 .metric-grid {
@@ -435,6 +456,7 @@ input:focus {
   }
 
   .dashboard-grid,
+  .diagnostics-grid,
   .metric-grid,
   .monitoring-detail-grid,
   .monitoring-event-row,

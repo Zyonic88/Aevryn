@@ -94,6 +94,7 @@ from aevryn.api.models import (
     ProjectStatusSnapshots,
     ProjectStatusWorker,
     ProjectTimelineChangeOutput,
+    ProjectTranslationReviewItem,
     ProjectWorkflowEvent,
     PromptPreviewRequest,
     PromptPreviewResponse,
@@ -3006,12 +3007,73 @@ def _project_language_identity_summary(
     return ProjectLanguageIdentitySummary(
         translation_unit_count=_int_payload_value(translation, "unit_count"),
         translation_review_count=_int_payload_value(translation, "issue_count"),
+        translation_review_items=_translation_review_items(translation),
         identity_decision_count=_int_payload_value(resolution, "decision_count"),
         identity_resolved_count=_int_payload_value(status_counts, "resolved"),
         identity_ambiguous_count=_int_payload_value(status_counts, "ambiguous"),
         identity_unresolved_count=_int_payload_value(status_counts, "unresolved"),
         identity_review_items=_identity_review_items(resolution),
     )
+
+
+def _translation_review_items(
+    translation_payload: Mapping[str, object],
+) -> tuple[ProjectTranslationReviewItem, ...]:
+    """Return translation review issues without source terms or translated text."""
+    units = translation_payload.get("units")
+    if not isinstance(units, list):
+        return ()
+    items: list[ProjectTranslationReviewItem] = []
+    for unit in units:
+        if not isinstance(unit, dict):
+            continue
+        issues = unit.get("issues")
+        if not isinstance(issues, list):
+            continue
+        for issue in issues:
+            if not isinstance(issue, dict):
+                continue
+            issue_code = _translation_issue_code(
+                _string_payload_value(issue, "issue_code")
+            )
+            try:
+                items.append(
+                    ProjectTranslationReviewItem(
+                        issue_code=issue_code,
+                        issue_label=_translation_issue_label(issue_code),
+                        chapter_id=_string_payload_value(unit, "source_chapter_id"),
+                        scene_id=_string_payload_value(unit, "source_scene_id"),
+                        evidence_anchor_count=_int_payload_value(
+                            issue,
+                            "evidence_anchor_count",
+                        ),
+                        reason=_translation_review_reason(issue_code),
+                    )
+                )
+            except (ValueError, ValidationError):
+                continue
+    return tuple(items[:12])
+
+
+def _translation_issue_code(value: str) -> str:
+    """Return a stable bounded translation issue code."""
+    if value == "translation_review_required":
+        return value
+    return "translation_review_required"
+
+
+def _translation_issue_label(issue_code: str) -> str:
+    """Return creator-facing translation review copy."""
+    if issue_code == "translation_review_required":
+        return "Glossary term needs review"
+    return "Translation needs review"
+
+
+def _translation_review_reason(issue_code: str) -> str:
+    """Return stable metadata-only translation review copy."""
+    if issue_code == "translation_review_required":
+        return "Aevryn preserved an uncertain term for review."
+    return "Aevryn preserved uncertain translation context for review."
 
 
 def _identity_review_items(
@@ -3038,6 +3100,12 @@ def _identity_review_items(
                         decision,
                         "evidence_anchor_id",
                     ),
+                    reference_kind=_identity_review_reference_kind(
+                        _string_payload_value(decision, "reference_kind")
+                    ),
+                    reference_label=_identity_review_reference_label(
+                        _string_payload_value(decision, "reference_label")
+                    ),
                     candidate_count=_int_payload_value(decision, "candidate_count"),
                     confidence=_float_payload_value(decision, "confidence"),
                     reason=_identity_review_reason(status),
@@ -3046,6 +3114,25 @@ def _identity_review_items(
         except (ValueError, ValidationError):
             continue
     return tuple(items[:12])
+
+
+def _identity_review_reference_kind(value: str) -> str:
+    """Return a stable bounded identity reference kind."""
+    if value in {"name", "title", "description", "pronoun"}:
+        return value
+    return "unknown"
+
+
+def _identity_review_reference_label(value: str) -> str:
+    """Return safe identity review label copy."""
+    if value in {
+        "Name reference",
+        "Title reference",
+        "Description reference",
+        "Pronoun reference",
+    }:
+        return value
+    return "Reference needs review"
 
 
 def _identity_review_reason(status: str) -> str:
@@ -3090,20 +3177,91 @@ def _canon_snapshot_metadata(snapshot: SnapshotRecord) -> Mapping[str, object]:
 def _snapshot_display_names(payload: Mapping[str, object]) -> dict[str, str]:
     """Return display names available inside persisted presentation metadata."""
     presentation = _mapping_payload_value(payload, "presentation")
-    characters = presentation.get("characters")
-    if not isinstance(characters, list):
-        return {}
     display_names: dict[str, str] = {}
-    for character in characters:
-        if not isinstance(character, dict):
-            continue
-        character_id = _string_payload_value(character, "character_id")
-        display_name = _string_payload_value(character, "display_name")
-        if not character_id or not display_name:
-            continue
-        display_names[character_id] = display_name
-        display_names[character_id.lower()] = display_name
+    characters = presentation.get("characters")
+    if isinstance(characters, list):
+        for character in characters:
+            if not isinstance(character, dict):
+                continue
+            character_id = _string_payload_value(character, "character_id")
+            display_name = _string_payload_value(character, "display_name")
+            _snapshot_display_names_set(
+                display_names,
+                entity_id=character_id,
+                display_name=display_name,
+            )
+    _snapshot_display_names_from_world_sections(presentation, display_names)
     return display_names
+
+
+def _snapshot_display_names_set(
+    display_names: dict[str, str],
+    *,
+    entity_id: str,
+    display_name: str,
+) -> None:
+    """Store one display name using case-insensitive entity ID lookup."""
+    if not entity_id or not display_name:
+        return
+    display_names[entity_id] = display_name
+    display_names[entity_id.lower()] = display_name
+
+
+def _snapshot_display_names_from_world_sections(
+    presentation: Mapping[str, object],
+    display_names: dict[str, str],
+) -> None:
+    """Infer legacy non-character labels from world section titles."""
+    world = presentation.get("world")
+    if not isinstance(world, dict):
+        return
+    sections = world.get("entity_sections")
+    if not isinstance(sections, list):
+        return
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        section_name = _snapshot_section_entity_name(
+            _string_payload_value(section, "title")
+        )
+        items = _string_sequence_payload_value(section, "items")
+        for item in items:
+            inferred_entity_id = _legacy_world_section_entity_id(
+                item,
+                display_names=display_names,
+            )
+            if inferred_entity_id:
+                _snapshot_display_names_set(
+                    display_names,
+                    entity_id=inferred_entity_id,
+                    display_name=section_name,
+                )
+
+
+def _snapshot_section_entity_name(title: str) -> str:
+    """Return a world section title without its entity-type suffix."""
+    return re.sub(r"\s+\([^)]+\)$", "", title).strip() or title
+
+
+def _legacy_world_section_entity_id(
+    item: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
+    """Infer which old relationship token belongs to the current world section."""
+    parts = item.split(" ")
+    if len(parts) != 3:
+        return ""
+    source_id, relationship_type, target_id = parts
+    source_known = source_id in display_names or source_id.lower() in display_names
+    target_known = target_id in display_names or target_id.lower() in display_names
+    if source_known and not target_known:
+        return target_id
+    if target_known and not source_known:
+        return source_id
+    if relationship_type in {"part_of", "under_entity", "member_of", "located_in"}:
+        return target_id
+    return source_id
 
 
 def _snapshot_character_profiles(
@@ -3561,8 +3719,14 @@ def _section_from_payload(
             display_names=display_names,
         ),
         items=tuple(
-            _readable_snapshot_text(item, display_names=display_names)
+            readable_item
             for item in _string_sequence_payload_value(payload, "items")
+            if (
+                readable_item := _readable_snapshot_text(
+                    item,
+                    display_names=display_names,
+                )
+            )
         ),
     )
 
@@ -3601,10 +3765,14 @@ def _readable_snapshot_relationship(
         and _snapshot_text_looks_entity_reference(target_id, display_names=display_names)
     ):
         return None
+    source_label = _snapshot_entity_label(source_id, display_names=display_names)
+    target_label = _snapshot_entity_label(target_id, display_names=display_names)
+    if source_label == target_label:
+        return ""
     return (
-        f"{_snapshot_entity_label(source_id, display_names=display_names)} "
+        f"{source_label} "
         f"{_snapshot_relationship_label(relationship_type)} "
-        f"{_snapshot_entity_label(target_id, display_names=display_names)}"
+        f"{target_label}"
     )
 
 
@@ -3621,7 +3789,7 @@ def _snapshot_text_looks_anchor_derived(value: str) -> bool:
 def _strip_snapshot_internal_entity_suffixes(value: str) -> str:
     """Remove parenthesized internal entity IDs from old prompt lines."""
     return re.sub(
-        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill)_[A-Za-z0-9_]+)\)",
+        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)\)",
         "",
         value,
     )
@@ -3638,7 +3806,7 @@ def _replace_snapshot_entity_tokens(
         return _snapshot_entity_label(match.group(0), display_names=display_names)
 
     return re.sub(
-        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
+        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
         replacement,
         value,
     )
@@ -3676,6 +3844,7 @@ def _snapshot_entity_label(
         "organization_",
         "vehicle_",
         "skill_",
+        "system_",
     ):
         if entity_id.startswith(prefix):
             return _title_preserving_snapshot_acronyms(
@@ -3707,6 +3876,7 @@ def _snapshot_text_looks_prefixed_entity_id(value: str) -> bool:
             "organization_",
             "vehicle_",
             "skill_",
+            "system_",
         )
     )
 
