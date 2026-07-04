@@ -20,6 +20,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const [projectName, setProjectName] = useState(defaultProjectName());
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const health = useQuery({ queryKey: ["api-health"], queryFn: () => apiClient.health() });
   const capabilities = useQuery({
     queryKey: ["api-capabilities"],
@@ -106,52 +107,6 @@ export function DashboardPage() {
         <h1>Dashboard</h1>
       </section>
 
-      <StatusPanel title="API Health">
-        {health.isLoading ? <LoadingMessage>Checking API health.</LoadingMessage> : null}
-        {health.error ? <ErrorMessage>{health.error.message}</ErrorMessage> : null}
-        {health.data ? (
-          <dl className="metric-grid">
-            <div>
-              <dt>Status</dt>
-              <dd>{health.data.status}</dd>
-            </div>
-            <div>
-              <dt>Engine</dt>
-              <dd>{health.data.engine}</dd>
-            </div>
-            <div>
-              <dt>API</dt>
-              <dd>{health.data.api_version}</dd>
-            </div>
-            <div>
-              <dt>Storage</dt>
-              <dd>{health.data.storage.project_storage}</dd>
-            </div>
-          </dl>
-        ) : null}
-      </StatusPanel>
-
-      <StatusPanel title="API Capabilities">
-        {capabilities.isLoading ? <LoadingMessage>Loading capabilities.</LoadingMessage> : null}
-        {capabilities.error ? <ErrorMessage>{capabilities.error.message}</ErrorMessage> : null}
-        {capabilities.data ? (
-          <dl className="metric-grid">
-            <div>
-              <dt>Routes</dt>
-              <dd>{capabilities.data.routes.length}</dd>
-            </div>
-            <div>
-              <dt>Auth routes</dt>
-              <dd>{authRouteCount}</dd>
-            </div>
-            <div>
-              <dt>Formats</dt>
-              <dd>{capabilities.data.source_formats.supported.length}</dd>
-            </div>
-          </dl>
-        ) : null}
-      </StatusPanel>
-
       <section className="project-panel">
         <div className="section-title-row">
           <h2>Projects</h2>
@@ -200,13 +155,71 @@ export function DashboardPage() {
                   disabled={deleteProjectMutation.isPending}
                   onClick={() => requestProjectDeletion(project.id, project.name)}
                 >
-                  x
+                  X
                 </button>
               </div>
             ))}
           </div>
         ) : null}
       </section>
+
+      <details
+        className="diagnostics-panel"
+        onToggle={(event) => setDiagnosticsOpen(event.currentTarget.open)}
+      >
+        <summary>Diagnostics</summary>
+        {diagnosticsOpen ? (
+          <div className="diagnostics-grid">
+            <StatusPanel title="API Health">
+              {health.isLoading ? <LoadingMessage>Checking API health.</LoadingMessage> : null}
+              {health.error ? <ErrorMessage>{health.error.message}</ErrorMessage> : null}
+              {health.data ? (
+                <dl className="metric-grid">
+                  <div>
+                    <dt>Status</dt>
+                    <dd>{health.data.status}</dd>
+                  </div>
+                  <div>
+                    <dt>Engine</dt>
+                    <dd>{health.data.engine}</dd>
+                  </div>
+                  <div>
+                    <dt>API</dt>
+                    <dd>{health.data.api_version}</dd>
+                  </div>
+                  <div>
+                    <dt>Storage</dt>
+                    <dd>{health.data.storage.project_storage}</dd>
+                  </div>
+                </dl>
+              ) : null}
+            </StatusPanel>
+
+            <StatusPanel title="API Capabilities">
+              {capabilities.isLoading ? (
+                <LoadingMessage>Loading capabilities.</LoadingMessage>
+              ) : null}
+              {capabilities.error ? <ErrorMessage>{capabilities.error.message}</ErrorMessage> : null}
+              {capabilities.data ? (
+                <dl className="metric-grid">
+                  <div>
+                    <dt>Routes</dt>
+                    <dd>{capabilities.data.routes.length}</dd>
+                  </div>
+                  <div>
+                    <dt>Auth routes</dt>
+                    <dd>{authRouteCount}</dd>
+                  </div>
+                  <div>
+                    <dt>Formats</dt>
+                    <dd>{capabilities.data.source_formats.supported.length}</dd>
+                  </div>
+                </dl>
+              ) : null}
+            </StatusPanel>
+          </div>
+        ) : null}
+      </details>
     </div>
   );
 }

@@ -18,10 +18,22 @@ import { useAuth } from "../auth/useAuth";
 import { EmptyState, LoadingMessage } from "../components/Feedback";
 import { formatDateTime, formatRunStatus } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
+import {
+  compactIdentityReviewItems,
+  identityReviewDetails,
+  identityReviewKey,
+  identityReviewStatusLabel,
+  reviewItemCountLabel,
+  translationReviewDetails,
+  translationReviewKey,
+} from "./languageIdentityDisplay";
 import { readableOutputItems, readablePromptText } from "./readableOutput";
 
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
+
+const MAX_VISIBLE_PROMPT_PACKS = 6;
+const MAX_VISIBLE_PROMPT_DETAILS = 10;
 
 export function ProjectOutputSummaryPanel({
   project,
@@ -136,7 +148,7 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
   ].join(" / ");
   const translationStatus =
     summary.translation_review_count > 0
-      ? `${summary.translation_review_count.toLocaleString()} review items`
+      ? reviewItemCountLabel(summary.translation_review_count)
       : "No review items";
   return (
     <div
@@ -155,58 +167,20 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
           {summary.identity_decision_count.toLocaleString()} reference decisions; {identityDetails}
         </span>
       </div>
-      {summary.identity_review_items.slice(0, 4).map((item) => (
+      {summary.translation_review_items.slice(0, 4).map((item) => (
+        <div className="compact-row" key={translationReviewKey(item)}>
+          <strong>{item.issue_label}</strong>
+          <span>{translationReviewDetails(item)}</span>
+        </div>
+      ))}
+      {compactIdentityReviewItems(summary.identity_review_items, 4).map((item) => (
         <div className="compact-row" key={identityReviewKey(item)}>
           <strong>{identityReviewStatusLabel(item.status)}</strong>
-          <span>{identityReviewLabel(item)}</span>
+          <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
         </div>
       ))}
     </div>
   );
-}
-
-function identityReviewKey(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  return [
-    item.status,
-    item.chapter_id,
-    item.scene_id,
-    item.evidence_anchor_id,
-    item.candidate_count,
-  ].join(":");
-}
-
-function identityReviewLabel(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  const scope = readableSceneScope(item);
-  const confidence = Math.round(item.confidence * 100);
-  const candidateLabel = identityCandidateLabel(item);
-  const confidenceLabel = confidence > 0 ? `; ${confidence}% confidence` : "";
-  return `${scope}; ${candidateLabel}${confidenceLabel}; ${identityReviewAction(item.status)}`;
-}
-
-function identityReviewStatusLabel(status: string): string {
-  if (status === "ambiguous") {
-    return "Needs review";
-  }
-  if (status === "unresolved") {
-    return "Unresolved reference";
-  }
-  return readableLabel(status);
-}
-
-function identityCandidateLabel(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  if (item.candidate_count === 0) {
-    return "no supported match";
-  }
-  if (item.candidate_count === 1) {
-    return "1 possible match";
-  }
-  return `${item.candidate_count.toLocaleString()} possible matches`;
 }
 
 function identityReviewAction(status: string): string {
@@ -217,20 +191,6 @@ function identityReviewAction(status: string): string {
     return "Aevryn left this reference unresolved";
   }
   return "Aevryn marked this reference for review";
-}
-
-function readableSceneScope(
-  item: ProjectOutputs["language_identity"]["identity_review_items"][number],
-): string {
-  const sceneMatch = item.scene_id.match(/_chapter_(\d+)_scene_(\d+)$/);
-  if (sceneMatch) {
-    return `Chapter ${Number(sceneMatch[1])}, Scene ${Number(sceneMatch[2])}`;
-  }
-  const chapterMatch = item.chapter_id.match(/_chapter_(\d+)$/);
-  if (chapterMatch) {
-    return `Chapter ${Number(chapterMatch[1])}`;
-  }
-  return "Unknown scene";
 }
 
 function ReadableSurfacePanels({
@@ -508,24 +468,33 @@ function ContinuityBucket({
 }
 
 function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
+  const visiblePacks = packs.slice(0, MAX_VISIBLE_PROMPT_PACKS);
   return (
-    <div className="profile-grid" aria-label="Prompt packs">
-      {packs.map((pack) => (
-        <article className="profile-card" key={pack.scene.scene_id}>
-          <header>
-            <h3>{pack.scene.title}</h3>
-            <p>{pack.scene.chapter_label}</p>
-          </header>
-          <div className="profile-section-grid">
-            <PromptTextSection section={pack.image_prompt} />
-            <PromptTextSection section={pack.narration_prompt} />
-            <PromptTextSection section={pack.camera_prompt} />
-            <PromptTextSection section={pack.animation_prompt} />
-          </div>
-          <p className="evidence-note">{pack.scene.evidence_summary}</p>
-        </article>
-      ))}
-    </div>
+    <>
+      {packs.length > visiblePacks.length ? (
+        <p className="result-summary">
+          Showing {visiblePacks.length.toLocaleString()} of {packs.length.toLocaleString()} prompt
+          packs.
+        </p>
+      ) : null}
+      <div className="profile-grid" aria-label="Prompt packs">
+        {visiblePacks.map((pack) => (
+          <article className="profile-card" key={pack.scene.scene_id}>
+            <header>
+              <h3>{pack.scene.title}</h3>
+              <p>{pack.scene.chapter_label}</p>
+            </header>
+            <div className="profile-section-grid">
+              <PromptTextSection section={pack.image_prompt} />
+              <PromptTextSection section={pack.narration_prompt} />
+              <PromptTextSection section={pack.camera_prompt} />
+              <PromptTextSection section={pack.animation_prompt} />
+            </div>
+            <p className="evidence-note">{pack.scene.evidence_summary}</p>
+          </article>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -612,7 +581,7 @@ function PromptTextSection({ section }: { section: OutputSection }) {
   return (
     <section className="profile-section prompt-text-section">
       <h4>{section.title}</h4>
-      <p>{readablePromptText(section)}</p>
+      <p>{readablePromptText(section, { maxItems: MAX_VISIBLE_PROMPT_DETAILS })}</p>
     </section>
   );
 }

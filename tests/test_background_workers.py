@@ -15,6 +15,7 @@ from aevryn.entity_resolution import ResolvedReference, SurfaceReference
 from aevryn.extraction import (
     ExtractedEntity,
     ExtractedFact,
+    ExtractedRelationship,
     ExtractedStateChange,
     ExtractionResult,
     SceneExtractionInput,
@@ -867,6 +868,43 @@ def test_project_import_snapshot_handler_uses_injected_extractor() -> None:
     assert "Lyra opened the sky gate" not in snapshots[0].serialized_output
 
 
+def test_project_import_snapshot_humanizes_presentation_machine_ids() -> None:
+    """Creator-facing snapshot presentation should not expose extraction IDs."""
+    repository = seeded_repository()
+    import_content_store: ImportContentStore = StaticImportContentStore(
+        b"Chapter 1\n\nZhao Chen entered North Star Academy."
+    )
+    handler = ProjectImportSnapshotHandler(
+        repository=repository,
+        import_content_store=import_content_store,
+        extractor=MachineIdSceneExtractor(),
+    )
+
+    snapshots = handler.process(background_job())
+
+    snapshot_payload = json.loads(snapshots[0].serialized_output)
+    presentation = snapshot_payload["presentation"]
+    world_items = tuple(
+        item
+        for section in presentation["world"]["entity_sections"]
+        for item in section["items"]
+    )
+    prompt_items = tuple(presentation["prompt_packs"][0]["image_prompt"]["items"])
+    continuity_items = tuple(
+        record["description"]
+        for scene in presentation["continuity_report"]["scenes"]
+        for bucket in ("new", "updated", "still_known", "invalidated")
+        for record in scene[bucket]
+    )
+
+    assert "Zhao Chen is located in North Star Academy" in world_items
+    assert "Character: Zhao Chen" in prompt_items
+    assert all("(E1)" not in item for item in prompt_items)
+    assert all("Aevryn Import Bundle" not in item for item in continuity_items)
+    assert all("State Valid From Event" not in item for item in continuity_items)
+    assert "Zhao Chen current location: North Star Academy" in continuity_items
+
+
 def test_canon_snapshot_payload_stores_stable_identity_review_reasons() -> None:
     """Phase 12 snapshot metadata should not persist resolver prose."""
     imported_source = StoryImporter().import_text(
@@ -911,6 +949,8 @@ def test_canon_snapshot_payload_stores_stable_identity_review_reasons() -> None:
                 "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
             ),
             "reason": "Identity has multiple possible matches and needs review.",
+            "reference_kind": "description",
+            "reference_label": "Description reference",
             "scene_id": "source_demo_chapter_001_scene_001",
             "status": "ambiguous",
         }
@@ -977,6 +1017,13 @@ def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> No
                 "source_scene_id": "source_demo_chapter_001_scene_001",
                 "target_language": "en",
                 "unit_id": "translation_source_demo_chapter_001_scene_001",
+                "issues": [
+                    {
+                        "evidence_anchor_count": 1,
+                        "issue_code": "translation_review_required",
+                        "issue_label": "Glossary term needs review",
+                    }
+                ],
             }
         ],
     }
@@ -1174,6 +1221,61 @@ class RecordingSceneExtractor:
                     entity_id="character_lyra",
                     attribute="role",
                     value="Sky Gate Keeper",
+                    valid_from_anchor_id=anchor_id,
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
+class MachineIdSceneExtractor:
+    """Test extractor that emits short provider-style entity IDs."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return accepted canon candidates with short entity IDs."""
+        anchor_id = scene.evidence_anchor_ids[0]
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="E1",
+                    entity_type="character",
+                    display_name="Zhao Chen",
+                    evidence_anchor_id=anchor_id,
+                    confidence=0.95,
+                ),
+                ExtractedEntity(
+                    entity_id="E5",
+                    entity_type="location",
+                    display_name="North Star Academy",
+                    evidence_anchor_id=anchor_id,
+                    confidence=0.95,
+                ),
+            ),
+            facts=(
+                ExtractedFact(
+                    fact_id="fact_e1_current_location",
+                    entity_id="E1",
+                    attribute="current_location",
+                    value="North Star Academy",
+                    evidence_anchor_id=anchor_id,
+                    confidence=0.91,
+                ),
+            ),
+            relationships=(
+                ExtractedRelationship(
+                    source_entity_id="E1",
+                    relationship_type="located_in",
+                    target_entity_id="E5",
+                    evidence_anchor_id=anchor_id,
+                    confidence=0.9,
+                ),
+            ),
+            state_changes=(
+                ExtractedStateChange(
+                    entity_id="E1",
+                    attribute="current_location",
+                    value="North Star Academy",
                     valid_from_anchor_id=anchor_id,
                     confidence=0.91,
                 ),

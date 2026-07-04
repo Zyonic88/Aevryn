@@ -7,6 +7,7 @@ import binascii
 import json
 import logging
 import os
+import re
 import tempfile
 import time
 import uuid
@@ -93,6 +94,7 @@ from aevryn.api.models import (
     ProjectStatusSnapshots,
     ProjectStatusWorker,
     ProjectTimelineChangeOutput,
+    ProjectTranslationReviewItem,
     ProjectWorkflowEvent,
     PromptPreviewRequest,
     PromptPreviewResponse,
@@ -2857,6 +2859,7 @@ def _project_outputs_response(
     latest_canon = _latest_canon_snapshot(snapshots)
     canon_summary = _project_output_canon_summary(latest_canon)
     canon_payload = _canon_snapshot_metadata(latest_canon) if latest_canon else {}
+    display_names = _snapshot_display_names(canon_payload)
     return ProjectOutputsResponse(
         project_id=project_id,
         status=_project_workflow_state(runs=runs, imports=imports, snapshots=snapshots),
@@ -2865,12 +2868,18 @@ def _project_outputs_response(
         canon=canon_summary,
         surfaces=_project_output_surfaces(canon_summary),
         language_identity=_project_language_identity_summary(canon_payload),
-        character_profiles=_snapshot_character_profiles(canon_payload),
-        world_sheet=_snapshot_world_sheet(canon_payload),
+        character_profiles=_snapshot_character_profiles(
+            canon_payload,
+            display_names=display_names,
+        ),
+        world_sheet=_snapshot_world_sheet(canon_payload, display_names=display_names),
         timeline_changes=_snapshot_timeline_changes(canon_payload),
-        scene_sheets=_snapshot_scene_sheets(canon_payload),
-        prompt_packs=_snapshot_prompt_packs(canon_payload),
-        continuity_report=_snapshot_continuity_report(canon_payload),
+        scene_sheets=_snapshot_scene_sheets(canon_payload, display_names=display_names),
+        prompt_packs=_snapshot_prompt_packs(canon_payload, display_names=display_names),
+        continuity_report=_snapshot_continuity_report(
+            canon_payload,
+            display_names=display_names,
+        ),
         export_options=_snapshot_export_options(canon_payload),
     )
 
@@ -2998,12 +3007,73 @@ def _project_language_identity_summary(
     return ProjectLanguageIdentitySummary(
         translation_unit_count=_int_payload_value(translation, "unit_count"),
         translation_review_count=_int_payload_value(translation, "issue_count"),
+        translation_review_items=_translation_review_items(translation),
         identity_decision_count=_int_payload_value(resolution, "decision_count"),
         identity_resolved_count=_int_payload_value(status_counts, "resolved"),
         identity_ambiguous_count=_int_payload_value(status_counts, "ambiguous"),
         identity_unresolved_count=_int_payload_value(status_counts, "unresolved"),
         identity_review_items=_identity_review_items(resolution),
     )
+
+
+def _translation_review_items(
+    translation_payload: Mapping[str, object],
+) -> tuple[ProjectTranslationReviewItem, ...]:
+    """Return translation review issues without source terms or translated text."""
+    units = translation_payload.get("units")
+    if not isinstance(units, list):
+        return ()
+    items: list[ProjectTranslationReviewItem] = []
+    for unit in units:
+        if not isinstance(unit, dict):
+            continue
+        issues = unit.get("issues")
+        if not isinstance(issues, list):
+            continue
+        for issue in issues:
+            if not isinstance(issue, dict):
+                continue
+            issue_code = _translation_issue_code(
+                _string_payload_value(issue, "issue_code")
+            )
+            try:
+                items.append(
+                    ProjectTranslationReviewItem(
+                        issue_code=issue_code,
+                        issue_label=_translation_issue_label(issue_code),
+                        chapter_id=_string_payload_value(unit, "source_chapter_id"),
+                        scene_id=_string_payload_value(unit, "source_scene_id"),
+                        evidence_anchor_count=_int_payload_value(
+                            issue,
+                            "evidence_anchor_count",
+                        ),
+                        reason=_translation_review_reason(issue_code),
+                    )
+                )
+            except (ValueError, ValidationError):
+                continue
+    return tuple(items[:12])
+
+
+def _translation_issue_code(value: str) -> str:
+    """Return a stable bounded translation issue code."""
+    if value == "translation_review_required":
+        return value
+    return "translation_review_required"
+
+
+def _translation_issue_label(issue_code: str) -> str:
+    """Return creator-facing translation review copy."""
+    if issue_code == "translation_review_required":
+        return "Glossary term needs review"
+    return "Translation needs review"
+
+
+def _translation_review_reason(issue_code: str) -> str:
+    """Return stable metadata-only translation review copy."""
+    if issue_code == "translation_review_required":
+        return "Aevryn preserved an uncertain term for review."
+    return "Aevryn preserved uncertain translation context for review."
 
 
 def _identity_review_items(
@@ -3030,6 +3100,12 @@ def _identity_review_items(
                         decision,
                         "evidence_anchor_id",
                     ),
+                    reference_kind=_identity_review_reference_kind(
+                        _string_payload_value(decision, "reference_kind")
+                    ),
+                    reference_label=_identity_review_reference_label(
+                        _string_payload_value(decision, "reference_label")
+                    ),
                     candidate_count=_int_payload_value(decision, "candidate_count"),
                     confidence=_float_payload_value(decision, "confidence"),
                     reason=_identity_review_reason(status),
@@ -3038,6 +3114,25 @@ def _identity_review_items(
         except (ValueError, ValidationError):
             continue
     return tuple(items[:12])
+
+
+def _identity_review_reference_kind(value: str) -> str:
+    """Return a stable bounded identity reference kind."""
+    if value in {"name", "title", "description", "pronoun"}:
+        return value
+    return "unknown"
+
+
+def _identity_review_reference_label(value: str) -> str:
+    """Return safe identity review label copy."""
+    if value in {
+        "Name reference",
+        "Title reference",
+        "Description reference",
+        "Pronoun reference",
+    }:
+        return value
+    return "Reference needs review"
 
 
 def _identity_review_reason(status: str) -> str:
@@ -3079,8 +3174,100 @@ def _canon_snapshot_metadata(snapshot: SnapshotRecord) -> Mapping[str, object]:
     return cast(Mapping[str, object], payload)
 
 
+def _snapshot_display_names(payload: Mapping[str, object]) -> dict[str, str]:
+    """Return display names available inside persisted presentation metadata."""
+    presentation = _mapping_payload_value(payload, "presentation")
+    display_names: dict[str, str] = {}
+    characters = presentation.get("characters")
+    if isinstance(characters, list):
+        for character in characters:
+            if not isinstance(character, dict):
+                continue
+            character_id = _string_payload_value(character, "character_id")
+            display_name = _string_payload_value(character, "display_name")
+            _snapshot_display_names_set(
+                display_names,
+                entity_id=character_id,
+                display_name=display_name,
+            )
+    _snapshot_display_names_from_world_sections(presentation, display_names)
+    return display_names
+
+
+def _snapshot_display_names_set(
+    display_names: dict[str, str],
+    *,
+    entity_id: str,
+    display_name: str,
+) -> None:
+    """Store one display name using case-insensitive entity ID lookup."""
+    if not entity_id or not display_name:
+        return
+    display_names[entity_id] = display_name
+    display_names[entity_id.lower()] = display_name
+
+
+def _snapshot_display_names_from_world_sections(
+    presentation: Mapping[str, object],
+    display_names: dict[str, str],
+) -> None:
+    """Infer legacy non-character labels from world section titles."""
+    world = presentation.get("world")
+    if not isinstance(world, dict):
+        return
+    sections = world.get("entity_sections")
+    if not isinstance(sections, list):
+        return
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        section_name = _snapshot_section_entity_name(
+            _string_payload_value(section, "title")
+        )
+        items = _string_sequence_payload_value(section, "items")
+        for item in items:
+            inferred_entity_id = _legacy_world_section_entity_id(
+                item,
+                display_names=display_names,
+            )
+            if inferred_entity_id:
+                _snapshot_display_names_set(
+                    display_names,
+                    entity_id=inferred_entity_id,
+                    display_name=section_name,
+                )
+
+
+def _snapshot_section_entity_name(title: str) -> str:
+    """Return a world section title without its entity-type suffix."""
+    return re.sub(r"\s+\([^)]+\)$", "", title).strip() or title
+
+
+def _legacy_world_section_entity_id(
+    item: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
+    """Infer which old relationship token belongs to the current world section."""
+    parts = item.split(" ")
+    if len(parts) != 3:
+        return ""
+    source_id, relationship_type, target_id = parts
+    source_known = source_id in display_names or source_id.lower() in display_names
+    target_known = target_id in display_names or target_id.lower() in display_names
+    if source_known and not target_known:
+        return target_id
+    if target_known and not source_known:
+        return source_id
+    if relationship_type in {"part_of", "under_entity", "member_of", "located_in"}:
+        return target_id
+    return source_id
+
+
 def _snapshot_character_profiles(
     payload: Mapping[str, object],
+    *,
+    display_names: Mapping[str, str],
 ) -> tuple[CharacterProfileOutput, ...]:
     """Return persisted character profile panels from snapshot metadata."""
     presentation = _mapping_payload_value(payload, "presentation")
@@ -3095,22 +3282,71 @@ def _snapshot_character_profiles(
             profiles.append(
                 CharacterProfileOutput(
                     character_id=_string_payload_value(character, "character_id"),
-                    display_name=_string_payload_value(character, "display_name"),
-                    subtitle=_string_payload_value(character, "subtitle"),
-                    race=_snapshot_section_or_unknown(character, "race", "Race"),
-                    gender=_snapshot_section_or_unknown(character, "gender", "Gender"),
-                    status=_snapshot_section(character, "status"),
-                    current_goal=_snapshot_section(character, "current_goal"),
-                    current_equipment=_snapshot_section(character, "current_equipment"),
-                    current_abilities=_snapshot_section(character, "current_abilities"),
-                    current_assets=_snapshot_section(character, "current_assets"),
-                    territory=_snapshot_section(character, "territory"),
-                    relationships=_snapshot_section(character, "relationships"),
+                    display_name=_readable_snapshot_text(
+                        _string_payload_value(character, "display_name"),
+                        display_names=display_names,
+                    ),
+                    subtitle=_readable_snapshot_text(
+                        _string_payload_value(character, "subtitle"),
+                        display_names=display_names,
+                    ),
+                    race=_snapshot_section_or_unknown(
+                        character,
+                        "race",
+                        "Race",
+                        display_names=display_names,
+                    ),
+                    gender=_snapshot_section_or_unknown(
+                        character,
+                        "gender",
+                        "Gender",
+                        display_names=display_names,
+                    ),
+                    status=_snapshot_section(
+                        character,
+                        "status",
+                        display_names=display_names,
+                    ),
+                    current_goal=_snapshot_section(
+                        character,
+                        "current_goal",
+                        display_names=display_names,
+                    ),
+                    current_equipment=_snapshot_section(
+                        character,
+                        "current_equipment",
+                        display_names=display_names,
+                    ),
+                    current_abilities=_snapshot_section(
+                        character,
+                        "current_abilities",
+                        display_names=display_names,
+                    ),
+                    current_assets=_snapshot_section(
+                        character,
+                        "current_assets",
+                        display_names=display_names,
+                    ),
+                    territory=_snapshot_section(
+                        character,
+                        "territory",
+                        display_names=display_names,
+                    ),
+                    relationships=_snapshot_section(
+                        character,
+                        "relationships",
+                        display_names=display_names,
+                    ),
                     current_limitations=_snapshot_section(
                         character,
                         "current_limitations",
+                        display_names=display_names,
                     ),
-                    recent_changes=_snapshot_section(character, "recent_changes"),
+                    recent_changes=_snapshot_section(
+                        character,
+                        "recent_changes",
+                        display_names=display_names,
+                    ),
                     evidence_summary=_string_payload_value(character, "evidence_summary"),
                 )
             )
@@ -3120,7 +3356,11 @@ def _snapshot_character_profiles(
     return tuple(profiles)
 
 
-def _snapshot_world_sheet(payload: Mapping[str, object]) -> WorldSheetOutput | None:
+def _snapshot_world_sheet(
+    payload: Mapping[str, object],
+    *,
+    display_names: Mapping[str, str],
+) -> WorldSheetOutput | None:
     """Return a persisted world sheet panel from snapshot metadata."""
     presentation = _mapping_payload_value(payload, "presentation")
     world = presentation.get("world")
@@ -3133,7 +3373,7 @@ def _snapshot_world_sheet(payload: Mapping[str, object]) -> WorldSheetOutput | N
         return WorldSheetOutput(
             chapter_label=_string_payload_value(world, "chapter_label"),
             entity_sections=tuple(
-                _section_from_payload(section)
+                _section_from_payload(section, display_names=display_names)
                 for section in entity_sections
                 if isinstance(section, dict)
             ),
@@ -3145,6 +3385,8 @@ def _snapshot_world_sheet(payload: Mapping[str, object]) -> WorldSheetOutput | N
 
 def _snapshot_scene_sheets(
     payload: Mapping[str, object],
+    *,
+    display_names: Mapping[str, str],
 ) -> tuple[SceneSheetOutput, ...]:
     """Return persisted scene sheet panels from snapshot metadata."""
     presentation = _mapping_payload_value(payload, "presentation")
@@ -3159,15 +3401,42 @@ def _snapshot_scene_sheets(
             scene_sheets.append(
                 SceneSheetOutput(
                     scene_id=_string_payload_value(scene, "scene_id"),
-                    title=_string_payload_value(scene, "title"),
+                    title=_readable_snapshot_text(
+                        _string_payload_value(scene, "title"),
+                        display_names=display_names,
+                    ),
                     chapter_label=_string_payload_value(scene, "chapter_label"),
-                    location=_snapshot_section(scene, "location"),
-                    characters_present=_snapshot_section(scene, "characters_present"),
-                    mood=_snapshot_section(scene, "mood"),
-                    purpose=_snapshot_section(scene, "purpose"),
-                    visual_highlights=_snapshot_section(scene, "visual_highlights"),
-                    continuity_changes=_snapshot_section(scene, "continuity_changes"),
-                    environment=_snapshot_section(scene, "environment"),
+                    location=_snapshot_section(
+                        scene,
+                        "location",
+                        display_names=display_names,
+                    ),
+                    characters_present=_snapshot_section(
+                        scene,
+                        "characters_present",
+                        display_names=display_names,
+                    ),
+                    mood=_snapshot_section(scene, "mood", display_names=display_names),
+                    purpose=_snapshot_section(
+                        scene,
+                        "purpose",
+                        display_names=display_names,
+                    ),
+                    visual_highlights=_snapshot_section(
+                        scene,
+                        "visual_highlights",
+                        display_names=display_names,
+                    ),
+                    continuity_changes=_snapshot_section(
+                        scene,
+                        "continuity_changes",
+                        display_names=display_names,
+                    ),
+                    environment=_snapshot_section(
+                        scene,
+                        "environment",
+                        display_names=display_names,
+                    ),
                     evidence_summary=_string_payload_value(scene, "evidence_summary"),
                 )
             )
@@ -3179,6 +3448,8 @@ def _snapshot_scene_sheets(
 
 def _snapshot_prompt_packs(
     payload: Mapping[str, object],
+    *,
+    display_names: Mapping[str, str],
 ) -> tuple[ProductionPackOutput, ...]:
     """Return persisted prompt-pack panels from snapshot metadata."""
     presentation = _mapping_payload_value(payload, "presentation")
@@ -3193,12 +3464,29 @@ def _snapshot_prompt_packs(
             packs.append(
                 ProductionPackOutput(
                     scene=_snapshot_scene_sheet_from_payload(
-                        _mapping_payload_value(pack, "scene")
+                        _mapping_payload_value(pack, "scene"),
+                        display_names=display_names,
                     ),
-                    image_prompt=_snapshot_section(pack, "image_prompt"),
-                    narration_prompt=_snapshot_section(pack, "narration_prompt"),
-                    camera_prompt=_snapshot_section(pack, "camera_prompt"),
-                    animation_prompt=_snapshot_section(pack, "animation_prompt"),
+                    image_prompt=_snapshot_section(
+                        pack,
+                        "image_prompt",
+                        display_names=display_names,
+                    ),
+                    narration_prompt=_snapshot_section(
+                        pack,
+                        "narration_prompt",
+                        display_names=display_names,
+                    ),
+                    camera_prompt=_snapshot_section(
+                        pack,
+                        "camera_prompt",
+                        display_names=display_names,
+                    ),
+                    animation_prompt=_snapshot_section(
+                        pack,
+                        "animation_prompt",
+                        display_names=display_names,
+                    ),
                 )
             )
         except (ValueError, ValidationError):
@@ -3209,25 +3497,44 @@ def _snapshot_prompt_packs(
 
 def _snapshot_scene_sheet_from_payload(
     scene: Mapping[str, object],
+    *,
+    display_names: Mapping[str, str],
 ) -> SceneSheetOutput:
     """Return one scene sheet from persisted metadata."""
     return SceneSheetOutput(
         scene_id=_string_payload_value(scene, "scene_id"),
-        title=_string_payload_value(scene, "title"),
+        title=_readable_snapshot_text(
+            _string_payload_value(scene, "title"),
+            display_names=display_names,
+        ),
         chapter_label=_string_payload_value(scene, "chapter_label"),
-        location=_snapshot_section(scene, "location"),
-        characters_present=_snapshot_section(scene, "characters_present"),
-        mood=_snapshot_section(scene, "mood"),
-        purpose=_snapshot_section(scene, "purpose"),
-        visual_highlights=_snapshot_section(scene, "visual_highlights"),
-        continuity_changes=_snapshot_section(scene, "continuity_changes"),
-        environment=_snapshot_section(scene, "environment"),
+        location=_snapshot_section(scene, "location", display_names=display_names),
+        characters_present=_snapshot_section(
+            scene,
+            "characters_present",
+            display_names=display_names,
+        ),
+        mood=_snapshot_section(scene, "mood", display_names=display_names),
+        purpose=_snapshot_section(scene, "purpose", display_names=display_names),
+        visual_highlights=_snapshot_section(
+            scene,
+            "visual_highlights",
+            display_names=display_names,
+        ),
+        continuity_changes=_snapshot_section(
+            scene,
+            "continuity_changes",
+            display_names=display_names,
+        ),
+        environment=_snapshot_section(scene, "environment", display_names=display_names),
         evidence_summary=_string_payload_value(scene, "evidence_summary"),
     )
 
 
 def _snapshot_continuity_report(
     payload: Mapping[str, object],
+    *,
+    display_names: Mapping[str, str],
 ) -> ContinuityReportOutput | None:
     """Return persisted continuity report metadata from snapshot output."""
     presentation = _mapping_payload_value(payload, "presentation")
@@ -3241,7 +3548,7 @@ def _snapshot_continuity_report(
         return ContinuityReportOutput(
             source_id=_string_payload_value(report, "source_id"),
             scenes=tuple(
-                _snapshot_continuity_scene(scene)
+                _snapshot_continuity_scene(scene, display_names=display_names)
                 for scene in scenes
                 if isinstance(scene, dict)
             ),
@@ -3252,20 +3559,40 @@ def _snapshot_continuity_report(
 
 def _snapshot_continuity_scene(
     scene: Mapping[str, object],
+    *,
+    display_names: Mapping[str, str],
 ) -> ContinuitySceneOutput:
     """Return one continuity scene from persisted metadata."""
     return ContinuitySceneOutput(
         scene_id=_string_payload_value(scene, "scene_id"),
-        new=_snapshot_continuity_records(scene, "new"),
-        updated=_snapshot_continuity_records(scene, "updated"),
-        still_known=_snapshot_continuity_records(scene, "still_known"),
-        invalidated=_snapshot_continuity_records(scene, "invalidated"),
+        new=_snapshot_continuity_records(
+            scene,
+            "new",
+            display_names=display_names,
+        ),
+        updated=_snapshot_continuity_records(
+            scene,
+            "updated",
+            display_names=display_names,
+        ),
+        still_known=_snapshot_continuity_records(
+            scene,
+            "still_known",
+            display_names=display_names,
+        ),
+        invalidated=_snapshot_continuity_records(
+            scene,
+            "invalidated",
+            display_names=display_names,
+        ),
     )
 
 
 def _snapshot_continuity_records(
     scene: Mapping[str, object],
     key: str,
+    *,
+    display_names: Mapping[str, str],
 ) -> tuple[ContinuityRecordOutput, ...]:
     """Return continuity records from one persisted bucket."""
     records = scene.get(key)
@@ -3279,7 +3606,10 @@ def _snapshot_continuity_records(
             ContinuityRecordOutput(
                 record_id=_string_payload_value(record, "record_id"),
                 record_type=_string_payload_value(record, "record_type"),
-                description=_string_payload_value(record, "description"),
+                description=_readable_snapshot_text(
+                    _string_payload_value(record, "description"),
+                    display_names=display_names,
+                ),
                 evidence_id=_string_payload_value(record, "evidence_id"),
                 chapter_id=_string_payload_value(record, "chapter_id"),
                 scene_id=_string_payload_value(record, "scene_id"),
@@ -3347,32 +3677,219 @@ def _snapshot_timeline_changes(
     return tuple(timeline_changes)
 
 
-def _snapshot_section(payload: Mapping[str, object], key: str) -> OutputSection:
+def _snapshot_section(
+    payload: Mapping[str, object],
+    key: str,
+    *,
+    display_names: Mapping[str, str],
+) -> OutputSection:
     """Return one required presentation section from snapshot metadata."""
-    return _section_from_payload(_mapping_payload_value(payload, key))
+    return _section_from_payload(
+        _mapping_payload_value(payload, key),
+        display_names=display_names,
+    )
 
 
 def _snapshot_section_or_unknown(
     payload: Mapping[str, object],
     key: str,
     title: str,
+    *,
+    display_names: Mapping[str, str],
 ) -> OutputSection:
     """Return an optional presentation section from snapshot metadata."""
     section_payload = _mapping_payload_value(payload, key)
     if not section_payload:
         return OutputSection(title=title, items=("Unknown",))
     try:
-        return _section_from_payload(section_payload)
+        return _section_from_payload(section_payload, display_names=display_names)
     except (ValueError, ValidationError):
         return OutputSection(title=title, items=("Unknown",))
 
 
-def _section_from_payload(payload: Mapping[str, object]) -> OutputSection:
+def _section_from_payload(
+    payload: Mapping[str, object],
+    *,
+    display_names: Mapping[str, str],
+) -> OutputSection:
     """Return one API output section from snapshot metadata."""
     return OutputSection(
-        title=_string_payload_value(payload, "title"),
-        items=_string_sequence_payload_value(payload, "items"),
+        title=_readable_snapshot_text(
+            _string_payload_value(payload, "title"),
+            display_names=display_names,
+        ),
+        items=tuple(
+            readable_item
+            for item in _string_sequence_payload_value(payload, "items")
+            if (
+                readable_item := _readable_snapshot_text(
+                    item,
+                    display_names=display_names,
+                )
+            )
+        ),
     )
+
+
+def _readable_snapshot_text(
+    value: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
+    """Return persisted presentation text with legacy machine IDs softened."""
+    normalized = " ".join(value.split())
+    if _snapshot_text_looks_anchor_derived(normalized):
+        return "State changed at this scene."
+    relationship_text = _readable_snapshot_relationship(
+        normalized,
+        display_names=display_names,
+    )
+    if relationship_text is not None:
+        return relationship_text
+    normalized = _strip_snapshot_internal_entity_suffixes(normalized)
+    return _replace_snapshot_entity_tokens(normalized, display_names=display_names)
+
+
+def _readable_snapshot_relationship(
+    value: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str | None:
+    """Return a readable source-relation-target line when possible."""
+    parts = value.split(" ")
+    if len(parts) != 3:
+        return None
+    source_id, relationship_type, target_id = parts
+    if not (
+        _snapshot_text_looks_entity_reference(source_id, display_names=display_names)
+        and _snapshot_text_looks_entity_reference(target_id, display_names=display_names)
+    ):
+        return None
+    source_label = _snapshot_entity_label(source_id, display_names=display_names)
+    target_label = _snapshot_entity_label(target_id, display_names=display_names)
+    if source_label == target_label:
+        return ""
+    return (
+        f"{source_label} "
+        f"{_snapshot_relationship_label(relationship_type)} "
+        f"{target_label}"
+    )
+
+
+def _snapshot_text_looks_anchor_derived(value: str) -> bool:
+    """Return whether old presentation text expanded an anchor ID into prose."""
+    lowered = value.lower()
+    return (
+        lowered.startswith("state valid from event ")
+        or " aevryn import bundle chapter " in lowered
+        or " evidence aevryn import bundle " in lowered
+    )
+
+
+def _strip_snapshot_internal_entity_suffixes(value: str) -> str:
+    """Remove parenthesized internal entity IDs from old prompt lines."""
+    return re.sub(
+        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)\)",
+        "",
+        value,
+    )
+
+
+def _replace_snapshot_entity_tokens(
+    value: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
+    """Replace standalone entity tokens in old presentation text."""
+
+    def replacement(match: re.Match[str]) -> str:
+        return _snapshot_entity_label(match.group(0), display_names=display_names)
+
+    return re.sub(
+        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
+        replacement,
+        value,
+    )
+
+
+def _snapshot_text_looks_entity_reference(
+    value: str,
+    *,
+    display_names: Mapping[str, str],
+) -> bool:
+    """Return whether a token looks like a snapshot entity reference."""
+    return (
+        value in display_names
+        or value.lower() in display_names
+        or re.fullmatch(r"[Ee]\d{1,4}", value.strip()) is not None
+        or _snapshot_text_looks_prefixed_entity_id(value)
+    )
+
+
+def _snapshot_entity_label(
+    entity_id: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
+    """Return a readable label for persisted snapshot entity IDs."""
+    display_name = display_names.get(entity_id) or display_names.get(entity_id.lower())
+    if display_name:
+        return display_name
+    if re.fullmatch(r"[Ee]\d{1,4}", entity_id.strip()):
+        return f"Entity {entity_id[1:]}"
+    for prefix in (
+        "character_",
+        "item_",
+        "location_",
+        "organization_",
+        "vehicle_",
+        "skill_",
+        "system_",
+    ):
+        if entity_id.startswith(prefix):
+            return _title_preserving_snapshot_acronyms(
+                entity_id.removeprefix(prefix).replace("_", " ")
+            )
+    return entity_id
+
+
+def _snapshot_relationship_label(relationship_type: str) -> str:
+    """Return a readable relationship phrase for old snapshot text."""
+    phrase = relationship_type.replace("_", " ")
+    if phrase in {"located in", "under entity"}:
+        return "is located in"
+    if phrase in {"owns", "owned by"}:
+        return "is connected to"
+    if phrase == "member of":
+        return "is a member of"
+    return phrase
+
+
+def _snapshot_text_looks_prefixed_entity_id(value: str) -> bool:
+    """Return whether a value is an old prefixed entity ID."""
+    return any(
+        value.startswith(prefix)
+        for prefix in (
+            "character_",
+            "item_",
+            "location_",
+            "organization_",
+            "vehicle_",
+            "skill_",
+            "system_",
+        )
+    )
+
+
+def _title_preserving_snapshot_acronyms(value: str) -> str:
+    """Title-case old ID labels while preserving short alphanumeric tokens."""
+    words: list[str] = []
+    for word in value.split():
+        if len(word) <= 3 and any(character.isdigit() for character in word):
+            words.append(word.upper())
+        else:
+            words.append(word.capitalize())
+    return " ".join(words)
 
 
 def _mapping_payload_value(

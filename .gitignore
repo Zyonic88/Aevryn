@@ -16,6 +16,7 @@ web/dist/
 
 # Test and coverage output
 .pytest_cache/
+.tmp/
 .coverage
 coverage.xml
 htmlcov/
@@ -36,13 +37,13 @@ web/.vite/
 .env.*
 
 # Runtime and generated output
-runtime/
-output/
-exports/
-generated/
-performance-baselines/
-snapshots/*
-!snapshots/README.md
+/runtime/
+/output/
+/exports/
+/generated/
+/performance-baselines/
+/snapshots/*
+!/snapshots/README.md
 
 # Editor and OS files
 .idea/

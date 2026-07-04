@@ -5,6 +5,7 @@ import type { AuthSession } from "../api/schemas";
 export type AuthContextValue = {
   session: AuthSession | null;
   isAuthenticated: boolean;
+  isSessionRestoring: boolean;
   sessionPersistenceError: string | null;
   clearSessionPersistenceError: () => void;
   setSession: (session: AuthSession) => void;

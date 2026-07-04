@@ -26,8 +26,12 @@ class TranslationEngine:
         """Return a normalized unit that still points to original source anchors."""
         text = unit.source_text
         issues: list[TranslationIssue] = []
+        stable_glossary = _validated_glossary(glossary)
 
-        for term in sorted(glossary, key=lambda item: item.source_term.lower()):
+        for term in sorted(
+            stable_glossary,
+            key=lambda item: (-len(item.source_term), item.source_term.lower()),
+        ):
             if term.review_required:
                 if _contains_term(text, term.source_term):
                     issues.append(
@@ -65,25 +69,42 @@ class TranslationEngine:
         mode: TranslationMode = "clean_english",
     ) -> tuple[TranslatedUnit, ...]:
         """Normalize multiple units deterministically."""
+        stable_glossary = _validated_glossary(glossary)
         return tuple(
-            self.normalize_unit(unit, glossary=glossary, mode=mode)
+            self.normalize_unit(unit, glossary=stable_glossary, mode=mode)
             for unit in units
         )
 
 
+def _validated_glossary(glossary: tuple[GlossaryTerm, ...]) -> tuple[GlossaryTerm, ...]:
+    """Reject duplicate source terms before order can affect normalization."""
+    seen_source_terms: set[str] = set()
+    for term in glossary:
+        normalized_source_term = term.source_term.casefold()
+        if normalized_source_term in seen_source_terms:
+            raise ValueError("Glossary source terms must be unique.")
+        seen_source_terms.add(normalized_source_term)
+    return glossary
+
+
 def _contains_term(text: str, source_term: str) -> bool:
     """Return whether text contains a source term."""
-    return re.search(re.escape(source_term), text, flags=re.IGNORECASE) is not None
+    return re.search(_term_pattern(source_term), text, flags=re.IGNORECASE) is not None
 
 
 def _replace_term(text: str, source_term: str, preferred_term: str) -> str:
-    """Replace a glossary term without using ad hoc token splitting."""
+    """Replace a complete glossary term without using ad hoc token splitting."""
     return re.sub(
-        re.escape(source_term),
+        _term_pattern(source_term),
         preferred_term,
         text,
         flags=re.IGNORECASE,
     )
+
+
+def _term_pattern(source_term: str) -> str:
+    """Return a regex that matches a complete story term, not a substring."""
+    return rf"(?<![A-Za-z0-9]){re.escape(source_term)}(?![A-Za-z0-9])"
 
 
 def _normalize_spacing(text: str) -> str:

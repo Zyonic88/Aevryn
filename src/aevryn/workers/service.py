@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import tempfile
 import time
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -468,10 +470,32 @@ def _translation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]
                 "source_scene_id": unit.source_scene_id,
                 "source_evidence_anchor_ids": unit.source_evidence_anchor_ids,
                 "issue_count": len(unit.issues),
+                "issues": tuple(
+                    {
+                        "issue_code": _translation_issue_code(issue.issue_code),
+                        "issue_label": _translation_issue_label(issue.issue_code),
+                        "evidence_anchor_count": len(issue.evidence_anchor_ids),
+                    }
+                    for issue in unit.issues
+                ),
             }
             for unit in result.translation_units
         ),
     }
+
+
+def _translation_issue_code(value: str) -> str:
+    """Return a stable translation issue code without storing source terms."""
+    if value == "translation_review_required":
+        return value
+    return "translation_review_required"
+
+
+def _translation_issue_label(value: str) -> str:
+    """Return metadata-only translation review label."""
+    if _translation_issue_code(value) == "translation_review_required":
+        return "Glossary term needs review"
+    return "Translation needs review"
 
 
 def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, object]:
@@ -494,12 +518,54 @@ def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, o
                 "evidence_anchor_id": decision.reference.evidence_anchor_id,
                 "chapter_id": decision.reference.chapter_id,
                 "scene_id": decision.reference.scene_id,
+                "reference_kind": _identity_reference_kind(decision.reference.text),
+                "reference_label": _identity_reference_label(decision.reference.text),
                 "candidate_count": len(decision.candidates),
                 "reason": _identity_snapshot_reason(decision.status),
             }
             for decision in result.identity_resolutions
         ),
     }
+
+
+def _identity_reference_kind(value: str) -> str:
+    """Classify an identity surface reference without storing source prose."""
+    normalized = value.strip().lower()
+    if normalized in {"he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs"}:
+        return "pronoun"
+    words = tuple(part for part in normalized.replace("-", " ").split() if part)
+    if not words:
+        return "unknown"
+    if len(words) == 1:
+        return "name"
+    if words[0] in {"the", "a", "an"}:
+        words = words[1:]
+    if words and words[-1] in {
+        "captain",
+        "commander",
+        "engineer",
+        "general",
+        "leader",
+        "officer",
+        "student",
+        "teacher",
+    }:
+        return "title"
+    return "description"
+
+
+def _identity_reference_label(value: str) -> str:
+    """Return creator-facing review copy for an identity surface reference."""
+    kind = _identity_reference_kind(value)
+    if kind == "pronoun":
+        return "Pronoun reference"
+    if kind == "name":
+        return "Name reference"
+    if kind == "title":
+        return "Title reference"
+    if kind == "description":
+        return "Description reference"
+    return "Reference needs review"
 
 
 def _identity_snapshot_reason(status: str) -> str:
@@ -598,21 +664,25 @@ def _presentation_snapshot_payload(result: ProjectRunResult) -> dict[str, object
     presenter = PresentationEngine()
     scene_id = runner.latest_scene_id(result)
     source_quotes = _source_quotes(result)
+    display_names = _entity_display_names(result)
     return {
         "scenes": _scene_sheets_payload(
             result=result,
             runner=runner,
             presenter=presenter,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
         "prompt_packs": _production_packs_payload(
             result=result,
             runner=runner,
             presenter=presenter,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
         "continuity_report": _continuity_report_payload(
-            runner.build_continuity_report(result)
+            runner.build_continuity_report(result),
+            display_names=display_names,
         ),
         "export_options": _export_options_payload(),
         "characters": tuple(
@@ -625,6 +695,7 @@ def _presentation_snapshot_payload(result: ProjectRunResult) -> dict[str, object
                     )
                 ),
                 source_quotes=source_quotes,
+                display_names=display_names,
             )
             for character_id in _accepted_character_ids(result)
         ),
@@ -637,6 +708,7 @@ def _presentation_snapshot_payload(result: ProjectRunResult) -> dict[str, object
                 )
             ),
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
     }
 
@@ -647,6 +719,7 @@ def _scene_sheets_payload(
     runner: AevrynProjectRunner,
     presenter: PresentationEngine,
     source_quotes: tuple[str, ...],
+    display_names: Mapping[str, str],
 ) -> tuple[dict[str, object], ...]:
     """Return a capped set of persisted scene sheets in story order."""
     prompt_builder = CanonPromptBuilder()
@@ -669,6 +742,7 @@ def _scene_sheets_payload(
                     scene_sheet,
                     chapter_label=f"Chapter {chapter.chapter_index}",
                     source_quotes=source_quotes,
+                    display_names=display_names,
                 )
             )
 
@@ -681,6 +755,7 @@ def _production_packs_payload(
     runner: AevrynProjectRunner,
     presenter: PresentationEngine,
     source_quotes: tuple[str, ...],
+    display_names: Mapping[str, str],
 ) -> tuple[dict[str, object], ...]:
     """Return a capped set of persisted prompt packs in story order."""
     prompt_builder = CanonPromptBuilder()
@@ -703,6 +778,7 @@ def _production_packs_payload(
                     presenter.production_pack(pack=pack, scene=scene_sheet),
                     chapter_label=f"Chapter {chapter.chapter_index}",
                     source_quotes=source_quotes,
+                    display_names=display_names,
                 )
             )
 
@@ -761,36 +837,93 @@ def _source_quotes(result: ProjectRunResult) -> tuple[str, ...]:
     )
 
 
+def _entity_display_names(result: ProjectRunResult) -> dict[str, str]:
+    """Return accepted entity display names for creator-facing presentation."""
+    display_names: dict[str, str] = {}
+    for summary in result.update_summaries:
+        for entity_id in summary.accepted_entities:
+            entity = result.database.retrieve_entity(entity_id)
+            if entity is None:
+                continue
+            display_names[entity.entity_id] = entity.display_name
+            display_names[entity.entity_id.lower()] = entity.display_name
+    return display_names
+
+
 def _character_profile_payload(
     profile: CharacterProfileView,
     *,
     source_quotes: tuple[str, ...],
+    display_names: Mapping[str, str],
 ) -> dict[str, object]:
     """Return a JSON-ready character profile panel."""
     return {
         "character_id": profile.character_id,
-        "display_name": _safe_display_text(profile.display_name, source_quotes),
-        "subtitle": _safe_display_text(profile.subtitle, source_quotes),
-        "race": _section_payload(profile.race, source_quotes=source_quotes),
-        "gender": _section_payload(profile.gender, source_quotes=source_quotes),
-        "status": _section_payload(profile.status, source_quotes=source_quotes),
-        "current_goal": _section_payload(profile.current_goal, source_quotes=source_quotes),
+        "display_name": _safe_display_text(
+            profile.display_name,
+            source_quotes,
+            display_names=display_names,
+        ),
+        "subtitle": _safe_display_text(
+            profile.subtitle,
+            source_quotes,
+            display_names=display_names,
+        ),
+        "race": _section_payload(
+            profile.race,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "gender": _section_payload(
+            profile.gender,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "status": _section_payload(
+            profile.status,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "current_goal": _section_payload(
+            profile.current_goal,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "current_equipment": _section_payload(
             profile.current_equipment,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
         "current_abilities": _section_payload(
             profile.current_abilities,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
-        "current_assets": _section_payload(profile.current_assets, source_quotes=source_quotes),
-        "territory": _section_payload(profile.territory, source_quotes=source_quotes),
-        "relationships": _section_payload(profile.relationships, source_quotes=source_quotes),
+        "current_assets": _section_payload(
+            profile.current_assets,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "territory": _section_payload(
+            profile.territory,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "relationships": _section_payload(
+            profile.relationships,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "current_limitations": _section_payload(
             profile.current_limitations,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
-        "recent_changes": _section_payload(profile.recent_changes, source_quotes=source_quotes),
+        "recent_changes": _section_payload(
+            profile.recent_changes,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "evidence_summary": profile.evidence_summary,
     }
 
@@ -800,28 +933,52 @@ def _scene_sheet_payload(
     *,
     chapter_label: str,
     source_quotes: tuple[str, ...],
+    display_names: Mapping[str, str],
 ) -> dict[str, object]:
     """Return a JSON-ready scene sheet panel."""
     return {
         "scene_id": scene.scene_id,
-        "title": _safe_display_text(scene.title, source_quotes),
+        "title": _safe_display_text(
+            scene.title,
+            source_quotes,
+            display_names=display_names,
+        ),
         "chapter_label": chapter_label,
-        "location": _section_payload(scene.location, source_quotes=source_quotes),
+        "location": _section_payload(
+            scene.location,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "characters_present": _section_payload(
             scene.characters_present,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
-        "mood": _section_payload(scene.mood, source_quotes=source_quotes),
-        "purpose": _section_payload(scene.purpose, source_quotes=source_quotes),
+        "mood": _section_payload(
+            scene.mood,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "purpose": _section_payload(
+            scene.purpose,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "visual_highlights": _section_payload(
             scene.visual_highlights,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
         "continuity_changes": _section_payload(
             scene.continuity_changes,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
-        "environment": _section_payload(scene.environment, source_quotes=source_quotes),
+        "environment": _section_payload(
+            scene.environment,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "evidence_summary": scene.evidence_summary,
     }
 
@@ -831,6 +988,7 @@ def _production_pack_payload(
     *,
     chapter_label: str,
     source_quotes: tuple[str, ...],
+    display_names: Mapping[str, str],
 ) -> dict[str, object]:
     """Return a JSON-ready production pack panel."""
     return {
@@ -838,52 +996,86 @@ def _production_pack_payload(
             pack.scene,
             chapter_label=chapter_label,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
-        "image_prompt": _section_payload(pack.image_prompt, source_quotes=source_quotes),
+        "image_prompt": _section_payload(
+            pack.image_prompt,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "narration_prompt": _section_payload(
             pack.narration_prompt,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
-        "camera_prompt": _section_payload(pack.camera_prompt, source_quotes=source_quotes),
+        "camera_prompt": _section_payload(
+            pack.camera_prompt,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "animation_prompt": _section_payload(
             pack.animation_prompt,
             source_quotes=source_quotes,
+            display_names=display_names,
         ),
     }
 
 
-def _continuity_report_payload(report: ContinuityReport) -> dict[str, object]:
+def _continuity_report_payload(
+    report: ContinuityReport,
+    *,
+    display_names: Mapping[str, str],
+) -> dict[str, object]:
     """Return a JSON-ready continuity report without exact source prose."""
     return {
         "source_id": report.source_id,
         "scenes": tuple(
-            _continuity_scene_payload(scene)
+            _continuity_scene_payload(scene, display_names=display_names)
             for scene in report.scenes
         ),
     }
 
 
-def _continuity_scene_payload(scene: ContinuitySceneReport) -> dict[str, object]:
+def _continuity_scene_payload(
+    scene: ContinuitySceneReport,
+    *,
+    display_names: Mapping[str, str],
+) -> dict[str, object]:
     """Return one JSON-ready continuity scene."""
     return {
         "scene_id": scene.scene_id,
-        "new": tuple(_continuity_record_payload(record) for record in scene.new),
-        "updated": tuple(_continuity_record_payload(record) for record in scene.updated),
+        "new": tuple(
+            _continuity_record_payload(record, display_names=display_names)
+            for record in scene.new
+        ),
+        "updated": tuple(
+            _continuity_record_payload(record, display_names=display_names)
+            for record in scene.updated
+        ),
         "still_known": tuple(
-            _continuity_record_payload(record) for record in scene.still_known[:8]
+            _continuity_record_payload(record, display_names=display_names)
+            for record in scene.still_known[:8]
         ),
         "invalidated": tuple(
-            _continuity_record_payload(record) for record in scene.invalidated
+            _continuity_record_payload(record, display_names=display_names)
+            for record in scene.invalidated
         ),
     }
 
 
-def _continuity_record_payload(record: ContinuityRecord) -> dict[str, object]:
+def _continuity_record_payload(
+    record: ContinuityRecord,
+    *,
+    display_names: Mapping[str, str],
+) -> dict[str, object]:
     """Return one JSON-ready continuity record without source prose."""
     return {
         "record_id": record.record_id,
         "record_type": record.record_type,
-        "description": _humanized_continuity_description(record.description),
+        "description": _humanized_continuity_description(
+            record.description,
+            display_names=display_names,
+        ),
         "evidence_id": record.evidence_id,
         "chapter_id": record.chapter_id,
         "scene_id": record.scene_id,
@@ -925,12 +1117,17 @@ def _world_sheet_payload(
     world: WorldSheetView,
     *,
     source_quotes: tuple[str, ...],
+    display_names: Mapping[str, str],
 ) -> dict[str, object]:
     """Return a JSON-ready world sheet panel."""
     return {
         "chapter_label": world.chapter_label,
         "entity_sections": tuple(
-            _section_payload(section, source_quotes=source_quotes)
+            _section_payload(
+                section,
+                source_quotes=source_quotes,
+                display_names=display_names,
+            )
             for section in world.entity_sections
         ),
         "evidence_summary": world.evidence_summary,
@@ -941,19 +1138,31 @@ def _section_payload(
     section: PresentationSection,
     *,
     source_quotes: tuple[str, ...],
+    display_names: Mapping[str, str],
 ) -> dict[str, object]:
     """Return a JSON-ready presentation section without exact source prose."""
     return {
-        "title": _humanized_display_text(section.title),
+        "title": _humanized_display_text(section.title, display_names=display_names),
         "items": tuple(
-            _safe_display_text(item, source_quotes)
+            safe_item
             for item in section.items
-            if _safe_display_text(item, source_quotes) != _SOURCE_BACKED_PLACEHOLDER
+            if (
+                safe_item := _safe_display_text(
+                    item,
+                    source_quotes,
+                    display_names=display_names,
+                )
+            ) != _SOURCE_BACKED_PLACEHOLDER
         ),
     }
 
 
-def _safe_display_text(value: str, source_quotes: tuple[str, ...]) -> str:
+def _safe_display_text(
+    value: str,
+    source_quotes: tuple[str, ...],
+    *,
+    display_names: Mapping[str, str] | None = None,
+) -> str:
     """Return display text while suppressing exact long source-prose echoes."""
     normalized = " ".join(value.split())
     for quote in source_quotes:
@@ -962,16 +1171,20 @@ def _safe_display_text(value: str, source_quotes: tuple[str, ...]) -> str:
         ):
             return _SOURCE_BACKED_PLACEHOLDER
 
-    return _humanized_display_text(normalized)
+    return _humanized_display_text(normalized, display_names=display_names)
 
 
-def _humanized_continuity_description(description: str) -> str:
+def _humanized_continuity_description(
+    description: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
     """Return creator-readable continuity text from engine descriptions."""
     normalized = " ".join(description.split())
     if normalized.startswith("Entity accepted: "):
         entity_id = normalized.removeprefix("Entity accepted: ")
-        return f"New entity: {_humanized_entity_id(entity_id)}"
-    if normalized.startswith("State valid from "):
+        return f"New entity: {_humanized_entity_id(entity_id, display_names=display_names)}"
+    if normalized.lower().startswith("state valid from "):
         return "State changed at this scene."
     if " = " in normalized:
         left, value = normalized.split(" = ", 1)
@@ -979,33 +1192,58 @@ def _humanized_continuity_description(description: str) -> str:
         if len(parts) == 2:
             entity_id, attribute = parts
             return (
-                f"{_humanized_entity_id(entity_id)} "
+                f"{_humanized_entity_id(entity_id, display_names=display_names)} "
                 f"{_humanized_attribute(attribute)}: "
-                f"{_humanized_display_text(value)}"
+                f"{_humanized_display_text(value, display_names=display_names)}"
             )
     relationship_parts = normalized.split(" ")
     if len(relationship_parts) == 3:
         source_id, relationship_type, target_id = relationship_parts
         return (
-            f"{_humanized_entity_id(source_id)} "
+            f"{_humanized_entity_id(source_id, display_names=display_names)} "
             f"{_humanized_relationship(relationship_type)} "
-            f"{_humanized_entity_id(target_id)}"
+            f"{_humanized_entity_id(target_id, display_names=display_names)}"
         )
-    return _humanized_display_text(normalized)
+    return _humanized_display_text(normalized, display_names=display_names)
 
 
-def _humanized_display_text(value: str) -> str:
+def _humanized_display_text(
+    value: str,
+    *,
+    display_names: Mapping[str, str] | None = None,
+) -> str:
     """Return display text with common machine tokens made readable."""
+    display_names = display_names or {}
     normalized = " ".join(value.split())
+    if _looks_like_anchor_derived_text(normalized):
+        return "State changed at this scene."
+    relationship_text = _humanized_relationship_line(
+        normalized,
+        display_names=display_names,
+    )
+    if relationship_text is not None:
+        return relationship_text
+    normalized = _strip_internal_entity_suffixes(normalized)
+    normalized = _replace_entity_tokens(normalized, display_names=display_names)
     if _looks_like_machine_id(normalized):
-        return _humanized_entity_id(normalized)
+        return _humanized_entity_id(normalized, display_names=display_names)
     if " " not in normalized and "_" in normalized:
         return normalized.replace("_", " ")
     return normalized
 
 
-def _humanized_entity_id(entity_id: str) -> str:
+def _humanized_entity_id(
+    entity_id: str,
+    *,
+    display_names: Mapping[str, str] | None = None,
+) -> str:
     """Return a readable label for common Aevryn entity IDs."""
+    display_names = display_names or {}
+    display_name = display_names.get(entity_id) or display_names.get(entity_id.lower())
+    if display_name:
+        return display_name
+    if _looks_like_short_entity_id(entity_id):
+        return f"Entity {entity_id[1:]}"
     prefixes = (
         "character_",
         "item_",
@@ -1013,6 +1251,7 @@ def _humanized_entity_id(entity_id: str) -> str:
         "organization_",
         "vehicle_",
         "skill_",
+        "system_",
         "fact_",
         "state_",
         "event_",
@@ -1043,9 +1282,35 @@ def _humanized_relationship(relationship_type: str) -> str:
     return phrase
 
 
+def _humanized_relationship_line(
+    value: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str | None:
+    """Return a readable relationship line when value is source-relation-target."""
+    parts = value.split(" ")
+    if len(parts) != 3:
+        return None
+    source_id, relationship_type, target_id = parts
+    if not (
+        _looks_like_entity_reference(source_id, display_names=display_names)
+        and _looks_like_entity_reference(target_id, display_names=display_names)
+    ):
+        return None
+    source_label = _humanized_entity_id(source_id, display_names=display_names)
+    target_label = _humanized_entity_id(target_id, display_names=display_names)
+    if source_label == target_label:
+        return ""
+    return (
+        f"{source_label} "
+        f"{_humanized_relationship(relationship_type)} "
+        f"{target_label}"
+    )
+
+
 def _looks_like_machine_id(value: str) -> bool:
     """Return whether a value is likely an internal Aevryn ID."""
-    return "_" in value and any(
+    return _looks_like_short_entity_id(value) or ("_" in value and any(
         value.startswith(prefix)
         for prefix in (
             "character_",
@@ -1054,11 +1319,67 @@ def _looks_like_machine_id(value: str) -> bool:
             "organization_",
             "vehicle_",
             "skill_",
+            "system_",
             "fact_",
             "state_",
             "event_",
             "rel_",
         )
+    ))
+
+
+def _looks_like_entity_reference(
+    value: str,
+    *,
+    display_names: Mapping[str, str],
+) -> bool:
+    """Return whether a token is an entity reference known to presentation."""
+    return (
+        value in display_names
+        or value.lower() in display_names
+        or _looks_like_machine_id(value)
+    )
+
+
+def _looks_like_short_entity_id(value: str) -> bool:
+    """Return whether a value is an extraction-style entity token such as E1."""
+    return re.fullmatch(r"[Ee]\d{1,4}", value.strip()) is not None
+
+
+def _looks_like_anchor_derived_text(value: str) -> bool:
+    """Return whether text is an anchor/event ID expanded into prose."""
+    lowered = value.lower()
+    return (
+        lowered.startswith("state valid from event ")
+        or " aevryn import bundle chapter " in lowered
+        or " evidence aevryn import bundle " in lowered
+    )
+
+
+def _strip_internal_entity_suffixes(value: str) -> str:
+    """Remove parenthesized internal entity IDs from visible prompt lines."""
+    return re.sub(
+        r"\s+\(([A-Za-z]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)\)",
+        "",
+        value,
+    )
+
+
+def _replace_entity_tokens(
+    value: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
+    """Replace standalone internal entity IDs with accepted display names."""
+
+    def replacement(match: re.Match[str]) -> str:
+        token = match.group(0)
+        return _humanized_entity_id(token, display_names=display_names)
+
+    return re.sub(
+        r"(?<![A-Za-z0-9_])(?:[Ee]\d{1,4}|(?:character|item|location|organization|vehicle|skill|system)_[A-Za-z0-9_]+)(?![A-Za-z0-9_])",
+        replacement,
+        value,
     )
 
 

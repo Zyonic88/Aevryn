@@ -176,6 +176,11 @@ class ExtractionResult:
             tuple(entity.entity_id for entity in self.entities),
             "entity IDs",
         )
+        object.__setattr__(
+            self,
+            "facts",
+            _deduped_fact_candidates(self.facts),
+        )
         _require_unique_candidate_values(
             tuple(fact.fact_id for fact in self.facts),
             "fact IDs",
@@ -274,3 +279,76 @@ def _deduped_relationship_candidates(
             relationships_by_key[key] = relationship
 
     return tuple(relationships_by_key.values())
+
+
+def _deduped_fact_candidates(
+    facts: tuple[ExtractedFact, ...],
+) -> tuple[ExtractedFact, ...]:
+    """Return fact candidates with safe IDs before result validation."""
+    signatures_by_id: dict[str, set[tuple[str, str, str, str]]] = {}
+    best_by_signature: dict[tuple[str, str, str, str], ExtractedFact] = {}
+    for fact in facts:
+        signature = _fact_signature(fact)
+        signatures_by_id.setdefault(fact.fact_id, set()).add(signature)
+        current = best_by_signature.get(signature)
+        if current is None or fact.confidence > current.confidence:
+            best_by_signature[signature] = fact
+
+    colliding_ids = {
+        fact_id
+        for fact_id, signatures in signatures_by_id.items()
+        if len(signatures) > 1
+    }
+    deduped: list[ExtractedFact] = []
+    seen_signatures: set[tuple[str, str, str, str]] = set()
+    for fact in facts:
+        signature = _fact_signature(fact)
+        if signature in seen_signatures:
+            continue
+        seen_signatures.add(signature)
+        stable_fact = best_by_signature[signature]
+        deduped.append(
+            _fact_with_collision_safe_id(stable_fact)
+            if stable_fact.fact_id in colliding_ids
+            else stable_fact
+        )
+
+    return tuple(deduped)
+
+
+def _fact_signature(fact: ExtractedFact) -> tuple[str, str, str, str]:
+    """Return the semantic identity of an extracted fact candidate."""
+    return (
+        fact.entity_id,
+        fact.attribute,
+        fact.value,
+        fact.evidence_anchor_id,
+    )
+
+
+def _fact_with_collision_safe_id(fact: ExtractedFact) -> ExtractedFact:
+    """Return a fact with a deterministic source-grounded ID."""
+    return ExtractedFact(
+        fact_id=(
+            "fact_"
+            f"{fact.entity_id}_"
+            f"{fact.attribute}_"
+            f"{_machine_suffix(fact.value)}_"
+            f"{fact.evidence_anchor_id}"
+        ),
+        entity_id=fact.entity_id,
+        attribute=fact.attribute,
+        value=fact.value,
+        evidence_anchor_id=fact.evidence_anchor_id,
+        confidence=fact.confidence,
+    )
+
+
+def _machine_suffix(value: str) -> str:
+    """Return a stable machine-token suffix from human text."""
+    normalized = "".join(
+        character.lower() if character.isalnum() else "_"
+        for character in value
+    )
+    collapsed = "_".join(part for part in normalized.split("_") if part)
+    return collapsed[:80] or "value"
