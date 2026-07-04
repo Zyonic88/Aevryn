@@ -156,7 +156,8 @@ def test_runner_builds_prompt_bundle_from_demo_pipeline() -> None:
     bundle = runner.build_prompt_bundle(result=result)
 
     assert "Scene ID: demo_chapter_002_scene_001" in bundle.image_prompt
-    assert "item_iron_sword" in bundle.animation_prompt
+    assert "Iron Sword" in bundle.animation_prompt
+    assert "item_iron_sword" not in bundle.animation_prompt
 
 
 class EmptyExtractor:
@@ -998,7 +999,8 @@ def test_runner_updates_character_card_and_prompt_from_ai_candidates() -> None:
     )
 
     assert any(fact.attribute == "current_weapon" for fact in card.facts)
-    assert "character_mark retains current_weapon: Iron Sword" in bundle.image_prompt
+    assert "Mark retains Current Weapon: Iron Sword" in bundle.image_prompt
+    assert "character_mark retains current_weapon" not in bundle.image_prompt
     assert "Important Objects:" in bundle.image_prompt
     assert world_state.entities[0].display_name == "Iron Sword"
 

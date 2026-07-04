@@ -38,8 +38,8 @@ def test_canon_prompt_builder_builds_image_prompt_from_scene_context() -> None:
     assert "Scene Summary:" in prompt
     assert "Purpose:" in prompt
     assert "Character: Mark (character_mark)" in prompt
-    assert "- current_weapon: Iron Sword" in prompt
-    assert "character_mark retains current_weapon: Iron Sword" in prompt
+    assert "- Current Weapon: Iron Sword" in prompt
+    assert "Mark retains Current Weapon: Iron Sword" in prompt
 
 
 def test_canon_prompt_builder_builds_narration_prompt_without_guessing() -> None:
@@ -63,7 +63,7 @@ def test_canon_prompt_builder_builds_animation_prompt_from_facts() -> None:
     prompt = CanonPromptBuilder().build_animation_prompt(build_context())
 
     assert "Describe motion using only accepted scene facts." in prompt
-    assert "character_mark retains current_weapon: Iron Sword" in prompt
+    assert "Mark retains Current Weapon: Iron Sword" in prompt
 
 
 def test_canon_prompt_builder_builds_bundle() -> None:
@@ -200,10 +200,11 @@ def test_canon_prompt_builder_includes_scene_world_context_and_exclusions() -> N
     assert "Scene production brief:" in prompt
     assert "World and scene object context:" in prompt
     assert (
-        "item_iron_sword visual_design: Chipped iron blade with a plain leather grip"
+        "Iron Sword Visual Design: Chipped iron blade with a plain leather grip"
         in prompt
     )
-    assert "character_mark owns item_iron_sword" in prompt
+    assert "Mark Owns Iron Sword" in prompt
+    assert "item_iron_sword visual_design" not in prompt
     assert "Do not include unless supported by this scene:" in prompt
     assert "Later canon objects or rewards" in prompt
 
@@ -288,7 +289,7 @@ def test_canon_prompt_builder_uses_scene_relevant_character_facts() -> None:
 
     prompt = CanonPromptBuilder().build_image_prompt(context)
 
-    assert "- current_weapon: Iron Sword" in prompt
+    assert "- Current Weapon: Iron Sword" in prompt
     assert "school_year" not in prompt
 
 
@@ -339,7 +340,7 @@ def test_canon_prompt_builder_omits_mechanical_metadata_from_character_details()
 
     prompt = CanonPromptBuilder().build_image_prompt(context)
 
-    assert "active_task: Win the contest" in prompt
+    assert "Active Task: Win the contest" in prompt
     assert "active_task_reward" not in prompt
     assert "One contest point" not in prompt
 

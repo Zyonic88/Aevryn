@@ -473,15 +473,19 @@ class CanonPromptBuilder:
     def _world_context_section(self, context: CanonSceneContext) -> str:
         """Return scene-relevant world, location, item, and relationship context."""
         character_ids = {card.character_id for card in context.character_cards}
+        display_names = self._entity_display_names(context)
         lines = ["World and scene object context:"]
         world_fact_lines = [
-            self._world_fact_line(fact)
+            self._world_fact_line(fact, display_names=display_names)
             for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
             if fact.entity_id not in character_ids
             and self._is_visual_production_attribute(fact.attribute)
         ]
         relationship_lines = [
-            self._relationship_prompt_line(relationship)
+            self._relationship_prompt_line(
+                relationship,
+                display_names=display_names,
+            )
             for relationship in sorted(
                 context.relationships,
                 key=lambda relationship: relationship.relationship_id,
@@ -580,19 +584,29 @@ class CanonPromptBuilder:
         )
 
     @staticmethod
-    def _world_fact_line(fact: Fact) -> str:
+    def _world_fact_line(
+        fact: Fact,
+        *,
+        display_names: dict[str, str],
+    ) -> str:
         """Return a compact world fact line for production prompts."""
         return (
-            f"{fact.entity_id} {fact.attribute}: "
+            f"{CanonPromptBuilder._entity_label(fact.entity_id, display_names)} "
+            f"{CanonPromptBuilder._attribute_label(fact.attribute)}: "
             f"{CanonPromptBuilder._shorten(fact.value)}"
         )
 
     @staticmethod
-    def _relationship_prompt_line(relationship: Relationship) -> str:
+    def _relationship_prompt_line(
+        relationship: Relationship,
+        *,
+        display_names: dict[str, str],
+    ) -> str:
         """Return a compact relationship line for production prompts."""
         return (
-            f"{relationship.source_entity_id} {relationship.relationship_type} "
-            f"{relationship.target_entity_id}"
+            f"{CanonPromptBuilder._entity_label(relationship.source_entity_id, display_names)} "
+            f"{CanonPromptBuilder._attribute_label(relationship.relationship_type)} "
+            f"{CanonPromptBuilder._entity_label(relationship.target_entity_id, display_names)}"
         )
 
     @staticmethod
@@ -778,7 +792,11 @@ class CanonPromptBuilder:
         """Return character fact lines."""
         relevant_fact_keys = scene_fact_keys.get(card.character_id, set())
         lines = (
-            f"- {fact.attribute}: {CanonPromptBuilder._shorten(fact.value)}"
+            (
+                "- "
+                f"{CanonPromptBuilder._attribute_label(fact.attribute)}: "
+                f"{CanonPromptBuilder._shorten(fact.value)}"
+            )
             for fact in sorted(card.facts, key=lambda fact: fact.attribute)
             if (fact.attribute, fact.value) in relevant_fact_keys
             and not CanonPromptBuilder._is_prompt_metadata_attribute(fact.attribute)
@@ -841,6 +859,42 @@ class CanonPromptBuilder:
     def _join_sections(sections: Iterable[str]) -> str:
         """Join prompt sections into stable text."""
         return "\n\n".join(section for section in sections if section.strip())
+
+    @staticmethod
+    def _entity_display_names(context: CanonSceneContext) -> dict[str, str]:
+        """Return human display names for entities available in scene context."""
+        display_names = {
+            card.character_id: card.display_name
+            for card in context.character_cards
+            if card.display_name
+        }
+        for fact in context.active_facts:
+            if fact.attribute == "display_name" and fact.value.strip():
+                display_names.setdefault(fact.entity_id, fact.value.strip())
+
+        return display_names
+
+    @staticmethod
+    def _entity_label(entity_id: str, display_names: dict[str, str]) -> str:
+        """Return a prompt-safe human label for an entity."""
+        display_name = display_names.get(entity_id)
+        if display_name:
+            return CanonPromptBuilder._shorten(display_name)
+
+        return CanonPromptBuilder._attribute_label(entity_id)
+
+    @staticmethod
+    def _attribute_label(attribute: str) -> str:
+        """Return a human-readable prompt label from a machine token."""
+        words = [
+            word
+            for word in re.split(r"[_\s]+", attribute.strip())
+            if word and word not in {"character", "entity", "item", "location"}
+        ]
+        if not words:
+            return attribute
+
+        return " ".join(word.capitalize() for word in words)
 
     @staticmethod
     def _shorten(value: str, width: int = 140) -> str:
