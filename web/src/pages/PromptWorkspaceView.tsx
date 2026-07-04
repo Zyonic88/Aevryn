@@ -180,10 +180,44 @@ function PromptPreviewResult({ result }: { result: PromptPreview }) {
 }
 
 function PromptSection({ section }: { section: OutputSection }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const promptText = readablePromptText(section, { maxItems: 10 });
+
+  async function copyPrompt() {
+    const clipboard = navigator.clipboard;
+    if (!clipboard) {
+      setCopyState("failed");
+      return;
+    }
+    try {
+      await clipboard.writeText(promptText);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+  }
+
   return (
     <section className="profile-section prompt-text-section">
-      <h4>{section.title}</h4>
-      <p>{readablePromptText(section, { maxItems: 10 })}</p>
+      <div className="prompt-section-heading">
+        <h4>{section.title}</h4>
+        <div className="prompt-copy-controls">
+          {copyState === "copied" ? <span>Copied</span> : null}
+          {copyState === "failed" ? <span>Copy unavailable</span> : null}
+          <button
+            type="button"
+            className="text-button"
+            aria-label={`Copy ${section.title}`}
+            onClick={() => void copyPrompt()}
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+      <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
+        <summary>Show prompt</summary>
+        <p>{promptText}</p>
+      </details>
     </section>
   );
 }

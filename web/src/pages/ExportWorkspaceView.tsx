@@ -1,9 +1,11 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 
 import { apiClient, type ExportPreviewRequest } from "../api/client";
-import type { ExportPreview } from "../api/schemas";
-import { ErrorMessage } from "../components/Feedback";
+import type { ExportPreview, ProjectExport } from "../api/schemas";
+import { useAuth } from "../auth/useAuth";
+import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
+import { formatDateTime } from "../formatting/display";
 import {
   DeveloperPreviewToggle,
   ProjectOutputSummaryPanel,
@@ -31,6 +33,8 @@ const exportOptions = [
 ] as const;
 
 export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
   const [sourceId, setSourceId] = useState(project.id.replace(/^project_/, "source_"));
   const [filename, setFilename] = useState("chapter_001.txt");
   const [title, setTitle] = useState(project.name);
@@ -42,8 +46,59 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [selectedExport, setSelectedExport] = useState(optionValue(exportOptions[0]));
   const [formError, setFormError] = useState<string | null>(null);
   const [previewResult, setPreviewResult] = useState<ExportPreview | null>(null);
+  const [createdExportId, setCreatedExportId] = useState<string | null>(null);
 
   const activeExport = parseOptionValue(selectedExport);
+  const statusQuery = useQuery({
+    queryKey: ["project-status", project.id, session?.session_token],
+    queryFn: () =>
+      apiClient.projectStatus(
+        project.id,
+        requireSessionToken(session),
+        new Date().toISOString(),
+      ),
+    enabled: session !== null,
+  });
+  const exportsQuery = useQuery({
+    queryKey: projectExportsQueryKey(project.id, session?.session_token),
+    queryFn: () =>
+      apiClient.listProjectExports(
+        project.id,
+        requireSessionToken(session),
+        new Date().toISOString(),
+      ),
+    enabled: session !== null,
+  });
+  const createSnapshotExport = useMutation({
+    mutationFn: () => {
+      const now = new Date().toISOString();
+      return apiClient.createProjectExport(
+        project.id,
+        {
+          export_id: newExportId(),
+          snapshot_id: requireLatestSnapshotId(statusQuery.data?.snapshots.latest_snapshot_id),
+          export_format: "json",
+          filename: `${safeFilename(project.name)}-canon-snapshot.json`,
+          now,
+        },
+        requireSessionToken(session),
+        now,
+      );
+    },
+    onSuccess(result) {
+      setCreatedExportId(result.export_id);
+      void queryClient.invalidateQueries({
+        queryKey: projectExportsQueryKey(project.id, session?.session_token),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["project-status", project.id, session?.session_token],
+      });
+    },
+  });
+  const downloadExport = useMutation({
+    mutationFn: (exportRecord: ProjectExport) =>
+      downloadProjectExport(project.id, exportRecord, requireSessionToken(session)),
+  });
   const previewExport = useMutation({
     mutationFn: (payload: ExportPreviewRequest) => apiClient.previewExport(payload),
     onSuccess(result) {
@@ -100,6 +155,20 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
       </div>
 
       <ProjectOutputSummaryPanel project={project} surface="exports" />
+
+      <ProjectStoredExportsPanel
+        exports={exportsQuery.data?.exports ?? []}
+        exportsError={exportsQuery.error}
+        isCreatePending={createSnapshotExport.isPending}
+        isDownloadPending={downloadExport.isPending}
+        isLoading={statusQuery.isLoading || exportsQuery.isLoading}
+        latestSnapshotId={statusQuery.data?.snapshots.latest_snapshot_id ?? ""}
+        mutationError={createSnapshotExport.error ?? downloadExport.error}
+        onCreateSnapshotExport={() => createSnapshotExport.mutate()}
+        onDownload={(exportRecord) => downloadExport.mutate(exportRecord)}
+        statusError={statusQuery.error}
+        createdExportId={createdExportId}
+      />
 
       <DeveloperPreviewToggle>
         <section>
@@ -192,6 +261,92 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
   );
 }
 
+function ProjectStoredExportsPanel({
+  exports,
+  exportsError,
+  isCreatePending,
+  isDownloadPending,
+  isLoading,
+  latestSnapshotId,
+  mutationError,
+  onCreateSnapshotExport,
+  onDownload,
+  statusError,
+  createdExportId,
+}: {
+  exports: ProjectExport[];
+  exportsError: Error | null;
+  isCreatePending: boolean;
+  isDownloadPending: boolean;
+  isLoading: boolean;
+  latestSnapshotId: string;
+  mutationError: Error | null;
+  onCreateSnapshotExport: () => void;
+  onDownload: (exportRecord: ProjectExport) => void;
+  statusError: Error | null;
+  createdExportId: string | null;
+}) {
+  return (
+    <section className="project-panel" aria-label="Stored exports">
+      <div className="panel-heading-row">
+        <div>
+          <h2>Stored Exports</h2>
+          <p className="field-note">
+            Create a downloadable JSON export from the latest accepted canon snapshot.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="ghost-button"
+          disabled={!latestSnapshotId || isCreatePending}
+          onClick={onCreateSnapshotExport}
+        >
+          {isCreatePending ? "Creating export" : "Create snapshot export"}
+        </button>
+      </div>
+
+      {isLoading ? <LoadingMessage>Loading stored exports.</LoadingMessage> : null}
+      {statusError ? <ErrorMessage>{statusError.message}</ErrorMessage> : null}
+      {exportsError ? <ErrorMessage>{exportsError.message}</ErrorMessage> : null}
+      {mutationError ? <ErrorMessage>{mutationError.message}</ErrorMessage> : null}
+      {createdExportId ? <p className="success-note">Snapshot export created.</p> : null}
+      {!latestSnapshotId && !isLoading ? (
+        <EmptyState title="No snapshot ready">
+          Process an import before creating a stored export.
+        </EmptyState>
+      ) : null}
+
+      {exports.length > 0 ? (
+        <div className="export-list">
+          {exports.map((exportRecord) => (
+            <article className="export-list-item" key={exportRecord.export_id}>
+              <div>
+                <h3>{exportRecord.filename}</h3>
+                <p>
+                  {exportRecord.export_kind} / {exportRecord.export_format} ·{" "}
+                  {formatBytes(exportRecord.size)} · {formatDateTime(exportRecord.created_at)}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={isDownloadPending}
+                onClick={() => onDownload(exportRecord)}
+              >
+                Download
+              </button>
+            </article>
+          ))}
+        </div>
+      ) : latestSnapshotId && !isLoading ? (
+        <EmptyState title="No exports yet">
+          Create a snapshot export to save a downloadable copy.
+        </EmptyState>
+      ) : null}
+    </section>
+  );
+}
+
 function ExportPreviewResult({ result }: { result: ExportPreview }) {
   return (
     <section className="project-panel" aria-label="Export preview result">
@@ -222,4 +377,67 @@ function optionValue(option: { kind: string; format: string }): string {
 function parseOptionValue(value: string): { kind: string; format: string } {
   const [kind = "", format = ""] = value.split(":");
   return { kind, format };
+}
+
+function projectExportsQueryKey(projectId: string, sessionToken: string | undefined) {
+  return ["project-exports", projectId, sessionToken];
+}
+
+function requireSessionToken(session: { session_token: string } | null): string {
+  if (!session) {
+    throw new Error("Login is required.");
+  }
+  return session.session_token;
+}
+
+function requireLatestSnapshotId(snapshotId: string | null | undefined): string {
+  if (!snapshotId) {
+    throw new Error("Process an import before creating an export.");
+  }
+  return snapshotId;
+}
+
+function safeFilename(value: string): string {
+  const cleaned = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+  return cleaned || "aevryn-project";
+}
+
+function newExportId(): string {
+  return `export_${crypto.randomUUID().replaceAll("-", "_")}`;
+}
+
+async function downloadProjectExport(
+  projectId: string,
+  exportRecord: ProjectExport,
+  sessionToken: string,
+): Promise<string> {
+  const result = await apiClient.downloadProjectExport(
+    projectId,
+    exportRecord.export_id,
+    sessionToken,
+    new Date().toISOString(),
+  );
+  const url = URL.createObjectURL(result.blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = result.filename === "aevryn-export" ? exportRecord.filename : result.filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+  return exportRecord.export_id;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

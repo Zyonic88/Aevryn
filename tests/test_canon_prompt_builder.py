@@ -81,7 +81,7 @@ def test_canon_prompt_builder_does_not_dump_full_scene_text() -> None:
     prompt = CanonPromptBuilder().build_image_prompt(build_context())
 
     assert "Paragraphs:" not in prompt
-    assert len(prompt) < 2200
+    assert len(prompt) < 3600
 
 
 def test_canon_prompt_builder_includes_current_scene_visual_anchors() -> None:
@@ -164,6 +164,97 @@ def test_canon_prompt_builder_includes_current_scene_visual_anchors() -> None:
     assert prompt.index("Scene-grounded visual anchors") < prompt.index(
         "Dragon engine blueprint"
     )
+
+
+def test_canon_prompt_builder_includes_scene_world_context_and_exclusions() -> None:
+    """Image prompts include connected world facts and explicit generation exclusions."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_fact(
+        Fact(
+            fact_id="fact_sword_visual_design",
+            entity_id="item_iron_sword",
+            attribute="visual_design",
+            value="Chipped iron blade with a plain leather grip",
+            evidence_id="evidence_relationship",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_sword_visual_design",
+            fact_id="fact_sword_visual_design",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "Scene production brief:" in prompt
+    assert "World and scene object context:" in prompt
+    assert (
+        "item_iron_sword visual_design: Chipped iron blade with a plain leather grip"
+        in prompt
+    )
+    assert "character_mark owns item_iron_sword" in prompt
+    assert "Do not include unless supported by this scene:" in prompt
+    assert "Later canon objects or rewards" in prompt
+
+
+def test_canon_prompt_builder_separates_facts_composition_lighting_and_style() -> None:
+    """Image prompts keep story understanding before production style."""
+    prompt = CanonPromptBuilder().build_image_prompt(build_context())
+
+    assert "Scene production brief:" in prompt
+    assert "World and scene object context:" in prompt
+    assert "Composition:" in prompt
+    assert "Lighting:" in prompt
+    assert "Rendering style:" in prompt
+    assert "Style must not override accepted Canon." in prompt
+    assert prompt.index("Scene production brief:") < prompt.index("Composition:")
+    assert prompt.index("World and scene object context:") < prompt.index(
+        "Rendering style:"
+    )
+    assert prompt.index("Do not include unless supported by this scene:") < prompt.index(
+        "Rendering style:"
+    )
+
+
+def test_canon_prompt_builder_prevents_prompt_metadata_as_visible_text() -> None:
+    """Image prompts prevent Canon metadata from becoming generated image labels."""
+    prompt = CanonPromptBuilder().build_image_prompt(build_context())
+
+    assert "Visible text and labels:" in prompt
+    assert "Do not render names, entity IDs" in prompt
+    assert "without readable text unless exact text is accepted canon" in prompt
+    assert "department, role, goal, or asset names" in prompt
+    assert prompt.index("Visible text and labels:") < prompt.index("Rendering style:")
+
+
+def test_canon_prompt_builder_camera_prompt_separates_composition_from_camera() -> None:
+    """Camera prompts distinguish visual arrangement from cinematography."""
+    prompt = CanonPromptBuilder().build_camera_prompt(build_context())
+
+    assert "Composition:" in prompt
+    assert "Camera direction:" in prompt
+    assert "Lighting:" in prompt
+    assert prompt.index("Composition:") < prompt.index("Camera direction:")
+
+
+def test_canon_prompt_builder_camera_and_animation_include_text_guard() -> None:
+    """Visual production variants carry the same visible text constraints."""
+    builder = CanonPromptBuilder()
+    context = build_context()
+
+    assert "Visible text and labels:" in builder.build_camera_prompt(context)
+    assert "Visible text and labels:" in builder.build_animation_prompt(context)
 
 
 def test_canon_prompt_builder_uses_scene_relevant_character_facts() -> None:
@@ -268,7 +359,7 @@ def test_canon_prompt_builder_shortens_long_analysis_text() -> None:
     )
 
     assert "Sentence 020" not in prompt
-    assert len(prompt) < 2400
+    assert len(prompt) < 4600
 
 
 class DuplicateAnalysisAnalyzer(SceneAnalyzer):

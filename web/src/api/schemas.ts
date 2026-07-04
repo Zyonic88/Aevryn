@@ -295,6 +295,23 @@ export const projectExportOptionSchema = z.object({
   label: z.string(),
 });
 
+export const projectExportSchema = z.object({
+  export_id: z.string(),
+  project_id: z.string(),
+  snapshot_id: z.string(),
+  export_kind: z.string(),
+  export_format: z.string(),
+  filename: z.string(),
+  content_type: z.string(),
+  size: z.number(),
+  checksum: z.string(),
+  created_at: z.string(),
+});
+
+export const projectExportListSchema = z.object({
+  exports: z.array(projectExportSchema),
+});
+
 export const projectOutputsSchema = z.object({
   project_id: z.string(),
   status: z.string(),
@@ -533,6 +550,8 @@ export type ProjectLanguageIdentitySummary = z.infer<
 >;
 export type ProjectTimelineChange = z.infer<typeof projectTimelineChangeSchema>;
 export type ProjectExportOption = z.infer<typeof projectExportOptionSchema>;
+export type ProjectExport = z.infer<typeof projectExportSchema>;
+export type ProjectExportList = z.infer<typeof projectExportListSchema>;
 export type ProjectOutputs = z.infer<typeof projectOutputsSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type SnapshotList = z.infer<typeof snapshotListSchema>;

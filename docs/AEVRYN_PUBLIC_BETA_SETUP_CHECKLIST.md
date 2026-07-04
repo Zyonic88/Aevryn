@@ -6,6 +6,8 @@ This checklist tracks the external setup required before Aevryn can enter public
 
 It consolidates the remaining work that cannot be completed by repository code alone.
 
+Internal alpha is limited to Aetherra Labs owner/operator development and Codex-assisted verification. Public beta is the first milestone where outside users may be invited to upload their own work.
+
 ---
 
 # Status

@@ -189,11 +189,20 @@ function ContinuitySceneCard({ scene }: { scene: ContinuityScene }) {
           </div>
         ))}
       </dl>
-      <div className="profile-section-grid">
-        {bucketKeys().map((bucket) => (
-          <ContinuityBucket key={bucket} title={bucketLabels[bucket]} records={scene[bucket]} />
-        ))}
-      </div>
+      <details className="profile-disclosure">
+        <summary>Continuity details</summary>
+        <div className="profile-section-grid">
+          {changeBucketKeys().map((bucket) => (
+            <ContinuityBucket key={bucket} title={bucketLabels[bucket]} records={scene[bucket]} />
+          ))}
+        </div>
+        {scene.still_known.length > 0 ? (
+          <details className="nested-disclosure">
+            <summary>{`${scene.still_known.length.toLocaleString()} still known`}</summary>
+            <ContinuityBucket title={bucketLabels.still_known} records={scene.still_known} />
+          </details>
+        ) : null}
+      </details>
     </article>
   );
 }
@@ -223,4 +232,8 @@ function ContinuityBucket({ title, records }: { title: string; records: Continui
 
 function bucketKeys(): ContinuityBucketKey[] {
   return ["new", "updated", "still_known", "invalidated"];
+}
+
+function changeBucketKeys(): ContinuityBucketKey[] {
+  return ["new", "updated", "invalidated"];
 }
