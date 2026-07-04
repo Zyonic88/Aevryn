@@ -27,7 +27,7 @@ import {
   translationReviewDetails,
   translationReviewKey,
 } from "./languageIdentityDisplay";
-import { readableOutputItems, readablePromptText } from "./readableOutput";
+import { readableOutputItems, readablePromptSummary, readablePromptText } from "./readableOutput";
 
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
@@ -650,6 +650,7 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
     section,
     full ? {} : { maxItems: MAX_VISIBLE_PROMPT_DETAILS },
   );
+  const promptSummary = readablePromptSummary(section);
 
   async function copyPrompt() {
     const clipboard = navigator.clipboard;
@@ -683,7 +684,10 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
         </div>
       </div>
       <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
-        <summary>Show prompt</summary>
+        <summary>
+          <span>Show prompt</span>
+          <small>{promptSummary}</small>
+        </summary>
         <p>{promptText}</p>
       </details>
     </section>

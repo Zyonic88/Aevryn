@@ -3293,6 +3293,7 @@ describe("App shell routing", () => {
     const promptBodies = selectedPack.querySelectorAll("details.prompt-disclosure");
     expect(promptBodies).toHaveLength(4);
     promptBodies.forEach((body) => expect(body).not.toHaveAttribute("open"));
+    expect(within(selectedPack).getByText("3 prompt details ready.")).toBeInTheDocument();
     await user.click(within(selectedPack).getByRole("button", { name: "Copy Image Prompt" }));
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Scene 1 image prompt detail")),
@@ -3303,6 +3304,7 @@ describe("App shell routing", () => {
 
     expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
     expect(within(selectedPack).getByText(/Scene 2 image prompt detail/u)).toBeInTheDocument();
+    expect(within(selectedPack).getByText("3 prompt details ready.")).toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {

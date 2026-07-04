@@ -1256,11 +1256,40 @@ select:focus {
 }
 
 .prompt-disclosure summary {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
   padding: 10px 12px;
   color: #40516a;
   font-weight: 700;
   cursor: pointer;
-  list-style-position: inside;
+  list-style: none;
+}
+
+.prompt-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.prompt-disclosure summary::before {
+  content: ">";
+  color: #667386;
+  font-size: 12px;
+}
+
+.prompt-disclosure[open] summary::before {
+  content: "v";
+}
+
+.prompt-disclosure summary span {
+  margin-right: auto;
+}
+
+.prompt-disclosure summary small {
+  color: #667386;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
 }
 
 .prompt-disclosure[open] summary {

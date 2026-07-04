@@ -13,7 +13,7 @@ import {
   buildPromptPreviewPayload,
   canSubmitPromptPreviewInput,
 } from "../previewing/previewPayload";
-import { readablePromptText } from "../output/readableOutput";
+import { readablePromptSummary, readablePromptText } from "../output/readableOutput";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
@@ -181,7 +181,9 @@ function PromptPreviewResult({ result }: { result: PromptPreview }) {
 
 function PromptSection({ section }: { section: OutputSection }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const promptText = readablePromptText(section, { maxItems: 10 });
+  const promptPreviewText = readablePromptText(section, { maxItems: 10 });
+  const promptCopyText = readablePromptText(section);
+  const promptSummary = readablePromptSummary(section);
 
   async function copyPrompt() {
     const clipboard = navigator.clipboard;
@@ -190,7 +192,7 @@ function PromptSection({ section }: { section: OutputSection }) {
       return;
     }
     try {
-      await clipboard.writeText(promptText);
+      await clipboard.writeText(promptCopyText);
       setCopyState("copied");
     } catch {
       setCopyState("failed");
@@ -215,8 +217,11 @@ function PromptSection({ section }: { section: OutputSection }) {
         </div>
       </div>
       <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
-        <summary>Show prompt</summary>
-        <p>{promptText}</p>
+        <summary>
+          <span>Show prompt</span>
+          <small>{promptSummary}</small>
+        </summary>
+        <p>{promptPreviewText}</p>
       </details>
     </section>
   );
