@@ -287,7 +287,16 @@ const continuityPreviewPayload = {
             scene_id: "source_alpha_chapter_002_scene_001",
           },
         ],
-        still_known: [],
+        still_known: [
+          {
+            record_id: "fact_character_mark_relationship_luna_ally",
+            record_type: "fact",
+            description: "character_mark relationship = Luna - Ally.",
+            evidence_id: "source_alpha_anchor_003",
+            chapter_id: "source_alpha_chapter_002",
+            scene_id: "source_alpha_chapter_002_scene_001",
+          },
+        ],
         invalidated: [
           {
             record_id: "fact_character_mark_current_weapon_rusty_dagger_invalidated",
@@ -341,6 +350,12 @@ const projectAlphaPayload = {
   name: projectAlpha.name,
   created_at: projectAlpha.updatedAt,
   updated_at: projectAlpha.updatedAt,
+};
+const projectBetaPayload = {
+  project_id: "project_beta",
+  name: "Beta",
+  created_at: "2026-06-28T00:00:00.000Z",
+  updated_at: "2026-06-30T00:00:00.000Z",
 };
 const projectSettingsPayload = {
   project_id: projectAlpha.id,
@@ -460,6 +475,18 @@ const projectStatusPayload = {
       summary: "Created canon snapshot.",
     },
   ],
+};
+const projectExportPayload = {
+  export_id: "export_alpha",
+  project_id: projectAlpha.id,
+  snapshot_id: snapshotPayload.snapshot_id,
+  export_kind: "canon",
+  export_format: "json",
+  filename: "alpha-canon-snapshot.json",
+  content_type: "application/json",
+  size: 128,
+  checksum: "checksum-alpha",
+  created_at: projectAlpha.updatedAt,
 };
 const projectOutputsPayload = {
   project_id: projectAlpha.id,
@@ -643,12 +670,19 @@ const projectOutputsPayload = {
   ],
 };
 
-const manyPromptPacks = Array.from({ length: 8 }, (_, index) => ({
+const manyPromptPacks = Array.from({ length: 28 }, (_, index) => ({
   ...promptPreviewPayload.production_pack,
   scene: {
     ...promptPreviewPayload.production_pack.scene,
     scene_id: `scene_${index + 1}`,
     title: `Scene ${index + 1}`,
+  },
+  image_prompt: {
+    ...promptPreviewPayload.production_pack.image_prompt,
+    items: [
+      ...promptPreviewPayload.production_pack.image_prompt.items,
+      `Scene ${index + 1} image prompt detail`,
+    ],
   },
 }));
 
@@ -754,6 +788,24 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
           return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/exports`)) {
+          if (init?.method === "POST") {
+            const body = JSON.parse(String(init.body));
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  ...projectExportPayload,
+                  export_id: body.export_id,
+                  snapshot_id: body.snapshot_id,
+                  export_format: body.export_format,
+                  filename: body.filename,
+                  created_at: body.now,
+                }),
+              ),
+            );
+          }
+          return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
         if (
           url.endsWith(
@@ -1023,7 +1075,7 @@ describe("App shell routing", () => {
     expect(window.localStorage.getItem("aevryn.session")).toBeNull();
   });
 
-  it("recovers the requested workspace route after session expiry and login", async () => {
+  it("lands on the dashboard after session expiry and login", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem(
       "aevryn.session",
@@ -1041,11 +1093,8 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
-    expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Monitoring" })).not.toBeInTheDocument();
-    expect(
-      await screen.findByRole("region", { name: "Current project run state" }),
-    ).toHaveTextContent("succeeded");
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Monitoring" })).not.toBeInTheDocument();
   });
 
   it("redirects authenticated users away from auth screens", async () => {
@@ -1317,21 +1366,32 @@ describe("App shell routing", () => {
     expect(
       await screen.findByRole("region", { name: "Processed project output" }),
     ).toHaveTextContent("1 accepted world relationship");
+    const worldOutput = screen.getByRole("region", { name: "Processed project output" });
+    const worldDetailPanels = worldOutput.querySelectorAll("details.profile-disclosure");
+    expect(worldDetailPanels.length).toBeGreaterThanOrEqual(1);
+    worldDetailPanels.forEach((panel) => expect(panel).not.toHaveAttribute("open"));
     expect(screen.getByLabelText("AI response JSON")).not.toBeVisible();
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview world" }));
     expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
+    const previewWorldDetails = screen.getAllByText("World details")[0].closest("details");
+    expect(previewWorldDetails).not.toBeNull();
+    expect(previewWorldDetails).not.toHaveAttribute("open");
 
     await user.click(screen.getByRole("link", { name: "Timeline" }));
     expect(
       await screen.findByRole("region", { name: "Processed project output" }),
     ).toHaveTextContent("2 accepted state changes");
+    const timelineOutput = screen.getByRole("region", { name: "Processed project output" });
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Chapter 1, Scene 1",
     );
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Mark - Current Weapon: Iron Sword",
     );
+    const timelineDetailRows = timelineOutput.querySelectorAll("details.detail-disclosure");
+    expect(timelineDetailRows.length).toBeGreaterThanOrEqual(1);
+    timelineDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview timeline" }));
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
@@ -1343,23 +1403,41 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Processed Scene 7",
     );
+    const sceneOutput = screen.getByRole("region", { name: "Processed project output" });
+    const sceneDetailPanels = sceneOutput.querySelectorAll("details.profile-disclosure");
+    expect(sceneDetailPanels.length).toBeGreaterThanOrEqual(1);
+    sceneDetailPanels.forEach((panel) => expect(panel).not.toHaveAttribute("open"));
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Characters Present",
     );
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview scene" }));
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
+    const previewSceneDetails = screen.getAllByText("Scene details")[0].closest("details");
+    expect(previewSceneDetails).not.toBeNull();
+    expect(previewSceneDetails).not.toHaveAttribute("open");
 
     await user.click(screen.getByRole("link", { name: "Continuity" }));
     expect(
       await screen.findByRole("region", { name: "Processed project output" }),
     ).toHaveTextContent("4 accepted facts");
+    const continuityOutput = screen.getByRole("region", { name: "Processed project output" });
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Current Weapon: Rusty Dagger.",
     );
+    const continuityDetailRows = continuityOutput.querySelectorAll("details.detail-disclosure");
+    expect(continuityDetailRows.length).toBeGreaterThanOrEqual(1);
+    continuityDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
+    expect(continuityOutput).toHaveTextContent("1 still known");
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview continuity" }));
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
+    const previewContinuityDetails = screen.getAllByText("Continuity details")[0].closest("details");
+    expect(previewContinuityDetails).not.toBeNull();
+    expect(previewContinuityDetails).not.toHaveAttribute("open");
+    const stableContinuityDetails = screen.getAllByText("1 still known")[0].closest("details");
+    expect(stableContinuityDetails).not.toBeNull();
+    expect(stableContinuityDetails).not.toHaveAttribute("open");
 
     await user.click(screen.getByRole("link", { name: "Prompt Packs" }));
     expect(
@@ -1442,6 +1520,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Demo User")).toBeInTheDocument();
     expect(await screen.findByText("Evidence in. Canon out.")).toBeInTheDocument();
+    expect(await screen.findByText("No projects")).toBeInTheDocument();
+    expect(screen.getByText("Open a project to continue working, or create a new story workspace."))
+      .toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
   });
 
@@ -1523,6 +1604,41 @@ describe("App shell routing", () => {
 
     await user.click(await screen.findByText("Diagnostics"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Health check failed.");
+  });
+
+  it("orders dashboard projects by most recent activity", async () => {
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(API_PATHS.projects)) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ projects: [projectAlphaPayload, projectBetaPayload] })),
+          );
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("2 projects")).toBeInTheDocument();
+    const projectLinks = screen
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("href")?.startsWith("/projects/"));
+    expect(projectLinks[0]).toHaveTextContent("Beta");
+    expect(projectLinks[1]).toHaveTextContent("Alpha");
   });
 
   it("shows project API create failures", async () => {
@@ -1621,11 +1737,16 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("link", { name: "Alpha" })).toBeInTheDocument();
+    expect(await screen.findByText("1 project")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Alpha Updated/u })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha",
+    );
+    expect(screen.getByText("Open workspace")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Delete project Alpha" }));
 
     await waitFor(() =>
-      expect(screen.queryByRole("link", { name: "Alpha" })).not.toBeInTheDocument(),
+      expect(screen.queryByRole("link", { name: /Alpha Updated/u })).not.toBeInTheDocument(),
     );
     expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete project Alpha?");
     expect(confirmSpy).toHaveBeenNthCalledWith(
@@ -2520,10 +2641,13 @@ describe("App shell routing", () => {
     await user.click(screen.getAllByRole("button", { name: "Submit processing" })[0]);
 
     expect(await screen.findByRole("button", { name: "Processing" })).toBeDisabled();
+    expect(await screen.findByLabelText("Processing progress")).toHaveTextContent("Queued");
+    expect(screen.getByLabelText("Processing progress")).toHaveTextContent("Processing");
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled());
     expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
     expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();
+    expect(screen.getByText(/Canon output is ready/u)).toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.workerProcess)),
     ).toBe(false);
@@ -2712,6 +2836,18 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+        }
+        if (url.endsWith(projectOutputsPath(projectAlpha.id))) {
+          return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
+          return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
+        }
         return Promise.resolve(new Response("{}", { status: 404 }));
       }),
     );
@@ -2788,6 +2924,18 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+        }
+        if (url.endsWith(projectOutputsPath(projectAlpha.id))) {
+          return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
+          return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
         return Promise.resolve(new Response("{}", { status: 404 }));
       }),
@@ -2880,6 +3028,18 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+        }
+        if (url.endsWith(projectOutputsPath(projectAlpha.id))) {
+          return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
+          return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
+        }
         return Promise.resolve(new Response("{}", { status: 404 }));
       }),
     );
@@ -2939,6 +3099,10 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Mark" }).length).toBeGreaterThanOrEqual(1);
+    const previewCard = screen.getAllByRole("heading", { name: "Mark" })[0].closest("article");
+    expect(previewCard).not.toBeNull();
+    expect(previewCard?.querySelector(".character-portrait")).toHaveTextContent("M");
+    expect(previewCard?.querySelector("details.profile-disclosure")).not.toHaveAttribute("open");
     expect(screen.getAllByText("Rusty Dagger").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Luna - Ally").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("3 verified facts").length).toBeGreaterThanOrEqual(1);
@@ -2953,7 +3117,12 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Mark" })).toBeInTheDocument();
+    const characterHeading = await screen.findByRole("heading", { name: "Mark" });
+    expect(characterHeading).toBeInTheDocument();
+    const characterCard = characterHeading.closest("article");
+    expect(characterCard).not.toBeNull();
+    expect(characterCard?.querySelector(".character-portrait")).toHaveTextContent("M");
+    expect(characterCard?.querySelector("details.profile-disclosure")).not.toHaveAttribute("open");
     expect(screen.getAllByRole("heading", { name: "Mark" })).toHaveLength(1);
     expect(screen.getByRole("heading", { name: "Race" })).toBeInTheDocument();
     expect(screen.getByText("Human")).toBeInTheDocument();
@@ -3033,6 +3202,21 @@ describe("App shell routing", () => {
     expect(
       await screen.findByRole("heading", { name: "Language and Identity" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Recommended Next Step" })).toBeInTheDocument();
+    expect(screen.getByText("Review identity")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open characters" })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/characters",
+    );
+    expect(screen.getByRole("heading", { name: "Quick Actions" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Prompt Packs 1 scenes ready/u })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/prompts",
+    );
+    expect(screen.getByRole("link", { name: /Exports Snapshot export available/u })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/exports",
+    );
     expect(screen.getByRole("link", { name: "View monitoring" })).toHaveAttribute(
       "href",
       "/projects/project_alpha/monitoring",
@@ -3055,7 +3239,13 @@ describe("App shell routing", () => {
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
   });
 
-  it("bounds rendered prompt packs so large projects stay responsive", async () => {
+  it("renders a bounded prompt scene picker with one selected prompt pack", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
     storeAuthenticatedProject();
     vi.stubGlobal(
       "fetch",
@@ -3092,9 +3282,27 @@ describe("App shell routing", () => {
 
     expect(
       await screen.findByRole("region", { name: "Processed project output" }),
-    ).toHaveTextContent("Showing 6 of 8 prompt packs");
-    expect(screen.getByRole("heading", { name: "Scene 6" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Scene 7" })).not.toBeInTheDocument();
+    ).toHaveTextContent("Showing 24 of 28 prompt scenes");
+    expect(screen.getByRole("button", { name: /Scene 24/u })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Scene 25/u })).not.toBeInTheDocument();
+
+    const selectedPack = screen.getByRole("article", { name: "Selected prompt pack" });
+    expect(within(selectedPack).getByRole("heading", { name: "Scene 1" })).toBeInTheDocument();
+    expect(within(selectedPack).getByText(/Scene 1 image prompt detail/u)).toBeInTheDocument();
+    expect(screen.queryByText(/Scene 2 image prompt detail/u)).not.toBeInTheDocument();
+    const promptBodies = selectedPack.querySelectorAll("details.prompt-disclosure");
+    expect(promptBodies).toHaveLength(4);
+    promptBodies.forEach((body) => expect(body).not.toHaveAttribute("open"));
+    await user.click(within(selectedPack).getByRole("button", { name: "Copy Image Prompt" }));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Scene 1 image prompt detail")),
+    );
+    expect(within(selectedPack).getByText("Copied")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^Scene 2\b/u }));
+
+    expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
+    expect(within(selectedPack).getByText(/Scene 2 image prompt detail/u)).toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {
@@ -3142,6 +3350,18 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+        }
+        if (url.endsWith(projectOutputsPath(projectAlpha.id))) {
+          return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
+          return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
         return Promise.resolve(new Response("{}", { status: 404 }));
       }),
@@ -3315,6 +3535,9 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Chapter 1, Scene 1" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Chapter 2, Scene 1" })).toBeInTheDocument();
+    const stableContinuityDetails = screen.getAllByText("1 still known")[0].closest("details");
+    expect(stableContinuityDetails).not.toBeNull();
+    expect(stableContinuityDetails).not.toHaveAttribute("open");
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(
       screen.getAllByText((_content, element) => {
@@ -3523,6 +3746,42 @@ describe("App shell routing", () => {
     ).toBeGreaterThanOrEqual(1);
   });
 
+  it("creates stored snapshot exports from the exports workspace tab", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const fetchMock = vi.mocked(fetch);
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/exports"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Stored Exports" })).toBeInTheDocument();
+    expect(await screen.findByText("alpha-canon-snapshot.json")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create snapshot export" }));
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([input, init]) => {
+          if (!String(input).endsWith(`${API_PATHS.projects}/project_alpha/exports`)) {
+            return false;
+          }
+          if (init?.method !== "POST") {
+            return false;
+          }
+          const body = JSON.parse(String(init.body));
+          return (
+            body.snapshot_id === "snapshot_run_alpha_canon" &&
+            body.export_format === "json" &&
+            body.filename === "alpha-canon-snapshot.json"
+          );
+        }),
+      ).toBe(true);
+    });
+    expect(await screen.findByText("Snapshot export created.")).toBeInTheDocument();
+  });
+
   it("clears stale export previews when local AI JSON validation fails", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
@@ -3598,7 +3857,7 @@ describe("App shell routing", () => {
     failPreview = true;
     await user.click(screen.getByRole("button", { name: "Preview export" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Export preview failed.");
+    expect(await screen.findByText("Export preview failed.")).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "source_alpha_production_pack.md" }),
     ).not.toBeInTheDocument();
@@ -3641,13 +3900,13 @@ describe("App shell routing", () => {
     await screen.findByRole("heading", { name: "Exports" });
     await user.click(screen.getByText("Developer preview"));
     await user.click(screen.getByRole("button", { name: "Preview export" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Export preview failed.");
+    expect(await screen.findByText("Export preview failed.")).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText("AI response JSON"));
     await user.type(screen.getByLabelText("AI response JSON"), "not json");
     await user.click(screen.getByRole("button", { name: "Preview export" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("AI response must be valid JSON.");
+    expect(await screen.findByText("AI response must be valid JSON.")).toBeInTheDocument();
     expect(screen.queryByText("Export preview failed.")).not.toBeInTheDocument();
   });
 
@@ -4326,6 +4585,23 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Settings Areas" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Project Defaults/u })).toHaveAttribute(
+      "href",
+      "#project-settings",
+    );
+    expect(screen.getByRole("heading", { name: "Workspace Preferences" })).toBeInTheDocument();
+    const accountPanel = screen.getByRole("heading", { name: "Account" }).closest("section");
+    expect(accountPanel).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Privacy & Data" })).toBeInTheDocument();
+    expect(within(accountPanel as HTMLElement).getByText("Demo User")).toBeInTheDocument();
+    expect(within(accountPanel as HTMLElement).getByText("demo@example.com")).toBeInTheDocument();
+    expect(within(accountPanel as HTMLElement).getByText("Managed identity provider")).toBeInTheDocument();
+    expect(
+      screen.getByText("Off by default. Opt-in only. No live training pipeline is active."),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/does not give Aevryn ownership/u)).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("session-token");
     expect(await screen.findByDisplayValue("en-US")).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Default export format"), "json");
     await user.clear(screen.getByLabelText("Locale"));

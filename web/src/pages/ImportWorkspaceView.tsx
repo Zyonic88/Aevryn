@@ -682,14 +682,13 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           <div className="compact-list">
             {projectRunsForActiveStory.map((run) => {
               const errorLabel = runErrorLabel(run);
+              const snapshot = snapshotsByRun.get(run.run_id);
               return (
                 <div key={run.run_id} className="compact-row">
                   <strong>Processing run</strong>
                   <span>{formatRunStatus(run.status)} run</span>
-                  <span>{runSnapshotLabel(run, snapshotsByRun.get(run.run_id))}</span>
-                  {isActiveRun(run) ? (
-                    <span>Results will appear when the canon snapshot is ready.</span>
-                  ) : null}
+                  <span>{runSnapshotLabel(run, snapshot)}</span>
+                  <ProcessingStepper run={run} snapshot={snapshot} />
                   {errorLabel ? <span>{errorLabel}</span> : null}
                 </div>
               );
@@ -932,6 +931,64 @@ function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): strin
     return "Snapshot pending";
   }
   return "Snapshot waiting";
+}
+
+function ProcessingStepper({ run, snapshot }: { run: EngineRun; snapshot: Snapshot | undefined }) {
+  const steps = processingSteps(run, snapshot);
+  return (
+    <div className="processing-stepper" aria-label="Processing progress">
+      {steps.map((step) => (
+        <div className={`processing-step processing-step-${step.state}`} key={step.label}>
+          <span aria-hidden="true">{step.marker}</span>
+          <strong>{step.label}</strong>
+        </div>
+      ))}
+      <p>{processingHelpText(run, snapshot)}</p>
+    </div>
+  );
+}
+
+function processingSteps(
+  run: EngineRun,
+  snapshot: Snapshot | undefined,
+): Array<{ label: string; state: "done" | "active" | "waiting" | "failed"; marker: string }> {
+  const failed = run.status === "failed";
+  const succeeded = run.status === "succeeded";
+  return [
+    {
+      label: "Queued",
+      state: failed || succeeded || run.status === "running" ? "done" : "active",
+      marker: failed || succeeded || run.status === "running" ? "✓" : "1",
+    },
+    {
+      label: "Processing",
+      state: failed ? "failed" : succeeded ? "done" : run.status === "running" ? "active" : "waiting",
+      marker: failed ? "!" : succeeded ? "✓" : "2",
+    },
+    {
+      label: "Snapshot",
+      state: failed ? "failed" : snapshot ? "done" : succeeded ? "active" : "waiting",
+      marker: failed ? "!" : snapshot ? "✓" : "3",
+    },
+    {
+      label: "Output ready",
+      state: failed ? "failed" : snapshot ? "done" : "waiting",
+      marker: failed ? "!" : snapshot ? "✓" : "4",
+    },
+  ];
+}
+
+function processingHelpText(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (run.status === "failed") {
+    return "Processing stopped before a canon snapshot was created.";
+  }
+  if (snapshot) {
+    return "Canon output is ready. You can review Characters, World, Timeline, Scenes, Continuity, Prompt Packs, and Exports.";
+  }
+  if (run.status === "succeeded") {
+    return "Processing finished. Aevryn is waiting for the canon snapshot to appear.";
+  }
+  return "You can leave this page. Aevryn will keep processing and update this run automatically.";
 }
 
 function importCardTitle(index: number): string {

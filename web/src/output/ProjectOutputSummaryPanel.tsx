@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { apiClient } from "../api/client";
 import type {
@@ -32,7 +32,7 @@ import { readableOutputItems, readablePromptText } from "./readableOutput";
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
 
-const MAX_VISIBLE_PROMPT_PACKS = 6;
+const MAX_VISIBLE_PROMPT_SCENES = 24;
 const MAX_VISIBLE_PROMPT_DETAILS = 10;
 
 export function ProjectOutputSummaryPanel({
@@ -297,27 +297,45 @@ function mergedEvidenceSummary(left: string, right: string): string {
 function CharacterPanel({ profile }: { profile: CharacterProfile }) {
   const recentChanges = characterRecentChanges(profile);
   return (
-    <article className="profile-card">
-      <header>
-        <h3>{profile.display_name}</h3>
-        <p>{profile.subtitle}</p>
+    <article className="profile-card character-profile-card">
+      <header className="character-profile-header">
+        <div className="character-portrait" aria-hidden="true">
+          {characterInitials(profile.display_name)}
+        </div>
+        <div>
+          <h3>{profile.display_name}</h3>
+          <p>{profile.subtitle}</p>
+        </div>
       </header>
-      <div className="profile-section-grid">
-        <PanelSection section={profile.race} />
-        <PanelSection section={profile.gender} />
-        <PanelSection section={profile.status} />
-        <PanelSection section={profile.current_goal} />
-        <PanelSection section={profile.current_equipment} />
-        <PanelSection section={profile.current_abilities} />
-        <PanelSection section={profile.current_assets} />
-        <PanelSection section={profile.territory} />
-        <PanelSection section={profile.relationships} />
-        <PanelSection section={profile.current_limitations} />
-        <PanelSection section={recentChanges} />
-      </div>
+      <details className="profile-disclosure">
+        <summary>Character details</summary>
+        <div className="profile-section-grid">
+          <PanelSection section={profile.race} />
+          <PanelSection section={profile.gender} />
+          <PanelSection section={profile.status} />
+          <PanelSection section={profile.current_goal} />
+          <PanelSection section={profile.current_equipment} />
+          <PanelSection section={profile.current_abilities} />
+          <PanelSection section={profile.current_assets} />
+          <PanelSection section={profile.territory} />
+          <PanelSection section={profile.relationships} />
+          <PanelSection section={profile.current_limitations} />
+          <PanelSection section={recentChanges} />
+        </div>
+      </details>
       <p className="evidence-note">{profile.evidence_summary}</p>
     </article>
   );
+}
+
+function characterInitials(name: string): string {
+  const initials = name
+    .split(/\s+/u)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+  return initials || "?";
 }
 
 function evidenceFactCount(summary: string): number {
@@ -344,7 +362,10 @@ function WorldPanel({ world }: { world: WorldSheet }) {
             <header>
               <h3>{section.title}</h3>
             </header>
-            <WorldSection section={section} />
+            <details className="profile-disclosure">
+              <summary>World details</summary>
+              <WorldSection section={section} />
+            </details>
           </article>
         ))}
       </div>
@@ -358,14 +379,15 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
   return (
     <div className="compact-list timeline-change-list" aria-label="Timeline changes">
       {timelineGroups.map((group) => (
-        <section
-          className="compact-row timeline-change-group"
+        <details
+          className="compact-row timeline-change-group detail-disclosure"
           key={`${group.chapterIndex}-${group.sceneIndex}`}
+          aria-label={`${group.title} timeline details`}
         >
-          <div>
+          <summary>
             <strong>{group.title}</strong>
             <span>{group.subtitle}</span>
-          </div>
+          </summary>
           <ul>
             {group.changes.map((change) => (
               <li key={change.change_id}>
@@ -377,7 +399,7 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
               </li>
             ))}
           </ul>
-        </section>
+        </details>
       ))}
     </div>
   );
@@ -392,15 +414,18 @@ function SceneSheetsPanel({ scenes }: { scenes: SceneSheet[] }) {
             <h3>{scene.title}</h3>
             <p>{scene.chapter_label}</p>
           </header>
-          <div className="profile-section-grid">
-            <PanelSection section={scene.characters_present} />
-            <PanelSection section={scene.location} />
-            <PanelSection section={scene.mood} />
-            <PanelSection section={scene.purpose} />
-            <PanelSection section={scene.visual_highlights} />
-            <PanelSection section={scene.continuity_changes} />
-            <PanelSection section={scene.environment} />
-          </div>
+          <details className="profile-disclosure">
+            <summary>Scene details</summary>
+            <div className="profile-section-grid">
+              <PanelSection section={scene.characters_present} />
+              <PanelSection section={scene.location} />
+              <PanelSection section={scene.mood} />
+              <PanelSection section={scene.purpose} />
+              <PanelSection section={scene.visual_highlights} />
+              <PanelSection section={scene.continuity_changes} />
+              <PanelSection section={scene.environment} />
+            </div>
+          </details>
           <p className="evidence-note">{scene.evidence_summary}</p>
         </article>
       ))}
@@ -428,16 +453,27 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
   return (
     <div className="compact-list timeline-change-list" aria-label="Continuity report">
       {visibleScenes.map((scene, index) => (
-        <section className="compact-row timeline-change-group" key={scene.scene_id}>
-          <div>
+        <details
+          className="compact-row timeline-change-group detail-disclosure"
+          key={scene.scene_id}
+          aria-label={`Scene ${index + 1} continuity details`}
+        >
+          <summary>
             <strong>{`Scene ${index + 1}`}</strong>
             <span>{continuitySceneSummary(scene)}</span>
+          </summary>
+          <div className="continuity-change-grid">
+            <ContinuityBucket title="New" records={scene.new} />
+            <ContinuityBucket title="Updated" records={scene.updated} />
+            <ContinuityBucket title="Invalidated" records={scene.invalidated} />
           </div>
-          <ContinuityBucket title="New" records={scene.new} />
-          <ContinuityBucket title="Updated" records={scene.updated} />
-          <ContinuityBucket title="Still Known" records={scene.still_known} />
-          <ContinuityBucket title="Invalidated" records={scene.invalidated} />
-        </section>
+          {scene.still_known.length > 0 ? (
+            <details className="nested-disclosure">
+              <summary>{`${scene.still_known.length.toLocaleString()} still known`}</summary>
+              <ContinuityBucket title="Still Known" records={scene.still_known} />
+            </details>
+          ) : null}
+        </details>
       ))}
     </div>
   );
@@ -468,42 +504,73 @@ function ContinuityBucket({
 }
 
 function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
-  const visiblePacks = packs.slice(0, MAX_VISIBLE_PROMPT_PACKS);
+  const visiblePacks = packs.slice(0, MAX_VISIBLE_PROMPT_SCENES);
+  const [selectedSceneId, setSelectedSceneId] = useState(packs[0]?.scene.scene_id ?? "");
+  const selectedPack = packs.find((pack) => pack.scene.scene_id === selectedSceneId) ?? packs[0];
+  if (!selectedPack) {
+    return null;
+  }
+
   return (
-    <>
+    <div className="prompt-pack-browser">
       {packs.length > visiblePacks.length ? (
         <p className="result-summary">
           Showing {visiblePacks.length.toLocaleString()} of {packs.length.toLocaleString()} prompt
-          packs.
+          scenes. Select a scene to view its production prompts.
         </p>
       ) : null}
-      <div className="profile-grid" aria-label="Prompt packs">
-        {visiblePacks.map((pack) => (
-          <article className="profile-card" key={pack.scene.scene_id}>
-            <header>
-              <h3>{pack.scene.title}</h3>
-              <p>{pack.scene.chapter_label}</p>
-            </header>
-            <div className="profile-section-grid">
-              <PromptTextSection section={pack.image_prompt} />
-              <PromptTextSection section={pack.narration_prompt} />
-              <PromptTextSection section={pack.camera_prompt} />
-              <PromptTextSection section={pack.animation_prompt} />
-            </div>
-            <p className="evidence-note">{pack.scene.evidence_summary}</p>
-          </article>
-        ))}
+      <div className="prompt-pack-layout">
+        <div className="prompt-scene-list" aria-label="Prompt scenes">
+          {visiblePacks.map((pack) => (
+            <button
+              type="button"
+              className="prompt-scene-button"
+              aria-pressed={pack.scene.scene_id === selectedPack.scene.scene_id}
+              key={pack.scene.scene_id}
+              onClick={() => setSelectedSceneId(pack.scene.scene_id)}
+            >
+              <strong>{pack.scene.title}</strong>
+              <span>{pack.scene.chapter_label}</span>
+              <small>{pack.scene.evidence_summary}</small>
+            </button>
+          ))}
+        </div>
+        <article className="profile-card prompt-pack-detail" aria-label="Selected prompt pack">
+          <header>
+            <h3>{selectedPack.scene.title}</h3>
+            <p>{selectedPack.scene.chapter_label}</p>
+          </header>
+          <div className="profile-section-grid prompt-scene-context">
+            <PanelSection section={selectedPack.scene.characters_present} />
+            <PanelSection section={selectedPack.scene.location} />
+            <PanelSection section={selectedPack.scene.mood} />
+            <PanelSection section={selectedPack.scene.purpose} />
+            <PanelSection section={selectedPack.scene.visual_highlights} />
+            <PanelSection section={selectedPack.scene.environment} />
+          </div>
+          <div className="prompt-pack-grid">
+            <PromptTextSection section={selectedPack.image_prompt} full />
+            <PromptTextSection section={selectedPack.narration_prompt} full />
+            <PromptTextSection section={selectedPack.camera_prompt} full />
+            <PromptTextSection section={selectedPack.animation_prompt} full />
+          </div>
+          <p className="evidence-note">{selectedPack.scene.evidence_summary}</p>
+        </article>
       </div>
-    </>
+    </div>
   );
 }
 
 function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): string {
-  const changeCount = scene.new.length + scene.updated.length + scene.invalidated.length;
+  const changeCount = continuityChangeCount(scene);
   const stableCount = scene.still_known.length;
   const changeLabel = `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
   const stableLabel = `${stableCount.toLocaleString()} still known`;
   return `${changeLabel}; ${stableLabel}`;
+}
+
+function continuityChangeCount(scene: ContinuityReport["scenes"][number]): number {
+  return scene.new.length + scene.updated.length + scene.invalidated.length;
 }
 
 function ExportOptionsPanel({ options }: { options: ProjectExportOption[] }) {
@@ -577,11 +644,48 @@ function PanelSection({ section }: { section: OutputSection }) {
   );
 }
 
-function PromptTextSection({ section }: { section: OutputSection }) {
+function PromptTextSection({ section, full = false }: { section: OutputSection; full?: boolean }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const promptText = readablePromptText(
+    section,
+    full ? {} : { maxItems: MAX_VISIBLE_PROMPT_DETAILS },
+  );
+
+  async function copyPrompt() {
+    const clipboard = navigator.clipboard;
+    if (!clipboard) {
+      setCopyState("failed");
+      return;
+    }
+    try {
+      await clipboard.writeText(promptText);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+  }
+
   return (
     <section className="profile-section prompt-text-section">
-      <h4>{section.title}</h4>
-      <p>{readablePromptText(section, { maxItems: MAX_VISIBLE_PROMPT_DETAILS })}</p>
+      <div className="prompt-section-heading">
+        <h4>{section.title}</h4>
+        <div className="prompt-copy-controls">
+          {copyState === "copied" ? <span>Copied</span> : null}
+          {copyState === "failed" ? <span>Copy unavailable</span> : null}
+          <button
+            type="button"
+            className="text-button"
+            aria-label={`Copy ${section.title}`}
+            onClick={() => void copyPrompt()}
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+      <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
+        <summary>Show prompt</summary>
+        <p>{promptText}</p>
+      </details>
     </section>
   );
 }

@@ -9,6 +9,8 @@ import {
   engineRunListSchema,
   engineRunSchema,
   exportPreviewSchema,
+  projectExportListSchema,
+  projectExportSchema,
   promptPreviewSchema,
   scenePreviewSchema,
   snapshotListSchema,
@@ -49,6 +51,8 @@ import {
   type ProjectList,
   type ProjectSettings,
   type ProjectStatus,
+  type ProjectExport,
+  type ProjectExportList,
   type ProjectOutputs,
   type Story,
   type StoryList,
@@ -179,6 +183,20 @@ export type ExportPreviewRequest = ImportInspectRequest & {
   character_ids?: string[];
   scene_id?: string;
   world_entity_ids?: string[];
+};
+
+export type ProjectExportCreateRequest = {
+  export_id: string;
+  snapshot_id: string;
+  export_format: string;
+  filename?: string;
+  now: string;
+};
+
+export type ExportDownload = {
+  blob: Blob;
+  filename: string;
+  contentType: string;
 };
 
 export type JsonPostResponse = {
@@ -446,6 +464,41 @@ export class AevrynApiClient {
     });
   }
 
+  listProjectExports(
+    projectId: string,
+    sessionToken: string,
+    now: string,
+  ): Promise<ProjectExportList> {
+    return this.request(projectExportsPath(projectId), projectExportListSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  createProjectExport(
+    projectId: string,
+    payload: ProjectExportCreateRequest,
+    sessionToken: string,
+    now: string,
+  ): Promise<ProjectExport> {
+    return this.request(projectExportsPath(projectId), projectExportSchema, {
+      method: "POST",
+      headers: authHeaders(sessionToken, now),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async downloadProjectExport(
+    projectId: string,
+    exportId: string,
+    sessionToken: string,
+    now: string,
+  ): Promise<ExportDownload> {
+    const response = await this.requestBlob(projectExportDownloadPath(projectId, exportId), {
+      headers: authHeaders(sessionToken, now),
+    });
+    return response;
+  }
+
   listProjectSnapshots(
     projectId: string,
     sessionToken: string,
@@ -554,6 +607,34 @@ export class AevrynApiClient {
       );
     }
   }
+
+  private async requestBlob(path: string, init: RequestInit = {}): Promise<ExportDownload> {
+    const headers = new Headers(init.headers);
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
+    } catch (error) {
+      throw new ApiError(friendlyNetworkMessage(error), 0, "network_error");
+    }
+
+    if (!response.ok) {
+      const payload = await readJsonPayload(response);
+      const errorPayload = z
+        .object({ error: z.string().optional(), detail: z.string().optional() })
+        .safeParse(payload);
+      throw new ApiError(
+        errorPayload.data?.detail ?? "Aevryn API request failed.",
+        response.status,
+        errorPayload.data?.error ?? "request_failed",
+      );
+    }
+
+    return {
+      blob: await response.blob(),
+      filename: filenameFromContentDisposition(response.headers.get("Content-Disposition")),
+      contentType: response.headers.get("Content-Type") ?? "application/octet-stream",
+    };
+  }
 }
 
 function authHeaders(sessionToken: string, now: string): HeadersInit {
@@ -595,6 +676,14 @@ function projectOutputsPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/outputs`;
 }
 
+function projectExportsPath(projectId: string): string {
+  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/exports`;
+}
+
+function projectExportDownloadPath(projectId: string, exportId: string): string {
+  return `${projectExportsPath(projectId)}/${encodeURIComponent(exportId)}/download`;
+}
+
 function projectSnapshotsPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/snapshots`;
 }
@@ -609,6 +698,14 @@ function storySnapshotsPath(projectId: string, storyId: string, snapshotKind?: s
 
 function projectImportRunsPath(projectId: string, storyId: string, importId: string): string {
   return `${projectStoryImportsPath(projectId, storyId)}/${encodeURIComponent(importId)}/runs`;
+}
+
+function filenameFromContentDisposition(value: string | null): string {
+  if (!value) {
+    return "aevryn-export";
+  }
+  const match = value.match(/filename="([^"]+)"/u) ?? value.match(/filename=([^;]+)/u);
+  return match?.[1]?.trim() || "aevryn-export";
 }
 
 async function readJsonPayload(response: Response): Promise<unknown> {

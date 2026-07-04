@@ -1,16 +1,18 @@
-# Aevryn Private Alpha Tester Guide
+# Aevryn Internal Alpha Operator Guide
 
 > Built by **Aetherra Labs**
 
-This guide is for narrow private alpha testing only.
+This guide is for internal alpha operator testing only.
 
-Aevryn is not public-release ready. Do not use this alpha for public users, payments, production hosting, collaboration, media generation, or untrusted manuscript intake.
+Aevryn is not public-release ready. Do not use this alpha for outside testers, public users, payments, production hosting, collaboration, media generation, or untrusted manuscript intake.
+
+Internal alpha means Aetherra Labs owner/operator development and Codex-assisted verification. Public beta is the first milestone where outside users may be invited to upload their own work.
 
 ---
 
 # Purpose
 
-Private alpha testers should answer one question:
+Internal alpha should answer one question:
 
 ```text
 Can a creator use the V2 workspace path without touching the CLI?
@@ -115,7 +117,7 @@ Known limitations:
 * AI extraction can still misclassify sparse race/gender evidence when the source is indirect.
 * Local/demo extraction may show unknown canon fields. That is expected when no accepted AI facts exist.
 * Prompt Packs must not invent unknown appearance, setting, item, or relationship details.
-* Security & Privacy Hardening is Phase 11 and must happen before public beta.
+* Public beta remains blocked until public-beta readiness gates are signed off.
 
 ---
 
@@ -143,4 +145,4 @@ Bad alpha behavior:
 * the UI exposes private source text in diagnostics
 * deleting a project leaves recoverable copies in Aevryn-owned active storage
 
-Project deletion and broader privacy guarantees will receive deeper hardening in Phase 11 before public beta.
+Project deletion and broader privacy guarantees remain public-beta gate concerns and must stay truthful before outside users are invited.
