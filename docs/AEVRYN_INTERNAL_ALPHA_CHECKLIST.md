@@ -38,6 +38,8 @@ Known Limitations:
 
 Production database, identity provider, object storage, deployment, public launch, payments, collaboration, media generation, and broad visual redesign remain out of Phase 10 scope. Web Import remains unavailable. Worker interruption is observable through status, but durable retry/reclaim policy belongs to a later production worker phase.
 
+Can the tester continue?
+
 Can the internal operator continue?
 
 Yes for the tested API-backed workflow, refresh recovery, session recovery, failed-run visibility, worker interruption observability, import retries, processed output review, and continued internal alpha hardening with documented limitations.
