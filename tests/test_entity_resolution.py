@@ -54,6 +54,27 @@ def test_resolves_alias_title_description_and_pronoun_to_same_identity() -> None
     assert decisions[5].confidence == 0.87
 
 
+def test_resolves_unicode_equivalent_alias_to_same_identity() -> None:
+    """Equivalent Unicode forms should not fragment identity resolution."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Cafe\u0301 Captain", "anchor_unicode_alias"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_cafe_captain",
+                canonical_name="Mira",
+                aliases=("Caf\u00e9 Captain",),
+                evidence_anchor_ids=("anchor_unicode_alias",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_cafe_captain"
+    assert decision.candidates[0].match_kind == "alias"
+
+
 def test_pronoun_resolution_stays_ambiguous_with_multiple_context_candidates() -> None:
     """Pronouns should not merge identities when context supports multiple candidates."""
     engine = EntityResolutionEngine()
@@ -385,6 +406,16 @@ def test_identity_profiles_reject_duplicate_aliases() -> None:
             entity_id="character_charlotte",
             canonical_name="Charlotte",
             aliases=("General Charlotte", " general charlotte "),
+        )
+
+
+def test_identity_profiles_reject_unicode_equivalent_duplicate_aliases() -> None:
+    """Alias uniqueness should compare normalized Unicode, not raw code points."""
+    with pytest.raises(ValueError, match="aliases must be unique"):
+        EntityIdentityProfile(
+            entity_id="character_cafe_captain",
+            canonical_name="Mira",
+            aliases=("Caf\u00e9 Captain", "Cafe\u0301 Captain"),
         )
 
 

@@ -110,9 +110,9 @@ Status: **Acceptance pending hosted browser recheck after alpha-noise fixes**
 
 Verified on July 13, 2026:
 
-* Backend deterministic gates passed: `946 passed`
+* Backend deterministic gates passed: `948 passed`
 * Translation Foundation tests passed: `24 passed`
-* Entity Resolution Foundation tests passed: `20 passed`
+* Entity Resolution Foundation tests passed: `22 passed`
 * Frontend lint passed
 * Frontend tests passed: `160 passed`
 * Frontend production build passed
