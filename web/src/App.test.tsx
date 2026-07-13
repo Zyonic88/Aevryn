@@ -321,6 +321,9 @@ const characterPreviewPayload = {
       character_id: "character_mark",
       display_name: "Mark",
       subtitle: "Known character",
+      aliases: { title: "Aliases", items: ["Captain Mark"] },
+      titles: { title: "Titles", items: ["Captain"] },
+      descriptions: { title: "Descriptions", items: ["human male captain"] },
       race: { title: "Race", items: ["Human"] },
       gender: { title: "Gender", items: ["Male"] },
       status: { title: "Status", items: ["Alive"] },
@@ -614,6 +617,9 @@ const projectOutputsPayload = {
     {
       ...characterPreviewPayload.character_profiles[0],
       character_id: "character_mark_duplicate",
+      aliases: { title: "Aliases", items: ["Captain Mark"] },
+      titles: { title: "Titles", items: ["Captain"] },
+      descriptions: { title: "Descriptions", items: ["human male captain"] },
       race: { title: "Race", items: ["Human"] },
       gender: { title: "Gender", items: ["Male"] },
       recent_changes: {
@@ -3109,6 +3115,7 @@ describe("App shell routing", () => {
   });
 
   it("renders processed character panels from project outputs", async () => {
+    const user = userEvent.setup();
     storeAuthenticatedProject();
     render(
       <MemoryRouter initialEntries={["/projects/project_alpha/characters"]}>
@@ -3128,6 +3135,11 @@ describe("App shell routing", () => {
     expect(screen.getByText("Human")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Gender" })).toBeInTheDocument();
     expect(screen.getByText("Male")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Aliases" })).toBeInTheDocument();
+    expect(screen.getByText("Captain Mark")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Titles" })).toBeInTheDocument();
+    expect(screen.getByText("Captain")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Descriptions" })).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
     expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();
@@ -3142,16 +3154,27 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Needs review")).toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "Chapter 1, Scene 1; 2 possible matches; 87% confidence; Aevryn did not merge this reference",
-      ),
-    ).toBeInTheDocument();
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Unresolved reference")).toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "Chapter 1, Scene 2; no supported match; Aevryn left this reference unresolved",
-      ),
-    ).toBeInTheDocument();
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("region", { name: "Identity review" })).toHaveTextContent(
+      "5 resolved, 1 ambiguous, 1 unresolved.",
+    );
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Unresolved" }));
+    expect(screen.getByRole("button", { name: "Unresolved" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("Description: the white-haired officer")).toBeInTheDocument();
+    expect(screen.queryByText("Title: The general")).not.toBeInTheDocument();
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getByText("11 verified facts")).toBeInTheDocument();
