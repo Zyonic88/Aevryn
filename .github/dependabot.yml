@@ -29,6 +29,10 @@ updates:
           - jsdom
           - vitest
           - "@vitest/*"
+    ignore:
+      - dependency-name: typescript
+        versions:
+          - ">=7"
 
   - package-ecosystem: github-actions
     directory: /
