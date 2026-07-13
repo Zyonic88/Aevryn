@@ -106,19 +106,25 @@ V2 release-candidate readiness remains blocked until Phase 12 is accepted.
 
 # Current Status
 
-Status: **Acceptance pending browser alpha pass**
+Status: **Acceptance pending hosted browser recheck after alpha-noise fixes**
 
 Verified on July 13, 2026:
 
-* Backend deterministic gates passed: `944 passed`
-* Translation Foundation tests passed: `22 passed`
+* Backend deterministic gates passed: `946 passed`
+* Translation Foundation tests passed: `24 passed`
 * Entity Resolution Foundation tests passed: `20 passed`
 * Frontend lint passed
 * Frontend tests passed: `160 passed`
 * Frontend production build passed
+* Hosted browser alpha sweep completed across Dashboard, Overview, Story, Import, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, Exports, and Settings
+* Browser sweep found two creator-facing presentation issues:
+  * internal source-backed placeholder text leaked into character output
+  * timeline and continuity summary labels lacked readable separators
+* Branch fixes were implemented and verified locally with frontend lint, tests, and production build
 
 Remaining before Phase 12 acceptance:
 
-* Browser alpha pass against hosted Aevryn
-* Confirm creator-facing views hide raw machine identity artifacts
-* Confirm translation and entity-resolution metadata appear only as review-safe uncertainty
+* Merge and deploy the alpha-noise fixes
+* Recheck hosted Aevryn after deployment
+* Confirm creator-facing views hide raw machine identity artifacts after deployment
+* Confirm translation and entity-resolution metadata appear only as review-safe uncertainty after deployment

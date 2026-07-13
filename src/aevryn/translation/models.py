@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from typing import Literal
 
@@ -163,7 +164,7 @@ def _normalized_text(value: str, field_name: str) -> str:
     """Normalize required human-readable text."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required.")
-    return " ".join(value.split())
+    return unicodedata.normalize("NFC", " ".join(value.split()))
 
 
 def _normalized_text_values(values: tuple[str, ...], field_name: str) -> tuple[str, ...]:

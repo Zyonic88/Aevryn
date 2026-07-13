@@ -95,6 +95,53 @@ def test_translation_glossary_preserves_preferred_story_terms() -> None:
     assert "T3 Blizzard-class Light Interstellar Battlecruiser" in result.normalized_text
 
 
+def test_translation_normalizes_unicode_before_glossary_matching() -> None:
+    """Visually identical Unicode terms should match deterministically."""
+    engine = TranslationEngine()
+
+    result = engine.normalize_unit(
+        TranslationUnit(
+            unit_id="unit_001_unicode_normalized",
+            source_text="The Cafe\u0301 Nebula opened above the academy.",
+            evidence_anchor_ids=("anchor_unicode",),
+        ),
+        glossary=(
+            GlossaryTerm(
+                source_term="Caf\u00e9 Nebula",
+                preferred_term="Cafe Nebula",
+                evidence_anchor_id="anchor_unicode",
+                term_kind="location",
+            ),
+        ),
+    )
+
+    assert result.normalized_text == "The Cafe Nebula opened above the academy."
+
+
+def test_glossary_source_terms_are_unicode_normalized_before_duplicate_checks() -> None:
+    """Equivalent Unicode source terms should not create order-dependent glossary matches."""
+    with pytest.raises(ValueError, match="Glossary source terms must be unique"):
+        TranslationEngine().normalize_unit(
+            TranslationUnit(
+                unit_id="unit_001_unicode_duplicate",
+                source_text="The Cafe\u0301 Nebula opened.",
+                evidence_anchor_ids=("anchor_unicode_duplicate",),
+            ),
+            glossary=(
+                GlossaryTerm(
+                    source_term="Caf\u00e9 Nebula",
+                    preferred_term="Cafe Nebula",
+                    evidence_anchor_id="anchor_unicode_duplicate",
+                ),
+                GlossaryTerm(
+                    source_term="Cafe\u0301 Nebula",
+                    preferred_term="Coffee Nebula",
+                    evidence_anchor_id="anchor_unicode_duplicate",
+                ),
+            ),
+        )
+
+
 def test_translation_glossary_tracks_protected_term_categories() -> None:
     """Glossary terms should classify the story term they protect without creating canon."""
     engine = TranslationEngine()
