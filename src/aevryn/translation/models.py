@@ -168,7 +168,11 @@ def _normalized_text(value: str, field_name: str) -> str:
 
 def _normalized_text_values(values: tuple[str, ...], field_name: str) -> tuple[str, ...]:
     """Normalize optional human-readable text choices."""
+    if not isinstance(values, tuple):
+        raise ValueError(f"{field_name} must be a tuple.")
     normalized_values = tuple(_normalized_text(value, field_name) for value in values)
+    if len(normalized_values) == 1:
+        raise ValueError(f"{field_name} must include at least two values when provided.")
     if len(normalized_values) != len(set(normalized_values)):
         raise ValueError(f"{field_name} must be unique.")
     return normalized_values
@@ -219,3 +223,5 @@ def _require_non_negative_count(value: int, field_name: str) -> None:
     """Validate safe metadata counts."""
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ValueError(f"{field_name} must be a non-negative integer.")
+    if value == 1:
+        raise ValueError(f"{field_name} cannot be exactly one.")

@@ -2,7 +2,12 @@
 
 import pytest
 
-from aevryn.translation import GlossaryTerm, TranslationEngine, TranslationUnit
+from aevryn.translation import (
+    GlossaryTerm,
+    TranslationEngine,
+    TranslationIssue,
+    TranslationUnit,
+)
 
 
 def test_translation_normalization_preserves_source_anchor_links() -> None:
@@ -366,6 +371,37 @@ def test_glossary_possible_meanings_are_normalized_and_unique() -> None:
             preferred_term="Dao",
             possible_meanings=("path or principle", " path or principle "),
             evidence_anchor_id="anchor_023",
+        )
+
+
+def test_glossary_possible_meanings_must_be_multiple_tuple_values() -> None:
+    """Possible meanings should be explicit multiple choices, not loose strings."""
+    with pytest.raises(ValueError, match="must be a tuple"):
+        GlossaryTerm(
+            source_term="dao",
+            preferred_term="Dao",
+            possible_meanings="path or principle",  # type: ignore[arg-type]
+            evidence_anchor_id="anchor_024",
+        )
+
+    with pytest.raises(ValueError, match="at least two values"):
+        GlossaryTerm(
+            source_term="dao",
+            preferred_term="Dao",
+            possible_meanings=("path or principle",),
+            evidence_anchor_id="anchor_024",
+        )
+
+
+def test_translation_issue_possible_meaning_count_rejects_single_choice() -> None:
+    """Review metadata should not describe a single meaning as ambiguous."""
+    with pytest.raises(ValueError, match="cannot be exactly one"):
+        TranslationIssue(
+            issue_code="translation_review_required",
+            source_term="dao",
+            message="Ambiguous glossary term preserved for review.",
+            evidence_anchor_ids=("anchor_025",),
+            possible_meaning_count=1,
         )
 
 
