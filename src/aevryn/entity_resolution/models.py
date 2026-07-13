@@ -128,6 +128,7 @@ class ResolvedReference:
             "reason",
             _normalized_text(self.reason or self.status, "Resolved reference reason"),
         )
+        _require_candidate_values(self.candidates)
         if self.status == "resolved" and not self.entity_id:
             raise ValueError("Resolved references require an entity ID.")
         if self.status != "resolved" and self.entity_id:
@@ -142,6 +143,15 @@ def _normalized_text_values(values: tuple[str, ...], field_name: str) -> tuple[s
     if len(normalized) != len({value.casefold() for value in normalized}):
         raise ValueError(f"{field_name} must be unique.")
     return normalized
+
+
+def _require_candidate_values(candidates: tuple[ResolutionCandidate, ...]) -> None:
+    """Validate candidate metadata for deterministic resolution decisions."""
+    if not isinstance(candidates, tuple):
+        raise ValueError("Resolved reference candidates must be a tuple.")
+    entity_ids = tuple(candidate.entity_id for candidate in candidates)
+    if len(entity_ids) != len(set(entity_ids)):
+        raise ValueError("Resolved reference candidate entity IDs must be unique.")
 
 
 def _normalized_text(value: str, field_name: str) -> str:

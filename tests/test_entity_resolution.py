@@ -5,6 +5,8 @@ import pytest
 from aevryn.entity_resolution import (
     EntityIdentityProfile,
     EntityResolutionEngine,
+    ResolutionCandidate,
+    ResolvedReference,
     SurfaceReference,
 )
 
@@ -403,4 +405,44 @@ def test_identity_profiles_reject_duplicate_relationship_labels() -> None:
             entity_id="character_jiang_shasha",
             canonical_name="Jiang Shasha",
             relationship_labels=("sister of Zhao Chen", " Sister of Zhao Chen "),
+        )
+
+
+def test_resolved_reference_candidates_must_be_a_tuple() -> None:
+    """Resolution candidate metadata should not accept mutable sequences."""
+    with pytest.raises(ValueError, match="candidates must be a tuple"):
+        ResolvedReference(
+            reference=SurfaceReference("Charlotte", "anchor_050"),
+            status="ambiguous",
+            candidates=[
+                ResolutionCandidate(
+                    entity_id="character_charlotte",
+                    confidence=0.99,
+                    match_kind="canonical_name",
+                    matched_text="Charlotte",
+                )
+            ],  # type: ignore[arg-type]
+        )
+
+
+def test_resolved_reference_rejects_duplicate_candidate_entity_ids() -> None:
+    """One resolution decision should not carry duplicate candidates for one identity."""
+    with pytest.raises(ValueError, match="candidate entity IDs must be unique"):
+        ResolvedReference(
+            reference=SurfaceReference("Charlotte", "anchor_051"),
+            status="ambiguous",
+            candidates=(
+                ResolutionCandidate(
+                    entity_id="character_charlotte",
+                    confidence=0.99,
+                    match_kind="canonical_name",
+                    matched_text="Charlotte",
+                ),
+                ResolutionCandidate(
+                    entity_id="character_charlotte",
+                    confidence=0.95,
+                    match_kind="alias",
+                    matched_text="General Charlotte",
+                ),
+            ),
         )
