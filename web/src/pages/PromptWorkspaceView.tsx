@@ -13,7 +13,7 @@ import {
   buildPromptPreviewPayload,
   canSubmitPromptPreviewInput,
 } from "../previewing/previewPayload";
-import { readablePromptSummary, readablePromptText } from "../output/readableOutput";
+import { readablePromptText } from "../output/readableOutput";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_SOURCE_TEXT = "Chapter 1\n";

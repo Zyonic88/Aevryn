@@ -200,10 +200,10 @@ def test_canon_prompt_builder_includes_scene_world_context_and_exclusions() -> N
     assert "Scene production brief:" in prompt
     assert "World and scene object context:" in prompt
     assert (
-        "item_iron_sword visual_design: Chipped iron blade with a plain leather grip"
+        "Iron Sword Visual Design: Chipped iron blade with a plain leather grip"
         in prompt
     )
-    assert "character_mark owns item_iron_sword" in prompt
+    assert "Mark Owns Iron Sword" in prompt
     assert "Do not include unless supported by this scene:" in prompt
     assert "Later canon objects or rewards" in prompt
 

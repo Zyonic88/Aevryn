@@ -28,7 +28,7 @@ import {
   translationReviewDetails,
   translationReviewKey,
 } from "./languageIdentityDisplay";
-import { readableOutputItems, readablePromptSummary, readablePromptText } from "./readableOutput";
+import { readableOutputItems, readablePromptText } from "./readableOutput";
 
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
@@ -532,7 +532,12 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
   const hiddenCount = Math.max(timelineGroups.length - visibleGroups.length, 0);
   return (
     <div className="compact-list timeline-change-list" aria-label="Timeline changes">
-      {timelineGroups.map((group) => (
+      <LimitedResultsNote
+        shown={visibleGroups.length}
+        total={timelineGroups.length}
+        label="timeline groups"
+      />
+      {visibleGroups.map((group) => (
         <details
           className="compact-row timeline-change-group detail-disclosure"
           key={`${group.chapterIndex}-${group.sceneIndex}`}
@@ -555,6 +560,13 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
           </ul>
         </details>
       ))}
+      <LoadMoreButton
+        hiddenCount={hiddenCount}
+        pageSize={TIMELINE_GROUP_PAGE_SIZE}
+        onLoadMore={() =>
+          setVisibleCount((currentCount) => currentCount + TIMELINE_GROUP_PAGE_SIZE)
+        }
+      />
     </div>
   );
 }
@@ -564,28 +576,36 @@ function SceneSheetsPanel({ scenes }: { scenes: SceneSheet[] }) {
   const visibleScenes = scenes.slice(0, visibleCount);
   const hiddenCount = Math.max(scenes.length - visibleScenes.length, 0);
   return (
-    <div className="profile-grid" aria-label="Scene sheets">
-      {scenes.map((scene) => (
-        <article className="profile-card" key={scene.scene_id}>
-          <header>
-            <h3>{scene.title}</h3>
-            <p>{scene.chapter_label}</p>
-          </header>
-          <details className="profile-disclosure">
-            <summary>Scene details</summary>
-            <div className="profile-section-grid">
-              <PanelSection section={scene.characters_present} />
-              <PanelSection section={scene.location} />
-              <PanelSection section={scene.mood} />
-              <PanelSection section={scene.purpose} />
-              <PanelSection section={scene.visual_highlights} />
-              <PanelSection section={scene.continuity_changes} />
-              <PanelSection section={scene.environment} />
-            </div>
-          </details>
-          <p className="evidence-note">{scene.evidence_summary}</p>
-        </article>
-      ))}
+    <div className="large-output-stack">
+      <LimitedResultsNote shown={visibleScenes.length} total={scenes.length} label="scene sheets" />
+      <div className="profile-grid" aria-label="Scene sheets">
+        {visibleScenes.map((scene) => (
+          <article className="profile-card" key={scene.scene_id}>
+            <header>
+              <h3>{scene.title}</h3>
+              <p>{scene.chapter_label}</p>
+            </header>
+            <details className="profile-disclosure">
+              <summary>Scene details</summary>
+              <div className="profile-section-grid">
+                <PanelSection section={scene.characters_present} />
+                <PanelSection section={scene.location} />
+                <PanelSection section={scene.mood} />
+                <PanelSection section={scene.purpose} />
+                <PanelSection section={scene.visual_highlights} />
+                <PanelSection section={scene.continuity_changes} />
+                <PanelSection section={scene.environment} />
+              </div>
+            </details>
+            <p className="evidence-note">{scene.evidence_summary}</p>
+          </article>
+        ))}
+      </div>
+      <LoadMoreButton
+        hiddenCount={hiddenCount}
+        pageSize={SCENE_CARD_PAGE_SIZE}
+        onLoadMore={() => setVisibleCount((currentCount) => currentCount + SCENE_CARD_PAGE_SIZE)}
+      />
     </div>
   );
 }
@@ -593,12 +613,12 @@ function SceneSheetsPanel({ scenes }: { scenes: SceneSheet[] }) {
 function ContinuityPanel({ report }: { report: ContinuityReport }) {
   const [visibleCount, setVisibleCount] = useState(CONTINUITY_SCENE_PAGE_SIZE);
   const scenesWithChanges = report.scenes.filter(
-      (scene) =>
-        scene.new.length > 0 ||
-        scene.updated.length > 0 ||
-        scene.still_known.length > 0 ||
-        scene.invalidated.length > 0,
-    );
+    (scene) =>
+      scene.new.length > 0 ||
+      scene.updated.length > 0 ||
+      scene.still_known.length > 0 ||
+      scene.invalidated.length > 0,
+  );
   const visibleScenes = scenesWithChanges.slice(0, visibleCount);
   const hiddenCount = Math.max(scenesWithChanges.length - visibleScenes.length, 0);
   if (visibleScenes.length === 0) {
@@ -610,6 +630,11 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
   }
   return (
     <div className="compact-list timeline-change-list" aria-label="Continuity report">
+      <LimitedResultsNote
+        shown={visibleScenes.length}
+        total={scenesWithChanges.length}
+        label="continuity scenes"
+      />
       {visibleScenes.map((scene, index) => (
         <details
           className="compact-row timeline-change-group detail-disclosure"
@@ -633,6 +658,13 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
           ) : null}
         </details>
       ))}
+      <LoadMoreButton
+        hiddenCount={hiddenCount}
+        pageSize={CONTINUITY_SCENE_PAGE_SIZE}
+        onLoadMore={() =>
+          setVisibleCount((currentCount) => currentCount + CONTINUITY_SCENE_PAGE_SIZE)
+        }
+      />
     </div>
   );
 }
@@ -799,6 +831,44 @@ function PanelSection({ section }: { section: OutputSection }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+function LimitedResultsNote({
+  shown,
+  total,
+  label,
+}: {
+  shown: number;
+  total: number;
+  label: string;
+}) {
+  if (total <= shown) {
+    return null;
+  }
+  return (
+    <p className="result-summary">
+      Showing {shown.toLocaleString()} of {total.toLocaleString()} {label}.
+    </p>
+  );
+}
+
+function LoadMoreButton({
+  hiddenCount,
+  pageSize,
+  onLoadMore,
+}: {
+  hiddenCount: number;
+  pageSize: number;
+  onLoadMore: () => void;
+}) {
+  if (hiddenCount <= 0) {
+    return null;
+  }
+  return (
+    <button type="button" className="text-button" onClick={onLoadMore}>
+      Show {Math.min(hiddenCount, pageSize).toLocaleString()} more
+    </button>
   );
 }
 
