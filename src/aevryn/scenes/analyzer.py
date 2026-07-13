@@ -111,10 +111,12 @@ class SceneAnalyzer:
         production_facts = self._production_facts(priority_facts)
         production_scene_facts = self._production_facts(scene_facts)
         production_all_facts = self._production_facts(facts)
+        display_names = self._entity_display_names(context=context, facts=facts)
         summary = self._summary(
             context=context,
             facts=production_facts,
             relationships=priority_relationships,
+            display_names=display_names,
         )
         logger.debug(
             "scene_analysis_built",
@@ -149,10 +151,17 @@ class SceneAnalyzer:
                 relationships=priority_relationships,
                 fallback_facts=production_all_facts,
                 fallback_relationships=relationships,
+                display_names=display_names,
             ),
             environment_summary=self._environment_summary(context),
-            changes_introduced=self._changes_introduced(production_scene_facts),
-            continuity_notes=self._continuity_notes(production_all_facts),
+            changes_introduced=self._changes_introduced(
+                production_scene_facts,
+                display_names=display_names,
+            ),
+            continuity_notes=self._continuity_notes(
+                production_all_facts,
+                display_names=display_names,
+            ),
             forbidden_elements=(
                 "Do not add facts, characters, items, locations, "
                 "or relationships without evidence.",
@@ -165,12 +174,19 @@ class SceneAnalyzer:
         context: CanonSceneContext,
         facts: tuple[Fact, ...],
         relationships: tuple[Relationship, ...],
+        display_names: dict[str, str],
     ) -> str:
         """Return a compact scene summary."""
         character_names = ", ".join(card.display_name for card in context.character_cards)
-        key_changes = "; ".join(SceneAnalyzer._fact_label(fact) for fact in facts[:4])
+        key_changes = "; ".join(
+            SceneAnalyzer._fact_label(fact, display_names=display_names)
+            for fact in facts[:4]
+        )
         relationship_labels = "; ".join(
-            SceneAnalyzer._relationship_label(relationship)
+            SceneAnalyzer._relationship_label(
+                relationship,
+                display_names=display_names,
+            )
             for relationship in relationships[:2]
         )
         parts = [
@@ -444,8 +460,10 @@ class SceneAnalyzer:
         relationships: Iterable[Relationship],
         fallback_facts: Iterable[Fact] = (),
         fallback_relationships: Iterable[Relationship] = (),
+        display_names: dict[str, str] | None = None,
     ) -> tuple[str, ...]:
         """Return important object labels from facts and relationships."""
+        display_names = display_names or {}
         objects = [
             fact.value
             for fact in facts
@@ -479,7 +497,10 @@ class SceneAnalyzer:
             )
         ]
         objects.extend(
-            relationship.target_entity_id
+            SceneAnalyzer._entity_label(
+                relationship.target_entity_id,
+                display_names=display_names,
+            )
             for relationship in relationships
             if SceneAnalyzer._relationship_marks_object(relationship.relationship_type)
         )
@@ -492,6 +513,7 @@ class SceneAnalyzer:
             return SceneAnalyzer._important_objects(
                 facts=fallback_fact_tuple,
                 relationships=fallback_relationship_tuple,
+                display_names=display_names,
             )
         return tuple(SceneAnalyzer._unique_values(objects))
 
@@ -544,11 +566,16 @@ class SceneAnalyzer:
         return textwrap.shorten(" ".join(source_text.split()), width=180, placeholder="...")
 
     @staticmethod
-    def _changes_introduced(facts: Iterable[Fact]) -> tuple[str, ...]:
+    def _changes_introduced(
+        facts: Iterable[Fact],
+        *,
+        display_names: dict[str, str],
+    ) -> tuple[str, ...]:
         """Return canon changes introduced by this scene context."""
         return tuple(
             SceneAnalyzer._unique_values(
-                SceneAnalyzer._fact_label(fact) for fact in facts
+                SceneAnalyzer._fact_label(fact, display_names=display_names)
+                for fact in facts
             )
         )
 
@@ -577,27 +604,89 @@ class SceneAnalyzer:
         )
 
     @staticmethod
-    def _continuity_notes(facts: Iterable[Fact]) -> tuple[str, ...]:
+    def _continuity_notes(
+        facts: Iterable[Fact],
+        *,
+        display_names: dict[str, str],
+    ) -> tuple[str, ...]:
         """Return continuity notes from accepted facts."""
         notes = [
-            f"{fact.entity_id} retains {fact.attribute}: {fact.value}"
+            (
+                f"{SceneAnalyzer._entity_label(fact.entity_id, display_names=display_names)} "
+                f"retains {SceneAnalyzer._attribute_label(fact.attribute)}: {fact.value}"
+            )
             for fact in facts
         ]
         return tuple(SceneAnalyzer._unique_values(notes))
 
     @staticmethod
-    def _fact_label(fact: Fact) -> str:
+    def _fact_label(fact: Fact, *, display_names: dict[str, str]) -> str:
         """Return compact fact label."""
-        return f"{fact.entity_id} {fact.attribute} = {fact.value}"
+        return (
+            f"{SceneAnalyzer._entity_label(fact.entity_id, display_names=display_names)} "
+            f"{SceneAnalyzer._attribute_label(fact.attribute)} = {fact.value}"
+        )
 
     @staticmethod
-    def _relationship_label(relationship: Relationship) -> str:
+    def _relationship_label(
+        relationship: Relationship,
+        *,
+        display_names: dict[str, str],
+    ) -> str:
         """Return compact relationship label."""
-        return (
-            f"{relationship.source_entity_id} "
-            f"{relationship.relationship_type} "
-            f"{relationship.target_entity_id}"
+        source = SceneAnalyzer._entity_label(
+            relationship.source_entity_id,
+            display_names=display_names,
         )
+        target = SceneAnalyzer._entity_label(
+            relationship.target_entity_id,
+            display_names=display_names,
+        )
+        return (
+            f"{source} "
+            f"{SceneAnalyzer._attribute_label(relationship.relationship_type)} "
+            f"{target}"
+        )
+
+    @staticmethod
+    def _entity_display_names(
+        *,
+        context: CanonSceneContext,
+        facts: Iterable[Fact],
+    ) -> dict[str, str]:
+        """Return human display names for entities visible to analysis."""
+        display_names = {
+            card.character_id: card.display_name
+            for card in context.character_cards
+            if card.display_name
+        }
+        for fact in facts:
+            if fact.attribute == "display_name" and fact.value.strip():
+                display_names.setdefault(fact.entity_id, fact.value.strip())
+
+        return display_names
+
+    @staticmethod
+    def _entity_label(entity_id: str, *, display_names: dict[str, str]) -> str:
+        """Return a human-readable entity label."""
+        display_name = display_names.get(entity_id)
+        if display_name:
+            return display_name
+
+        return SceneAnalyzer._attribute_label(entity_id)
+
+    @staticmethod
+    def _attribute_label(attribute: str) -> str:
+        """Return a human-readable label from a machine token."""
+        words = [
+            word
+            for word in attribute.strip().replace("-", "_").split("_")
+            if word and word not in {"character", "entity", "item", "location"}
+        ]
+        if not words:
+            return attribute
+
+        return " ".join(word.capitalize() for word in words)
 
     @staticmethod
     def _combined_labels(

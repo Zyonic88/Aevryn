@@ -44,7 +44,8 @@ def test_scene_analyzer_summarizes_scene_meaning() -> None:
     analysis = SceneAnalyzer().analyze(build_context())
 
     assert analysis.scene_id == "source_demo_chapter_002_scene_001"
-    assert "character_mark current_weapon = Iron Sword" in analysis.summary
+    assert "Mark Current Weapon = Iron Sword" in analysis.summary
+    assert "character_mark current_weapon" not in analysis.summary
     assert analysis.purpose == "Establish current character and world state."
     assert analysis.forbidden_elements
 
@@ -238,7 +239,7 @@ Zhang Haoran mocked Zhao Chen with contempt.""",
     assert analysis.purpose == "Reveal social conflict and relationship tension."
     assert analysis.conflict == "Social humiliation or contempt is present."
     assert analysis.changes_introduced == (
-        "character_zhang_haoran attitude_toward_zhao_chen = Contempt",
+        "Zhang Haoran Attitude Toward Zhao Chen = Contempt",
     )
     assert any("Fleet Luck Bonus" in note for note in analysis.continuity_notes)
 
@@ -407,5 +408,5 @@ def test_scene_analyzer_dedupes_repeated_output_values() -> None:
 
     assert analysis.changes_introduced == ()
     assert analysis.continuity_notes == (
-        "character_mark retains current_weapon: Iron Sword",
+        "Mark retains Current Weapon: Iron Sword",
     )

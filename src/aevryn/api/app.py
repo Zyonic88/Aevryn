@@ -253,6 +253,7 @@ PLATFORM_ENGINE_VERSION = "aevryn_v1"
 ALPHA_ACTIVE_RUN_TIMEOUT = timedelta(minutes=30)
 MAX_IMPORT_CONTENT_BYTES = 10 * 1024 * 1024
 MAX_IMPORT_CONTENT_BASE64_CHARS = ((MAX_IMPORT_CONTENT_BYTES + 2) // 3) * 4
+IDENTITY_REVIEW_SAMPLE_LIMIT = 48
 _API_IMPORT_SUFFIX_BY_FORMAT = {
     "txt": ".txt",
     "markdown": ".md",
@@ -3079,11 +3080,14 @@ def _translation_review_reason(issue_code: str) -> str:
 def _identity_review_items(
     resolution_payload: Mapping[str, object],
 ) -> tuple[ProjectIdentityReviewItem, ...]:
-    """Return unresolved or ambiguous identity decisions without source text."""
+    """Return grouped unresolved or ambiguous identity decisions without source text."""
     decisions = resolution_payload.get("decisions")
     if not isinstance(decisions, list):
         return ()
-    items: list[ProjectIdentityReviewItem] = []
+    grouped_items: dict[
+        tuple[str, str, str, int, float, str],
+        tuple[ProjectIdentityReviewItem, int],
+    ] = {}
     for decision in decisions:
         if not isinstance(decision, dict):
             continue
@@ -3091,29 +3095,53 @@ def _identity_review_items(
         if status not in {"ambiguous", "unresolved"}:
             continue
         try:
-            items.append(
-                ProjectIdentityReviewItem(
-                    status=status,
-                    chapter_id=_string_payload_value(decision, "chapter_id"),
-                    scene_id=_string_payload_value(decision, "scene_id"),
-                    evidence_anchor_id=_string_payload_value(
-                        decision,
-                        "evidence_anchor_id",
-                    ),
-                    reference_kind=_identity_review_reference_kind(
-                        _string_payload_value(decision, "reference_kind")
-                    ),
-                    reference_label=_identity_review_reference_label(
-                        _string_payload_value(decision, "reference_label")
-                    ),
-                    candidate_count=_int_payload_value(decision, "candidate_count"),
-                    confidence=_float_payload_value(decision, "confidence"),
-                    reason=_identity_review_reason(status),
-                )
+            reference_kind = _identity_review_reference_kind(
+                _string_payload_value(decision, "reference_kind")
+            )
+            reference_label = _identity_review_reference_label(
+                _string_payload_value(decision, "reference_label")
+            )
+            candidate_count = _int_payload_value(decision, "candidate_count")
+            confidence = round(_float_payload_value(decision, "confidence"), 2)
+            reason = _identity_review_reason(status)
+            item = ProjectIdentityReviewItem(
+                status=status,
+                chapter_id=_string_payload_value(decision, "chapter_id"),
+                scene_id=_string_payload_value(decision, "scene_id"),
+                evidence_anchor_id=_string_payload_value(
+                    decision,
+                    "evidence_anchor_id",
+                ),
+                reference_kind=reference_kind,
+                reference_label=reference_label,
+                candidate_count=candidate_count,
+                confidence=confidence,
+                reason=reason,
             )
         except (ValueError, ValidationError):
             continue
-    return tuple(items[:12])
+        key = (status, reference_kind, reference_label, candidate_count, confidence, reason)
+        existing = grouped_items.get(key)
+        if existing is None:
+            grouped_items[key] = (item, 1)
+        else:
+            grouped_items[key] = (existing[0], existing[1] + 1)
+
+    status_priority = {"ambiguous": 0, "unresolved": 1}
+    ordered_items = sorted(
+        grouped_items.values(),
+        key=lambda grouped: (
+            status_priority.get(grouped[0].status, 9),
+            -grouped[1],
+            grouped[0].chapter_id,
+            grouped[0].scene_id,
+            grouped[0].reference_kind,
+        ),
+    )
+    return tuple(
+        item.model_copy(update={"review_count": review_count})
+        for item, review_count in ordered_items[:IDENTITY_REVIEW_SAMPLE_LIMIT]
+    )
 
 
 def _identity_review_reference_kind(value: str) -> str:

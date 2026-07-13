@@ -49,10 +49,11 @@ export function compactIdentityReviewItems(
       item.reason,
     ].join(":");
     const existing = compacted.get(key);
+    const reviewCount = item.review_count || 1;
     if (existing) {
-      existing.review_count = (existing.review_count || 1) + 1;
+      existing.review_count = (existing.review_count || 1) + reviewCount;
     } else {
-      compacted.set(key, { ...item, review_count: 1 });
+      compacted.set(key, { ...item, review_count: reviewCount });
     }
   }
   return Array.from(compacted.values()).slice(0, limit);

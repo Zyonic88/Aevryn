@@ -480,6 +480,7 @@ class ProjectIdentityReviewItem(BaseModel):
     reference_label: str = "Reference needs review"
     candidate_count: int = 0
     confidence: float = 0.0
+    review_count: int = 1
     reason: str = ""
 
 
