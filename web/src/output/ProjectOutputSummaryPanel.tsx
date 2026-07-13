@@ -576,6 +576,7 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
         >
           <summary>
             <strong>{group.title}</strong>
+            <span aria-hidden="true"> - </span>
             <span>
               {group.subtitle}; {timelineGroupChangeLabel(group.changes.length)}
             </span>
@@ -676,6 +677,7 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
         >
           <summary>
             <strong>{formatSceneScope(scene.scene_id)}</strong>
+            <span aria-hidden="true"> - </span>
             <span>{continuitySceneSummary(scene)}</span>
           </summary>
           <div className="continuity-change-grid">

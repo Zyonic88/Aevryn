@@ -1411,6 +1411,9 @@ describe("App shell routing", () => {
     );
     const timelineDetailRows = timelineOutput.querySelectorAll("details.detail-disclosure");
     expect(timelineDetailRows.length).toBeGreaterThanOrEqual(1);
+    expect(timelineDetailRows[0]?.querySelector("summary")).toHaveTextContent(
+      /Chapter 1, Scene 1\s+-\s+Chapter 1 \/ Scene 1; 1 change/u,
+    );
     timelineDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview timeline" }));
@@ -1447,6 +1450,9 @@ describe("App shell routing", () => {
     );
     const continuityDetailRows = continuityOutput.querySelectorAll("details.detail-disclosure");
     expect(continuityDetailRows.length).toBeGreaterThanOrEqual(1);
+    expect(continuityDetailRows[0]?.querySelector("summary")).toHaveTextContent(
+      /Chapter 1, Scene 1\s+-\s+\d+ changes?; \d+ still known/u,
+    );
     continuityDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
     expect(continuityOutput).toHaveTextContent("1 still known");
     await user.click(screen.getByText("Developer preview"));
