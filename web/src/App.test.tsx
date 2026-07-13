@@ -3188,6 +3188,7 @@ describe("App shell routing", () => {
   });
 
   it("renders a safe project overview with identity review metadata", async () => {
+    const user = userEvent.setup();
     storeAuthenticatedProject();
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
@@ -3222,7 +3223,7 @@ describe("App shell routing", () => {
       }
       return projectApiFallbackResponse(url);
     });
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={["/projects/project_alpha/overview"]}>
         <App />
       </MemoryRouter>,
@@ -3251,6 +3252,18 @@ describe("App shell routing", () => {
       "href",
       "/projects/project_alpha/monitoring",
     );
+    await waitFor(() =>
+      expect(container.querySelectorAll("details.identity-review-panel")).toHaveLength(2),
+    );
+    const [identityDisclosure, translationDisclosure] = Array.from(
+      container.querySelectorAll("details.identity-review-panel"),
+    ) as HTMLDetailsElement[];
+    expect(identityDisclosure.open).toBe(false);
+    expect(translationDisclosure.open).toBe(false);
+    await user.click(identityDisclosure.querySelector("summary") as HTMLElement);
+    await user.click(translationDisclosure.querySelector("summary") as HTMLElement);
+    expect(identityDisclosure.open).toBe(true);
+    expect(translationDisclosure.open).toBe(true);
     expect(screen.getByText("Title: The general")).toBeInTheDocument();
     expect(
       screen.getByText("Chapter 1, Scene 1; 2 possible matches; 87% confidence; held for review"),
