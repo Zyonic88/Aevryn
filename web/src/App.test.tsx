@@ -3807,9 +3807,17 @@ describe("App shell routing", () => {
     expect(
       await screen.findByRole("heading", { name: "source_alpha_production_pack.md" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("production_pack")).toBeInTheDocument();
-    expect(screen.getByText("markdown")).toBeInTheDocument();
-    expect(screen.getByText("text/markdown; charset=utf-8")).toBeInTheDocument();
+    const exportPreviewResult = screen.getByRole("region", { name: "Export preview result" });
+    expect(within(exportPreviewResult).getByText("Production Pack")).toBeInTheDocument();
+    expect(within(exportPreviewResult).getByText("Markdown")).toBeInTheDocument();
+    expect(
+      within(exportPreviewResult).getByText("text/markdown; charset=utf-8"),
+    ).toBeInTheDocument();
+    const exportContent = within(exportPreviewResult)
+      .getByText(/Show export content - \d+ characters/u)
+      .closest("details");
+    expect(exportContent).not.toBeNull();
+    expect(exportContent).not.toHaveAttribute("open");
     expect(
       screen.getAllByText(/Generate this image using only accepted Aevryn canon/u).length,
     ).toBeGreaterThanOrEqual(1);
@@ -3828,7 +3836,7 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Stored Exports" })).toBeInTheDocument();
     expect(await screen.findByText("alpha-canon-snapshot.json")).toBeInTheDocument();
-    expect(screen.getByText(/canon \/ json \| 128 B \|/u)).toBeInTheDocument();
+    expect(screen.getByText(/Canon Snapshot \/ JSON \| 128 B \|/u)).toBeInTheDocument();
     expect(screen.queryByText(/Â/u)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create snapshot export" }));
 

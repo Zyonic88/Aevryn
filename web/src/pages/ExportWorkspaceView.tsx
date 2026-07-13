@@ -323,7 +323,8 @@ function ProjectStoredExportsPanel({
               <div>
                 <h3>{exportRecord.filename}</h3>
                 <p>
-                  {exportRecord.export_kind} / {exportRecord.export_format} |{" "}
+                  {readableExportKind(exportRecord.export_kind)} /{" "}
+                  {readableExportFormat(exportRecord.export_format)} |{" "}
                   {formatBytes(exportRecord.size)} | {formatDateTime(exportRecord.created_at)}
                 </p>
               </div>
@@ -348,24 +349,31 @@ function ProjectStoredExportsPanel({
 }
 
 function ExportPreviewResult({ result }: { result: ExportPreview }) {
+  const contentSummary = `${result.content.length.toLocaleString()} character${
+    result.content.length === 1 ? "" : "s"
+  }`;
+
   return (
     <section className="project-panel" aria-label="Export preview result">
       <h2>{result.filename}</h2>
       <dl className="metric-grid export-metadata">
         <div>
           <dt>Kind</dt>
-          <dd>{result.export_kind}</dd>
+          <dd>{readableExportKind(result.export_kind)}</dd>
         </div>
         <div>
           <dt>Format</dt>
-          <dd>{result.export_format}</dd>
+          <dd>{readableExportFormat(result.export_format)}</dd>
         </div>
         <div>
           <dt>Content Type</dt>
           <dd>{result.content_type}</dd>
         </div>
       </dl>
-      <pre className="export-preview-content">{result.content}</pre>
+      <details className="detail-disclosure export-preview-disclosure">
+        <summary>Show export content - {contentSummary}</summary>
+        <pre className="export-preview-content">{result.content}</pre>
+      </details>
     </section>
   );
 }
@@ -404,6 +412,36 @@ function safeFilename(value: string): string {
     .replace(/[^a-z0-9]+/gu, "-")
     .replace(/^-+|-+$/gu, "");
   return cleaned || "aevryn-project";
+}
+
+function readableExportKind(value: string): string {
+  const labels: Record<string, string> = {
+    canon: "Canon Snapshot",
+    character_profile: "Character Profile",
+    continuity_report: "Continuity Report",
+    production_pack: "Production Pack",
+    prompt_bundle: "Prompt Bundle",
+    scene_sheet: "Scene Sheet",
+    world_sheet: "World Sheet",
+  };
+  return labels[value] ?? readableExportToken(value);
+}
+
+function readableExportFormat(value: string): string {
+  const labels: Record<string, string> = {
+    csv: "CSV",
+    json: "JSON",
+    markdown: "Markdown",
+  };
+  return labels[value] ?? readableExportToken(value);
+}
+
+function readableExportToken(value: string): string {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+    .join(" ");
 }
 
 function newExportId(): string {
