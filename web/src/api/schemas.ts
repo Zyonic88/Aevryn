@@ -261,6 +261,7 @@ export const projectLanguageIdentitySummarySchema = z
           reference_label: z.string().default("Reference needing review"),
           candidate_count: z.number(),
           confidence: z.number(),
+          review_count: z.number().default(1),
           reason: z.string().default(""),
         }),
       )

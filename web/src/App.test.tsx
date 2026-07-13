@@ -686,6 +686,14 @@ const manyPromptPacks = Array.from({ length: 28 }, (_, index) => ({
   },
 }));
 
+const manyCharacterProfiles = Array.from({ length: 55 }, (_, index) => ({
+  ...characterPreviewPayload.character_profiles[0],
+  character_id: `character_${index + 1}`,
+  display_name: `Character ${index + 1}`,
+  subtitle: index === 54 ? "Hidden witness" : "Known character",
+  evidence_summary: `${index + 1} verified facts`,
+}));
+
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
   window.localStorage.setItem("aevryn.projects", JSON.stringify([projectAlpha]));
@@ -3109,6 +3117,7 @@ describe("App shell routing", () => {
   });
 
   it("renders processed character panels from project outputs", async () => {
+    const user = userEvent.setup();
     storeAuthenticatedProject();
     render(
       <MemoryRouter initialEntries={["/projects/project_alpha/characters"]}>
@@ -3142,16 +3151,27 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Needs review")).toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "Chapter 1, Scene 1; 2 possible matches; 87% confidence; Aevryn did not merge this reference",
-      ),
-    ).toBeInTheDocument();
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Unresolved reference")).toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "Chapter 1, Scene 2; no supported match; Aevryn left this reference unresolved",
-      ),
-    ).toBeInTheDocument();
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("region", { name: "Identity review" })).toHaveTextContent(
+      "5 resolved, 1 ambiguous, 1 unresolved.",
+    );
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Unresolved" }));
+    expect(screen.getByRole("button", { name: "Unresolved" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("Description: the white-haired officer")).toBeInTheDocument();
+    expect(screen.queryByText("Title: The general")).not.toBeInTheDocument();
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getByText("11 verified facts")).toBeInTheDocument();
@@ -3237,6 +3257,62 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
+  });
+
+  it("bounds large character output and supports searching hidden profiles", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...projectOutputsPayload,
+                surfaces: projectOutputsPayload.surfaces.map((surface) =>
+                  surface.surface === "characters"
+                    ? { ...surface, item_count: manyCharacterProfiles.length }
+                    : surface,
+                ),
+                character_profiles: manyCharacterProfiles,
+              }),
+            ),
+          );
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        return Promise.resolve(new Response("{}", { status: 404 }));
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/characters"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Showing 48 of 55 character profiles.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Character 48" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Character 49" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Search characters"), "hidden witness");
+
+    expect(screen.getByText("Showing 1 of 1 character profiles.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Character 55" })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Search characters"));
+    await user.click(screen.getByRole("button", { name: "Show 7 more" }));
+
+    expect(screen.getByRole("heading", { name: "Character 55" })).toBeInTheDocument();
   });
 
   it("renders a bounded prompt scene picker with one selected prompt pack", async () => {
