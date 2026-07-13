@@ -365,6 +365,7 @@ const projectSettingsPayload = {
   default_export_format: "markdown",
   locale: "en-US",
 };
+const sourceBackedPlaceholder = "Source-backed detail available through evidence controls.";
 const storyAlphaPayload = {
   story_id: "story_alpha",
   project_id: projectAlpha.id,
@@ -617,14 +618,20 @@ const projectOutputsPayload = {
     {
       ...characterPreviewPayload.character_profiles[0],
       character_id: "character_mark_duplicate",
+      subtitle: sourceBackedPlaceholder,
       aliases: { title: "Aliases", items: ["Captain Mark"] },
       titles: { title: "Titles", items: ["Captain"] },
-      descriptions: { title: "Descriptions", items: ["human male captain"] },
+      descriptions: { title: "Descriptions", items: ["human male captain", sourceBackedPlaceholder] },
       race: { title: "Race", items: ["Human"] },
       gender: { title: "Gender", items: ["Male"] },
       recent_changes: {
         title: "Recent Changes",
-        items: ["display_name -> Mark", "gender -> Male", "current_weapon -> Rusty Dagger"],
+        items: [
+          "display_name -> Mark",
+          "gender -> Male",
+          "current_weapon -> Rusty Dagger",
+          sourceBackedPlaceholder,
+        ],
       },
       evidence_summary: "8 verified facts",
     },
@@ -3149,6 +3156,7 @@ describe("App shell routing", () => {
     expect(screen.getByRole("heading", { name: "Descriptions" })).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
+    expect(screen.queryByText(sourceBackedPlaceholder)).not.toBeInTheDocument();
     expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();
     expect(screen.getAllByText("Glossary term needs review").length).toBeGreaterThanOrEqual(1);
     expect(

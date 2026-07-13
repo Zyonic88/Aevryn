@@ -1,6 +1,10 @@
+const SOURCE_BACKED_PLACEHOLDER = "Source-backed detail available through evidence controls.";
+
 export function readableOutputItems(items: string[]): string[] {
   const readableItems = items
+    .filter((item) => !isInternalOutputPlaceholder(item))
     .map(readableOutputItem)
+    .filter((item) => item.length > 0)
     .filter((item, index, allItems) => allItems.indexOf(item) === index);
   if (readableItems.length > 1) {
     return readableItems.filter((item) => item !== "Unknown");
@@ -9,8 +13,8 @@ export function readableOutputItems(items: string[]): string[] {
 }
 
 export function readableOutputItem(item: string): string {
-  if (item === "Source-backed detail available through evidence controls.") {
-    return item;
+  if (isInternalOutputPlaceholder(item)) {
+    return "";
   }
   const withoutAnchorPrefix = item.replace(/^aevryn_import_bundle_chapter_\d{3}:\s*/i, "");
   const acceptedEntity = withoutAnchorPrefix.match(/^Entity accepted:\s*(.+)$/i);
@@ -64,8 +68,18 @@ export function readablePromptSummary(section: { items: string[] }): string {
 
 function readablePromptItems(section: { items: string[] }): string[] {
   return readableOutputItems(section.items)
-    .filter((item) => item !== "Source-backed detail available through evidence controls.")
     .filter((item) => !/^Scene ID:/iu.test(item));
+}
+
+export function readableOutputText(value: string): string {
+  if (isInternalOutputPlaceholder(value)) {
+    return "Unknown";
+  }
+  return readableOutputItem(value) || "Unknown";
+}
+
+export function isInternalOutputPlaceholder(value: string): boolean {
+  return value.trim() === SOURCE_BACKED_PLACEHOLDER;
 }
 
 function toSentence(value: string): string {

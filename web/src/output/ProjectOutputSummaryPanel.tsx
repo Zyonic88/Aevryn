@@ -28,7 +28,13 @@ import {
   translationReviewDetails,
   translationReviewKey,
 } from "./languageIdentityDisplay";
-import { readableOutputItems, readablePromptSummary, readablePromptText } from "./readableOutput";
+import {
+  isInternalOutputPlaceholder,
+  readableOutputItems,
+  readableOutputText,
+  readablePromptSummary,
+  readablePromptText,
+} from "./readableOutput";
 
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
@@ -363,10 +369,11 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
 }
 
 function bestSubtitle(left: string, right: string): string {
-  if (left && left !== "Unknown") {
+  const readableLeft = readableCharacterSubtitle(left);
+  if (readableLeft !== "Unknown") {
     return left;
   }
-  return right || left;
+  return readableCharacterSubtitle(right) !== "Unknown" ? right : readableLeft;
 }
 
 function mergeSection(left: OutputSection, right: OutputSection): OutputSection {
@@ -389,6 +396,7 @@ function mergedEvidenceSummary(left: string, right: string): string {
 
 function CharacterPanel({ profile }: { profile: CharacterProfile }) {
   const recentChanges = characterRecentChanges(profile);
+  const subtitle = readableCharacterSubtitle(profile.subtitle);
   return (
     <article className="profile-card character-profile-card">
       <header className="character-profile-header">
@@ -397,7 +405,7 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
         </div>
         <div>
           <h3>{profile.display_name}</h3>
-          <p>{profile.subtitle}</p>
+          <p>{subtitle}</p>
         </div>
       </header>
       <details className="profile-disclosure">
@@ -449,13 +457,20 @@ function characterRecentChanges(profile: CharacterProfile): OutputSection {
   };
 }
 
+function readableCharacterSubtitle(subtitle: string): string {
+  if (!subtitle || subtitle === "Unknown" || isInternalOutputPlaceholder(subtitle)) {
+    return "Unknown";
+  }
+  return readableOutputText(subtitle);
+}
+
 function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(CHARACTER_CARD_PAGE_SIZE);
   const normalizedQuery = query.trim().toLowerCase();
   const filteredProfiles = normalizedQuery
     ? profiles.filter((profile) =>
-        [profile.display_name, profile.subtitle, profile.evidence_summary]
+        [profile.display_name, readableCharacterSubtitle(profile.subtitle), profile.evidence_summary]
           .join(" ")
           .toLowerCase()
           .includes(normalizedQuery),
