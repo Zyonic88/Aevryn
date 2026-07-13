@@ -377,6 +377,7 @@ def test_extraction_can_filter_candidates_without_known_anchor() -> None:
     assert tuple(
         state_change.entity_id for state_change in result.state_changes
     ) == ("character_mark",)
+    assert result.rejected_candidate_count == 4
 
 
 def test_extraction_rewrites_cross_scene_fact_id_collisions() -> None:
@@ -537,6 +538,15 @@ def test_extraction_models_reject_invalid_confidence() -> None:
             value="Iron Sword",
             valid_from_anchor_id="anchor_001",
             confidence=1.5,
+        )
+
+
+def test_extraction_result_rejects_invalid_rejected_candidate_count() -> None:
+    """Extraction result metadata counts must be honest non-negative integers."""
+    with pytest.raises(ValueError, match="rejected candidate count"):
+        ExtractionResult(
+            scene_id="source_demo_chapter_001_scene_001",
+            rejected_candidate_count=-1,
         )
 
 

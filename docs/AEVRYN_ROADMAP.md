@@ -22,8 +22,8 @@ Current active target:
 
 ```text
 V2 Platform
--> Product development complete for private/internal alpha
--> Next: V2 Release Candidate Readiness
+-> Reopened for Phase 12 Language And Identity Understanding
+-> Release Candidate Readiness blocked until Phase 12 is accepted
 ```
 
 Phase 6 Project Storage is accepted.
@@ -36,11 +36,15 @@ Phase 9 Performance is accepted.
 
 Phase 10 Internal Alpha is accepted for internal operator testing with documented limitations.
 
-Phase 11 Security & Privacy Hardening is accepted as the V2 trust gate. Public beta remains blocked by deployment-specific production decisions documented in the Phase 11 security docs.
+Phase 11 Security & Privacy Hardening is accepted as the V2 trust gate. Public beta remains blocked by Phase 12 acceptance plus deployment-specific production decisions documented in the Phase 11 security docs.
 
 V2 closeout is recorded in `docs/AEVRYN_V2_CLOSEOUT.md`.
 
 V2 Release Candidate Readiness is defined in `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md`.
+
+Phase 12 acceptance is defined in `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`.
+
+The current work track is Phase 12. Release Candidate Readiness should not be treated as active until Translation Foundation and Entity Resolution Foundation are accepted.
 
 The product path now has durable project identity, storage-backed workspace access, saved imports, queued runs, import source-byte storage, deterministic `canon` snapshots from successful import runs, supported-format import UI hardening, metadata-only workflow observability, performance budgets, metadata-only baseline artifacts, regression comparison, and workspace-load request hardening.
 

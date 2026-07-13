@@ -959,6 +959,30 @@ def test_canon_snapshot_payload_stores_stable_identity_review_reasons() -> None:
     assert "the dagger carrier" not in snapshot_payload
 
 
+def test_canon_snapshot_payload_reports_quarantined_extraction_candidates() -> None:
+    """Snapshot metadata should expose ungrounded AI candidate quarantine counts."""
+    imported_source = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo Story",
+        text="Chapter 1\n\nMark carried a rusty dagger.",
+    )
+    result = ProjectRunResult(
+        imported_source=imported_source,
+        database=CanonDatabase(),
+        extraction_results=(
+            ExtractionResult(
+                scene_id="source_demo_chapter_001_scene_001",
+                rejected_candidate_count=3,
+            ),
+        ),
+        update_summaries=(CanonUpdateSummary(),),
+    )
+
+    parsed_payload = json.loads(_canon_snapshot_payload(result))
+
+    assert parsed_payload["ungrounded_extraction_candidate_count"] == 3
+
+
 def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> None:
     """Phase 12 translation snapshots should persist metadata, not text."""
     imported_source = StoryImporter().import_text(

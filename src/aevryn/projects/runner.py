@@ -550,6 +550,7 @@ class AevrynProjectRunner:
                 facts=rewritten_facts,
                 relationships=rewritten_relationships,
                 state_changes=rewritten_state_changes,
+                rejected_candidate_count=extraction_result.rejected_candidate_count,
             ),
             decisions,
         )

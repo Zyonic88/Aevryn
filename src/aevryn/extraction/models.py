@@ -168,10 +168,15 @@ class ExtractionResult:
     facts: tuple[ExtractedFact, ...] = ()
     relationships: tuple[ExtractedRelationship, ...] = ()
     state_changes: tuple[ExtractedStateChange, ...] = ()
+    rejected_candidate_count: int = 0
 
     def __post_init__(self) -> None:
         """Validate extraction result identity."""
         _require_machine_token(self.scene_id, "Extraction result scene ID")
+        _require_non_negative_int(
+            self.rejected_candidate_count,
+            "Extraction rejected candidate count",
+        )
         _require_unique_candidate_values(
             tuple(entity.entity_id for entity in self.entities),
             "entity IDs",
@@ -243,6 +248,12 @@ def _require_confidence(confidence: float) -> None:
         or not 0.0 <= confidence <= 1.0
     ):
         raise ValueError("Extraction confidence must be between 0.0 and 1.0.")
+
+
+def _require_non_negative_int(value: int, field_name: str) -> None:
+    """Validate a non-negative integer metadata count."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{field_name} must be a non-negative integer.")
 
 
 def _require_unique_values(values: tuple[object, ...], field_name: str) -> None:

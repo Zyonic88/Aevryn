@@ -432,6 +432,10 @@ def _canon_snapshot_payload(result: ProjectRunResult) -> str:
         "rejected_candidate_count": sum(
             len(summary.rejected_candidates) for summary in result.update_summaries
         ),
+        "ungrounded_extraction_candidate_count": sum(
+            extraction_result.rejected_candidate_count
+            for extraction_result in result.extraction_results
+        ),
         "translation": _translation_snapshot_payload(result),
         "entity_resolution": _entity_resolution_snapshot_payload(result),
         "timeline_changes": _timeline_changes_payload(result, source_quotes=_source_quotes(result)),

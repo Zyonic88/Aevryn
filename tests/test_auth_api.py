@@ -32,7 +32,7 @@ from aevryn.persistence import (
     SnapshotRecord,
 )
 from aevryn.storage import LocalFilesystemStorage, StorageObjectNotFoundError
-from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
+from aevryn.workers import InMemoryJobQueue, JobNotFoundError, ProjectImportSnapshotHandler
 from aevryn.workers.models import BackgroundJob
 
 NOW = "2026-06-27T00:00:00Z"
@@ -773,6 +773,19 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
         json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
     )
     assert processed.status_code == 200
+    queue.enqueue(
+        BackgroundJob(
+            job_id="job_other_story",
+            kind="process_import",
+            run_id="run_other_story",
+            project_id="project_alpha",
+            story_id="story_other",
+            import_id="import_other",
+            status="queued",
+            queued_at=NOW,
+            status_updated_at=NOW,
+        )
+    )
     repository.record_export(
         ExportRecord(
             export_id="export_alpha",
@@ -834,6 +847,9 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
         repository.get_export("user_owner", "export_alpha")
     with pytest.raises(ImportContentNotFoundError):
         content_store.read_import_content(storage_ref)
+    with pytest.raises(JobNotFoundError):
+        queue.get("job_alpha")
+    assert queue.get("job_other_story").story_id == "story_other"
 
 
 def test_delete_project_api_hard_deletes_metadata_and_private_bytes(tmp_path: Path) -> None:
@@ -875,6 +891,19 @@ def test_delete_project_api_hard_deletes_metadata_and_private_bytes(tmp_path: Pa
         json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
     )
     assert processed.status_code == 200
+    queue.enqueue(
+        BackgroundJob(
+            job_id="job_other_project",
+            kind="process_import",
+            run_id="run_other_project",
+            project_id="project_other",
+            story_id="story_other",
+            import_id="import_other",
+            status="queued",
+            queued_at=NOW,
+            status_updated_at=NOW,
+        )
+    )
     export_storage_ref = "storage://projects/project_alpha/exports/export_alpha/canon.md"
     storage.save_object(
         storage_ref=export_storage_ref,
@@ -923,6 +952,9 @@ def test_delete_project_api_hard_deletes_metadata_and_private_bytes(tmp_path: Pa
         content_store.read_import_content(import_storage_ref)
     with pytest.raises(StorageObjectNotFoundError):
         storage.read_object(export_storage_ref)
+    with pytest.raises(JobNotFoundError):
+        queue.get("job_alpha")
+    assert queue.get("job_other_project").project_id == "project_other"
 
 
 def test_phase11_project_surfaces_fail_closed_across_users() -> None:
@@ -1300,6 +1332,52 @@ def test_project_runs_api_marks_stale_running_queue_jobs_failed() -> None:
     assert runs[0]["error_summary"] == (
         "Processing timed out before completion. Retry is available."
     )
+    job = queue.get("job_alpha")
+    assert job.status == "failed"
+    assert job.error_summary == "Processing timed out before completion. Retry is available."
+    assert queue.snapshot().running_jobs == 0
+
+
+def test_project_runs_api_does_not_hide_queue_adapter_failures() -> None:
+    """Unexpected queue adapter failures should not be treated as idle jobs."""
+
+    class BrokenGetQueue(InMemoryJobQueue):
+        def get(self, job_id: str) -> BackgroundJob:
+            raise RuntimeError(f"Queue adapter failed for {job_id}.")
+
+    repository = InMemoryProjectRepository()
+    authentication_service = auth_service(repository=repository)
+    queue = BrokenGetQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=authentication_service,
+            project_repository=repository,
+            background_job_queue=queue,
+        ),
+        raise_server_exceptions=False,
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+
+    listed = client.get(
+        "/v2/projects/project_alpha/runs",
+        headers=auth_headers("token_001"),
+    )
+
+    assert listed.status_code == 500
+    assert repository.get_engine_run("user_owner", "run_alpha").status == "pending"
 
 
 def test_import_runs_api_requires_configured_queue() -> None:

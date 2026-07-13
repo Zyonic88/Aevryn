@@ -6,6 +6,10 @@ This document preserves the active project context for future Codex sessions.
 
 Read this file before making code changes.
 
+If `docs/AEVRYN_AI_CODING_RULES.md` exists locally, read it before making code
+changes. It is an internal, gitignored rules document and is mandatory for local
+development sessions.
+
 ---
 
 # Project
@@ -46,7 +50,9 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **V2 product complete for private/internal alpha - Release Candidate Readiness next**
+Current phase: **Phase 12 - Language And Identity Understanding**
+
+V2 was previously product-complete for private/internal alpha, but hosted alpha testing reopened V2 for Phase 12. Release Candidate Readiness remains blocked until Phase 12 is accepted.
 
 Recent completed V2 work:
 
@@ -79,7 +85,9 @@ Future ideas are preserved in `docs/AEVRYN_FUTURE_IDEAS.md`. That document is no
 
 Next expected V2 target:
 
-- Work V2 Release Candidate Readiness from `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md`.
+- Work Phase 12 from `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`.
+- Treat `docs/AEVRYN_TRANSLATION_ENGINE.md` and `docs/AEVRYN_ENTITY_RESOLUTION.md` as the active technical contracts for this phase.
+- Return to V2 Release Candidate Readiness from `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md` only after Phase 12 is accepted.
 - Gate 1 Public-Facing Trust Documentation is tracked in `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`.
 - Public support/contact readiness is tracked in `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`.
 - Production infrastructure readiness is tracked in `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md`.
@@ -90,8 +98,8 @@ Next expected V2 target:
 - AI provider and data-use readiness is tracked in `docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md`.
 - Release candidate test readiness is tracked in `docs/AEVRYN_RELEASE_CANDIDATE_TEST_READINESS.md`.
 - Use `docs/AEVRYN_V2_CLOSEOUT.md` as the decision record that separates V2 product completion from public beta approval.
-- Do not treat Phase 11 acceptance as public beta approval; public beta still requires deployment-specific security decisions and production infrastructure choices.
-- Release Candidate Readiness progress: local production startup contract now passes with `startup_contract=ready` and `secrets_printed=0`; hosted CI/security workflows exist under `.github/workflows/`; GitHub branch protection, push protection, and protected-path verification are configured/exercised; hosted alert routing runbook is documented; synthetic GitHub-hosted alert path was tested through issue #10; email inbox receipt from GitHub notification settings remains unverified; a 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent; 2026-07-01 local production-style smoke passed for production config, PostgreSQL Project Database, and Cloudflare R2; Cloud Run revision `aevryn-api-00003-9v4` deployed and `/v2/health` returned OK; `api.aevryn.ai` custom-domain health smoke returned OK over HTTPS; local frontend build/lint/tests passed with `VITE_AEVRYN_API_URL=https://api.aevryn.ai`; Cloudflare Pages project `aevryn-web` is deployed, `https://app.aevryn.ai` returns HTTP OK, and API CORS allows `Origin: https://app.aevryn.ai`; hosted browser-flow smoke verified login/register shell availability, unauthenticated `/dashboard` redirect to `/login`, unauthenticated `GET /v2/projects` returning `401 session_required`, clean browser console output, managed-identity login completion, and authenticated project create/read/list for `RC Smoke Test Project`; Supabase JWT verification now supports ES256/JWKS, RS256/JWKS, and explicit HS256/JWT-secret modes; smoke evidence is recorded in `docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md`; Cloud Run deployment prep is documented in `docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md`; Cloudflare Pages deployment prep is documented in `docs/AEVRYN_CLOUDFLARE_PAGES_DEPLOYMENT.md`; hosted import processing, monitoring workflow status, export preview, production-safe worker posture, log review, and release-candidate signoff remain open.
+- Do not treat Phase 11 acceptance or private alpha success as public beta approval; public beta still requires Phase 12 acceptance plus deployment-specific security decisions and production infrastructure choices.
+- Release Candidate Readiness progress: local production startup contract now passes with `startup_contract=ready` and `secrets_printed=0`; hosted CI/security workflows exist under `.github/workflows/`; GitHub branch protection, push protection, and protected-path verification are configured/exercised; hosted alert routing runbook is documented; synthetic GitHub-hosted alert path was tested through issue #10; email inbox receipt from GitHub notification settings remains unverified; a 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent; 2026-07-01 local production-style smoke passed for production config, PostgreSQL Project Database, and Cloudflare R2; production startup now requires `AEVRYN_EXTRACTION_MODE=openai` plus OpenAI key/model so demo extraction remains local-only; production queue wiring now uses `PostgresqlBackgroundJobQueue` backed by the Project Database `background_jobs` table instead of process memory; Cloud Run revision `aevryn-api-00003-9v4` deployed and `/v2/health` returned OK; `api.aevryn.ai` custom-domain health smoke returned OK over HTTPS; local frontend build/lint/tests passed with `VITE_AEVRYN_API_URL=https://api.aevryn.ai`; Cloudflare Pages project `aevryn-web` is deployed, `https://app.aevryn.ai` returns HTTP OK, and API CORS allows `Origin: https://app.aevryn.ai`; hosted browser-flow smoke verified login/register shell availability, unauthenticated `/dashboard` redirect to `/login`, unauthenticated `GET /v2/projects` returning `401 session_required`, clean browser console output, managed-identity login completion, and authenticated project create/read/list for `RC Smoke Test Project`; Supabase JWT verification now supports ES256/JWKS, RS256/JWKS, and explicit HS256/JWT-secret modes; smoke evidence is recorded in `docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md`; Cloud Run deployment prep is documented in `docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md`; Cloudflare Pages deployment prep is documented in `docs/AEVRYN_CLOUDFLARE_PAGES_DEPLOYMENT.md`; hosted import processing, monitoring workflow status, export preview, hosted worker runner smoke, log review, and release-candidate signoff remain open.
 - Branch protection readiness is documented in `docs/AEVRYN_BRANCH_PROTECTION.md` and `docs/AEVRYN_GITHUB_HOSTED_CONTROLS.md`; workflows, CODEOWNERS, Dependabot configuration, GitHub security policy, and pull request template exist in `.github/`. GitHub branch protection is configured for `master` with required pull requests, code-owner review, required checks, up-to-date branches, conversation resolution, and restricted deletions. GitHub dependency graph, Dependabot alerts, Dependabot security updates, secret scanning, push protection, private vulnerability reporting, and default CodeQL are enabled. Protected-path drill was exercised through PR #9: direct pushes to `master` were blocked, required hosted checks caught static-security and backend-gate issues, and final hosted checks passed after fixes.
 - Restore-test readiness is documented in `docs/AEVRYN_RESTORE_TEST_PLAN.md`; production backup provider, retention window, restore execution, and audit storage decisions remain open.
 - AI provider review is documented in `docs/AEVRYN_AI_PROVIDER_REVIEW.md`; OpenAI remains an internal-alpha candidate only until provider terms, retention, training behavior, disclosure, and release-gate coverage are reviewed.
@@ -110,7 +118,7 @@ Phase 6 Project Storage accepted:
 - `create_app_from_env` wires `FileSystemImportContentStore` from `AEVRYN_IMPORT_STORAGE_PATH` or a sibling `_imports` directory
 - CLI `aevryn api` now uses the environment-backed app factory in reload and non-reload modes
 - Dashboard list/create now uses the project storage API instead of browser project shells as source of truth
-- Direct workspace project routes load project detail through the API, with legacy local shell fallback only for compatibility
+- Direct workspace project routes load project detail through the API; stale browser project shells are no longer treated as workspace truth
 - Project Settings API routes added for read/update and the workspace Settings tab now saves through the API
 - Project Story API routes added for list/create and the workspace Story tab now creates story metadata through the API
 - Story Import API routes added for list/create metadata and the workspace Import tab now saves inspected import metadata under durable stories
@@ -190,6 +198,7 @@ Phase 10 progress:
 - Alpha extraction now dedupes duplicate relationship candidates and presentation hides conflicting gender values instead of showing both.
 - Browser sanity testing validated Continuity, Prompt Packs, and Exports against persisted backend snapshots.
 - Browser sanity testing found and fixed the local/demo prompt-pack fallback so scene and prompt panels stay available even when extraction accepts no canon facts.
+- Hosted extraction may quarantine ungrounded AI candidates, but snapshots persist a metadata-only `ungrounded_extraction_candidate_count` so tolerant runs are observable rather than silent.
 - Internal alpha operator instructions are documented in `docs/AEVRYN_PRIVATE_ALPHA_TESTER_GUIDE.md`.
 - Phase 10 is ready for internal alpha hardening with documented limitations; no outside testers or untrusted manuscripts enter before public-beta readiness gates are complete. Phase 11 Security & Privacy Hardening is accepted, and public beta now depends on deployment-specific security follow-through.
 

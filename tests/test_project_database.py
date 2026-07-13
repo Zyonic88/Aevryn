@@ -52,6 +52,7 @@ def test_project_database_schema_manifest_defines_phase_2_tables() -> None:
         "stories",
         "imports",
         "engine_runs",
+        "background_jobs",
         "snapshots",
         "exports",
         "project_settings",
@@ -79,7 +80,8 @@ def test_project_database_schema_renders_postgresql_contract() -> None:
     assert "user_id text PRIMARY KEY" in statements[0]
     assert "email text NOT NULL UNIQUE" in statements[0]
     assert "owner_user_id text NOT NULL REFERENCES users(user_id)" in statements[1]
-    assert "serialized_output jsonb NOT NULL" in statements[5]
+    assert "run_id text NOT NULL" in statements[5]
+    assert "serialized_output jsonb NOT NULL" in statements[6]
     assert statements[-1].endswith(");")
 
 
@@ -91,6 +93,11 @@ def test_project_database_schema_manifest_defines_check_constraints() -> None:
         "chk_imports_evidence_anchor_count_non_negative",
         "chk_engine_runs_status",
         "chk_engine_runs_finished_at_by_status",
+        "chk_background_jobs_kind",
+        "chk_background_jobs_status",
+        "chk_background_jobs_attempts_non_negative",
+        "chk_background_jobs_max_attempts_positive",
+        "chk_background_jobs_error_summary_by_status",
         "chk_snapshots_snapshot_kind",
         "chk_exports_size_non_negative",
     )
@@ -105,6 +112,7 @@ def test_project_database_schema_renders_postgresql_constraints() -> None:
         "chk_imports_chapter_count_non_negative CHECK (chapter_count >= 0);"
     )
     assert any("chk_engine_runs_status" in statement for statement in statements)
+    assert any("chk_background_jobs_status" in statement for statement in statements)
     assert any("chk_snapshots_snapshot_kind" in statement for statement in statements)
 
 
@@ -158,6 +166,9 @@ def test_project_database_schema_manifest_defines_indexes() -> None:
         "idx_imports_story_id",
         "idx_engine_runs_project_id",
         "idx_engine_runs_story_id",
+        "idx_background_jobs_status",
+        "idx_background_jobs_project_id",
+        "idx_background_jobs_queued_order",
         "idx_snapshots_project_id",
         "idx_snapshots_story_kind",
         "idx_exports_project_id",

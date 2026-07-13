@@ -24,10 +24,10 @@ SnapshotKind = Literal[
 
 @dataclass(frozen=True, slots=True)
 class UserRecord:
-    """Persisted platform user identity placeholder.
+    """Persisted platform user identity.
 
-    Full registration, login, password recovery, and session policy belong to
-    Version 2 Phase 4. Phase 2 only needs a stable ownership record.
+    Managed identity owns authentication policy. Project storage keeps the
+    stable ownership record needed for authorization and project isolation.
     """
 
     user_id: str

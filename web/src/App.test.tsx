@@ -697,6 +697,13 @@ function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.projects", JSON.stringify([projectAlpha]));
 }
 
+function projectApiFallbackResponse(url: string): Promise<Response> {
+  if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+    return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+  }
+  return Promise.resolve(new Response("{}", { status: 404 }));
+}
+
 function projectOutputsPath(projectId: string): string {
   return `${API_PATHS.projects}/${projectId}/outputs`;
 }
@@ -900,7 +907,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.authLogin) || url.endsWith(API_PATHS.authRegister)) {
           return Promise.resolve(new Response(JSON.stringify(session)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
   });
@@ -990,7 +997,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1228,7 +1235,7 @@ describe("App shell routing", () => {
       if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
         return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -1334,7 +1341,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1496,7 +1503,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1598,7 +1605,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.projects)) {
           return Promise.resolve(new Response(JSON.stringify({ projects: [] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1629,7 +1636,7 @@ describe("App shell routing", () => {
             new Response(JSON.stringify({ projects: [projectAlphaPayload, projectBetaPayload] })),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1671,7 +1678,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1733,7 +1740,7 @@ describe("App shell routing", () => {
       ) {
         return Promise.resolve(new Response(null, { status: 204 }));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -1874,7 +1881,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.sourceFormats)) {
         return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2013,7 +2020,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2116,7 +2123,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2184,7 +2191,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.importsInspect)) {
           return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2289,7 +2296,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2399,7 +2406,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.importsInspect)) {
         return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2504,7 +2511,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.sourceFormats)) {
         return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2628,7 +2635,7 @@ describe("App shell routing", () => {
       if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
         return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2749,7 +2756,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.capabilities)) {
         return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2854,7 +2861,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
           return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2943,7 +2950,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
           return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3046,7 +3053,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
           return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3213,7 +3220,7 @@ describe("App shell routing", () => {
       if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
         return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     render(
       <MemoryRouter initialEntries={["/projects/project_alpha/overview"]}>
@@ -3293,7 +3300,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
           return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3386,7 +3393,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
           return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3433,7 +3440,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3648,7 +3655,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3717,7 +3724,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3862,7 +3869,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3912,7 +3919,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3961,7 +3968,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4031,7 +4038,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4103,7 +4110,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4149,7 +4156,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4222,7 +4229,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4268,7 +4275,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4340,7 +4347,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4385,7 +4392,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4439,7 +4446,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4501,7 +4508,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4531,7 +4538,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.capabilities)) {
         return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -4700,7 +4707,7 @@ describe("App shell routing", () => {
       if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
         return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
