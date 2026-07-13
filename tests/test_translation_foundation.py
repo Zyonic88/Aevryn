@@ -31,6 +31,35 @@ def test_translation_normalization_preserves_source_anchor_links() -> None:
     assert result.issues == ()
 
 
+def test_translation_modes_are_bounded_and_preserved() -> None:
+    """Supported modes should stay explicit metadata instead of changing Canon truth."""
+    engine = TranslationEngine()
+    unit = TranslationUnit(
+        unit_id="chapter_001_scene_001_unit_002",
+        source_text="Charlotte raised her sword.",
+        evidence_anchor_ids=("anchor_003",),
+    )
+
+    modes = ("literal", "clean_english", "localized", "subtitle_narration")
+
+    assert tuple(engine.normalize_unit(unit, mode=mode).mode for mode in modes) == modes
+
+
+def test_translation_rejects_unknown_mode() -> None:
+    """Unsupported modes should fail closed instead of implying untested behavior."""
+    engine = TranslationEngine()
+
+    with pytest.raises(ValueError, match="Translated unit mode is invalid"):
+        engine.normalize_unit(
+            TranslationUnit(
+                unit_id="chapter_001_scene_001_unit_003",
+                source_text="Charlotte raised her sword.",
+                evidence_anchor_ids=("anchor_004",),
+            ),
+            mode="marketing_copy",  # type: ignore[arg-type]
+        )
+
+
 def test_translation_glossary_preserves_preferred_story_terms() -> None:
     """Glossary terms should normalize story-specific terms consistently."""
     engine = TranslationEngine()
