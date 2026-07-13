@@ -41,9 +41,7 @@ export function readablePromptText(
   section: { items: string[] },
   options: { maxItems?: number } = {},
 ): string {
-  const items = readableOutputItems(section.items)
-    .filter((item) => item !== "Source-backed detail available through evidence controls.")
-    .filter((item) => !/^Scene ID:/iu.test(item));
+  const items = readablePromptItems(section);
   if (items.length === 0) {
     return "Unknown.";
   }
@@ -53,6 +51,21 @@ export function readablePromptText(
       ? `\n\n${items.length - options.maxItems} more canon details available.`
       : "";
   return `${visibleItems.map(toSentence).join("\n\n")}${overflow}`;
+}
+
+export function readablePromptSummary(section: { items: string[] }): string {
+  const items = readablePromptItems(section);
+  if (items.length === 0) {
+    return "No prompt details available.";
+  }
+  const label = items.length === 1 ? "prompt detail" : "prompt details";
+  return `${items.length.toLocaleString()} ${label} ready.`;
+}
+
+function readablePromptItems(section: { items: string[] }): string[] {
+  return readableOutputItems(section.items)
+    .filter((item) => item !== "Source-backed detail available through evidence controls.")
+    .filter((item) => !/^Scene ID:/iu.test(item));
 }
 
 function toSentence(value: string): string {

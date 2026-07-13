@@ -22,6 +22,9 @@ from aevryn.world import WorldEntityState, WorldState
 logger = logging.getLogger(__name__)
 
 _STATUS_ATTRIBUTES = ("status", "role", "academic_year", "year", "student_status")
+_ALIAS_ATTRIBUTES = ("display_name", "name", "alias")
+_TITLE_ATTRIBUTES = ("title", "noble_title")
+_DESCRIPTION_ATTRIBUTES = ("description", "appearance")
 _GOAL_EXACT_ATTRIBUTES = ("current_goal", "current_task", "next_semester_requirement", "intention")
 _GOAL_PARTIAL_ATTRIBUTES = (
     "goal",
@@ -155,6 +158,13 @@ class PresentationEngine:
             character_id=card.character_id,
             display_name=card.display_name,
             subtitle=self._subtitle(facts_by_attribute),
+            aliases=self._section("Aliases", facts_by_attribute, _ALIAS_ATTRIBUTES),
+            titles=self._section("Titles", facts_by_attribute, _TITLE_ATTRIBUTES),
+            descriptions=self._section(
+                "Descriptions",
+                facts_by_attribute,
+                _DESCRIPTION_ATTRIBUTES,
+            ),
             race=self._identity_section(
                 "Race",
                 facts_by_attribute,
@@ -463,6 +473,7 @@ class PresentationEngine:
         """Return attributes already routed into first-class profile sections."""
         presented: set[str] = set()
         exact_groups = (
+            (*_ALIAS_ATTRIBUTES, *_TITLE_ATTRIBUTES, *_DESCRIPTION_ATTRIBUTES),
             ("race", "species", "gender", "sex"),
             _STATUS_ATTRIBUTES,
             _TERRITORY_ATTRIBUTES,

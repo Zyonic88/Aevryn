@@ -1633,7 +1633,8 @@ def test_prompt_command_can_use_ai_json_candidates(
     output = capsys.readouterr().out
 
     assert exit_code == 0
-    assert "character_mark retains current_weapon: Iron Sword" in output
+    assert "Mark retains Current Weapon: Iron Sword" in output
+    assert "character_mark retains current_weapon" not in output
 
 
 def test_prompt_command_defaults_to_accepted_scene_characters(

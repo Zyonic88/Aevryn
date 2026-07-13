@@ -17,6 +17,18 @@ updates:
       time: "10:15"
       timezone: America/Denver
     open-pull-requests-limit: 5
+    groups:
+      eslint-toolchain:
+        patterns:
+          - eslint
+          - "@eslint/*"
+          - "@typescript-eslint/*"
+          - typescript-eslint
+      frontend-test-tooling:
+        patterns:
+          - jsdom
+          - vitest
+          - "@vitest/*"
 
   - package-ecosystem: github-actions
     directory: /

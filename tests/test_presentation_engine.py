@@ -185,6 +185,30 @@ def test_presentation_engine_routes_identity_and_profile_facts() -> None:
                 valid_from_scene_id="source_demo_chapter_001_scene_001",
             ),
             CanonCharacterFact(
+                attribute="alias",
+                value="Captain Mark",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="title",
+                value="Captain",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="description",
+                value="human male captain",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
                 attribute="family_background",
                 value="Merchant family",
                 previous_value=None,
@@ -207,6 +231,9 @@ def test_presentation_engine_routes_identity_and_profile_facts() -> None:
 
     assert profile.race.items == ("Human",)
     assert profile.gender.items == ("Male",)
+    assert profile.aliases.items == ("Captain Mark",)
+    assert profile.titles.items == ("Captain",)
+    assert profile.descriptions.items == ("human male captain",)
     assert profile.relationships.items == ("Merchant family",)
     assert profile.current_equipment.items == ("Iron Sword",)
     assert profile.recent_changes.items == (
