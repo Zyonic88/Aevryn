@@ -3782,6 +3782,8 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Stored Exports" })).toBeInTheDocument();
     expect(await screen.findByText("alpha-canon-snapshot.json")).toBeInTheDocument();
+    expect(screen.getByText(/canon \/ json \| 128 B \|/u)).toBeInTheDocument();
+    expect(screen.queryByText(/Â/u)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create snapshot export" }));
 
     await waitFor(() => {

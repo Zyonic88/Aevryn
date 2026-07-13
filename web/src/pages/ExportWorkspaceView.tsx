@@ -323,8 +323,8 @@ function ProjectStoredExportsPanel({
               <div>
                 <h3>{exportRecord.filename}</h3>
                 <p>
-                  {exportRecord.export_kind} / {exportRecord.export_format} ·{" "}
-                  {formatBytes(exportRecord.size)} · {formatDateTime(exportRecord.created_at)}
+                  {exportRecord.export_kind} / {exportRecord.export_format} |{" "}
+                  {formatBytes(exportRecord.size)} | {formatDateTime(exportRecord.created_at)}
                 </p>
               </div>
               <button
