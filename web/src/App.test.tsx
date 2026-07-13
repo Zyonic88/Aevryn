@@ -321,6 +321,9 @@ const characterPreviewPayload = {
       character_id: "character_mark",
       display_name: "Mark",
       subtitle: "Known character",
+      aliases: { title: "Aliases", items: ["Captain Mark"] },
+      titles: { title: "Titles", items: ["Captain"] },
+      descriptions: { title: "Descriptions", items: ["human male captain"] },
       race: { title: "Race", items: ["Human"] },
       gender: { title: "Gender", items: ["Male"] },
       status: { title: "Status", items: ["Alive"] },
@@ -614,6 +617,9 @@ const projectOutputsPayload = {
     {
       ...characterPreviewPayload.character_profiles[0],
       character_id: "character_mark_duplicate",
+      aliases: { title: "Aliases", items: ["Captain Mark"] },
+      titles: { title: "Titles", items: ["Captain"] },
+      descriptions: { title: "Descriptions", items: ["human male captain"] },
       race: { title: "Race", items: ["Human"] },
       gender: { title: "Gender", items: ["Male"] },
       recent_changes: {
@@ -3137,6 +3143,12 @@ describe("App shell routing", () => {
     expect(screen.getByText("Human")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Gender" })).toBeInTheDocument();
     expect(screen.getByText("Male")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Aliases" })).toBeInTheDocument();
+    expect(screen.getByText("Captain Mark")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Titles" })).toBeInTheDocument();
+    expect(screen.getByText("Captain")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Descriptions" })).toBeInTheDocument();
+    expect(screen.getByText("human male captain")).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
     expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();

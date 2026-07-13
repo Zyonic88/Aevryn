@@ -320,6 +320,9 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
     profilesByName.set(profile.display_name, {
       ...existingProfile,
       subtitle: bestSubtitle(existingProfile.subtitle, profile.subtitle),
+      aliases: mergeSection(existingProfile.aliases, profile.aliases),
+      titles: mergeSection(existingProfile.titles, profile.titles),
+      descriptions: mergeSection(existingProfile.descriptions, profile.descriptions),
       race: mergeSection(existingProfile.race, profile.race),
       gender: mergeSection(existingProfile.gender, profile.gender),
       status: mergeSection(existingProfile.status, profile.status),
@@ -384,6 +387,9 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
       <details className="profile-disclosure">
         <summary>Character details</summary>
         <div className="profile-section-grid">
+          <PanelSection section={profile.aliases} />
+          <PanelSection section={profile.titles} />
+          <PanelSection section={profile.descriptions} />
           <PanelSection section={profile.race} />
           <PanelSection section={profile.gender} />
           <PanelSection section={profile.status} />

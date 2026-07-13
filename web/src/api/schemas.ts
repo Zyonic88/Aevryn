@@ -382,12 +382,18 @@ export const outputSectionSchema = z.object({
 
 const unknownRaceSection = { title: "Race", items: ["Unknown"] };
 const unknownGenderSection = { title: "Gender", items: ["Unknown"] };
+const unknownAliasesSection = { title: "Aliases", items: ["Unknown"] };
+const unknownTitlesSection = { title: "Titles", items: ["Unknown"] };
+const unknownDescriptionsSection = { title: "Descriptions", items: ["Unknown"] };
 
 export const characterProfileSchema = z
   .object({
     character_id: z.string(),
     display_name: z.string(),
     subtitle: z.string(),
+    aliases: outputSectionSchema.optional(),
+    titles: outputSectionSchema.optional(),
+    descriptions: outputSectionSchema.optional(),
     race: outputSectionSchema.optional(),
     gender: outputSectionSchema.optional(),
     status: outputSectionSchema,
@@ -403,6 +409,9 @@ export const characterProfileSchema = z
   })
   .transform((profile) => ({
     ...profile,
+    aliases: profile.aliases ?? unknownAliasesSection,
+    titles: profile.titles ?? unknownTitlesSection,
+    descriptions: profile.descriptions ?? unknownDescriptionsSection,
     race: profile.race ?? unknownRaceSection,
     gender: profile.gender ?? unknownGenderSection,
   }));
