@@ -869,6 +869,21 @@ def _character_profile_payload(
             source_quotes,
             display_names=display_names,
         ),
+        "aliases": _section_payload(
+            profile.aliases,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "titles": _section_payload(
+            profile.titles,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "descriptions": _section_payload(
+            profile.descriptions,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "race": _section_payload(
             profile.race,
             source_quotes=source_quotes,

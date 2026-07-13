@@ -32,6 +32,9 @@ class CharacterProfileView:
     character_id: str
     display_name: str
     subtitle: str
+    aliases: PresentationSection
+    titles: PresentationSection
+    descriptions: PresentationSection
     race: PresentationSection
     gender: PresentationSection
     status: PresentationSection

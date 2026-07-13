@@ -115,6 +115,44 @@ def test_low_confidence_description_remains_unresolved_candidate() -> None:
     assert decision.candidates[0].confidence < 0.75
 
 
+def test_resolves_supported_description_variant_to_same_identity() -> None:
+    """Description variants should resolve when multiple explicit tokens support one profile."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("the white-haired woman", "anchor_031"),
+        (charlotte_profile(),),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_charlotte"
+    assert decision.confidence == 0.82
+    assert decision.candidates[0].match_kind == "description_variant"
+
+
+def test_description_variant_stays_ambiguous_when_multiple_profiles_fit() -> None:
+    """Description variants should not merge when multiple identities fit."""
+    engine = EntityResolutionEngine()
+    elaine = EntityIdentityProfile(
+        entity_id="character_elaine",
+        canonical_name="Elaine",
+        descriptions=("white-haired beauty",),
+        evidence_anchor_ids=("anchor_032",),
+    )
+
+    decision = engine.resolve_reference(
+        SurfaceReference("the white-haired woman", "anchor_033"),
+        (charlotte_profile(), elaine),
+    )
+
+    assert decision.status == "ambiguous"
+    assert decision.entity_id is None
+    assert {candidate.entity_id for candidate in decision.candidates} == {
+        "character_charlotte",
+        "character_elaine",
+    }
+
+
 def test_near_tied_high_confidence_matches_remain_ambiguous() -> None:
     """Near-tied strong matches should not silently merge identities."""
     engine = EntityResolutionEngine()

@@ -23,6 +23,7 @@ import {
   identityReviewDetails,
   identityReviewKey,
   identityReviewStatusLabel,
+  identityReviewTitle,
   reviewItemCountLabel,
   translationReviewDetails,
   translationReviewKey,
@@ -34,6 +35,11 @@ type OutputSurface =
 
 const MAX_VISIBLE_PROMPT_SCENES = 24;
 const MAX_VISIBLE_PROMPT_DETAILS = 10;
+const CHARACTER_CARD_PAGE_SIZE = 48;
+const WORLD_CARD_PAGE_SIZE = 48;
+const TIMELINE_GROUP_PAGE_SIZE = 60;
+const SCENE_CARD_PAGE_SIZE = 48;
+const CONTINUITY_SCENE_PAGE_SIZE = 24;
 
 export function ProjectOutputSummaryPanel({
   project,
@@ -123,6 +129,7 @@ function ProjectOutputSummary({
       </dl>
       <LanguageIdentityStatus outputs={outputs} />
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
+      {surface === "characters" ? <IdentityReviewPanel outputs={outputs} /> : null}
       <ReadableSurfacePanels surface={surface} outputs={outputs} />
       {surfaceSummary.status === "waiting" ? (
         <EmptyState title="No extracted canon content yet">
@@ -193,6 +200,79 @@ function identityReviewAction(status: string): string {
   return "Aevryn marked this reference for review";
 }
 
+function IdentityReviewPanel({ outputs }: { outputs: ProjectOutputs }) {
+  const [statusFilter, setStatusFilter] = useState<"all" | "ambiguous" | "unresolved">("all");
+  const summary = outputs.language_identity;
+  const reviewTotal = summary.identity_ambiguous_count + summary.identity_unresolved_count;
+  const reviewItems = compactIdentityReviewItems(summary.identity_review_items, 24);
+  const filteredItems =
+    statusFilter === "all"
+      ? reviewItems
+      : reviewItems.filter((item) => item.status === statusFilter);
+
+  if (summary.identity_decision_count === 0) {
+    return null;
+  }
+
+  return (
+    <section className="identity-review-panel" aria-label="Identity review">
+      <div className="identity-review-heading">
+        <div>
+          <h3>Identity Review</h3>
+          <p>
+            {summary.identity_resolved_count.toLocaleString()} resolved,{" "}
+            {summary.identity_ambiguous_count.toLocaleString()} ambiguous,{" "}
+            {summary.identity_unresolved_count.toLocaleString()} unresolved.
+          </p>
+        </div>
+        <div className="segmented-control" aria-label="Identity review filter">
+          <button
+            type="button"
+            aria-pressed={statusFilter === "all"}
+            onClick={() => setStatusFilter("all")}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            aria-pressed={statusFilter === "ambiguous"}
+            onClick={() => setStatusFilter("ambiguous")}
+          >
+            Ambiguous
+          </button>
+          <button
+            type="button"
+            aria-pressed={statusFilter === "unresolved"}
+            onClick={() => setStatusFilter("unresolved")}
+          >
+            Unresolved
+          </button>
+        </div>
+      </div>
+      {reviewTotal > reviewItems.length ? (
+        <p className="result-summary">
+          Showing {reviewItems.length.toLocaleString()} representative review examples from{" "}
+          {reviewTotal.toLocaleString()} references that need attention.
+        </p>
+      ) : null}
+      {filteredItems.length > 0 ? (
+        <div className="compact-list">
+          {filteredItems.map((item) => (
+            <div className="compact-row identity-review-row" key={identityReviewKey(item)}>
+              <strong>{identityReviewTitle(item)}</strong>
+              <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState title="No matching identity reviews">
+          No identity review examples match this filter.
+        </EmptyState>
+      )}
+    </section>
+  );
+}
+
 function ReadableSurfacePanels({
   surface,
   outputs,
@@ -202,13 +282,7 @@ function ReadableSurfacePanels({
 }) {
   if (surface === "characters" && outputs.character_profiles.length > 0) {
     const characterProfiles = mergeCharacterProfiles(outputs.character_profiles);
-    return (
-      <div className="profile-grid" aria-label="Character cards">
-        {characterProfiles.map((profile) => (
-          <CharacterPanel key={profile.character_id} profile={profile} />
-        ))}
-      </div>
-    );
+    return <CharacterPanels profiles={characterProfiles} />;
   }
   if (
     surface === "world" &&
@@ -246,6 +320,9 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
     profilesByName.set(profile.display_name, {
       ...existingProfile,
       subtitle: bestSubtitle(existingProfile.subtitle, profile.subtitle),
+      aliases: mergeSection(existingProfile.aliases, profile.aliases),
+      titles: mergeSection(existingProfile.titles, profile.titles),
+      descriptions: mergeSection(existingProfile.descriptions, profile.descriptions),
       race: mergeSection(existingProfile.race, profile.race),
       gender: mergeSection(existingProfile.gender, profile.gender),
       status: mergeSection(existingProfile.status, profile.status),
@@ -310,6 +387,9 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
       <details className="profile-disclosure">
         <summary>Character details</summary>
         <div className="profile-section-grid">
+          <PanelSection section={profile.aliases} />
+          <PanelSection section={profile.titles} />
+          <PanelSection section={profile.descriptions} />
           <PanelSection section={profile.race} />
           <PanelSection section={profile.gender} />
           <PanelSection section={profile.status} />
@@ -353,11 +433,77 @@ function characterRecentChanges(profile: CharacterProfile): OutputSection {
   };
 }
 
-function WorldPanel({ world }: { world: WorldSheet }) {
+function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
+  const [query, setQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(CHARACTER_CARD_PAGE_SIZE);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredProfiles = normalizedQuery
+    ? profiles.filter((profile) =>
+        [profile.display_name, profile.subtitle, profile.evidence_summary]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedQuery),
+      )
+    : profiles;
+  const visibleProfiles = filteredProfiles.slice(0, visibleCount);
+  const hiddenCount = Math.max(filteredProfiles.length - visibleProfiles.length, 0);
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setVisibleCount(CHARACTER_CARD_PAGE_SIZE);
+  }
+
   return (
-    <div>
+    <div className="large-output-stack">
+      <div className="large-output-controls">
+        <label>
+          Search characters
+          <input
+            value={query}
+            onChange={(event) => updateQuery(event.target.value)}
+            placeholder="Name, title, role, evidence"
+          />
+        </label>
+        <p>
+          Showing {visibleProfiles.length.toLocaleString()} of{" "}
+          {filteredProfiles.length.toLocaleString()} character profiles.
+        </p>
+      </div>
+      {visibleProfiles.length > 0 ? (
+        <div className="profile-grid" aria-label="Character cards">
+          {visibleProfiles.map((profile) => (
+            <CharacterPanel key={profile.character_id} profile={profile} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState title="No matching characters">
+          No character profiles match the current search.
+        </EmptyState>
+      )}
+      <LoadMoreButton
+        hiddenCount={hiddenCount}
+        pageSize={CHARACTER_CARD_PAGE_SIZE}
+        onLoadMore={() =>
+          setVisibleCount((currentCount) => currentCount + CHARACTER_CARD_PAGE_SIZE)
+        }
+      />
+    </div>
+  );
+}
+
+function WorldPanel({ world }: { world: WorldSheet }) {
+  const [visibleCount, setVisibleCount] = useState(WORLD_CARD_PAGE_SIZE);
+  const visibleSections = world.entity_sections.slice(0, visibleCount);
+  const hiddenCount = Math.max(world.entity_sections.length - visibleSections.length, 0);
+  return (
+    <div className="large-output-stack">
+      <LimitedResultsNote
+        shown={visibleSections.length}
+        total={world.entity_sections.length}
+        label="world sections"
+      />
       <div className="profile-grid" aria-label="World sheets">
-        {world.entity_sections.map((section) => (
+        {visibleSections.map((section) => (
           <article className="profile-card" key={section.title}>
             <header>
               <h3>{section.title}</h3>
@@ -369,16 +515,29 @@ function WorldPanel({ world }: { world: WorldSheet }) {
           </article>
         ))}
       </div>
+      <LoadMoreButton
+        hiddenCount={hiddenCount}
+        pageSize={WORLD_CARD_PAGE_SIZE}
+        onLoadMore={() => setVisibleCount((currentCount) => currentCount + WORLD_CARD_PAGE_SIZE)}
+      />
       <p className="evidence-note">{world.evidence_summary}</p>
     </div>
   );
 }
 
 function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
+  const [visibleCount, setVisibleCount] = useState(TIMELINE_GROUP_PAGE_SIZE);
   const timelineGroups = groupedTimelineChanges(changes);
+  const visibleGroups = timelineGroups.slice(0, visibleCount);
+  const hiddenCount = Math.max(timelineGroups.length - visibleGroups.length, 0);
   return (
     <div className="compact-list timeline-change-list" aria-label="Timeline changes">
-      {timelineGroups.map((group) => (
+      <LimitedResultsNote
+        shown={visibleGroups.length}
+        total={timelineGroups.length}
+        label="timeline groups"
+      />
+      {visibleGroups.map((group) => (
         <details
           className="compact-row timeline-change-group detail-disclosure"
           key={`${group.chapterIndex}-${group.sceneIndex}`}
@@ -401,48 +560,67 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
           </ul>
         </details>
       ))}
+      <LoadMoreButton
+        hiddenCount={hiddenCount}
+        pageSize={TIMELINE_GROUP_PAGE_SIZE}
+        onLoadMore={() =>
+          setVisibleCount((currentCount) => currentCount + TIMELINE_GROUP_PAGE_SIZE)
+        }
+      />
     </div>
   );
 }
 
 function SceneSheetsPanel({ scenes }: { scenes: SceneSheet[] }) {
+  const [visibleCount, setVisibleCount] = useState(SCENE_CARD_PAGE_SIZE);
+  const visibleScenes = scenes.slice(0, visibleCount);
+  const hiddenCount = Math.max(scenes.length - visibleScenes.length, 0);
   return (
-    <div className="profile-grid" aria-label="Scene sheets">
-      {scenes.map((scene) => (
-        <article className="profile-card" key={scene.scene_id}>
-          <header>
-            <h3>{scene.title}</h3>
-            <p>{scene.chapter_label}</p>
-          </header>
-          <details className="profile-disclosure">
-            <summary>Scene details</summary>
-            <div className="profile-section-grid">
-              <PanelSection section={scene.characters_present} />
-              <PanelSection section={scene.location} />
-              <PanelSection section={scene.mood} />
-              <PanelSection section={scene.purpose} />
-              <PanelSection section={scene.visual_highlights} />
-              <PanelSection section={scene.continuity_changes} />
-              <PanelSection section={scene.environment} />
-            </div>
-          </details>
-          <p className="evidence-note">{scene.evidence_summary}</p>
-        </article>
-      ))}
+    <div className="large-output-stack">
+      <LimitedResultsNote shown={visibleScenes.length} total={scenes.length} label="scene sheets" />
+      <div className="profile-grid" aria-label="Scene sheets">
+        {visibleScenes.map((scene) => (
+          <article className="profile-card" key={scene.scene_id}>
+            <header>
+              <h3>{scene.title}</h3>
+              <p>{scene.chapter_label}</p>
+            </header>
+            <details className="profile-disclosure">
+              <summary>Scene details</summary>
+              <div className="profile-section-grid">
+                <PanelSection section={scene.characters_present} />
+                <PanelSection section={scene.location} />
+                <PanelSection section={scene.mood} />
+                <PanelSection section={scene.purpose} />
+                <PanelSection section={scene.visual_highlights} />
+                <PanelSection section={scene.continuity_changes} />
+                <PanelSection section={scene.environment} />
+              </div>
+            </details>
+            <p className="evidence-note">{scene.evidence_summary}</p>
+          </article>
+        ))}
+      </div>
+      <LoadMoreButton
+        hiddenCount={hiddenCount}
+        pageSize={SCENE_CARD_PAGE_SIZE}
+        onLoadMore={() => setVisibleCount((currentCount) => currentCount + SCENE_CARD_PAGE_SIZE)}
+      />
     </div>
   );
 }
 
 function ContinuityPanel({ report }: { report: ContinuityReport }) {
-  const visibleScenes = report.scenes
-    .filter(
-      (scene) =>
-        scene.new.length > 0 ||
-        scene.updated.length > 0 ||
-        scene.still_known.length > 0 ||
-        scene.invalidated.length > 0,
-    )
-    .slice(0, 12);
+  const [visibleCount, setVisibleCount] = useState(CONTINUITY_SCENE_PAGE_SIZE);
+  const scenesWithChanges = report.scenes.filter(
+    (scene) =>
+      scene.new.length > 0 ||
+      scene.updated.length > 0 ||
+      scene.still_known.length > 0 ||
+      scene.invalidated.length > 0,
+  );
+  const visibleScenes = scenesWithChanges.slice(0, visibleCount);
+  const hiddenCount = Math.max(scenesWithChanges.length - visibleScenes.length, 0);
   if (visibleScenes.length === 0) {
     return (
       <EmptyState title="No continuity changes">
@@ -452,6 +630,11 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
   }
   return (
     <div className="compact-list timeline-change-list" aria-label="Continuity report">
+      <LimitedResultsNote
+        shown={visibleScenes.length}
+        total={scenesWithChanges.length}
+        label="continuity scenes"
+      />
       {visibleScenes.map((scene, index) => (
         <details
           className="compact-row timeline-change-group detail-disclosure"
@@ -475,6 +658,13 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
           ) : null}
         </details>
       ))}
+      <LoadMoreButton
+        hiddenCount={hiddenCount}
+        pageSize={CONTINUITY_SCENE_PAGE_SIZE}
+        onLoadMore={() =>
+          setVisibleCount((currentCount) => currentCount + CONTINUITY_SCENE_PAGE_SIZE)
+        }
+      />
     </div>
   );
 }
@@ -641,6 +831,44 @@ function PanelSection({ section }: { section: OutputSection }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+function LimitedResultsNote({
+  shown,
+  total,
+  label,
+}: {
+  shown: number;
+  total: number;
+  label: string;
+}) {
+  if (total <= shown) {
+    return null;
+  }
+  return (
+    <p className="result-summary">
+      Showing {shown.toLocaleString()} of {total.toLocaleString()} {label}.
+    </p>
+  );
+}
+
+function LoadMoreButton({
+  hiddenCount,
+  pageSize,
+  onLoadMore,
+}: {
+  hiddenCount: number;
+  pageSize: number;
+  onLoadMore: () => void;
+}) {
+  if (hiddenCount <= 0) {
+    return null;
+  }
+  return (
+    <button type="button" className="text-button" onClick={onLoadMore}>
+      Show {Math.min(hiddenCount, pageSize).toLocaleString()} more
+    </button>
   );
 }
 
