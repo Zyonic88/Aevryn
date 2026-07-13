@@ -92,6 +92,27 @@ def test_pronoun_resolution_requires_contextual_identity_support() -> None:
     assert decision.reason == "Pronoun reference requires contextual identity support."
 
 
+def test_pronoun_surface_does_not_resolve_as_canonical_name() -> None:
+    """Pronoun-looking extraction artifacts should not bypass pronoun safety rules."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("She", "anchor_026"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_she",
+                canonical_name="She",
+                evidence_anchor_ids=("anchor_026",),
+            ),
+        ),
+        context_entity_ids=("character_she",),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.candidates == ()
+
+
 def test_low_confidence_description_remains_unresolved_candidate() -> None:
     """Soft matches should remain candidates instead of silently merging entities."""
     engine = EntityResolutionEngine()

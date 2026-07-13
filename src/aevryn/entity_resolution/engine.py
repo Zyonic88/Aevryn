@@ -144,6 +144,16 @@ class EntityResolutionEngine:
     ) -> ResolutionCandidate | None:
         """Return the best candidate score for one profile."""
         normalized_reference = _normalized_phrase(reference.text)
+        if _is_pronoun_phrase(normalized_reference):
+            for pronoun in profile.pronouns:
+                if normalized_reference == _normalized_phrase(pronoun):
+                    return ResolutionCandidate(
+                        entity_id=profile.entity_id,
+                        confidence=0.87,
+                        match_kind="pronoun",
+                        matched_text=pronoun,
+                    )
+            return None
         if normalized_reference == _normalized_phrase(profile.canonical_name):
             return ResolutionCandidate(
                 entity_id=profile.entity_id,
@@ -230,6 +240,22 @@ def _normalized_phrase(value: str) -> str:
         if part not in {"a", "an", "the"}
     )
     return " ".join(parts)
+
+
+def _is_pronoun_phrase(value: str) -> bool:
+    """Return whether a normalized phrase is only a pronoun reference."""
+    return value in {
+        "he",
+        "him",
+        "his",
+        "she",
+        "her",
+        "hers",
+        "they",
+        "them",
+        "their",
+        "theirs",
+    }
 
 
 def _without_possessive_suffixes(value: str) -> str:
