@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { apiClient } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
+import { formatDateTime } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
 import { readActiveStoryId, saveActiveStoryId } from "../stories/activeStory";
 
@@ -93,7 +94,7 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
   }
 
   function requestStoryDeletion(storyId: string, storyTitle: string) {
-    if (!window.confirm(`Delete project ${storyTitle}?`)) {
+    if (!window.confirm(`Delete story ${storyTitle}?`)) {
       return;
     }
     if (!window.confirm("Story data will be lost forever, are you sure?")) {
@@ -133,7 +134,7 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
         {stories.length > 0 ? (
           <div className="project-list">
             {stories.map((story) => (
-              <div key={story.story_id} className="project-row project-row-action">
+              <div key={story.story_id} className="project-row project-row-action story-row-action">
                 <button
                   type="button"
                   className="text-button story-select-button"
@@ -143,15 +144,16 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
                   <strong>{story.title}</strong>
                   <span>{activeStoryId === story.story_id ? "Selected story" : "Select story"}</span>
                 </button>
-                <span>{story.updated_at}</span>
+                <span>Updated {formatDateTime(story.updated_at)}</span>
                 <button
                   type="button"
                   className="icon-button danger-button"
-                  aria-label={`Delete ${story.title}`}
+                  aria-label={`Delete story ${story.title}`}
+                  title={`Delete story ${story.title}`}
                   disabled={deleteStory.isPending}
                   onClick={() => requestStoryDeletion(story.story_id, story.title)}
                 >
-                  x
+                  <span aria-hidden="true">×</span>
                 </button>
               </div>
             ))}

@@ -4780,9 +4780,9 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: /Beta Story Select story/ }));
 
     expect(window.localStorage.getItem("aevryn.activeStory.project_alpha")).toBe("story_beta");
-    await user.click(screen.getByRole("button", { name: "Delete Beta Story" }));
+    await user.click(screen.getByRole("button", { name: "Delete story Beta Story" }));
 
-    expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete project Beta Story?");
+    expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete story Beta Story?");
     expect(confirmSpy).toHaveBeenNthCalledWith(2, "Story data will be lost forever, are you sure?");
     expect(await screen.findByText("Alpha Story")).toBeInTheDocument();
     expect(screen.queryByText("Beta Story")).not.toBeInTheDocument();
