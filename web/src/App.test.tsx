@@ -3470,13 +3470,27 @@ describe("App shell routing", () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
 
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={["/projects/project_alpha/world"]}>
         <App />
       </MemoryRouter>,
     );
 
     expect(await screen.findByRole("heading", { name: "World" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(container.querySelector("details.identity-review-panel > summary")).toBeInTheDocument(),
+    );
+    const identityReviewToggle = container.querySelector(
+      "details.identity-review-panel > summary",
+    ) as HTMLElement;
+    const identityReviewDisclosure = container.querySelector(
+      "details.identity-review-panel",
+    ) as HTMLDetailsElement;
+    expect(identityReviewToggle).toBeInTheDocument();
+    expect(identityReviewDisclosure.open).toBe(false);
+    await user.click(identityReviewToggle);
+    expect(identityReviewDisclosure.open).toBe(true);
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByText("Developer preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}The hangar was quiet.");

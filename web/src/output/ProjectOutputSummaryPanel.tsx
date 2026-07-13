@@ -129,7 +129,9 @@ function ProjectOutputSummary({
       </dl>
       <LanguageIdentityStatus outputs={outputs} />
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
-      {surface === "characters" ? <IdentityReviewPanel outputs={outputs} /> : null}
+      {hasIdentityReviewItems(outputs) ? (
+        <IdentityReviewPanel outputs={outputs} defaultOpen={surface === "characters"} />
+      ) : null}
       <ReadableSurfacePanels surface={surface} outputs={outputs} />
       {surfaceSummary.status === "waiting" ? (
         <EmptyState title="No extracted canon content yet">
@@ -139,6 +141,11 @@ function ProjectOutputSummary({
       ) : null}
     </section>
   );
+}
+
+function hasIdentityReviewItems(outputs: ProjectOutputs): boolean {
+  const summary = outputs.language_identity;
+  return summary.identity_ambiguous_count + summary.identity_unresolved_count > 0;
 }
 
 function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
@@ -200,7 +207,13 @@ function identityReviewAction(status: string): string {
   return "Aevryn marked this reference for review";
 }
 
-function IdentityReviewPanel({ outputs }: { outputs: ProjectOutputs }) {
+function IdentityReviewPanel({
+  outputs,
+  defaultOpen,
+}: {
+  outputs: ProjectOutputs;
+  defaultOpen: boolean;
+}) {
   const [statusFilter, setStatusFilter] = useState<"all" | "ambiguous" | "unresolved">("all");
   const summary = outputs.language_identity;
   const reviewTotal = summary.identity_ambiguous_count + summary.identity_unresolved_count;
@@ -215,61 +228,64 @@ function IdentityReviewPanel({ outputs }: { outputs: ProjectOutputs }) {
   }
 
   return (
-    <section className="identity-review-panel" aria-label="Identity review">
-      <div className="identity-review-heading">
-        <div>
-          <h3>Identity Review</h3>
-          <p>
-            {summary.identity_resolved_count.toLocaleString()} resolved,{" "}
-            {summary.identity_ambiguous_count.toLocaleString()} ambiguous,{" "}
-            {summary.identity_unresolved_count.toLocaleString()} unresolved.
+    <details className="identity-review-panel" open={defaultOpen}>
+      <summary>Identity Review</summary>
+      <section aria-label="Identity review">
+        <div className="identity-review-heading">
+          <div>
+            <h3>Identity Review</h3>
+            <p>
+              {summary.identity_resolved_count.toLocaleString()} resolved,{" "}
+              {summary.identity_ambiguous_count.toLocaleString()} ambiguous,{" "}
+              {summary.identity_unresolved_count.toLocaleString()} unresolved.
+            </p>
+          </div>
+          <div className="segmented-control" aria-label="Identity review filter">
+            <button
+              type="button"
+              aria-pressed={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              aria-pressed={statusFilter === "ambiguous"}
+              onClick={() => setStatusFilter("ambiguous")}
+            >
+              Ambiguous
+            </button>
+            <button
+              type="button"
+              aria-pressed={statusFilter === "unresolved"}
+              onClick={() => setStatusFilter("unresolved")}
+            >
+              Unresolved
+            </button>
+          </div>
+        </div>
+        {reviewTotal > reviewItems.length ? (
+          <p className="result-summary">
+            Showing {reviewItems.length.toLocaleString()} representative review examples from{" "}
+            {reviewTotal.toLocaleString()} references that need attention.
           </p>
-        </div>
-        <div className="segmented-control" aria-label="Identity review filter">
-          <button
-            type="button"
-            aria-pressed={statusFilter === "all"}
-            onClick={() => setStatusFilter("all")}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            aria-pressed={statusFilter === "ambiguous"}
-            onClick={() => setStatusFilter("ambiguous")}
-          >
-            Ambiguous
-          </button>
-          <button
-            type="button"
-            aria-pressed={statusFilter === "unresolved"}
-            onClick={() => setStatusFilter("unresolved")}
-          >
-            Unresolved
-          </button>
-        </div>
-      </div>
-      {reviewTotal > reviewItems.length ? (
-        <p className="result-summary">
-          Showing {reviewItems.length.toLocaleString()} representative review examples from{" "}
-          {reviewTotal.toLocaleString()} references that need attention.
-        </p>
-      ) : null}
-      {filteredItems.length > 0 ? (
-        <div className="compact-list">
-          {filteredItems.map((item) => (
-            <div className="compact-row identity-review-row" key={identityReviewKey(item)}>
-              <strong>{identityReviewTitle(item)}</strong>
-              <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <EmptyState title="No matching identity reviews">
-          No identity review examples match this filter.
-        </EmptyState>
-      )}
-    </section>
+        ) : null}
+        {filteredItems.length > 0 ? (
+          <div className="compact-list">
+            {filteredItems.map((item) => (
+              <div className="compact-row identity-review-row" key={identityReviewKey(item)}>
+                <strong>{identityReviewTitle(item)}</strong>
+                <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="No matching identity reviews">
+            No identity review examples match this filter.
+          </EmptyState>
+        )}
+      </section>
+    </details>
   );
 }
 
