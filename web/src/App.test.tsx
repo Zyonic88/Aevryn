@@ -3533,6 +3533,8 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Timeline" })).toBeInTheDocument();
+    expect(await screen.findByText("Chapter 1 / Scene 1; 1 change")).toBeInTheDocument();
+    expect(await screen.findByText("Chapter 2 / Scene 1; 1 change")).toBeInTheDocument();
     await user.click(screen.getByText("Developer preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
@@ -3584,6 +3586,9 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Continuity" })).toBeInTheDocument();
+    expect(await screen.findByLabelText("Chapter 1, Scene 1 continuity details")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Chapter 2, Scene 1 continuity details")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Scene 1 continuity details")).not.toBeInTheDocument();
     await user.click(screen.getByText("Developer preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");

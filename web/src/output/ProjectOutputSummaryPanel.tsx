@@ -16,7 +16,7 @@ import type {
 } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, LoadingMessage } from "../components/Feedback";
-import { formatDateTime, formatRunStatus } from "../formatting/display";
+import { formatDateTime, formatRunStatus, formatSceneScope } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
 import {
   compactIdentityReviewItems,
@@ -561,7 +561,9 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
         >
           <summary>
             <strong>{group.title}</strong>
-            <span>{group.subtitle}</span>
+            <span>
+              {group.subtitle}; {timelineGroupChangeLabel(group.changes.length)}
+            </span>
           </summary>
           <ul>
             {group.changes.map((change) => (
@@ -651,14 +653,14 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
         total={scenesWithChanges.length}
         label="continuity scenes"
       />
-      {visibleScenes.map((scene, index) => (
+      {visibleScenes.map((scene) => (
         <details
           className="compact-row timeline-change-group detail-disclosure"
           key={scene.scene_id}
-          aria-label={`Scene ${index + 1} continuity details`}
+          aria-label={`${formatSceneScope(scene.scene_id)} continuity details`}
         >
           <summary>
-            <strong>{`Scene ${index + 1}`}</strong>
+            <strong>{formatSceneScope(scene.scene_id)}</strong>
             <span>{continuitySceneSummary(scene)}</span>
           </summary>
           <div className="continuity-change-grid">
@@ -773,6 +775,10 @@ function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): stri
   const changeLabel = `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
   const stableLabel = `${stableCount.toLocaleString()} still known`;
   return `${changeLabel}; ${stableLabel}`;
+}
+
+function timelineGroupChangeLabel(changeCount: number): string {
+  return `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
 }
 
 function continuityChangeCount(scene: ContinuityReport["scenes"][number]): number {
