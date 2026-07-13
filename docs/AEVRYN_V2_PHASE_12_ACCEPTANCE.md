@@ -101,3 +101,24 @@ Phase 12 does not include:
 Phase 12 is complete only when backend gates, frontend gates, deterministic translation tests, deterministic entity-resolution tests, and a browser alpha pass all succeed.
 
 V2 release-candidate readiness remains blocked until Phase 12 is accepted.
+
+---
+
+# Current Status
+
+Status: **Acceptance pending browser alpha pass**
+
+Verified on July 13, 2026:
+
+* Backend deterministic gates passed: `944 passed`
+* Translation Foundation tests passed: `22 passed`
+* Entity Resolution Foundation tests passed: `20 passed`
+* Frontend lint passed
+* Frontend tests passed: `160 passed`
+* Frontend production build passed
+
+Remaining before Phase 12 acceptance:
+
+* Browser alpha pass against hosted Aevryn
+* Confirm creator-facing views hide raw machine identity artifacts
+* Confirm translation and entity-resolution metadata appear only as review-safe uncertainty
