@@ -2007,6 +2007,7 @@ def test_project_outputs_translation_review_items_are_stable_metadata() -> None:
                                         "issue_code": "translation_review_required",
                                         "issue_label": "Glossary term needs review",
                                         "evidence_anchor_count": 1,
+                                        "possible_meaning_count": 2,
                                         "source_term": "private_source_term",
                                         "message": "Private issue prose.",
                                     }
@@ -2028,11 +2029,15 @@ def test_project_outputs_translation_review_items_are_stable_metadata() -> None:
     assert summary["translation_review_items"] == [
         {
             "issue_code": "translation_review_required",
-            "issue_label": "Glossary term needs review",
+            "issue_label": "Multiple meanings need review",
             "chapter_id": "source_alpha_chapter_001",
             "scene_id": "source_alpha_chapter_001_scene_001",
             "evidence_anchor_count": 1,
-            "reason": "Aevryn preserved an uncertain term for review.",
+            "possible_meaning_count": 2,
+            "reason": (
+                "Aevryn found multiple plausible meanings and preserved the original term "
+                "for review."
+            ),
         }
     ]
     assert "private_source_term" not in response.text

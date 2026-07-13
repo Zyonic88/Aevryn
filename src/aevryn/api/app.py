@@ -3068,18 +3068,29 @@ def _translation_review_items(
             issue_code = _translation_issue_code(
                 _string_payload_value(issue, "issue_code")
             )
+            possible_meaning_count = _int_payload_value(
+                issue,
+                "possible_meaning_count",
+            )
             try:
                 items.append(
                     ProjectTranslationReviewItem(
                         issue_code=issue_code,
-                        issue_label=_translation_issue_label(issue_code),
+                        issue_label=_translation_issue_label(
+                            issue_code,
+                            possible_meaning_count=possible_meaning_count,
+                        ),
                         chapter_id=_string_payload_value(unit, "source_chapter_id"),
                         scene_id=_string_payload_value(unit, "source_scene_id"),
                         evidence_anchor_count=_int_payload_value(
                             issue,
                             "evidence_anchor_count",
                         ),
-                        reason=_translation_review_reason(issue_code),
+                        possible_meaning_count=possible_meaning_count,
+                        reason=_translation_review_reason(
+                            issue_code,
+                            possible_meaning_count=possible_meaning_count,
+                        ),
                     )
                 )
             except (ValueError, ValidationError):
@@ -3094,15 +3105,30 @@ def _translation_issue_code(value: str) -> str:
     return "translation_review_required"
 
 
-def _translation_issue_label(issue_code: str) -> str:
+def _translation_issue_label(
+    issue_code: str,
+    *,
+    possible_meaning_count: int = 0,
+) -> str:
     """Return creator-facing translation review copy."""
+    if issue_code == "translation_review_required" and possible_meaning_count > 1:
+        return "Multiple meanings need review"
     if issue_code == "translation_review_required":
         return "Glossary term needs review"
     return "Translation needs review"
 
 
-def _translation_review_reason(issue_code: str) -> str:
+def _translation_review_reason(
+    issue_code: str,
+    *,
+    possible_meaning_count: int = 0,
+) -> str:
     """Return stable metadata-only translation review copy."""
+    if issue_code == "translation_review_required" and possible_meaning_count > 1:
+        return (
+            "Aevryn found multiple plausible meanings and preserved the original term "
+            "for review."
+        )
     if issue_code == "translation_review_required":
         return "Aevryn preserved an uncertain term for review."
     return "Aevryn preserved uncertain translation context for review."

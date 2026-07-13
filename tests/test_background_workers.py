@@ -1047,7 +1047,7 @@ def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> No
                     {
                         "evidence_anchor_count": 1,
                         "issue_code": "translation_review_required",
-                        "issue_label": "Glossary term needs review",
+                        "issue_label": "Multiple meanings need review",
                         "possible_meaning_count": 2,
                         "term_kind": "power_system",
                     }

@@ -477,7 +477,10 @@ def _translation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]
                 "issues": tuple(
                     {
                         "issue_code": _translation_issue_code(issue.issue_code),
-                        "issue_label": _translation_issue_label(issue.issue_code),
+                        "issue_label": _translation_issue_label(
+                            issue.issue_code,
+                            possible_meaning_count=issue.possible_meaning_count,
+                        ),
                         "term_kind": issue.term_kind,
                         "evidence_anchor_count": len(issue.evidence_anchor_ids),
                         "possible_meaning_count": issue.possible_meaning_count,
@@ -497,8 +500,17 @@ def _translation_issue_code(value: str) -> str:
     return "translation_review_required"
 
 
-def _translation_issue_label(value: str) -> str:
+def _translation_issue_label(
+    value: str,
+    *,
+    possible_meaning_count: int = 0,
+) -> str:
     """Return metadata-only translation review label."""
+    if (
+        _translation_issue_code(value) == "translation_review_required"
+        and possible_meaning_count > 1
+    ):
+        return "Multiple meanings need review"
     if _translation_issue_code(value) == "translation_review_required":
         return "Glossary term needs review"
     return "Translation needs review"

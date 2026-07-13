@@ -38,6 +38,7 @@ Translation Foundation is accepted when:
 * translated or normalized text remains linked to original source evidence anchors
 * names, titles, aliases, honorifics, factions, locations, items, skills, and power-system terms are preserved or glossary-controlled
 * uncertain translations preserve the original term and mark it for review
+* terms with multiple plausible meanings preserve the original term and expose metadata-only review context
 * translation does not create canon facts
 * translation does not remove source evidence
 * extraction can consume normalized text while citing original anchors
@@ -100,4 +101,3 @@ Phase 12 does not include:
 Phase 12 is complete only when backend gates, frontend gates, deterministic translation tests, deterministic entity-resolution tests, and a browser alpha pass all succeed.
 
 V2 release-candidate readiness remains blocked until Phase 12 is accepted.
-

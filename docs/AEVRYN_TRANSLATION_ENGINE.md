@@ -91,6 +91,8 @@ The Translation Engine can fail if:
 
 When uncertain, Translation should preserve the original term and mark it for glossary review.
 
+When a source term has multiple plausible meanings, Translation should preserve the original term, record ambiguity metadata, and require review instead of selecting one meaning by default.
+
 Unknown stays unknown.
 
 ## How Does It Interact With Other Systems?
@@ -139,6 +141,7 @@ Glossary entries should preserve:
 
 * Source term
 * Preferred translation
+* Possible meanings when the source term is ambiguous
 * Entity ID if known
 * First evidence anchor
 * Notes
