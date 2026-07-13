@@ -181,9 +181,7 @@ function PromptPreviewResult({ result }: { result: PromptPreview }) {
 
 function PromptSection({ section }: { section: OutputSection }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const promptPreviewText = readablePromptText(section, { maxItems: 10 });
-  const promptCopyText = readablePromptText(section);
-  const promptSummary = readablePromptSummary(section);
+  const promptText = readablePromptText(section, { maxItems: 10 });
 
   async function copyPrompt() {
     const clipboard = navigator.clipboard;
@@ -192,7 +190,7 @@ function PromptSection({ section }: { section: OutputSection }) {
       return;
     }
     try {
-      await clipboard.writeText(promptCopyText);
+      await clipboard.writeText(promptText);
       setCopyState("copied");
     } catch {
       setCopyState("failed");
@@ -217,11 +215,8 @@ function PromptSection({ section }: { section: OutputSection }) {
         </div>
       </div>
       <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
-        <summary>
-          <span>Show prompt</span>
-          <small>{promptSummary}</small>
-        </summary>
-        <p>{promptPreviewText}</p>
+        <summary>Show prompt</summary>
+        <p>{promptText}</p>
       </details>
     </section>
   );

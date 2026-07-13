@@ -531,44 +531,30 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
   const visibleGroups = timelineGroups.slice(0, visibleCount);
   const hiddenCount = Math.max(timelineGroups.length - visibleGroups.length, 0);
   return (
-    <div className="large-output-stack">
-      <LimitedResultsNote
-        shown={visibleGroups.length}
-        total={timelineGroups.length}
-        label="timeline groups"
-      />
-      <div className="compact-list timeline-change-list" aria-label="Timeline changes">
-        {visibleGroups.map((group) => (
-          <details
-            className="compact-row timeline-change-group detail-disclosure"
-            key={`${group.chapterIndex}-${group.sceneIndex}`}
-            aria-label={`${group.title} timeline details`}
-          >
-            <summary>
-              <strong>{group.title}</strong>
-              <span>{group.subtitle}</span>
-            </summary>
-            <ul>
-              {group.changes.map((change) => (
-                <li key={change.change_id}>
-                  <strong>{change.entity_name}</strong>
-                  <span aria-hidden="true"> - </span>
-                  <span>
-                    {readableLabel(change.attribute)}: {change.value}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </details>
-        ))}
-      </div>
-      <LoadMoreButton
-        hiddenCount={hiddenCount}
-        pageSize={TIMELINE_GROUP_PAGE_SIZE}
-        onLoadMore={() =>
-          setVisibleCount((currentCount) => currentCount + TIMELINE_GROUP_PAGE_SIZE)
-        }
-      />
+    <div className="compact-list timeline-change-list" aria-label="Timeline changes">
+      {timelineGroups.map((group) => (
+        <details
+          className="compact-row timeline-change-group detail-disclosure"
+          key={`${group.chapterIndex}-${group.sceneIndex}`}
+          aria-label={`${group.title} timeline details`}
+        >
+          <summary>
+            <strong>{group.title}</strong>
+            <span>{group.subtitle}</span>
+          </summary>
+          <ul>
+            {group.changes.map((change) => (
+              <li key={change.change_id}>
+                <strong>{change.entity_name}</strong>
+                <span aria-hidden="true"> - </span>
+                <span>
+                  {readableLabel(change.attribute)}: {change.value}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ))}
     </div>
   );
 }
@@ -578,36 +564,28 @@ function SceneSheetsPanel({ scenes }: { scenes: SceneSheet[] }) {
   const visibleScenes = scenes.slice(0, visibleCount);
   const hiddenCount = Math.max(scenes.length - visibleScenes.length, 0);
   return (
-    <div className="large-output-stack">
-      <LimitedResultsNote shown={visibleScenes.length} total={scenes.length} label="scene sheets" />
-      <div className="profile-grid" aria-label="Scene sheets">
-        {visibleScenes.map((scene) => (
-          <article className="profile-card" key={scene.scene_id}>
-            <header>
-              <h3>{scene.title}</h3>
-              <p>{scene.chapter_label}</p>
-            </header>
-            <details className="profile-disclosure">
-              <summary>Scene details</summary>
-              <div className="profile-section-grid">
-                <PanelSection section={scene.characters_present} />
-                <PanelSection section={scene.location} />
-                <PanelSection section={scene.mood} />
-                <PanelSection section={scene.purpose} />
-                <PanelSection section={scene.visual_highlights} />
-                <PanelSection section={scene.continuity_changes} />
-                <PanelSection section={scene.environment} />
-              </div>
-            </details>
-            <p className="evidence-note">{scene.evidence_summary}</p>
-          </article>
-        ))}
-      </div>
-      <LoadMoreButton
-        hiddenCount={hiddenCount}
-        pageSize={SCENE_CARD_PAGE_SIZE}
-        onLoadMore={() => setVisibleCount((currentCount) => currentCount + SCENE_CARD_PAGE_SIZE)}
-      />
+    <div className="profile-grid" aria-label="Scene sheets">
+      {scenes.map((scene) => (
+        <article className="profile-card" key={scene.scene_id}>
+          <header>
+            <h3>{scene.title}</h3>
+            <p>{scene.chapter_label}</p>
+          </header>
+          <details className="profile-disclosure">
+            <summary>Scene details</summary>
+            <div className="profile-section-grid">
+              <PanelSection section={scene.characters_present} />
+              <PanelSection section={scene.location} />
+              <PanelSection section={scene.mood} />
+              <PanelSection section={scene.purpose} />
+              <PanelSection section={scene.visual_highlights} />
+              <PanelSection section={scene.continuity_changes} />
+              <PanelSection section={scene.environment} />
+            </div>
+          </details>
+          <p className="evidence-note">{scene.evidence_summary}</p>
+        </article>
+      ))}
     </div>
   );
 }
@@ -631,44 +609,30 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
     );
   }
   return (
-    <div className="large-output-stack">
-      <LimitedResultsNote
-        shown={visibleScenes.length}
-        total={scenesWithChanges.length}
-        label="continuity scenes"
-      />
-      <div className="compact-list timeline-change-list" aria-label="Continuity report">
-        {visibleScenes.map((scene, index) => (
-          <details
-            className="compact-row timeline-change-group detail-disclosure"
-            key={scene.scene_id}
-            aria-label={`Scene ${index + 1} continuity details`}
-          >
-            <summary>
-              <strong>{`Scene ${index + 1}`}</strong>
-              <span>{continuitySceneSummary(scene)}</span>
-            </summary>
-            <div className="continuity-change-grid">
-              <ContinuityBucket title="New" records={scene.new} />
-              <ContinuityBucket title="Updated" records={scene.updated} />
-              <ContinuityBucket title="Invalidated" records={scene.invalidated} />
-            </div>
-            {scene.still_known.length > 0 ? (
-              <details className="nested-disclosure">
-                <summary>{`${scene.still_known.length.toLocaleString()} still known`}</summary>
-                <ContinuityBucket title="Still Known" records={scene.still_known} />
-              </details>
-            ) : null}
-          </details>
-        ))}
-      </div>
-      <LoadMoreButton
-        hiddenCount={hiddenCount}
-        pageSize={CONTINUITY_SCENE_PAGE_SIZE}
-        onLoadMore={() =>
-          setVisibleCount((currentCount) => currentCount + CONTINUITY_SCENE_PAGE_SIZE)
-        }
-      />
+    <div className="compact-list timeline-change-list" aria-label="Continuity report">
+      {visibleScenes.map((scene, index) => (
+        <details
+          className="compact-row timeline-change-group detail-disclosure"
+          key={scene.scene_id}
+          aria-label={`Scene ${index + 1} continuity details`}
+        >
+          <summary>
+            <strong>{`Scene ${index + 1}`}</strong>
+            <span>{continuitySceneSummary(scene)}</span>
+          </summary>
+          <div className="continuity-change-grid">
+            <ContinuityBucket title="New" records={scene.new} />
+            <ContinuityBucket title="Updated" records={scene.updated} />
+            <ContinuityBucket title="Invalidated" records={scene.invalidated} />
+          </div>
+          {scene.still_known.length > 0 ? (
+            <details className="nested-disclosure">
+              <summary>{`${scene.still_known.length.toLocaleString()} still known`}</summary>
+              <ContinuityBucket title="Still Known" records={scene.still_known} />
+            </details>
+          ) : null}
+        </details>
+      ))}
     </div>
   );
 }
@@ -752,44 +716,6 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
         </article>
       </div>
     </div>
-  );
-}
-
-function LimitedResultsNote({
-  shown,
-  total,
-  label,
-}: {
-  shown: number;
-  total: number;
-  label: string;
-}) {
-  if (shown >= total) {
-    return null;
-  }
-  return (
-    <p className="result-summary">
-      Showing {shown.toLocaleString()} of {total.toLocaleString()} {label}.
-    </p>
-  );
-}
-
-function LoadMoreButton({
-  hiddenCount,
-  pageSize,
-  onLoadMore,
-}: {
-  hiddenCount: number;
-  pageSize: number;
-  onLoadMore: () => void;
-}) {
-  if (hiddenCount <= 0) {
-    return null;
-  }
-  return (
-    <button type="button" className="secondary-button large-output-load-more" onClick={onLoadMore}>
-      Show {Math.min(hiddenCount, pageSize).toLocaleString()} more
-    </button>
   );
 }
 
@@ -882,7 +808,6 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
     section,
     full ? {} : { maxItems: MAX_VISIBLE_PROMPT_DETAILS },
   );
-  const promptSummary = readablePromptSummary(section);
 
   async function copyPrompt() {
     const clipboard = navigator.clipboard;
@@ -916,10 +841,7 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
         </div>
       </div>
       <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
-        <summary>
-          <span>Show prompt</span>
-          <small>{promptSummary}</small>
-        </summary>
+        <summary>Show prompt</summary>
         <p>{promptText}</p>
       </details>
     </section>
