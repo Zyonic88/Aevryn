@@ -959,6 +959,59 @@ def test_canon_snapshot_payload_stores_stable_identity_review_reasons() -> None:
     assert "the dagger carrier" not in snapshot_payload
 
 
+def test_canon_snapshot_payload_classifies_identity_reference_metadata_safely() -> None:
+    """Identity review metadata should classify references without persisting source text."""
+    imported_source = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo Story",
+        text="Chapter 1\n\nGeneral Charlotte arrived. She, waited.",
+    )
+    result = ProjectRunResult(
+        imported_source=imported_source,
+        database=CanonDatabase(),
+        extraction_results=(
+            ExtractionResult(scene_id="source_demo_chapter_001_scene_001"),
+        ),
+        update_summaries=(CanonUpdateSummary(),),
+        identity_resolutions=(
+            ResolvedReference(
+                reference=SurfaceReference(
+                    text="General Charlotte",
+                    evidence_anchor_id=(
+                        "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+                    ),
+                    chapter_id="source_demo_chapter_001",
+                    scene_id="source_demo_chapter_001_scene_001",
+                ),
+                status="ambiguous",
+                confidence=0.95,
+            ),
+            ResolvedReference(
+                reference=SurfaceReference(
+                    text="She,",
+                    evidence_anchor_id=(
+                        "source_demo_chapter_001_scene_001_paragraph_001_sentence_002_anchor"
+                    ),
+                    chapter_id="source_demo_chapter_001",
+                    scene_id="source_demo_chapter_001_scene_001",
+                ),
+                status="unresolved",
+                confidence=0.87,
+            ),
+        ),
+    )
+
+    parsed_payload = json.loads(_canon_snapshot_payload(result))
+    decisions = parsed_payload["entity_resolution"]["decisions"]
+
+    assert decisions[0]["reference_kind"] == "title"
+    assert decisions[0]["reference_label"] == "Title reference"
+    assert decisions[1]["reference_kind"] == "pronoun"
+    assert decisions[1]["reference_label"] == "Pronoun reference"
+    assert "General Charlotte" not in json.dumps(parsed_payload)
+    assert "She," not in json.dumps(parsed_payload)
+
+
 def test_canon_snapshot_payload_reports_quarantined_extraction_candidates() -> None:
     """Snapshot metadata should expose ungrounded AI candidate quarantine counts."""
     imported_source = StoryImporter().import_text(

@@ -549,16 +549,34 @@ def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, o
 def _identity_reference_kind(value: str) -> str:
     """Classify an identity surface reference without storing source prose."""
     normalized = value.strip().lower()
-    if normalized in {"he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs"}:
+    words = tuple(
+        part
+        for part in "".join(
+            character.lower() if character.isalnum() else " "
+            for character in normalized.replace("-", " ")
+        ).split()
+        if part
+    )
+    if words in {
+        ("he",),
+        ("him",),
+        ("his",),
+        ("she",),
+        ("her",),
+        ("hers",),
+        ("they",),
+        ("them",),
+        ("their",),
+        ("theirs",),
+    }:
         return "pronoun"
-    words = tuple(part for part in normalized.replace("-", " ").split() if part)
     if not words:
         return "unknown"
     if len(words) == 1:
         return "name"
     if words[0] in {"the", "a", "an"}:
         words = words[1:]
-    if words and words[-1] in {
+    title_words = {
         "captain",
         "commander",
         "engineer",
@@ -567,7 +585,8 @@ def _identity_reference_kind(value: str) -> str:
         "officer",
         "student",
         "teacher",
-    }:
+    }
+    if words and (words[0] in title_words or words[-1] in title_words):
         return "title"
     return "description"
 
