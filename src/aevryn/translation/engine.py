@@ -118,7 +118,7 @@ def _apply_glossary_once(
 
 
 def _glossary_pattern(glossary: tuple[GlossaryTerm, ...]) -> str:
-    """Return a longest-term-first regex for complete glossary terms."""
+    """Return a longest-term-first regex for complete Unicode glossary terms."""
     alternatives = "|".join(
         re.escape(term.source_term)
         for term in sorted(
@@ -126,7 +126,7 @@ def _glossary_pattern(glossary: tuple[GlossaryTerm, ...]) -> str:
             key=lambda item: (-len(item.source_term), item.source_term.casefold()),
         )
     )
-    return rf"(?<![A-Za-z0-9])(?:{alternatives})(?![A-Za-z0-9])"
+    return rf"(?<!\w)(?:{alternatives})(?!\w)"
 
 
 def _normalize_spacing(text: str) -> str:

@@ -133,6 +133,31 @@ def test_translation_glossary_matches_complete_terms_only() -> None:
     )
 
 
+def test_translation_glossary_respects_cjk_compound_boundaries() -> None:
+    """Single-character CJK terms should not mutate larger source compounds."""
+    engine = TranslationEngine()
+
+    result = engine.normalize_unit(
+        TranslationUnit(
+            unit_id="unit_001_cjk_boundaries",
+            source_text="她参悟了天道，也提到了 道 。",
+            evidence_anchor_ids=("anchor_011a",),
+            source_language="zh",
+            target_language="en",
+        ),
+        glossary=(
+            GlossaryTerm(
+                source_term="道",
+                preferred_term="Dao",
+                evidence_anchor_id="anchor_011a",
+                term_kind="power_system",
+            ),
+        ),
+    )
+
+    assert result.normalized_text == "她参悟了天道，也提到了 Dao 。"
+
+
 def test_translation_glossary_prefers_longer_overlapping_terms() -> None:
     """Specific canon terms should win over shorter overlapping glossary terms."""
     engine = TranslationEngine()
