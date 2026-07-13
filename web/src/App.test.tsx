@@ -4665,9 +4665,21 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Settings Areas" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Project Defaults/u })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Project Active Defaults/u })).toHaveAttribute(
       "href",
       "#project-settings",
+    );
+    expect(screen.getByRole("link", { name: /Account Managed/u })).toHaveAttribute(
+      "href",
+      "#account-settings",
+    );
+    expect(screen.getByRole("link", { name: /Privacy & Data Protected/u })).toHaveAttribute(
+      "href",
+      "#privacy-data-settings",
+    );
+    expect(screen.getByRole("link", { name: /Diagnostics Hidden/u })).toHaveAttribute(
+      "href",
+      "#diagnostics-settings",
     );
     expect(screen.getByRole("heading", { name: "Workspace Preferences" })).toBeInTheDocument();
     const accountPanel = screen.getByRole("heading", { name: "Account" }).closest("section");

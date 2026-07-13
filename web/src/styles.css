@@ -895,6 +895,27 @@ select:focus {
   overflow-wrap: anywhere;
 }
 
+.settings-area-heading {
+  display: flex !important;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-area-status {
+  display: inline-flex !important;
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid #c8d5e4;
+  border-radius: 999px;
+  color: #40516a !important;
+  background: #ffffff;
+  font-size: 11px !important;
+  font-weight: 800;
+  line-height: 1.2 !important;
+  text-transform: uppercase;
+}
+
 .settings-scope-grid strong,
 .settings-summary-list dt {
   color: #536174;
