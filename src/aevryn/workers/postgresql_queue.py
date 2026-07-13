@@ -419,7 +419,13 @@ def _timestamp_string(value: Any) -> str:
     """Return a UTC timestamp string from PostgreSQL or test values."""
     if isinstance(value, str):
         return value
-    return value.isoformat().replace("+00:00", "Z")
+    isoformat = getattr(value, "isoformat", None)
+    if not callable(isoformat):
+        raise PersistenceError("Background job timestamp must be a string or datetime value.")
+    timestamp = isoformat()
+    if not isinstance(timestamp, str):
+        raise PersistenceError("Background job timestamp conversion must return text.")
+    return timestamp.replace("+00:00", "Z")
 
 
 def _is_unique_violation(error: Exception) -> bool:

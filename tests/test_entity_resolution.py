@@ -152,6 +152,58 @@ def test_resolves_title_name_variant_without_prebuilt_alias() -> None:
     assert decision.candidates[0].match_kind == "title_name"
 
 
+def test_resolves_explicit_relationship_label_variant() -> None:
+    """Family-role references should resolve only when explicitly profile-backed."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Zhao Chen's sister", "anchor_032a"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_jiang_shasha",
+                canonical_name="Jiang Shasha",
+                relationship_labels=("sister of Zhao Chen",),
+                evidence_anchor_ids=("anchor_002",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_jiang_shasha"
+    assert decision.confidence == 0.91
+    assert decision.candidates[0].match_kind == "relationship_label"
+
+
+def test_shared_honorific_stays_ambiguous() -> None:
+    """Honorifics should not merge identities when multiple profiles carry the same title."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Senior Brother", "anchor_032c"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_li_wei",
+                canonical_name="Li Wei",
+                honorifics=("Senior Brother",),
+                evidence_anchor_ids=("anchor_010",),
+            ),
+            EntityIdentityProfile(
+                entity_id="character_han_feng",
+                canonical_name="Han Feng",
+                honorifics=("Senior Brother",),
+                evidence_anchor_ids=("anchor_011",),
+            ),
+        ),
+    )
+
+    assert decision.status == "ambiguous"
+    assert decision.entity_id is None
+    assert {candidate.entity_id for candidate in decision.candidates} == {
+        "character_han_feng",
+        "character_li_wei",
+    }
+
+
 def test_title_with_different_name_does_not_resolve_from_title_alone() -> None:
     """A shared title should not merge a different named surface reference."""
     engine = EntityResolutionEngine()
@@ -296,4 +348,14 @@ def test_identity_profiles_reject_duplicate_aliases() -> None:
             entity_id="character_charlotte",
             canonical_name="Charlotte",
             aliases=("General Charlotte", "General Charlotte"),
+        )
+
+
+def test_identity_profiles_reject_duplicate_relationship_labels() -> None:
+    """Relationship labels should stay deterministic."""
+    with pytest.raises(ValueError, match="relationship labels must be unique"):
+        EntityIdentityProfile(
+            entity_id="character_jiang_shasha",
+            canonical_name="Jiang Shasha",
+            relationship_labels=("sister of Zhao Chen", "sister of Zhao Chen"),
         )

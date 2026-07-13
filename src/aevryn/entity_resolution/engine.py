@@ -165,6 +165,14 @@ class EntityResolutionEngine:
                     match_kind="title",
                     matched_text=title,
                 )
+        for honorific in profile.honorifics:
+            if normalized_reference == _normalized_phrase(honorific):
+                return ResolutionCandidate(
+                    entity_id=profile.entity_id,
+                    confidence=0.9,
+                    match_kind="honorific",
+                    matched_text=honorific,
+                )
         for description in profile.descriptions:
             if normalized_reference == _normalized_phrase(description):
                 return ResolutionCandidate(
@@ -173,6 +181,9 @@ class EntityResolutionEngine:
                     match_kind="description",
                     matched_text=description,
                 )
+        relationship_score = _relationship_label_score(normalized_reference, profile)
+        if relationship_score is not None:
+            return relationship_score
         for pronoun in profile.pronouns:
             if normalized_reference == _normalized_phrase(pronoun):
                 return ResolutionCandidate(
@@ -206,6 +217,7 @@ def _validated_profiles(
 
 def _normalized_phrase(value: str) -> str:
     """Return a comparison-safe phrase."""
+    value = value.replace("'s", "").replace("'S", "").replace("’s", "").replace("’S", "")
     normalized = "".join(
         character.lower() if character.isalnum() else " "
         for character in value.strip()
@@ -286,6 +298,39 @@ def _title_name_score(
                 matched_text=f"{profile.canonical_name} with title",
             )
     return None
+
+
+def _relationship_label_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Return a candidate for explicit relationship labels."""
+    for relationship_label in profile.relationship_labels:
+        normalized_label = _normalized_phrase(relationship_label)
+        if normalized_reference in {
+            normalized_label,
+            _possessive_relationship_variant(normalized_label),
+        }:
+            return ResolutionCandidate(
+                entity_id=profile.entity_id,
+                confidence=0.91,
+                match_kind="relationship_label",
+                matched_text=relationship_label,
+            )
+    return None
+
+
+def _possessive_relationship_variant(normalized_label: str) -> str:
+    """Convert labels like "sister of zhao chen" to "zhao chen sister"."""
+    label_parts = normalized_label.split()
+    if len(label_parts) < 3 or "of" not in label_parts:
+        return normalized_label
+    of_index = label_parts.index("of")
+    relationship = label_parts[:of_index]
+    owner = label_parts[of_index + 1 :]
+    if not relationship or not owner:
+        return normalized_label
+    return " ".join((*owner, *relationship))
 
 
 def _description_variant_confidence(

@@ -35,7 +35,9 @@ class EntityIdentityProfile:
     entity_type: str = "character"
     aliases: tuple[str, ...] = ()
     titles: tuple[str, ...] = ()
+    honorifics: tuple[str, ...] = ()
     descriptions: tuple[str, ...] = ()
+    relationship_labels: tuple[str, ...] = ()
     pronouns: tuple[str, ...] = ()
     evidence_anchor_ids: tuple[str, ...] = ()
 
@@ -59,8 +61,21 @@ class EntityIdentityProfile:
         )
         object.__setattr__(
             self,
+            "honorifics",
+            _normalized_text_values(self.honorifics, "Entity identity honorifics"),
+        )
+        object.__setattr__(
+            self,
             "descriptions",
             _normalized_text_values(self.descriptions, "Entity identity descriptions"),
+        )
+        object.__setattr__(
+            self,
+            "relationship_labels",
+            _normalized_text_values(
+                self.relationship_labels,
+                "Entity identity relationship labels",
+            ),
         )
         object.__setattr__(
             self,
@@ -149,4 +164,3 @@ def _require_confidence(confidence: float) -> None:
         or not 0.0 <= confidence <= 1.0
     ):
         raise ValueError("Resolution confidence must be between 0.0 and 1.0.")
-
