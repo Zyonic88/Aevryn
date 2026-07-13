@@ -109,6 +109,66 @@ def test_translation_glossary_prefers_longer_overlapping_terms() -> None:
     )
 
 
+def test_translation_glossary_does_not_rewrite_preferred_long_term_output() -> None:
+    """Shorter terms should not mutate the preferred output for a longer term."""
+    engine = TranslationEngine()
+
+    result = engine.normalize_unit(
+        TranslationUnit(
+            unit_id="unit_001_no_cascade",
+            source_text="The t3 blizzard-class light cruiser docked beside a blizzard shrine.",
+            evidence_anchor_ids=("anchor_012a",),
+        ),
+        glossary=(
+            GlossaryTerm(
+                source_term="t3 blizzard-class light cruiser",
+                preferred_term="T3 Blizzard-class Light Interstellar Battlecruiser",
+                evidence_anchor_id="anchor_012a",
+                entity_id="item_t3_blizzard",
+            ),
+            GlossaryTerm(
+                source_term="blizzard",
+                preferred_term="storm",
+                evidence_anchor_id="anchor_012a",
+            ),
+        ),
+    )
+
+    assert result.normalized_text == (
+        "The T3 Blizzard-class Light Interstellar Battlecruiser docked beside a storm shrine."
+    )
+
+
+def test_uncertain_long_glossary_term_blocks_partial_replacement() -> None:
+    """Uncertain phrases should be preserved whole instead of partially normalized."""
+    engine = TranslationEngine()
+
+    result = engine.normalize_unit(
+        TranslationUnit(
+            unit_id="unit_001_uncertain_overlap",
+            source_text="Charlotte studied the qi blade before sensing qi nearby.",
+            evidence_anchor_ids=("anchor_012b",),
+        ),
+        glossary=(
+            GlossaryTerm(
+                source_term="qi blade",
+                preferred_term="qi blade",
+                evidence_anchor_id="anchor_012b",
+                review_required=True,
+            ),
+            GlossaryTerm(
+                source_term="qi",
+                preferred_term="Qi",
+                evidence_anchor_id="anchor_012b",
+            ),
+        ),
+    )
+
+    assert result.normalized_text == "Charlotte studied the qi blade before sensing Qi nearby."
+    assert len(result.issues) == 1
+    assert result.issues[0].source_term == "qi blade"
+
+
 def test_translation_glossary_rejects_duplicate_source_terms() -> None:
     """Duplicate glossary source terms should not make normalization order-dependent."""
     engine = TranslationEngine()
