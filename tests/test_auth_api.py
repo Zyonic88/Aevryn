@@ -1726,6 +1726,7 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
             "reference_label": "Name reference",
             "candidate_count": 0,
             "confidence": 0.0,
+            "review_count": 1,
             "reason": "Identity could not be matched with enough evidence.",
         }
     ]
@@ -1814,6 +1815,19 @@ def test_project_outputs_identity_review_reasons_are_stable_metadata() -> None:
                                 "candidate_count": 2,
                                 "confidence": 0.58,
                                 "reason": "Mark carried a rusty dagger in the original scene.",
+                            },
+                            {
+                                "status": "ambiguous",
+                                "chapter_id": "source_alpha_chapter_002",
+                                "scene_id": "source_alpha_chapter_002_scene_001",
+                                "evidence_anchor_id": "anchor_002",
+                                "reference_kind": "description",
+                                "reference_label": "Description reference",
+                                "candidate_count": 2,
+                                "confidence": 0.58,
+                                "reason": (
+                                    "This second source-adjacent reason must not leak either."
+                                ),
                             }
                         ],
                     },
@@ -1837,10 +1851,12 @@ def test_project_outputs_identity_review_reasons_are_stable_metadata() -> None:
             "reference_label": "Description reference",
             "candidate_count": 2,
             "confidence": 0.58,
+            "review_count": 2,
             "reason": "Identity has multiple possible matches and needs review.",
         }
     ]
     assert "Mark carried a rusty dagger" not in response.text
+    assert "second source-adjacent reason" not in response.text
 
 
 def test_project_outputs_translation_review_items_are_stable_metadata() -> None:

@@ -194,6 +194,9 @@ function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
         <div className="profile-section-grid">
           <ProfileSection section={profile.race} />
           <ProfileSection section={profile.gender} />
+          <ProfileSection section={profile.aliases} />
+          <ProfileSection section={profile.titles} />
+          <ProfileSection section={profile.descriptions} />
           <ProfileSection section={profile.status} />
           <ProfileSection section={profile.current_goal} />
           <ProfileSection section={profile.current_equipment} />
