@@ -304,6 +304,46 @@ def test_uncertain_glossary_issue_keeps_protected_term_category() -> None:
     assert result.issues[0].source_term == "dantian"
 
 
+def test_ambiguous_glossary_term_preserves_source_and_records_meaning_count() -> None:
+    """Terms with multiple plausible meanings should not be translated by guesswork."""
+    engine = TranslationEngine()
+
+    result = engine.normalize_unit(
+        TranslationUnit(
+            unit_id="unit_002_ambiguous_term",
+            source_text="The dao shook as Charlotte stepped forward.",
+            evidence_anchor_ids=("anchor_022",),
+        ),
+        glossary=(
+            GlossaryTerm(
+                source_term="dao",
+                preferred_term="Dao",
+                possible_meanings=("path or principle", "blade or saber"),
+                evidence_anchor_id="anchor_022",
+                term_kind="power_system",
+            ),
+        ),
+    )
+
+    assert result.normalized_text == "The dao shook as Charlotte stepped forward."
+    assert len(result.issues) == 1
+    assert result.issues[0].issue_code == "translation_review_required"
+    assert result.issues[0].message == "Ambiguous glossary term preserved for review."
+    assert result.issues[0].term_kind == "power_system"
+    assert result.issues[0].possible_meaning_count == 2
+
+
+def test_glossary_possible_meanings_are_normalized_and_unique() -> None:
+    """Ambiguity choices should be deterministic before they enter translation review."""
+    with pytest.raises(ValueError, match="possible meanings must be unique"):
+        GlossaryTerm(
+            source_term="dao",
+            preferred_term="Dao",
+            possible_meanings=("path or principle", " path or principle "),
+            evidence_anchor_id="anchor_023",
+        )
+
+
 def test_translation_units_reject_duplicate_anchor_links() -> None:
     """Translation source links should remain deterministic."""
     with pytest.raises(ValueError, match="must be unique"):

@@ -94,17 +94,21 @@ def _apply_glossary_once(
     def replace_match(match: re.Match[str]) -> str:
         source_text = match.group(0)
         term = terms_by_source[source_text.casefold()]
-        if term.review_required:
+        if term.review_required or term.possible_meanings:
             reviewed_key = term.source_term.casefold()
             if reviewed_key not in reviewed_terms:
                 reviewed_terms.add(reviewed_key)
+                message = "Uncertain glossary term preserved for review."
+                if term.possible_meanings:
+                    message = "Ambiguous glossary term preserved for review."
                 issues.append(
                     TranslationIssue(
                         issue_code="translation_review_required",
                         source_term=term.source_term,
-                        message="Uncertain glossary term preserved for review.",
+                        message=message,
                         evidence_anchor_ids=evidence_anchor_ids,
                         term_kind=term.term_kind,
+                        possible_meaning_count=len(term.possible_meanings),
                     )
                 )
             return source_text
