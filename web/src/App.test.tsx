@@ -3336,6 +3336,9 @@ describe("App shell routing", () => {
     const promptBodies = selectedPack.querySelectorAll("details.prompt-disclosure");
     expect(promptBodies).toHaveLength(4);
     promptBodies.forEach((body) => expect(body).not.toHaveAttribute("open"));
+    expect(
+      within(selectedPack).getByText(/Show Image Prompt - \d+ prompt details ready\./u),
+    ).toBeInTheDocument();
     await user.click(within(selectedPack).getByRole("button", { name: "Copy Image Prompt" }));
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Scene 1 image prompt detail")),
@@ -3641,6 +3644,10 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
+    const promptPreviewResult = screen.getByRole("region", { name: "Prompt pack preview result" });
+    expect(
+      within(promptPreviewResult).getByText(/Show Image Prompt - \d+ prompt details ready\./u),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Image Prompt" }).length).toBeGreaterThanOrEqual(
       1,
     );
