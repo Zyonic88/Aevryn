@@ -1283,12 +1283,12 @@ def _merged_identity_profiles(
             entity_id=current.entity_id,
             canonical_name=current.canonical_name,
             entity_type=current.entity_type,
-            aliases=tuple(sorted(set(current.aliases).union(addition.aliases))),
-            titles=tuple(sorted(set(current.titles).union(addition.titles))),
-            descriptions=tuple(
-                sorted(set(current.descriptions).union(addition.descriptions))
+            aliases=_unique_identity_surfaces((*current.aliases, *addition.aliases)),
+            titles=_unique_identity_surfaces((*current.titles, *addition.titles)),
+            descriptions=_unique_identity_surfaces(
+                (*current.descriptions, *addition.descriptions)
             ),
-            pronouns=tuple(sorted(set(current.pronouns).union(addition.pronouns))),
+            pronouns=_unique_identity_surfaces((*current.pronouns, *addition.pronouns)),
             evidence_anchor_ids=tuple(
                 sorted(
                     set(current.evidence_anchor_ids).union(
@@ -1329,12 +1329,23 @@ def _identity_profile_from_parts(
         entity_id=entity.entity_id,
         canonical_name=entity.display_name,
         entity_type=entity.entity_type,
-        aliases=tuple(sorted(composite_aliases)),
-        titles=tuple(sorted(titles)),
-        descriptions=tuple(sorted(composite_descriptions)),
-        pronouns=tuple(sorted(pronouns)),
+        aliases=_unique_identity_surfaces(tuple(composite_aliases)),
+        titles=_unique_identity_surfaces(tuple(titles)),
+        descriptions=_unique_identity_surfaces(tuple(composite_descriptions)),
+        pronouns=_unique_identity_surfaces(tuple(pronouns)),
         evidence_anchor_ids=tuple(sorted(evidence_anchor_ids)),
     )
+
+
+def _unique_identity_surfaces(values: tuple[str, ...]) -> tuple[str, ...]:
+    """Return deterministic identity surfaces unique by comparison tokens."""
+    surfaces_by_key: dict[str, str] = {}
+    for value in sorted(values):
+        key = " ".join(_identity_surface_tokens(value))
+        if not key:
+            continue
+        surfaces_by_key.setdefault(key, value)
+    return tuple(surfaces_by_key[key] for key in sorted(surfaces_by_key))
 
 
 def _add_identity_profile_fact(

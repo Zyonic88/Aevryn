@@ -136,8 +136,10 @@ class ResolvedReference:
 
 def _normalized_text_values(values: tuple[str, ...], field_name: str) -> tuple[str, ...]:
     """Normalize a sequence of human-readable values."""
+    if not isinstance(values, tuple):
+        raise ValueError(f"{field_name} must be a tuple.")
     normalized = tuple(_normalized_text(value, field_name) for value in values)
-    if len(normalized) != len(set(normalized)):
+    if len(normalized) != len({value.casefold() for value in normalized}):
         raise ValueError(f"{field_name} must be unique.")
     return normalized
 

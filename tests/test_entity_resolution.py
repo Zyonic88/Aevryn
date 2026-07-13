@@ -361,7 +361,17 @@ def test_identity_profiles_reject_duplicate_aliases() -> None:
         EntityIdentityProfile(
             entity_id="character_charlotte",
             canonical_name="Charlotte",
-            aliases=("General Charlotte", "General Charlotte"),
+            aliases=("General Charlotte", " general charlotte "),
+        )
+
+
+def test_identity_profile_surface_lists_must_be_tuples() -> None:
+    """Identity profile surfaces should not accept loose strings as sequences."""
+    with pytest.raises(ValueError, match="aliases must be a tuple"):
+        EntityIdentityProfile(
+            entity_id="character_charlotte",
+            canonical_name="Charlotte",
+            aliases="General Charlotte",  # type: ignore[arg-type]
         )
 
 
@@ -371,5 +381,5 @@ def test_identity_profiles_reject_duplicate_relationship_labels() -> None:
         EntityIdentityProfile(
             entity_id="character_jiang_shasha",
             canonical_name="Jiang Shasha",
-            relationship_labels=("sister of Zhao Chen", "sister of Zhao Chen"),
+            relationship_labels=("sister of Zhao Chen", " Sister of Zhao Chen "),
         )
