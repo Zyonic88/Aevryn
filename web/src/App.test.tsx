@@ -2767,7 +2767,7 @@ describe("App shell routing", () => {
     );
 
     expect(
-      await screen.findByText("Aevryn will create a story record when you save this import."),
+      await screen.findByText("Aevryn will create the first story when you save this import."),
     ).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");

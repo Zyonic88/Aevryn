@@ -128,7 +128,7 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
         {storiesQuery.error ? <ErrorMessage>{storiesQuery.error.message}</ErrorMessage> : null}
         {!storiesQuery.isLoading && !storiesQuery.error && stories.length === 0 ? (
           <EmptyState title="No stories yet">
-            Create story metadata before importing chapters.
+            Create a story before importing chapters.
           </EmptyState>
         ) : null}
         {stories.length > 0 ? (
