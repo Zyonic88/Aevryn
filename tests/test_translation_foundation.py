@@ -6,6 +6,7 @@ from aevryn.translation import (
     GlossaryTerm,
     TranslationEngine,
     TranslationIssue,
+    TranslationMode,
     TranslationUnit,
 )
 
@@ -40,7 +41,12 @@ def test_translation_modes_are_bounded_and_preserved() -> None:
         evidence_anchor_ids=("anchor_003",),
     )
 
-    modes = ("literal", "clean_english", "localized", "subtitle_narration")
+    modes: tuple[TranslationMode, ...] = (
+        "literal",
+        "clean_english",
+        "localized",
+        "subtitle_narration",
+    )
 
     assert tuple(engine.normalize_unit(unit, mode=mode).mode for mode in modes) == modes
 
@@ -403,6 +409,17 @@ def test_glossary_possible_meanings_are_normalized_and_unique() -> None:
         )
 
 
+def test_glossary_possible_meanings_reject_case_only_duplicates() -> None:
+    """Ambiguous meaning choices should not differ only by capitalization."""
+    with pytest.raises(ValueError, match="possible meanings must be unique"):
+        GlossaryTerm(
+            source_term="dao",
+            preferred_term="Dao",
+            possible_meanings=("Dao principle", "dao principle"),
+            evidence_anchor_id="anchor_023a",
+        )
+
+
 def test_glossary_possible_meanings_must_be_multiple_tuple_values() -> None:
     """Possible meanings should be explicit multiple choices, not loose strings."""
     with pytest.raises(ValueError, match="must be a tuple"):
@@ -434,6 +451,16 @@ def test_translation_issue_possible_meaning_count_rejects_single_choice() -> Non
         )
 
 
+def test_translation_evidence_anchor_links_must_be_tuples() -> None:
+    """Source links should not accept loose strings that look like sequences."""
+    with pytest.raises(ValueError, match="evidence anchor IDs must be a tuple"):
+        TranslationUnit(
+            unit_id="unit_002_anchor_string",
+            source_text="Text",
+            evidence_anchor_ids="anchor_001",  # type: ignore[arg-type]
+        )
+
+
 def test_translation_units_reject_duplicate_anchor_links() -> None:
     """Translation source links should remain deterministic."""
     with pytest.raises(ValueError, match="must be unique"):
@@ -441,4 +468,15 @@ def test_translation_units_reject_duplicate_anchor_links() -> None:
             unit_id="unit_003",
             source_text="Text",
             evidence_anchor_ids=("anchor_001", "anchor_001"),
+        )
+
+
+def test_translation_issue_anchor_links_must_be_tuples() -> None:
+    """Review issues should keep evidence links as immutable metadata."""
+    with pytest.raises(ValueError, match="evidence anchor IDs must be a tuple"):
+        TranslationIssue(
+            issue_code="translation_review_required",
+            source_term="dao",
+            message="Ambiguous glossary term preserved for review.",
+            evidence_anchor_ids=["anchor_025"],  # type: ignore[arg-type]
         )

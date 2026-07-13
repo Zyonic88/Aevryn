@@ -173,7 +173,7 @@ def _normalized_text_values(values: tuple[str, ...], field_name: str) -> tuple[s
     normalized_values = tuple(_normalized_text(value, field_name) for value in values)
     if len(normalized_values) == 1:
         raise ValueError(f"{field_name} must include at least two values when provided.")
-    if len(normalized_values) != len(set(normalized_values)):
+    if len(normalized_values) != len({value.casefold() for value in normalized_values}):
         raise ValueError(f"{field_name} must be unique.")
     return normalized_values
 
@@ -187,6 +187,8 @@ def _require_machine_token(value: str, field_name: str) -> None:
 
 def _require_unique_machine_tokens(values: tuple[str, ...], field_name: str) -> None:
     """Validate unique machine-token values."""
+    if not isinstance(values, tuple):
+        raise ValueError(f"{field_name} must be a tuple.")
     if not values:
         raise ValueError(f"{field_name} are required.")
     for value in values:
