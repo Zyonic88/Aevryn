@@ -28,7 +28,7 @@ Future account deletion must remove or anonymize active account data unless lega
 
 Project metadata is retained while the project exists.
 
-Deleting a project or story must remove active project/story data scoped to that deletion.
+Deleting a project or story must remove active project/story data scoped to that deletion, including queued or completed background job metadata.
 
 ---
 
@@ -45,6 +45,14 @@ Deleted story uploads must be removed from active Aevryn-owned storage.
 Canon snapshots and generated output records are retained while the project/story exists.
 
 Deleted story snapshots must be removed from active Aevryn-owned storage.
+
+---
+
+# Background Jobs
+
+Background job metadata is retained only while the containing project/story exists and while it is needed for workflow observability, retry, and support.
+
+Project or story deletion must remove matching background job rows from active Aevryn-owned storage.
 
 ---
 

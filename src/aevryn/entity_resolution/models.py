@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from typing import Literal
 
@@ -35,7 +36,9 @@ class EntityIdentityProfile:
     entity_type: str = "character"
     aliases: tuple[str, ...] = ()
     titles: tuple[str, ...] = ()
+    honorifics: tuple[str, ...] = ()
     descriptions: tuple[str, ...] = ()
+    relationship_labels: tuple[str, ...] = ()
     pronouns: tuple[str, ...] = ()
     evidence_anchor_ids: tuple[str, ...] = ()
 
@@ -59,8 +62,21 @@ class EntityIdentityProfile:
         )
         object.__setattr__(
             self,
+            "honorifics",
+            _normalized_text_values(self.honorifics, "Entity identity honorifics"),
+        )
+        object.__setattr__(
+            self,
             "descriptions",
             _normalized_text_values(self.descriptions, "Entity identity descriptions"),
+        )
+        object.__setattr__(
+            self,
+            "relationship_labels",
+            _normalized_text_values(
+                self.relationship_labels,
+                "Entity identity relationship labels",
+            ),
         )
         object.__setattr__(
             self,
@@ -113,6 +129,7 @@ class ResolvedReference:
             "reason",
             _normalized_text(self.reason or self.status, "Resolved reference reason"),
         )
+        _require_candidate_values(self.candidates)
         if self.status == "resolved" and not self.entity_id:
             raise ValueError("Resolved references require an entity ID.")
         if self.status != "resolved" and self.entity_id:
@@ -121,17 +138,28 @@ class ResolvedReference:
 
 def _normalized_text_values(values: tuple[str, ...], field_name: str) -> tuple[str, ...]:
     """Normalize a sequence of human-readable values."""
+    if not isinstance(values, tuple):
+        raise ValueError(f"{field_name} must be a tuple.")
     normalized = tuple(_normalized_text(value, field_name) for value in values)
-    if len(normalized) != len(set(normalized)):
+    if len(normalized) != len({value.casefold() for value in normalized}):
         raise ValueError(f"{field_name} must be unique.")
     return normalized
+
+
+def _require_candidate_values(candidates: tuple[ResolutionCandidate, ...]) -> None:
+    """Validate candidate metadata for deterministic resolution decisions."""
+    if not isinstance(candidates, tuple):
+        raise ValueError("Resolved reference candidates must be a tuple.")
+    entity_ids = tuple(candidate.entity_id for candidate in candidates)
+    if len(entity_ids) != len(set(entity_ids)):
+        raise ValueError("Resolved reference candidate entity IDs must be unique.")
 
 
 def _normalized_text(value: str, field_name: str) -> str:
     """Normalize required human-readable text."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required.")
-    return " ".join(value.split())
+    return unicodedata.normalize("NFC", " ".join(value.split()))
 
 
 def _require_machine_token(value: str, field_name: str) -> None:
@@ -149,4 +177,3 @@ def _require_confidence(confidence: float) -> None:
         or not 0.0 <= confidence <= 1.0
     ):
         raise ValueError("Resolution confidence must be between 0.0 and 1.0.")
-

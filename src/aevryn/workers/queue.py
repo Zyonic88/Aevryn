@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Protocol
 
@@ -34,6 +35,12 @@ class BackgroundJobQueue(Protocol):
 
     def list_jobs(self) -> tuple[BackgroundJob, ...]:
         """Return all jobs in deterministic order."""
+
+    def delete_project_jobs(self, project_id: str) -> int:
+        """Delete all jobs scoped to a hard-deleted project."""
+
+    def delete_story_jobs(self, story_id: str) -> int:
+        """Delete all jobs scoped to a hard-deleted story."""
 
     def snapshot(self) -> BackgroundQueueSnapshot:
         """Return deterministic queue status counts."""
@@ -168,6 +175,22 @@ class InMemoryJobQueue:
         """Return all jobs in deterministic FIFO order."""
         return tuple(self._jobs[job_id] for job_id in self._order)
 
+    def delete_project_jobs(self, project_id: str) -> int:
+        """Delete all jobs scoped to a hard-deleted project."""
+        return self._delete_jobs(
+            job_id
+            for job_id in self._order
+            if self._jobs[job_id].project_id == project_id
+        )
+
+    def delete_story_jobs(self, story_id: str) -> int:
+        """Delete all jobs scoped to a hard-deleted story."""
+        return self._delete_jobs(
+            job_id
+            for job_id in self._order
+            if self._jobs[job_id].story_id == story_id
+        )
+
     def snapshot(self) -> BackgroundQueueSnapshot:
         """Return deterministic queue status counts."""
         jobs = self.list_jobs()
@@ -183,6 +206,16 @@ class InMemoryJobQueue:
             failed_jobs=sum(1 for job in jobs if job.status == "failed"),
             next_job_id=next_job_id,
         )
+
+    def _delete_jobs(self, job_ids: Iterable[str]) -> int:
+        """Delete queued job IDs while preserving deterministic order."""
+        deleted_ids = set(job_ids)
+        if not deleted_ids:
+            return 0
+        for job_id in deleted_ids:
+            del self._jobs[job_id]
+        self._order = [job_id for job_id in self._order if job_id not in deleted_ids]
+        return len(deleted_ids)
 
 
 def _require_transition_timestamp_not_before_current(

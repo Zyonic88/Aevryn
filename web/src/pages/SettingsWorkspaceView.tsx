@@ -64,26 +64,36 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
       <section className="project-panel">
         <h2>Settings Areas</h2>
         <div className="settings-scope-grid" aria-label="Settings areas">
-          <a href="#project-settings">
-            <strong>Project</strong>
-            <span>Defaults that belong to this story workspace.</span>
-          </a>
-          <a href="#workspace-preferences">
-            <strong>Workspace</strong>
-            <span>How Aevryn opens, organizes, and reveals tools.</span>
-          </a>
-          <a href="#account-settings">
-            <strong>Account</strong>
-            <span>Managed login and profile context.</span>
-          </a>
-          <a href="#privacy-data-settings">
-            <strong>Privacy & Data</strong>
-            <span>Ownership, deletion, and AI-training boundaries.</span>
-          </a>
-          <a href="#diagnostics-settings">
-            <strong>Diagnostics</strong>
-            <span>Support metadata only, never source prose or secrets.</span>
-          </a>
+          <SettingsAreaCard
+            href="#project-settings"
+            status="Active"
+            title="Project"
+            description="Defaults that belong to this story workspace."
+          />
+          <SettingsAreaCard
+            href="#workspace-preferences"
+            status="Active"
+            title="Workspace"
+            description="How Aevryn opens, organizes, and reveals tools."
+          />
+          <SettingsAreaCard
+            href="#account-settings"
+            status="Managed"
+            title="Account"
+            description="Managed login and profile context."
+          />
+          <SettingsAreaCard
+            href="#privacy-data-settings"
+            status="Protected"
+            title="Privacy & Data"
+            description="Ownership, deletion, and AI-training boundaries."
+          />
+          <SettingsAreaCard
+            href="#diagnostics-settings"
+            status="Hidden"
+            title="Diagnostics"
+            description="Support metadata only, never source prose or secrets."
+          />
         </div>
       </section>
 
@@ -217,6 +227,28 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
 
 function projectSettingsQueryKey(projectId: string, sessionToken: string | undefined) {
   return ["project-settings", projectId, sessionToken] as const;
+}
+
+function SettingsAreaCard({
+  href,
+  status,
+  title,
+  description,
+}: {
+  href: string;
+  status: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <a href={href}>
+      <span className="settings-area-heading">
+        <strong>{title}</strong>
+        <span className="settings-area-status">{status}</span>
+      </span>
+      <span>{description}</span>
+    </a>
+  );
 }
 
 function ProjectSettingsForm({

@@ -354,6 +354,15 @@ def production_worker_env() -> dict[str, str]:
     }
 
 
+def production_extraction_env() -> dict[str, str]:
+    """Return required production extraction settings for fail-closed tests."""
+    return {
+        EXTRACTION_MODE_ENV: "openai",
+        OPENAI_API_KEY_ENV: "openai-api-key-placeholder",
+        OPENAI_MODEL_ENV: "gpt-5.4-mini",
+    }
+
+
 def production_observability_env() -> dict[str, str]:
     """Return required production observability settings for fail-closed tests."""
     return {
@@ -529,6 +538,15 @@ def test_create_app_from_env_fails_closed_for_incomplete_production_config(
         )
 
 
+def test_create_app_from_env_rejects_ambiguous_deployment_env() -> None:
+    """Deployment mode should not accept aliases that drift from the CLI contract."""
+    with pytest.raises(ValueError, match=DEPLOYMENT_ENV):
+        create_app_from_env({DEPLOYMENT_ENV: "prod"})
+
+    with pytest.raises(ValueError, match=DEPLOYMENT_ENV):
+        create_app_from_env({DEPLOYMENT_ENV: "staging"})
+
+
 def test_create_app_from_env_requires_r2_provider_credentials() -> None:
     """Production mode should fail closed without R2 provider credentials."""
     complete_until_bucket = {
@@ -600,6 +618,53 @@ def test_create_app_from_env_requires_production_secret_and_environment_config()
         )
 
 
+def test_create_app_from_env_requires_production_extraction_provider() -> None:
+    """Production mode should reject local demo extraction."""
+    complete_until_extraction = {
+        DEPLOYMENT_ENV: "production",
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+        **production_edge_env(),
+        API_KEYS_ENV: "production-api-key",
+        STORAGE_PROVIDER_ENV: "r2",
+        R2_BUCKET_ENV: "aevryn-prod",
+        R2_ACCOUNT_ID_ENV: "account-id",
+        R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
+        R2_ACCESS_KEY_ID_ENV: "access-key",
+        R2_SECRET_ACCESS_KEY_ENV: "secret-key",
+        SECRET_MANAGER_ENV: "deployment",
+        ENVIRONMENT_NAME_ENV: "production",
+    }
+
+    with pytest.raises(ValueError, match=EXTRACTION_MODE_ENV):
+        create_app_from_env(complete_until_extraction)
+
+    with pytest.raises(ValueError, match=EXTRACTION_MODE_ENV):
+        create_app_from_env(
+            {
+                **complete_until_extraction,
+                EXTRACTION_MODE_ENV: "demo",
+            }
+        )
+
+    with pytest.raises(ValueError, match=OPENAI_API_KEY_ENV):
+        create_app_from_env(
+            {
+                **complete_until_extraction,
+                EXTRACTION_MODE_ENV: "openai",
+            }
+        )
+
+    with pytest.raises(ValueError, match=OPENAI_MODEL_ENV):
+        create_app_from_env(
+            {
+                **complete_until_extraction,
+                EXTRACTION_MODE_ENV: "openai",
+                OPENAI_API_KEY_ENV: "openai-api-key-placeholder",
+            }
+        )
+
+
 def test_create_app_from_env_fails_closed_without_production_identity_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -618,6 +683,7 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
         R2_SECRET_ACCESS_KEY_ENV: "secret-key",
         SECRET_MANAGER_ENV: "deployment",
         ENVIRONMENT_NAME_ENV: "production",
+        **production_extraction_env(),
         **production_worker_env(),
         **production_observability_env(),
     }
@@ -830,11 +896,53 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
         def delete_object(self, storage_ref: str) -> None:
             return None
 
+    class FakePostgresqlBackgroundJobQueue:
+        """Test double for durable production queue selection."""
+
+        constructed_database_urls: list[str] = []
+
+        def __init__(self, database_url: str) -> None:
+            self.constructed_database_urls.append(database_url)
+
+        def enqueue(self, job: object) -> None:
+            return None
+
+        def claim_next(self, claimed_at: str) -> None:
+            return None
+
+        def complete(self, job_id: str, completed_at: str) -> object:
+            raise AssertionError("Unexpected queue completion in wiring test.")
+
+        def fail(self, job_id: str, failed_at: str, error_summary: str) -> object:
+            raise AssertionError("Unexpected queue failure in wiring test.")
+
+        def get(self, job_id: str) -> object:
+            raise AssertionError("Unexpected queue lookup in wiring test.")
+
+        def has_job(self, job_id: str) -> bool:
+            return False
+
+        def list_jobs(self) -> tuple[object, ...]:
+            return ()
+
+        def delete_project_jobs(self, project_id: str) -> int:
+            return 0
+
+        def delete_story_jobs(self, story_id: str) -> int:
+            return 0
+
+        def snapshot(self) -> object:
+            raise AssertionError("Unexpected queue snapshot in wiring test.")
+
     monkeypatch.setattr(
         "aevryn.api.app.PostgresqlProjectRepository",
         FakePostgresqlProjectRepository,
     )
     monkeypatch.setattr("aevryn.api.app.R2Storage", FakeR2Storage)
+    monkeypatch.setattr(
+        "aevryn.api.app.PostgresqlBackgroundJobQueue",
+        FakePostgresqlBackgroundJobQueue,
+    )
 
     client = TestClient(
         create_app_from_env({**complete_until_identity, **production_identity_env()})
@@ -853,6 +961,9 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
     )
 
     assert health.status_code == 200
+    assert FakePostgresqlBackgroundJobQueue.constructed_database_urls == [
+        "postgresql://aevryn.example/project"
+    ]
     assert register.status_code == 400
     assert register.json()["error"] == "registration_failed"
     assert "Managed identity provider owns registration" in register.json()["detail"]
@@ -874,6 +985,7 @@ def test_create_app_from_env_requires_production_worker_runtime_config() -> None
         R2_SECRET_ACCESS_KEY_ENV: "secret-key",
         SECRET_MANAGER_ENV: "deployment",
         ENVIRONMENT_NAME_ENV: "production",
+        **production_extraction_env(),
     }
 
     with pytest.raises(ValueError, match=WORKER_RUNTIME_ENV):
@@ -946,6 +1058,7 @@ def test_create_app_from_env_requires_production_observability_config() -> None:
         R2_SECRET_ACCESS_KEY_ENV: "secret-key",
         SECRET_MANAGER_ENV: "deployment",
         ENVIRONMENT_NAME_ENV: "production",
+        **production_extraction_env(),
         **production_worker_env(),
     }
 

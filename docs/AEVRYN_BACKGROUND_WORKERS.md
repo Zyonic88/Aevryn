@@ -12,7 +12,7 @@ Background Workers run long platform workflows outside the browser request cycle
 
 Aevryn must never require the website to wait while imports, extraction, canon updating, presentation, or export workflows execute synchronously.
 
-The Phase 3 worker foundation exists to prove the platform job lifecycle before production queue infrastructure is introduced.
+The Phase 3 worker foundation exists to prove the platform job lifecycle and keep queue adapters replaceable.
 
 ---
 
@@ -107,13 +107,17 @@ Phase 3 starts with a deterministic local worker foundation:
 
 * `BackgroundJob`
 * `InMemoryJobQueue`
+* `PostgresqlBackgroundJobQueue`
 * `BackgroundJobService`
 * `BackgroundWorker`
 * `BackgroundWorkerRunSummary`
 
-This foundation proves the contract without requiring Redis, Celery, RQ, Dramatiq, or a production database adapter yet.
+This foundation proves the contract without requiring Redis, Celery, RQ, or Dramatiq.
 
-Production queue infrastructure can replace the queue adapter later without changing engine authority.
+Local development and test runs use `InMemoryJobQueue`. Production uses
+`PostgresqlBackgroundJobQueue`, which stores worker lifecycle state in the
+Project Database `background_jobs` table. The queue adapter can still be
+replaced later without changing engine authority.
 
 ## Hosted Alpha Auto-Process Bridge
 
@@ -128,11 +132,12 @@ server-side worker drain, and returns the submitted run response without waiting
 for provider-backed extraction to finish. The browser never calls the worker
 drain endpoint and never receives worker credentials.
 
-This is an alpha bridge for the current process-local queue. It is not the final
-production worker posture.
+In local alpha, this bridge drains the process-local queue. In production, queued
+job state is durable in PostgreSQL so job metadata survives API instance restarts.
 
-Before public beta, replace this bridge with a persistent managed queue runner
-that survives API instance restarts and does not depend on process-local memory.
+Before public beta, hosted worker execution still needs an operational runner
+decision and smoke evidence, but production startup must not use the in-memory
+queue adapter.
 
 ---
 

@@ -192,6 +192,8 @@ from aevryn.workers import (
     BackgroundWorkerRunSummary,
     DuplicateJobError,
     InMemoryJobQueue,
+    JobNotFoundError,
+    PostgresqlBackgroundJobQueue,
     ProjectImportSnapshotHandler,
 )
 
@@ -728,6 +730,9 @@ def create_app(
             authentication_service=authentication_service,
         )
         try:
+            repository.get_project(user_id=user.user_id, project_id=project_id)
+            if background_job_queue is not None:
+                background_job_queue.delete_project_jobs(project_id)
             deletion = repository.delete_project(user_id=user.user_id, project_id=project_id)
             if import_content_store is not None:
                 for import_record in deletion.deleted_imports:
@@ -1120,6 +1125,8 @@ def create_app(
                 project_id=project_id,
                 story_id=story_id,
             )
+            if background_job_queue is not None:
+                background_job_queue.delete_story_jobs(story_id)
             deleted_imports = repository.delete_story(user_id=user.user_id, story_id=story_id)
             if import_content_store is not None:
                 for import_record in deleted_imports:
@@ -2066,8 +2073,13 @@ def _require_true_flag(environ: Mapping[str, str], key: str) -> None:
 def _require_production_security_config(environ: Mapping[str, str]) -> None:
     """Reject production startup when required security config is missing."""
     deployment_env = environ.get(DEPLOYMENT_ENV, "").strip().lower()
-    if deployment_env not in {"prod", "production"}:
+    if not deployment_env:
         return
+    if deployment_env != "production":
+        raise ValueError(
+            "AEVRYN_DEPLOYMENT_ENV must be 'production' for production startup or "
+            "unset for local development."
+        )
 
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
     if database_adapter != "postgresql":
@@ -2147,6 +2159,7 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_DEPLOYMENT_ENV=production. Production must be separated from "
             "local, test, and staging environments."
         )
+    _require_production_extraction_config(environ)
     _require_production_worker_config(environ)
     _require_production_observability_config(environ)
     identity_provider = environ.get(IDENTITY_PROVIDER_ENV, "").strip().lower()
@@ -2209,6 +2222,24 @@ def _require_production_identity_config(environ: Mapping[str, str]) -> None:
         )
     _require_true_flag(environ, PASSWORD_RESET_ENABLED_ENV)
     _require_true_flag(environ, ACCOUNT_DELETION_HANDOFF_ENV)
+
+
+def _require_production_extraction_config(environ: Mapping[str, str]) -> None:
+    """Reject production startup without a real extraction provider."""
+    mode = environ.get(EXTRACTION_MODE_ENV, "").strip().lower()
+    if mode != "openai":
+        raise ValueError(
+            "AEVRYN_EXTRACTION_MODE=openai is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Demo extraction is local-only."
+        )
+    if not environ.get(OPENAI_API_KEY_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_OPENAI_API_KEY is required when AEVRYN_EXTRACTION_MODE=openai."
+        )
+    if not environ.get(OPENAI_MODEL_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_OPENAI_MODEL is required when AEVRYN_EXTRACTION_MODE=openai."
+        )
 
 
 def _require_production_worker_config(environ: Mapping[str, str]) -> None:
@@ -2344,7 +2375,7 @@ def _production_postgresql_platform_services(
     return (
         authentication_service,
         repository,
-        InMemoryJobQueue(),
+        PostgresqlBackgroundJobQueue(environ.get(PROJECT_DATABASE_URL_ENV, "")),
         ProjectImportSnapshotHandler(
             repository,
             import_content_store,
@@ -2473,7 +2504,7 @@ def _worker_extractor_from_env(environ: Mapping[str, str]) -> SceneExtractor | N
 
 def _is_production_environment(environ: Mapping[str, str]) -> bool:
     """Return whether the environment is configured as production."""
-    return environ.get(DEPLOYMENT_ENV, "").strip().lower() in {"prod", "production"}
+    return environ.get(DEPLOYMENT_ENV, "").strip().lower() == "production"
 
 
 def _auth_store_path_from_env(
@@ -3037,18 +3068,29 @@ def _translation_review_items(
             issue_code = _translation_issue_code(
                 _string_payload_value(issue, "issue_code")
             )
+            possible_meaning_count = _int_payload_value(
+                issue,
+                "possible_meaning_count",
+            )
             try:
                 items.append(
                     ProjectTranslationReviewItem(
                         issue_code=issue_code,
-                        issue_label=_translation_issue_label(issue_code),
+                        issue_label=_translation_issue_label(
+                            issue_code,
+                            possible_meaning_count=possible_meaning_count,
+                        ),
                         chapter_id=_string_payload_value(unit, "source_chapter_id"),
                         scene_id=_string_payload_value(unit, "source_scene_id"),
                         evidence_anchor_count=_int_payload_value(
                             issue,
                             "evidence_anchor_count",
                         ),
-                        reason=_translation_review_reason(issue_code),
+                        possible_meaning_count=possible_meaning_count,
+                        reason=_translation_review_reason(
+                            issue_code,
+                            possible_meaning_count=possible_meaning_count,
+                        ),
                     )
                 )
             except (ValueError, ValidationError):
@@ -3063,15 +3105,30 @@ def _translation_issue_code(value: str) -> str:
     return "translation_review_required"
 
 
-def _translation_issue_label(issue_code: str) -> str:
+def _translation_issue_label(
+    issue_code: str,
+    *,
+    possible_meaning_count: int = 0,
+) -> str:
     """Return creator-facing translation review copy."""
+    if issue_code == "translation_review_required" and possible_meaning_count > 1:
+        return "Multiple meanings need review"
     if issue_code == "translation_review_required":
         return "Glossary term needs review"
     return "Translation needs review"
 
 
-def _translation_review_reason(issue_code: str) -> str:
+def _translation_review_reason(
+    issue_code: str,
+    *,
+    possible_meaning_count: int = 0,
+) -> str:
     """Return stable metadata-only translation review copy."""
+    if issue_code == "translation_review_required" and possible_meaning_count > 1:
+        return (
+            "Aevryn found multiple plausible meanings and preserved the original term "
+            "for review."
+        )
     if issue_code == "translation_review_required":
         return "Aevryn preserved an uncertain term for review."
     return "Aevryn preserved uncertain translation context for review."
@@ -4393,15 +4450,19 @@ def _reconcile_orphaned_project_runs(
                 and _run_is_stale(run, now)
             )
             if job_is_stale_running:
+                error_summary = "Processing timed out before completion. Retry is available."
+                background_job_queue.fail(
+                    job_id=job_id,
+                    failed_at=now,
+                    error_summary=error_summary,
+                )
                 repository.update_engine_run(
                     replace(
                         run,
                         status="failed",
                         status_updated_at=now,
                         finished_at=now,
-                        error_summary=(
-                            "Processing timed out before completion. Retry is available."
-                        ),
+                        error_summary=error_summary,
                     )
                 )
             continue
@@ -4420,7 +4481,7 @@ def _queue_job_is_running(background_job_queue: BackgroundJobQueue, job_id: str)
     """Return true when an existing queue job is stuck in the running state."""
     try:
         return background_job_queue.get(job_id).status == "running"
-    except Exception:
+    except JobNotFoundError:
         return False
 
 

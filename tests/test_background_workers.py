@@ -959,6 +959,83 @@ def test_canon_snapshot_payload_stores_stable_identity_review_reasons() -> None:
     assert "the dagger carrier" not in snapshot_payload
 
 
+def test_canon_snapshot_payload_classifies_identity_reference_metadata_safely() -> None:
+    """Identity review metadata should classify references without persisting source text."""
+    imported_source = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo Story",
+        text="Chapter 1\n\nGeneral Charlotte arrived. She, waited.",
+    )
+    result = ProjectRunResult(
+        imported_source=imported_source,
+        database=CanonDatabase(),
+        extraction_results=(
+            ExtractionResult(scene_id="source_demo_chapter_001_scene_001"),
+        ),
+        update_summaries=(CanonUpdateSummary(),),
+        identity_resolutions=(
+            ResolvedReference(
+                reference=SurfaceReference(
+                    text="General Charlotte",
+                    evidence_anchor_id=(
+                        "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor"
+                    ),
+                    chapter_id="source_demo_chapter_001",
+                    scene_id="source_demo_chapter_001_scene_001",
+                ),
+                status="ambiguous",
+                confidence=0.95,
+            ),
+            ResolvedReference(
+                reference=SurfaceReference(
+                    text="She,",
+                    evidence_anchor_id=(
+                        "source_demo_chapter_001_scene_001_paragraph_001_sentence_002_anchor"
+                    ),
+                    chapter_id="source_demo_chapter_001",
+                    scene_id="source_demo_chapter_001_scene_001",
+                ),
+                status="unresolved",
+                confidence=0.87,
+            ),
+        ),
+    )
+
+    parsed_payload = json.loads(_canon_snapshot_payload(result))
+    decisions = parsed_payload["entity_resolution"]["decisions"]
+
+    assert decisions[0]["reference_kind"] == "title"
+    assert decisions[0]["reference_label"] == "Title reference"
+    assert decisions[1]["reference_kind"] == "pronoun"
+    assert decisions[1]["reference_label"] == "Pronoun reference"
+    assert "General Charlotte" not in json.dumps(parsed_payload)
+    assert "She," not in json.dumps(parsed_payload)
+
+
+def test_canon_snapshot_payload_reports_quarantined_extraction_candidates() -> None:
+    """Snapshot metadata should expose ungrounded AI candidate quarantine counts."""
+    imported_source = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo Story",
+        text="Chapter 1\n\nMark carried a rusty dagger.",
+    )
+    result = ProjectRunResult(
+        imported_source=imported_source,
+        database=CanonDatabase(),
+        extraction_results=(
+            ExtractionResult(
+                scene_id="source_demo_chapter_001_scene_001",
+                rejected_candidate_count=3,
+            ),
+        ),
+        update_summaries=(CanonUpdateSummary(),),
+    )
+
+    parsed_payload = json.loads(_canon_snapshot_payload(result))
+
+    assert parsed_payload["ungrounded_extraction_candidate_count"] == 3
+
+
 def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> None:
     """Phase 12 translation snapshots should persist metadata, not text."""
     imported_source = StoryImporter().import_text(
@@ -991,6 +1068,8 @@ def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> No
                         evidence_anchor_ids=(
                             "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor",
                         ),
+                        term_kind="power_system",
+                        possible_meaning_count=2,
                     ),
                 ),
                 source_chapter_id="source_demo_chapter_001",
@@ -1021,7 +1100,9 @@ def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> No
                     {
                         "evidence_anchor_count": 1,
                         "issue_code": "translation_review_required",
-                        "issue_label": "Glossary term needs review",
+                        "issue_label": "Multiple meanings need review",
+                        "possible_meaning_count": 2,
+                        "term_kind": "power_system",
                     }
                 ],
             }
