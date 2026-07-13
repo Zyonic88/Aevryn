@@ -219,25 +219,73 @@ def _soft_description_score(
     profile: EntityIdentityProfile,
 ) -> ResolutionCandidate | None:
     """Return a conservative low-confidence description candidate."""
-    reference_tokens = set(normalized_reference.split())
+    reference_tokens = _expanded_identity_tokens(normalized_reference)
     if not reference_tokens:
         return None
 
     best: ResolutionCandidate | None = None
     for description in profile.descriptions + profile.titles:
-        description_tokens = set(_normalized_phrase(description).split())
+        normalized_description = _normalized_phrase(description)
+        description_tokens = _expanded_identity_tokens(normalized_description)
         if not description_tokens:
             continue
         overlap = len(reference_tokens.intersection(description_tokens))
         if overlap == 0:
             continue
-        confidence = round(min(0.74, 0.45 + (overlap / len(reference_tokens)) * 0.2), 2)
+        confidence = _description_variant_confidence(
+            overlap=overlap,
+            reference_token_count=len(reference_tokens),
+            description_token_count=len(description_tokens),
+        )
         candidate = ResolutionCandidate(
             entity_id=profile.entity_id,
             confidence=confidence,
-            match_kind="low_confidence_description",
+            match_kind=(
+                "description_variant"
+                if confidence >= RESOLUTION_THRESHOLD
+                else "low_confidence_description"
+            ),
             matched_text=description,
         )
         if best is None or candidate.confidence > best.confidence:
             best = candidate
     return best
+
+
+def _description_variant_confidence(
+    *,
+    overlap: int,
+    reference_token_count: int,
+    description_token_count: int,
+) -> float:
+    """Return a conservative score for non-exact description overlap."""
+    if (
+        overlap >= 2
+        and overlap / reference_token_count >= 0.5
+        and overlap / description_token_count >= 0.5
+    ):
+        return 0.82
+    return round(min(0.74, 0.45 + (overlap / reference_token_count) * 0.2), 2)
+
+
+def _expanded_identity_tokens(normalized_phrase: str) -> set[str]:
+    """Return normalized tokens plus conservative identity equivalences."""
+    tokens = set(normalized_phrase.split())
+    expanded = set(tokens)
+    for token in tokens:
+        expanded.update(_IDENTITY_TOKEN_EQUIVALENTS.get(token, ()))
+    return expanded
+
+
+_IDENTITY_TOKEN_EQUIVALENTS = {
+    "female": ("woman", "girl"),
+    "woman": ("female",),
+    "women": ("female",),
+    "girl": ("female",),
+    "girls": ("female",),
+    "male": ("man", "boy"),
+    "man": ("male",),
+    "men": ("male",),
+    "boy": ("male",),
+    "boys": ("male",),
+}
