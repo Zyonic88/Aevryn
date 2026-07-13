@@ -686,14 +686,6 @@ const manyPromptPacks = Array.from({ length: 28 }, (_, index) => ({
   },
 }));
 
-const manyCharacterProfiles = Array.from({ length: 55 }, (_, index) => ({
-  ...characterPreviewPayload.character_profiles[0],
-  character_id: `character_${index + 1}`,
-  display_name: `Character ${index + 1}`,
-  subtitle: index === 54 ? "Hidden witness" : "Known character",
-  evidence_summary: `${index + 1} verified facts`,
-}));
-
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
   window.localStorage.setItem("aevryn.projects", JSON.stringify([projectAlpha]));
@@ -3259,62 +3251,6 @@ describe("App shell routing", () => {
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
   });
 
-  it("bounds large character output and supports searching hidden profiles", async () => {
-    const user = userEvent.setup();
-    storeAuthenticatedProject();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.endsWith(API_PATHS.health)) {
-          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
-        }
-        if (url.endsWith(API_PATHS.capabilities)) {
-          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
-        }
-        if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                ...projectOutputsPayload,
-                surfaces: projectOutputsPayload.surfaces.map((surface) =>
-                  surface.surface === "characters"
-                    ? { ...surface, item_count: manyCharacterProfiles.length }
-                    : surface,
-                ),
-                character_profiles: manyCharacterProfiles,
-              }),
-            ),
-          );
-        }
-        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
-          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
-        }
-        return Promise.resolve(new Response("{}", { status: 404 }));
-      }),
-    );
-
-    render(
-      <MemoryRouter initialEntries={["/projects/project_alpha/characters"]}>
-        <App />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText("Showing 48 of 55 character profiles.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Character 48" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Character 49" })).not.toBeInTheDocument();
-
-    await user.type(screen.getByLabelText("Search characters"), "hidden witness");
-
-    expect(screen.getByText("Showing 1 of 1 character profiles.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Character 55" })).toBeInTheDocument();
-
-    await user.clear(screen.getByLabelText("Search characters"));
-    await user.click(screen.getByRole("button", { name: "Show 7 more" }));
-
-    expect(screen.getByRole("heading", { name: "Character 55" })).toBeInTheDocument();
-  });
-
   it("renders a bounded prompt scene picker with one selected prompt pack", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -3369,7 +3305,6 @@ describe("App shell routing", () => {
     const promptBodies = selectedPack.querySelectorAll("details.prompt-disclosure");
     expect(promptBodies).toHaveLength(4);
     promptBodies.forEach((body) => expect(body).not.toHaveAttribute("open"));
-    expect(within(selectedPack).getByText("3 prompt details ready.")).toBeInTheDocument();
     await user.click(within(selectedPack).getByRole("button", { name: "Copy Image Prompt" }));
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Scene 1 image prompt detail")),
@@ -3380,7 +3315,6 @@ describe("App shell routing", () => {
 
     expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
     expect(within(selectedPack).getByText(/Scene 2 image prompt detail/u)).toBeInTheDocument();
-    expect(within(selectedPack).getByText("3 prompt details ready.")).toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {

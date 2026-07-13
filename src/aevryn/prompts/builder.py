@@ -473,19 +473,15 @@ class CanonPromptBuilder:
     def _world_context_section(self, context: CanonSceneContext) -> str:
         """Return scene-relevant world, location, item, and relationship context."""
         character_ids = {card.character_id for card in context.character_cards}
-        display_names = self._entity_display_names(context)
         lines = ["World and scene object context:"]
         world_fact_lines = [
-            self._world_fact_line(fact, display_names=display_names)
+            self._world_fact_line(fact)
             for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
             if fact.entity_id not in character_ids
             and self._is_visual_production_attribute(fact.attribute)
         ]
         relationship_lines = [
-            self._relationship_prompt_line(
-                relationship,
-                display_names=display_names,
-            )
+            self._relationship_prompt_line(relationship)
             for relationship in sorted(
                 context.relationships,
                 key=lambda relationship: relationship.relationship_id,
@@ -584,29 +580,19 @@ class CanonPromptBuilder:
         )
 
     @staticmethod
-    def _world_fact_line(
-        fact: Fact,
-        *,
-        display_names: dict[str, str],
-    ) -> str:
+    def _world_fact_line(fact: Fact) -> str:
         """Return a compact world fact line for production prompts."""
         return (
-            f"{CanonPromptBuilder._entity_label(fact.entity_id, display_names)} "
-            f"{CanonPromptBuilder._attribute_label(fact.attribute)}: "
+            f"{fact.entity_id} {fact.attribute}: "
             f"{CanonPromptBuilder._shorten(fact.value)}"
         )
 
     @staticmethod
-    def _relationship_prompt_line(
-        relationship: Relationship,
-        *,
-        display_names: dict[str, str],
-    ) -> str:
+    def _relationship_prompt_line(relationship: Relationship) -> str:
         """Return a compact relationship line for production prompts."""
         return (
-            f"{CanonPromptBuilder._entity_label(relationship.source_entity_id, display_names)} "
-            f"{CanonPromptBuilder._attribute_label(relationship.relationship_type)} "
-            f"{CanonPromptBuilder._entity_label(relationship.target_entity_id, display_names)}"
+            f"{relationship.source_entity_id} {relationship.relationship_type} "
+            f"{relationship.target_entity_id}"
         )
 
     @staticmethod
