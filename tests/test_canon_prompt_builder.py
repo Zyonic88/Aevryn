@@ -37,7 +37,8 @@ def test_canon_prompt_builder_builds_image_prompt_from_scene_context() -> None:
     assert "Generate this image using only accepted Aevryn canon." in prompt
     assert "Scene Summary:" in prompt
     assert "Purpose:" in prompt
-    assert "Character: Mark (character_mark)" in prompt
+    assert "Character: Mark" in prompt
+    assert "Character: Mark (character_mark)" not in prompt
     assert "- Current Weapon: Iron Sword" in prompt
     assert "Mark retains Current Weapon: Iron Sword" in prompt
 
@@ -47,7 +48,8 @@ def test_canon_prompt_builder_builds_narration_prompt_without_guessing() -> None
     prompt = CanonPromptBuilder().build_narration_prompt(build_context())
 
     assert "Narrate using only accepted canon facts." in prompt
-    assert "Character: Mark (character_mark)" in prompt
+    assert "Character: Mark" in prompt
+    assert "Character: Mark (character_mark)" not in prompt
 
 
 def test_canon_prompt_builder_builds_camera_prompt_without_new_canon() -> None:
@@ -55,7 +57,8 @@ def test_canon_prompt_builder_builds_camera_prompt_without_new_canon() -> None:
     prompt = CanonPromptBuilder().build_camera_prompt(build_context())
 
     assert "Describe camera framing without inventing new canon." in prompt
-    assert "Character: Mark (character_mark)" in prompt
+    assert "Character: Mark" in prompt
+    assert "Character: Mark (character_mark)" not in prompt
 
 
 def test_canon_prompt_builder_builds_animation_prompt_from_facts() -> None:

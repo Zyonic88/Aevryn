@@ -130,6 +130,49 @@ def test_resolves_supported_description_variant_to_same_identity() -> None:
     assert decision.candidates[0].match_kind == "description_variant"
 
 
+def test_resolves_title_name_variant_without_prebuilt_alias() -> None:
+    """Title plus canonical name should resolve through explicit title/name support."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("General Charlotte", "anchor_032"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_charlotte",
+                canonical_name="Charlotte",
+                titles=("General",),
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_charlotte"
+    assert decision.confidence == 0.97
+    assert decision.candidates[0].match_kind == "title_name"
+
+
+def test_title_with_different_name_does_not_resolve_from_title_alone() -> None:
+    """A shared title should not merge a different named surface reference."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("General Li", "anchor_032b"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_charlotte",
+                canonical_name="Charlotte",
+                titles=("General",),
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.candidates == ()
+
+
 def test_description_variant_stays_ambiguous_when_multiple_profiles_fit() -> None:
     """Description variants should not merge when multiple identities fit."""
     engine = EntityResolutionEngine()

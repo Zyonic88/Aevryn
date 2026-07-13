@@ -182,6 +182,10 @@ class EntityResolutionEngine:
                     matched_text=pronoun,
                 )
 
+        title_name_score = _title_name_score(normalized_reference, profile)
+        if title_name_score is not None:
+            return title_name_score
+
         soft_score = _soft_description_score(normalized_reference, profile)
         if soft_score is None:
             return None
@@ -224,7 +228,7 @@ def _soft_description_score(
         return None
 
     best: ResolutionCandidate | None = None
-    for description in profile.descriptions + profile.titles:
+    for description in profile.descriptions:
         normalized_description = _normalized_phrase(description)
         description_tokens = _expanded_identity_tokens(normalized_description)
         if not description_tokens:
@@ -250,6 +254,38 @@ def _soft_description_score(
         if best is None or candidate.confidence > best.confidence:
             best = candidate
     return best
+
+
+def _title_name_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Return a high-confidence candidate for supported title/name references."""
+    reference_tokens = set(normalized_reference.split())
+    if len(reference_tokens) < 2:
+        return None
+
+    title_token_sets = tuple(
+        _expanded_identity_tokens(_normalized_phrase(title))
+        for title in profile.titles
+    )
+    name_token_sets = tuple(
+        _expanded_identity_tokens(_normalized_phrase(name))
+        for name in (profile.canonical_name, *profile.aliases)
+    )
+    for title_tokens in title_token_sets:
+        if not title_tokens or not title_tokens.issubset(reference_tokens):
+            continue
+        for name_tokens in name_token_sets:
+            if not name_tokens or not name_tokens.issubset(reference_tokens):
+                continue
+            return ResolutionCandidate(
+                entity_id=profile.entity_id,
+                confidence=0.97,
+                match_kind="title_name",
+                matched_text=f"{profile.canonical_name} with title",
+            )
+    return None
 
 
 def _description_variant_confidence(
