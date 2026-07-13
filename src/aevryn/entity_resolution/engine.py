@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from aevryn.entity_resolution.models import (
     EntityIdentityProfile,
     ResolutionCandidate,
@@ -217,7 +219,7 @@ def _validated_profiles(
 
 def _normalized_phrase(value: str) -> str:
     """Return a comparison-safe phrase."""
-    value = value.replace("'s", "").replace("'S", "").replace("’s", "").replace("’S", "")
+    value = _without_possessive_suffixes(value)
     normalized = "".join(
         character.lower() if character.isalnum() else " "
         for character in value.strip()
@@ -228,6 +230,11 @@ def _normalized_phrase(value: str) -> str:
         if part not in {"a", "an", "the"}
     )
     return " ".join(parts)
+
+
+def _without_possessive_suffixes(value: str) -> str:
+    """Remove common possessive suffixes without changing owner text."""
+    return re.sub(r"(?:['\u2019]s|\u00e2\u20ac\u2122s)\b", "", value, flags=re.IGNORECASE)
 
 
 def _soft_description_score(

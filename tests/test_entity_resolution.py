@@ -156,22 +156,36 @@ def test_resolves_explicit_relationship_label_variant() -> None:
     """Family-role references should resolve only when explicitly profile-backed."""
     engine = EntityResolutionEngine()
 
-    decision = engine.resolve_reference(
-        SurfaceReference("Zhao Chen's sister", "anchor_032a"),
-        (
-            EntityIdentityProfile(
-                entity_id="character_jiang_shasha",
-                canonical_name="Jiang Shasha",
-                relationship_labels=("sister of Zhao Chen",),
-                evidence_anchor_ids=("anchor_002",),
+    decisions = tuple(
+        engine.resolve_reference(
+            SurfaceReference(reference_text, f"anchor_032a_{index}"),
+            (
+                EntityIdentityProfile(
+                    entity_id="character_jiang_shasha",
+                    canonical_name="Jiang Shasha",
+                    relationship_labels=("sister of Zhao Chen",),
+                    evidence_anchor_ids=("anchor_002",),
+                ),
             ),
-        ),
+        )
+        for index, reference_text in enumerate(
+            (
+                "Zhao Chen's sister",
+                "Zhao Chen’s sister",
+                "Zhao Chen’S sister",
+            ),
+            start=1,
+        )
     )
 
-    assert decision.status == "resolved"
-    assert decision.entity_id == "character_jiang_shasha"
-    assert decision.confidence == 0.91
-    assert decision.candidates[0].match_kind == "relationship_label"
+    assert tuple(decision.status for decision in decisions) == ("resolved",) * 3
+    assert tuple(decision.entity_id for decision in decisions) == (
+        "character_jiang_shasha",
+    ) * 3
+    assert tuple(decision.confidence for decision in decisions) == (0.91,) * 3
+    assert tuple(decision.candidates[0].match_kind for decision in decisions) == (
+        "relationship_label",
+    ) * 3
 
 
 def test_shared_honorific_stays_ambiguous() -> None:
