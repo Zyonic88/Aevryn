@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { apiClient, type ProjectSettingsRequest } from "../api/client";
@@ -11,8 +11,6 @@ import type { ProjectSummary } from "../projects/projectStore";
 export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) {
   const { session } = useAuth();
   const queryClient = useQueryClient();
-  const [defaultExportFormat, setDefaultExportFormat] = useState("markdown");
-  const [locale, setLocale] = useState("en-US");
   const [formError, setFormError] = useState<string | null>(null);
   const [savedSettings, setSavedSettings] = useState<ProjectSettings | null>(null);
 
@@ -44,29 +42,13 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
     },
   });
 
-  useEffect(() => {
-    if (!settingsQuery.data) {
-      return;
-    }
-    setDefaultExportFormat(settingsQuery.data.default_export_format);
-    setLocale(settingsQuery.data.locale);
-  }, [settingsQuery.data]);
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const payload = {
-      default_export_format: defaultExportFormat.trim(),
-      locale: locale.trim(),
-    };
-    if (!payload.default_export_format || !payload.locale) {
-      setSavedSettings(null);
-      setFormError("Project settings fields cannot be blank.");
-      return;
-    }
-    setFormError(null);
-    setSavedSettings(null);
-    updateSettings.mutate(payload);
-  }
+  const settingsFormKey = settingsQuery.data
+    ? `${project.id}:${settingsQuery.data.default_export_format}:${settingsQuery.data.locale}`
+    : `${project.id}:defaults`;
+  const settingsDefaults = settingsQuery.data ?? {
+    default_export_format: "markdown",
+    locale: "en-US",
+  };
 
   return (
     <div className="workspace-view-stack">
@@ -113,33 +95,25 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
         </p>
         {settingsQuery.isLoading ? <LoadingMessage>Loading settings.</LoadingMessage> : null}
         {settingsQuery.error ? <ErrorMessage>{settingsQuery.error.message}</ErrorMessage> : null}
-        <form className="import-form" onSubmit={submit}>
-          <label>
-            Default export format
-            <select
-              value={defaultExportFormat}
-              onChange={(event) => setDefaultExportFormat(event.target.value)}
-            >
-              <option value="markdown">Markdown</option>
-              <option value="json">JSON</option>
-              <option value="csv">CSV</option>
-            </select>
-          </label>
-          <label>
-            Locale
-            <input value={locale} onChange={(event) => setLocale(event.target.value)} />
-          </label>
-          {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
-          {updateSettings.error ? <ErrorMessage>{updateSettings.error.message}</ErrorMessage> : null}
-          {savedSettings ? <p role="status">Settings saved.</p> : null}
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={settingsQuery.isLoading || updateSettings.isPending}
-          >
-            {updateSettings.isPending ? "Saving settings" : "Save settings"}
-          </button>
-        </form>
+        <ProjectSettingsForm
+          key={settingsFormKey}
+          initialSettings={settingsDefaults}
+          formError={formError}
+          mutationError={updateSettings.error?.message ?? null}
+          savedSettings={savedSettings}
+          isDisabled={settingsQuery.isLoading || updateSettings.isPending}
+          isSaving={updateSettings.isPending}
+          onSubmit={(payload) => {
+            if (!payload.default_export_format || !payload.locale) {
+              setSavedSettings(null);
+              setFormError("Project settings fields cannot be blank.");
+              return;
+            }
+            setFormError(null);
+            setSavedSettings(null);
+            updateSettings.mutate(payload);
+          }}
+        />
       </section>
 
       <section className="project-panel" id="workspace-preferences">
@@ -243,6 +217,68 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
 
 function projectSettingsQueryKey(projectId: string, sessionToken: string | undefined) {
   return ["project-settings", projectId, sessionToken] as const;
+}
+
+function ProjectSettingsForm({
+  initialSettings,
+  formError,
+  mutationError,
+  savedSettings,
+  isDisabled,
+  isSaving,
+  onSubmit,
+}: {
+  initialSettings: Pick<ProjectSettings, "default_export_format" | "locale">;
+  formError: string | null;
+  mutationError: string | null;
+  savedSettings: ProjectSettings | null;
+  isDisabled: boolean;
+  isSaving: boolean;
+  onSubmit: (payload: ProjectSettingsRequest) => void;
+}) {
+  const [defaultExportFormat, setDefaultExportFormat] = useState(
+    initialSettings.default_export_format,
+  );
+  const [locale, setLocale] = useState(initialSettings.locale);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSubmit({
+      default_export_format: defaultExportFormat.trim(),
+      locale: locale.trim(),
+    });
+  }
+
+  return (
+    <form className="import-form" onSubmit={submit}>
+      <label>
+        Default export format
+        <select
+          value={defaultExportFormat}
+          disabled={isDisabled}
+          onChange={(event) => setDefaultExportFormat(event.target.value)}
+        >
+          <option value="markdown">Markdown</option>
+          <option value="json">JSON</option>
+          <option value="csv">CSV</option>
+        </select>
+      </label>
+      <label>
+        Locale
+        <input
+          value={locale}
+          disabled={isDisabled}
+          onChange={(event) => setLocale(event.target.value)}
+        />
+      </label>
+      {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+      {mutationError ? <ErrorMessage>{mutationError}</ErrorMessage> : null}
+      {savedSettings ? <p role="status">Settings saved.</p> : null}
+      <button type="submit" className="primary-button" disabled={isDisabled}>
+        {isSaving ? "Saving settings" : "Save settings"}
+      </button>
+    </form>
+  );
 }
 
 function requireSessionToken(session: { session_token: string } | null): string {

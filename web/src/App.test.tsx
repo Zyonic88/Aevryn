@@ -4625,7 +4625,10 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/does not give Aevryn ownership/u)).toBeInTheDocument();
     expect(document.body).not.toHaveTextContent("session-token");
-    expect(await screen.findByDisplayValue("en-US")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText("Locale")).toHaveValue("en-US"));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Save settings" })).toBeEnabled(),
+    );
     await user.selectOptions(screen.getByLabelText("Default export format"), "json");
     await user.clear(screen.getByLabelText("Locale"));
     await user.type(screen.getByLabelText("Locale"), "en-GB");
