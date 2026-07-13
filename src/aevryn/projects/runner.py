@@ -1131,17 +1131,13 @@ def _identity_profiles_from_extraction_results(
             if fact.entity_id not in entities_by_id:
                 continue
             evidence_by_id.setdefault(fact.entity_id, set()).add(fact.evidence_anchor_id)
-            attribute = fact.attribute.lower()
-            if attribute in {"display_name", "name", "alias"}:
-                aliases_by_id.setdefault(fact.entity_id, set()).add(fact.value)
-            elif attribute in {"title", "role", "profession"}:
-                titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
-            elif attribute in {"description", "appearance", "race", "species"}:
-                descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
-            elif attribute in {"gender", "sex"}:
-                pronouns = _pronouns_for_identity_fact_value(fact.value)
-                if pronouns:
-                    pronouns_by_id.setdefault(fact.entity_id, set()).update(pronouns)
+            _add_identity_profile_fact(
+                fact=fact,
+                aliases_by_id=aliases_by_id,
+                titles_by_id=titles_by_id,
+                descriptions_by_id=descriptions_by_id,
+                pronouns_by_id=pronouns_by_id,
+            )
 
     return tuple(
         _identity_profile_from_parts(
@@ -1315,12 +1311,11 @@ def _identity_profile_from_parts(
     """Create one identity profile with useful composite descriptions."""
     composite_aliases = set(aliases)
     composite_descriptions = set(descriptions)
-    genders = {
-        description
-        for description in descriptions
-        if description.lower() in {"male", "female", "man", "woman"}
-    }
     name_surfaces = {entity.display_name, *aliases}
+    genders = _explicit_gender_terms_for_identity_surfaces(
+        (entity.display_name, *aliases, *titles, *descriptions)
+    )
+    composite_descriptions.update(genders)
     for title in titles:
         for name in name_surfaces:
             composite_aliases.add(f"{title} {name}")
@@ -1357,19 +1352,97 @@ def _add_identity_profile_fact(
         titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
     elif attribute in {"description", "appearance", "race", "species", "gender", "sex"}:
         descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
-        pronouns = _pronouns_for_identity_fact_value(fact.value)
-        if pronouns:
-            pronouns_by_id.setdefault(fact.entity_id, set()).update(pronouns)
+    elif attribute in {
+        "family_role",
+        "relationship_role",
+        "relationship_context",
+        "kinship",
+    }:
+        descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+    pronouns = _pronouns_for_identity_fact_value(fact.value)
+    if pronouns:
+        pronouns_by_id.setdefault(fact.entity_id, set()).update(pronouns)
 
 
 def _pronouns_for_identity_fact_value(value: str) -> tuple[str, ...]:
-    """Return conservative pronoun hints from explicit gender or sex values."""
-    normalized = value.strip().lower()
-    if normalized in {"female", "woman", "girl"}:
+    """Return conservative pronoun hints from explicit gendered terms."""
+    gender_terms = _explicit_gender_terms_for_identity_surfaces((value,))
+    if gender_terms == {"female"}:
         return ("she", "her", "hers")
-    if normalized in {"male", "man", "boy"}:
+    if gender_terms == {"male"}:
         return ("he", "him", "his")
     return ()
+
+
+def _explicit_gender_terms_for_identity_surfaces(values: tuple[str, ...]) -> set[str]:
+    """Return explicit gender terms present in identity surfaces without guessing."""
+    gender_terms: set[str] = set()
+    for value in values:
+        tokens = _identity_surface_tokens(value)
+        for index, token in enumerate(tokens):
+            if _gender_token_is_negated(tokens, index):
+                continue
+            if token in _FEMALE_IDENTITY_TERMS:
+                gender_terms.add("female")
+            elif token in _MALE_IDENTITY_TERMS:
+                gender_terms.add("male")
+    return gender_terms
+
+
+_FEMALE_IDENTITY_TERMS = {
+    "female",
+    "woman",
+    "women",
+    "girl",
+    "girls",
+    "sister",
+    "sisters",
+    "mother",
+    "mothers",
+    "daughter",
+    "daughters",
+    "wife",
+    "wives",
+    "queen",
+    "queens",
+    "princess",
+    "princesses",
+}
+_MALE_IDENTITY_TERMS = {
+    "male",
+    "man",
+    "men",
+    "boy",
+    "boys",
+    "brother",
+    "brothers",
+    "father",
+    "fathers",
+    "son",
+    "sons",
+    "husband",
+    "husbands",
+    "king",
+    "kings",
+    "prince",
+    "princes",
+}
+_GENDER_NEGATION_TERMS = {"not", "no", "non", "without"}
+
+
+def _identity_surface_tokens(value: str) -> tuple[str, ...]:
+    """Return lowercase alphanumeric tokens from a human identity surface."""
+    normalized = "".join(
+        character.lower() if character.isalnum() else " "
+        for character in value
+    )
+    return tuple(part for part in normalized.split() if part)
+
+
+def _gender_token_is_negated(tokens: tuple[str, ...], index: int) -> bool:
+    """Return whether a gendered token has a nearby explicit negation."""
+    start = max(0, index - 2)
+    return any(token in _GENDER_NEGATION_TERMS for token in tokens[start:index])
 
 
 def _rewritten_fact_for_resolved_identity(
