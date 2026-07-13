@@ -6,6 +6,18 @@ from dataclasses import dataclass
 from typing import Literal
 
 TranslationMode = Literal["literal", "clean_english", "localized", "subtitle_narration"]
+TranslationTermKind = Literal[
+    "term",
+    "name",
+    "alias",
+    "title",
+    "honorific",
+    "faction",
+    "location",
+    "item",
+    "skill",
+    "power_system",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,6 +28,7 @@ class GlossaryTerm:
     preferred_term: str
     evidence_anchor_id: str
     entity_id: str | None = None
+    term_kind: TranslationTermKind = "term"
     review_required: bool = False
 
     def __post_init__(self) -> None:
@@ -28,6 +41,7 @@ class GlossaryTerm:
         _require_machine_token(self.evidence_anchor_id, "Glossary term evidence anchor ID")
         if self.entity_id is not None:
             _require_machine_token(self.entity_id, "Glossary term entity ID")
+        _require_term_kind(self.term_kind)
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,9 +86,11 @@ class TranslationIssue:
     source_term: str
     message: str
     evidence_anchor_ids: tuple[str, ...]
+    term_kind: TranslationTermKind = "term"
 
     def __post_init__(self) -> None:
         _require_machine_token(self.issue_code, "Translation issue code")
+        _require_term_kind(self.term_kind)
         object.__setattr__(
             self,
             "source_term",
@@ -158,3 +174,20 @@ def _require_language_token(value: str, field_name: str) -> None:
     _require_machine_token(value, field_name)
     if not all(character.isalnum() or character in {"-", "_"} for character in value):
         raise ValueError(f"{field_name} is invalid.")
+
+
+def _require_term_kind(value: str) -> None:
+    """Validate supported glossary term categories."""
+    if value not in {
+        "term",
+        "name",
+        "alias",
+        "title",
+        "honorific",
+        "faction",
+        "location",
+        "item",
+        "skill",
+        "power_system",
+    }:
+        raise ValueError("Translation term kind is invalid.")

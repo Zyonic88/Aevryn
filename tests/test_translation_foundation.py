@@ -55,6 +55,60 @@ def test_translation_glossary_preserves_preferred_story_terms() -> None:
     assert "T3 Blizzard-class Light Interstellar Battlecruiser" in result.normalized_text
 
 
+def test_translation_glossary_tracks_protected_term_categories() -> None:
+    """Glossary terms should classify the story term they protect without creating canon."""
+    engine = TranslationEngine()
+    glossary = (
+        GlossaryTerm(
+            source_term="Zhao Chen",
+            preferred_term="Zhao Chen",
+            evidence_anchor_id="anchor_name",
+            entity_id="character_zhao_chen",
+            term_kind="name",
+        ),
+        GlossaryTerm(
+            source_term="North Star Academy",
+            preferred_term="North Star Academy",
+            evidence_anchor_id="anchor_location",
+            entity_id="location_north_star_academy",
+            term_kind="location",
+        ),
+        GlossaryTerm(
+            source_term="Eye of Insight",
+            preferred_term="Eye of Insight",
+            evidence_anchor_id="anchor_skill",
+            entity_id="skill_eye_of_insight",
+            term_kind="skill",
+        ),
+    )
+
+    result = engine.normalize_unit(
+        TranslationUnit(
+            unit_id="unit_001_term_categories",
+            source_text="Zhao Chen trained at North Star Academy and used Eye of Insight.",
+            evidence_anchor_ids=("anchor_name", "anchor_location", "anchor_skill"),
+        ),
+        glossary=glossary,
+    )
+
+    assert result.normalized_text == (
+        "Zhao Chen trained at North Star Academy and used Eye of Insight."
+    )
+    assert tuple(term.term_kind for term in glossary) == ("name", "location", "skill")
+    assert result.issues == ()
+
+
+def test_translation_glossary_rejects_unknown_term_category() -> None:
+    """Unsupported categories should fail closed instead of creating ambiguous metadata."""
+    with pytest.raises(ValueError, match="Translation term kind is invalid"):
+        GlossaryTerm(
+            source_term="Zhao Chen",
+            preferred_term="Zhao Chen",
+            evidence_anchor_id="anchor_invalid_kind",
+            term_kind="species",  # type: ignore[arg-type]
+        )
+
+
 def test_translation_glossary_matches_complete_terms_only() -> None:
     """Glossary handling should not mutate unrelated longer words."""
     engine = TranslationEngine()
@@ -219,7 +273,35 @@ def test_uncertain_glossary_term_is_preserved_for_review() -> None:
     assert "qi" in result.normalized_text
     assert len(result.issues) == 1
     assert result.issues[0].issue_code == "translation_review_required"
+    assert result.issues[0].term_kind == "term"
     assert result.issues[0].evidence_anchor_ids == ("anchor_020",)
+
+
+def test_uncertain_glossary_issue_keeps_protected_term_category() -> None:
+    """Review issues should carry safe term-category metadata without source prose leakage."""
+    engine = TranslationEngine()
+
+    result = engine.normalize_unit(
+        TranslationUnit(
+            unit_id="unit_002_power_system_review",
+            source_text="The dantian pulsed with unfamiliar force.",
+            evidence_anchor_ids=("anchor_021",),
+        ),
+        glossary=(
+            GlossaryTerm(
+                source_term="dantian",
+                preferred_term="dantian",
+                evidence_anchor_id="anchor_021",
+                term_kind="power_system",
+                review_required=True,
+            ),
+        ),
+    )
+
+    assert result.normalized_text == "The dantian pulsed with unfamiliar force."
+    assert len(result.issues) == 1
+    assert result.issues[0].term_kind == "power_system"
+    assert result.issues[0].source_term == "dantian"
 
 
 def test_translation_units_reject_duplicate_anchor_links() -> None:

@@ -478,6 +478,7 @@ def _translation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]
                     {
                         "issue_code": _translation_issue_code(issue.issue_code),
                         "issue_label": _translation_issue_label(issue.issue_code),
+                        "term_kind": issue.term_kind,
                         "evidence_anchor_count": len(issue.evidence_anchor_ids),
                     }
                     for issue in unit.issues

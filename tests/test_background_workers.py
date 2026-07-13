@@ -1015,6 +1015,7 @@ def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> No
                         evidence_anchor_ids=(
                             "source_demo_chapter_001_scene_001_paragraph_001_sentence_001_anchor",
                         ),
+                        term_kind="power_system",
                     ),
                 ),
                 source_chapter_id="source_demo_chapter_001",
@@ -1046,6 +1047,7 @@ def test_canon_snapshot_payload_stores_translation_metadata_without_text() -> No
                         "evidence_anchor_count": 1,
                         "issue_code": "translation_review_required",
                         "issue_label": "Glossary term needs review",
+                        "term_kind": "power_system",
                     }
                 ],
             }

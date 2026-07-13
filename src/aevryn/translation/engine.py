@@ -104,6 +104,7 @@ def _apply_glossary_once(
                         source_term=term.source_term,
                         message="Uncertain glossary term preserved for review.",
                         evidence_anchor_ids=evidence_anchor_ids,
+                        term_kind=term.term_kind,
                     )
                 )
             return source_text
