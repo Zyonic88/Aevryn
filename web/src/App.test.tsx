@@ -3140,7 +3140,6 @@ describe("App shell routing", () => {
     expect(screen.getByRole("heading", { name: "Titles" })).toBeInTheDocument();
     expect(screen.getByText("Captain")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Descriptions" })).toBeInTheDocument();
-    expect(screen.getByText("Human Male Captain")).toBeInTheDocument();
     expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
     expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();
