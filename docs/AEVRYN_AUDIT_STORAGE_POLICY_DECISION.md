@@ -156,7 +156,8 @@ Core API and worker workflow events are wired to the configured audit writer.
 The covered event set includes registration, login success/failure, password
 reset request/completion, project creation/deletion, settings changes, cross-user
 settings access denials, story creation/deletion, import save, run submission,
-worker drain completion, snapshot creation, and export generation.
+worker drain completion, snapshot creation, export generation, and production
+configuration check failures when the PostgreSQL audit ledger is available.
 
 Public beta remains blocked until:
 
