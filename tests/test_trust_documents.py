@@ -364,6 +364,7 @@ def test_public_site_publication_plan_maps_pages_to_sources() -> None:
         "privacy@aevryn.ai",
         "security@aevryn.ai",
         "abuse@aevryn.ai",
+        "Implemented with verified contact details",
         "full manuscripts",
         "AI provider data-use disclosure",
         "final public-beta signoff explicitly approves publication",

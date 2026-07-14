@@ -16,7 +16,7 @@ Status: Started
 Public beta: Blocked
 ```
 
-The required contact aliases are verified. The public pages still need implementation, owner review, legal review where required, and final public-beta signoff.
+The required contact aliases are verified. The initial public pages are implemented in the browser app. Owner review, legal review where required, backup/provider wording, and final public-beta signoff remain open.
 
 ---
 
@@ -34,15 +34,15 @@ Public copy must not convert internal intent into public promises.
 
 | Page | Proposed Route | Source Documents | Publication Status |
 | --- | --- | --- | --- |
-| Trust | `/trust` | `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`, `docs/AEVRYN_TRUST_MODEL.md` | Draft copy ready; implementation pending |
-| Privacy | `/privacy` | `docs/PRIVACY_POLICY.md`, `docs/AEVRYN_PRIVACY.md` | Draft only; attorney review required |
-| Security | `/security` | `docs/AEVRYN_SECURITY.md`, `docs/SECURITY_DISCLOSURE.md` | Draft only; incident-response review required |
-| User Rights | `/user-rights` | `docs/AEVRYN_USER_RIGHTS.md`, `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md` | Draft copy ready; backup wording pending |
-| Content Classification | `/content` | `docs/AEVRYN_CONTENT_CLASSIFICATION.md` | Draft copy ready; legal/provider-policy review required |
-| Support | `/support` | `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`, `docs/AEVRYN_PUBLIC_CONTACTS.md` | Contact details verified; implementation pending |
-| Security Disclosure | `/security/disclosure` | `docs/SECURITY_DISCLOSURE.md` | Contact verified; safe-harbor review required |
-| Terms | `/terms` | `docs/TERMS_OF_SERVICE.md` | Draft only; attorney review required |
-| Acceptable Use | `/acceptable-use` | `docs/ACCEPTABLE_USE_POLICY.md` | Draft only; attorney review required |
+| Trust | `/trust` | `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`, `docs/AEVRYN_TRUST_MODEL.md` | Implemented; owner review pending |
+| Privacy | `/privacy` | `docs/PRIVACY_POLICY.md`, `docs/AEVRYN_PRIVACY.md` | Implemented as draft; attorney review required |
+| Security | `/security` | `docs/AEVRYN_SECURITY.md`, `docs/SECURITY_DISCLOSURE.md` | Implemented as draft; incident-response review required |
+| User Rights | `/user-rights` | `docs/AEVRYN_USER_RIGHTS.md`, `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md` | Implemented; backup wording pending |
+| Content Classification | `/content` | `docs/AEVRYN_CONTENT_CLASSIFICATION.md` | Implemented as draft; legal/provider-policy review required |
+| Support | `/support` | `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`, `docs/AEVRYN_PUBLIC_CONTACTS.md` | Implemented with verified contact details; support procedure review pending |
+| Security Disclosure | `/security/disclosure` | `docs/SECURITY_DISCLOSURE.md` | Implemented as draft; safe-harbor review required |
+| Terms | `/terms` | `docs/TERMS_OF_SERVICE.md` | Implemented as draft; attorney review required |
+| Acceptable Use | `/acceptable-use` | `docs/ACCEPTABLE_USE_POLICY.md` | Implemented as draft; attorney review required |
 
 ---
 
@@ -84,7 +84,6 @@ Public publication remains blocked until:
 * legal-sensitive pages receive owner and attorney review
 * production backup retention wording is selected
 * AI provider data-use disclosure is completed or provider-backed extraction is disabled for public beta
-* public pages are implemented in the website
 * links are reachable from the website footer, app footer, or support surface
 * public pages are checked against implementation and deployment behavior
 * final public-beta signoff explicitly approves publication
