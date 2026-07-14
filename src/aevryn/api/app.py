@@ -119,6 +119,7 @@ from aevryn.api.models import (
     WorldPreviewResponse,
     WorldSheetOutput,
 )
+from aevryn.audit import AuditLedger, PostgresqlAuditLedger
 from aevryn.auth import (
     AuthenticationError,
     AuthenticationService,
@@ -288,6 +289,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         background_job_handler,
         import_content_store,
         storage_service,
+        audit_ledger,
     ) = _platform_services_from_env(active_environ)
     return create_app(
         allowed_origins=_allowed_origins_from_env(active_environ),
@@ -298,6 +300,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         background_job_handler=background_job_handler,
         import_content_store=import_content_store,
         storage_service=storage_service,
+        audit_ledger=audit_ledger,
         auto_process_import_runs=_env_flag_is_true(
             active_environ,
             WORKER_AUTO_PROCESS_SUBMISSIONS_ENV,
@@ -316,6 +319,7 @@ def create_app(
     background_job_handler: BackgroundJobHandler | None = None,
     import_content_store: ImportContentStore | None = None,
     storage_service: StorageService | None = None,
+    audit_ledger: AuditLedger | PostgresqlAuditLedger | None = None,
     auto_process_import_runs: bool = False,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
@@ -329,6 +333,7 @@ def create_app(
         background_job_handler: Optional Phase 3 worker handler for queued jobs.
         import_content_store: Optional storage adapter for uploaded source bytes.
         storage_service: Optional storage adapter for generated exports.
+        audit_ledger: Optional metadata-only audit writer for workflow events.
         auto_process_import_runs: Optional alpha bridge that starts one worker
             drain after a run is submitted. Production persistent queue runners
             should replace this bridge before public beta.
@@ -349,6 +354,7 @@ def create_app(
             422: {"model": ErrorResponse},
         },
     )
+    app.state.audit_ledger = audit_ledger
     if allowed_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -677,6 +683,14 @@ def create_app(
                 updated_at=request_body.now,
             )
             repository.create_project(project)
+            _append_audit_event(
+                audit_ledger,
+                event_type="project_created",
+                occurred_at=request_body.now,
+                summary="Project created.",
+                actor_id=user.user_id,
+                project_id=project.project_id,
+            )
         except ValueError as error:
             raise HTTPException(
                 status_code=400,
@@ -744,6 +758,18 @@ def create_app(
                 )
                 for export_record in deletion.deleted_exports:
                     export_storage.delete_export_bytes(export_record)
+            _append_audit_event(
+                audit_ledger,
+                event_type="project_deleted",
+                occurred_at=_audit_timestamp(),
+                summary="Project permanently deleted.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={
+                    "deleted_imports": str(len(deletion.deleted_imports)),
+                    "deleted_exports": str(len(deletion.deleted_exports)),
+                },
+            )
         except (AccessDeniedError, RecordNotFoundError) as error:
             raise HTTPException(
                 status_code=404,
@@ -954,6 +980,21 @@ def create_app(
                     created_at=request_body.now,
                 )
             )
+            _append_audit_event(
+                audit_ledger,
+                event_type="export_generated",
+                occurred_at=request_body.now,
+                summary="Export generated.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=snapshot.story_id,
+                metadata={
+                    "export_id": export.export_id,
+                    "snapshot_id": snapshot.snapshot_id,
+                    "export_kind": export.export_kind,
+                    "export_format": export.export_format,
+                },
+            )
         except (AccessDeniedError, RecordNotFoundError) as error:
             raise HTTPException(
                 status_code=404,
@@ -1086,6 +1127,15 @@ def create_app(
                 updated_at=request_body.now,
             )
             repository.create_story(story)
+            _append_audit_event(
+                audit_ledger,
+                event_type="story_created",
+                occurred_at=request_body.now,
+                summary="Story created.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=story.story_id,
+            )
         except (AccessDeniedError, RecordNotFoundError) as error:
             raise HTTPException(
                 status_code=404,
@@ -1131,6 +1181,16 @@ def create_app(
             if import_content_store is not None:
                 for import_record in deleted_imports:
                     import_content_store.delete_import_content(import_record.storage_ref)
+            _append_audit_event(
+                audit_ledger,
+                event_type="story_deleted",
+                occurred_at=_audit_timestamp(),
+                summary="Story permanently deleted.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+                metadata={"deleted_imports": str(len(deleted_imports))},
+            )
         except (AccessDeniedError, RecordNotFoundError, ValueError) as error:
             raise HTTPException(
                 status_code=404,
@@ -1265,6 +1325,22 @@ def create_app(
                     _decode_base64(request_body.content_base64),
                 )
             repository.record_import(import_record)
+            _append_audit_event(
+                audit_ledger,
+                event_type="import_saved",
+                occurred_at=request_body.now,
+                summary="Import metadata saved.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+                metadata={
+                    "import_id": import_record.import_id,
+                    "source_format": import_record.source_format,
+                    "chapter_count": str(import_record.chapter_count),
+                    "scene_count": str(import_record.scene_count),
+                    "evidence_anchor_count": str(import_record.evidence_anchor_count),
+                },
+            )
         except DuplicateRecordError as error:
             raise HTTPException(
                 status_code=409,
@@ -1475,6 +1551,21 @@ def create_app(
                     request_body.now,
                 )
             run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
+            _append_audit_event(
+                audit_ledger,
+                event_type="run_submitted",
+                occurred_at=request_body.now,
+                summary="Import processing run submitted.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+                metadata={
+                    "import_id": import_id,
+                    "run_id": run.run_id,
+                    "job_id": request_body.job_id,
+                    "run_status": run.status,
+                },
+            )
         except HTTPException:
             raise
         except (DuplicateRecordError, DuplicateJobError) as error:
@@ -1512,6 +1603,18 @@ def create_app(
                 finished_at=request_body.finished_at,
                 max_jobs=request_body.max_jobs,
             )
+            _append_audit_event(
+                audit_ledger,
+                event_type="worker_processed",
+                occurred_at=request_body.finished_at,
+                summary="Worker drain completed.",
+                metadata={
+                    "claimed_jobs": str(summary.claimed_jobs),
+                    "succeeded_jobs": str(summary.succeeded_jobs),
+                    "failed_jobs": str(summary.failed_jobs),
+                    "max_jobs": str(request_body.max_jobs),
+                },
+            )
         except ValueError as error:
             raise HTTPException(
                 status_code=400,
@@ -1546,6 +1649,20 @@ def create_app(
                 created_at=request_body.now,
             )
             repository.store_snapshot(snapshot)
+            _append_audit_event(
+                audit_ledger,
+                event_type="snapshot_created",
+                occurred_at=request_body.now,
+                summary="Snapshot stored.",
+                project_id=run.project_id,
+                story_id=run.story_id,
+                metadata={
+                    "run_id": run.run_id,
+                    "snapshot_id": snapshot.snapshot_id,
+                    "snapshot_kind": snapshot.snapshot_kind,
+                    "media_type": snapshot.content_type,
+                },
+            )
         except RecordNotFoundError as error:
             raise HTTPException(
                 status_code=404,
@@ -2327,6 +2444,7 @@ def _platform_services_from_env(
     BackgroundJobHandler | None,
     ImportContentStore | None,
     StorageService | None,
+    AuditLedger | PostgresqlAuditLedger | None,
 ]:
     """Return configured platform services from deployment environment settings."""
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
@@ -2353,7 +2471,7 @@ def _platform_services_from_env(
 
     database_path = environ.get(PROJECT_DATABASE_PATH_ENV, "").strip()
     if not database_path:
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
 
     project_database_path = Path(database_path)
     repository = JsonProjectRepository(project_database_path)
@@ -2376,6 +2494,7 @@ def _production_postgresql_platform_services(
     BackgroundJobHandler,
     ImportContentStore,
     StorageService,
+    PostgresqlAuditLedger,
 ]:
     """Return production storage services after fail-closed environment validation."""
     authentication_service = _production_authentication_service(
@@ -2395,6 +2514,7 @@ def _production_postgresql_platform_services(
         ),
         import_content_store,
         storage_service,
+        PostgresqlAuditLedger(environ.get(PROJECT_DATABASE_URL_ENV, "")),
     )
 
 
@@ -2436,6 +2556,7 @@ def _local_platform_services(
     BackgroundJobHandler,
     ImportContentStore,
     StorageService,
+    AuditLedger,
 ]:
     """Return browser-ready local platform services for one project repository."""
     if environ.get(STORAGE_PROVIDER_ENV, "").strip().lower() == "r2":
@@ -2465,6 +2586,7 @@ def _local_platform_services(
         ),
         import_content_store,
         storage_service,
+        AuditLedger(),
     )
 
 
@@ -4597,6 +4719,53 @@ def _project_storage_error(error: PersistenceError) -> HTTPException:
         status_code=503,
         detail={"error": "project_storage_failed", "detail": str(error)},
     )
+
+
+def _append_audit_event(
+    audit_ledger: AuditLedger | PostgresqlAuditLedger | None,
+    *,
+    event_type: str,
+    occurred_at: str,
+    summary: str,
+    actor_id: str = "",
+    project_id: str = "",
+    story_id: str = "",
+    metadata: Mapping[str, str] | None = None,
+) -> None:
+    """Append a metadata-only audit event or fail the workflow visibly."""
+    if audit_ledger is None:
+        return
+    try:
+        audit_ledger.append(
+            event_type=event_type,
+            occurred_at=occurred_at,
+            summary=summary,
+            actor_id=actor_id,
+            project_id=project_id,
+            story_id=story_id,
+            metadata=metadata or {},
+        )
+    except Exception as error:
+        logger.exception(
+            "audit_ledger_append_failed",
+            extra={
+                "audit_event_type": event_type,
+                "project_id": project_id,
+                "story_id": story_id,
+            },
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "audit_record_failed",
+                "detail": "Audit ledger write failed.",
+            },
+        ) from error
+
+
+def _audit_timestamp() -> str:
+    """Return a UTC timestamp for audited routes without client body time."""
+    return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def _auth_session_response(session: Any) -> AuthSessionResponse:

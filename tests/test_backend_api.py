@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -66,9 +67,17 @@ from aevryn.api import (
     create_app_from_env,
 )
 from aevryn.api.app import MAX_IMPORT_CONTENT_BASE64_CHARS, _worker_extractor_from_env
+from aevryn.audit import AuditLedger, AuditLedgerRecord
+from aevryn.auth import (
+    AuthenticationService,
+    InMemoryCredentialStore,
+    InMemorySessionStore,
+)
 from aevryn.extraction import EvidenceBoundedAIExtractor
 from aevryn.import_storage import InMemoryImportContentStore
 from aevryn.persistence import InMemoryProjectRepository
+from aevryn.storage import LocalFilesystemStorage
+from aevryn.workers import BackgroundJob, InMemoryJobQueue
 
 
 def test_health_endpoint_reports_api_status() -> None:
@@ -321,6 +330,171 @@ def test_create_app_from_env_configures_project_storage(
     assert (tmp_path / "default_project_database_auth.json").exists()
 
 
+def test_workflow_mutations_append_metadata_only_audit_events(tmp_path: Path) -> None:
+    """Configured audit writers should record workflow mutations without payload data."""
+    audit_ledger = AuditLedger()
+    repository = InMemoryProjectRepository()
+    auth_store = InMemoryCredentialStore()
+    session_store = InMemorySessionStore()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=AuthenticationService(
+                repository=repository,
+                credential_store=auth_store,
+                session_store=session_store,
+            ),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=_NoSnapshotBackgroundJobHandler(),
+            import_content_store=InMemoryImportContentStore(),
+            storage_service=LocalFilesystemStorage(tmp_path / "exports"),
+            audit_ledger=audit_ledger,
+        )
+    )
+    now = "2026-07-14T00:00:00Z"
+    headers = _registered_user_headers(client, now=now)
+    source_text = "Chapter 1\nA clean metadata-only scene."
+    source_base64 = base64.b64encode(source_text.encode("utf-8")).decode("ascii")
+
+    project = client.post(
+        "/v2/projects",
+        json={"project_id": "project_demo", "name": "Demo", "now": now},
+        headers=headers,
+    )
+    story = client.post(
+        "/v2/projects/project_demo/stories",
+        json={"story_id": "story_demo", "title": "Demo Story", "now": now},
+        headers=headers,
+    )
+    saved_import = client.post(
+        "/v2/projects/project_demo/stories/story_demo/imports",
+        json={
+            "source_id": "source_demo",
+            "filename": "chapter.txt",
+            "content_base64": source_base64,
+            "title": "Demo Story",
+            "import_id": "import_demo",
+            "now": now,
+        },
+        headers=headers,
+    )
+    submitted_run = client.post(
+        "/v2/projects/project_demo/stories/story_demo/imports/import_demo/runs",
+        json={"run_id": "run_demo", "job_id": "job_demo", "now": now},
+        headers=headers,
+    )
+    worker = client.post(
+        "/v2/workers/process",
+        json={"started_at": now, "finished_at": now, "max_jobs": 1},
+    )
+    snapshot = client.post(
+        "/v2/workers/runs/run_demo/snapshots",
+        json={
+            "snapshot_id": "snapshot_demo",
+            "snapshot_kind": "canon",
+            "content_type": "application/json",
+            "serialized_output": "{\"ok\":true}",
+            "now": now,
+        },
+    )
+    export = client.post(
+        "/v2/projects/project_demo/exports",
+        json={
+            "export_id": "export_demo",
+            "snapshot_id": "snapshot_demo",
+            "export_format": "json",
+            "now": now,
+        },
+        headers=headers,
+    )
+    deleted_story = client.delete(
+        "/v2/projects/project_demo/stories/story_demo",
+        headers=headers,
+    )
+    deleted_project = client.delete("/v2/projects/project_demo", headers=headers)
+
+    for response in (
+        project,
+        story,
+        saved_import,
+        submitted_run,
+        worker,
+        snapshot,
+        export,
+        deleted_story,
+        deleted_project,
+    ):
+        assert response.status_code in {200, 204}, response.text
+
+    records = audit_ledger.records()
+    assert tuple(record.event_type for record in records) == (
+        "project_created",
+        "story_created",
+        "import_saved",
+        "run_submitted",
+        "worker_processed",
+        "snapshot_created",
+        "export_generated",
+        "story_deleted",
+        "project_deleted",
+    )
+    assert records[2].metadata == {
+        "chapter_count": "1",
+        "evidence_anchor_count": "1",
+        "import_id": "import_demo",
+        "scene_count": "1",
+        "source_format": "txt",
+    }
+    assert records[4].metadata == {
+        "claimed_jobs": "1",
+        "failed_jobs": "0",
+        "max_jobs": "1",
+        "succeeded_jobs": "1",
+    }
+    serialized_records = json.dumps(
+        [record.payload_for_hash() for record in records],
+        sort_keys=True,
+    )
+    assert "clean metadata-only scene" not in serialized_records
+    assert "serialized_output" not in serialized_records
+    assert "source_text" not in serialized_records
+    audit_ledger.verify()
+
+
+def test_configured_audit_writer_failure_blocks_workflow_completion() -> None:
+    """Workflow routes should not claim completion when audit writing fails."""
+    audit_ledger = _FailingAuditLedger()
+    repository = InMemoryProjectRepository()
+    auth_store = InMemoryCredentialStore()
+    session_store = InMemorySessionStore()
+    client = TestClient(
+        create_app(
+            authentication_service=AuthenticationService(
+                repository=repository,
+                credential_store=auth_store,
+                session_store=session_store,
+            ),
+            project_repository=repository,
+            audit_ledger=audit_ledger,
+        )
+    )
+    now = "2026-07-14T00:00:00Z"
+    headers = _registered_user_headers(client, now=now)
+
+    response = client.post(
+        "/v2/projects",
+        json={"project_id": "project_demo", "name": "Demo", "now": now},
+        headers=headers,
+    )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Audit ledger write failed.",
+        "error": "audit_record_failed",
+    }
+
+
 def test_create_app_from_env_rejects_wildcard_cors_origin() -> None:
     """Environment app factory should not allow broad CORS by accident."""
     try:
@@ -391,6 +565,51 @@ def production_identity_env() -> dict[str, str]:
         PASSWORD_RESET_ENABLED_ENV: "true",
         ACCOUNT_DELETION_HANDOFF_ENV: "true",
     }
+
+
+def _registered_user_headers(client: TestClient, *, now: str) -> dict[str, str]:
+    """Register a local API user and return authenticated request headers."""
+    response = client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": "user_demo",
+            "email": "demo@example.com",
+            "display_name": "Demo User",
+            "password": "StrongPass123",
+            "now": now,
+        },
+    )
+    assert response.status_code == 200, response.text
+    return {
+        "Authorization": f"Bearer {response.json()['session_token']}",
+        "X-Aevryn-Now": now,
+    }
+
+
+class _NoSnapshotBackgroundJobHandler:
+    """Worker test handler that completes jobs without storing engine snapshots."""
+
+    def process(self, _job: BackgroundJob) -> tuple[Any, ...]:
+        """Return no snapshots for worker lifecycle audit tests."""
+        return ()
+
+
+class _FailingAuditLedger(AuditLedger):
+    """Audit ledger test double that fails writes visibly."""
+
+    def append(
+        self,
+        *,
+        event_type: str,
+        occurred_at: str,
+        summary: str,
+        actor_id: str = "",
+        project_id: str = "",
+        story_id: str = "",
+        metadata: Mapping[str, str] | None = None,
+    ) -> AuditLedgerRecord:
+        """Raise an audit failure instead of appending."""
+        raise RuntimeError("audit unavailable")
 
 
 def test_create_app_from_env_requires_production_https_edge_config() -> None:
@@ -957,6 +1176,27 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
         def snapshot(self) -> object:
             raise AssertionError("Unexpected queue snapshot in wiring test.")
 
+    class FakePostgresqlAuditLedger:
+        """Test double for durable production audit ledger selection."""
+
+        constructed_database_urls: list[str] = []
+
+        def __init__(self, database_url: str) -> None:
+            self.constructed_database_urls.append(database_url)
+
+        def append(
+            self,
+            *,
+            event_type: str,
+            occurred_at: str,
+            summary: str,
+            actor_id: str = "",
+            project_id: str = "",
+            story_id: str = "",
+            metadata: Mapping[str, str] | None = None,
+        ) -> object:
+            raise AssertionError("Unexpected audit append in wiring test.")
+
     monkeypatch.setattr(
         "aevryn.api.app.PostgresqlProjectRepository",
         FakePostgresqlProjectRepository,
@@ -965,6 +1205,10 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
     monkeypatch.setattr(
         "aevryn.api.app.PostgresqlBackgroundJobQueue",
         FakePostgresqlBackgroundJobQueue,
+    )
+    monkeypatch.setattr(
+        "aevryn.api.app.PostgresqlAuditLedger",
+        FakePostgresqlAuditLedger,
     )
 
     client = TestClient(
@@ -985,6 +1229,9 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
 
     assert health.status_code == 200
     assert FakePostgresqlBackgroundJobQueue.constructed_database_urls == [
+        "postgresql://aevryn.example/project"
+    ]
+    assert FakePostgresqlAuditLedger.constructed_database_urls == [
         "postgresql://aevryn.example/project"
     ]
     assert register.status_code == 400

@@ -151,12 +151,15 @@ The PostgreSQL audit storage adapter is implemented as `PostgresqlAuditLedger` i
 
 The adapter creates the `audit_ledger_records` table, appends records in a locked transaction, reloads records in sequence order, and verifies the persisted hash chain.
 
-This does not claim production API or worker events are wired to the adapter yet.
+Core API and worker workflow events are wired to the configured audit writer.
+
+The covered event set includes project creation/deletion, story creation/deletion,
+import save, run submission, worker drain completion, snapshot creation, and
+export generation.
 
 Public beta remains blocked until:
 
-* PostgreSQL audit adapter is configured in production
-* API and worker events are wired to the production audit adapter
+* PostgreSQL audit adapter configuration is verified in hosted production
 * audit retention behavior is enforced or operationally documented
 * audit access controls are configured and reviewed
 * hash-chain verification is included in the release gate
@@ -173,5 +176,5 @@ This decision is accepted when:
 Production audit records can be stored in managed PostgreSQL as metadata-only,
 append-only, tamper-evident records; deletion events can outlive deleted content
 without preserving it; and public beta remains blocked until production
-configuration, event wiring, retention, access, and restore/audit verification are complete.
+configuration verification, retention, access, and restore/audit verification are complete.
 ```

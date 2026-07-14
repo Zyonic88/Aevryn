@@ -128,7 +128,8 @@ The selected candidate uses managed PostgreSQL audit tables owned by Aevryn's Pr
 
 `PostgresqlAuditLedger` implements the selected storage adapter.
 
-Selection and adapter implementation do not mean production API or worker events are wired to the adapter yet.
+Core API and worker workflow events now append metadata-only audit records through
+the configured audit writer.
 
 ---
 
@@ -140,13 +141,12 @@ Public beta should capture security-relevant and workflow-relevant events, inclu
 * login success and failure
 * password reset request
 * project creation
+* project deletion
 * story creation
 * story deletion
 * import saved
 * run submitted
-* worker started
-* worker failed
-* worker succeeded
+* worker drain completion
 * snapshot created
 * export generated
 * settings changed
@@ -196,8 +196,9 @@ docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit d
 Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
 Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
 `PostgresqlAuditLedger` implements the selected PostgreSQL adapter.
+Core API and worker workflow events are wired to the configured audit writer.
 
-Production backup provider verification, restore execution, production audit adapter configuration, audit event wiring, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, hosted production audit adapter verification, remaining identity/settings/access audit event coverage, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
 ```
 
 ---

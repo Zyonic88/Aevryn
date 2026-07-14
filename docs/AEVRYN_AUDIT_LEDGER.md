@@ -21,7 +21,9 @@ The public-beta production ledger storage candidate is selected in `docs/AEVRYN_
 
 The selected candidate is managed PostgreSQL audit tables owned by Aevryn's Project Database environment.
 
-The production adapter, event wiring, retention enforcement, access-control verification, and restore/audit drill remain public-beta blockers.
+The production adapter and core workflow event wiring are implemented.
+
+Hosted production configuration verification, retention enforcement, access-control verification, release-gate integrity verification, and the restore/audit drill remain public-beta blockers.
 
 Current implementation:
 
@@ -115,25 +117,29 @@ story_deleted | Deleted story text: ...
 
 ---
 
-# Candidate Event Types
+# Implemented Workflow Event Types
 
-Initial event types should include:
+The API now appends metadata-only records for:
 
-* `user_registered`
-* `login_succeeded`
-* `login_failed`
 * `project_created`
+* `project_deleted`
 * `story_created`
 * `story_deleted`
 * `import_saved`
 * `run_submitted`
-* `worker_started`
-* `worker_failed`
-* `worker_succeeded`
+* `worker_processed`
 * `snapshot_created`
 * `export_generated`
+
+Additional candidate event types still needed before public beta include:
+
+* `user_registered`
+* `login_succeeded`
+* `login_failed`
+* `password_reset_requested`
 * `settings_changed`
 * `security_configuration_failed`
+* `cross_user_access_attempt`
 
 Event types are stable machine-readable tokens.
 
@@ -143,10 +149,10 @@ Event types are stable machine-readable tokens.
 
 Audit ledger work does not unblock public beta until:
 
-* production storage adapter for audit records is configured in production
+* hosted production configuration verifies the PostgreSQL audit adapter
 * audit retention policy is enforced or operationally verified
 * audit access controls are configured and reviewed
-* security-relevant API and worker events are wired into the ledger
+* remaining security-relevant identity/settings/access events are wired into the ledger
 * deletion events are verified to remain metadata-only
 * ledger integrity verification is part of the release gate
 * restore/audit drill results are recorded with `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
