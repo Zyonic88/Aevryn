@@ -360,6 +360,7 @@ def test_project_db_smoke_reads_env_without_printing_url(
         assert bootstrap_schema is True
         return {
             "adapter": "postgresql",
+            "schema": "bootstrapped",
             "ok": "project_database_postgresql_smoke_completed",
         }
 
@@ -370,6 +371,7 @@ def test_project_db_smoke_reads_env_without_printing_url(
 
     assert exit_code == 0
     assert "adapter=postgresql" in captured.out
+    assert "schema=bootstrapped" in captured.out
     assert "ok=project_database_postgresql_smoke_completed" in captured.out
     assert "secret-db-password" not in captured.out
     assert "secret-db-password" not in captured.err
@@ -394,6 +396,7 @@ def test_project_db_smoke_can_validate_existing_schema_without_bootstrap(
         assert bootstrap_schema is False
         return {
             "adapter": "postgresql",
+            "schema": "existing",
             "ok": "project_database_postgresql_smoke_completed",
         }
 
@@ -403,6 +406,7 @@ def test_project_db_smoke_can_validate_existing_schema_without_bootstrap(
     captured = capsys.readouterr()
 
     assert exit_code == 0
+    assert "schema=existing" in captured.out
     assert "ok=project_database_postgresql_smoke_completed" in captured.out
     assert "secret-db-password" not in captured.out
     assert "secret-db-password" not in captured.err
