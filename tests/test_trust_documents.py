@@ -154,7 +154,8 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
     document = read_doc("docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md")
 
     required_terms = (
-        "V2 Release Candidate Readiness is blocked until Phase 12 is accepted.",
+        "V2 product scope is accepted after Phase 12 Language And Identity Understanding.",
+        "V2 Release Candidate Readiness is active.",
         "Public beta is not approved yet.",
         "Release Candidate Readiness is not Version 3.",
         "docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md",
