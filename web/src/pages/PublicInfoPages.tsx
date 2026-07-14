@@ -125,6 +125,15 @@ export function PrivacyPage() {
           ],
         },
         {
+          title: "AI Providers",
+          body: [
+            "When provider-backed extraction is enabled, Aevryn may send selected story excerpts, scene context, evidence anchors, extraction instructions, and structured-output requirements to a reviewed AI provider.",
+            "The current provider candidate is OpenAI.",
+            "Provider output is not Canon. Aevryn validates provider output against story evidence before accepting anything into project state.",
+            "Provider-backed extraction must remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, and no-training posture are reviewed, documented, and disclosed accurately.",
+          ],
+        },
+        {
           title: "Contact",
           body: ["Privacy questions should go to privacy@aevryn.ai.", ...contactGuidance],
         },

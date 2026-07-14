@@ -68,6 +68,15 @@ Backup retention wording is tracked in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md
 
 Before public beta, Aevryn must disclose third-party processors that may receive user data, including authentication, hosting, storage, analytics, payment, support, and AI providers.
 
+The current AI provider disclosure candidate is tracked in `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`.
+
+Current posture:
+
+* OpenAI is the internal-alpha provider candidate for evidence-bounded extraction.
+* Provider-backed extraction may send selected story excerpts, scene context, evidence anchors, extraction instructions, and structured-output requirements.
+* Provider output is not Canon and must be validated against story evidence before acceptance.
+* Provider-backed extraction must remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, and no-training posture are reviewed, documented, and disclosed accurately.
+
 ---
 
 # User Rights

@@ -83,7 +83,7 @@ Public beta remains blocked until:
 
 * legal-sensitive pages receive owner and attorney review
 * production backup retention wording is verified against final production backup behavior
-* AI provider data-use disclosure is completed or provider-backed extraction is disabled for public beta
+* AI provider data-use disclosure is completed against the selected public-beta disclosure candidate or provider-backed extraction is disabled for public beta
 * support procedure owner review confirms metadata-first triage and escalation handling
 * final public-beta signoff explicitly approves publication
 

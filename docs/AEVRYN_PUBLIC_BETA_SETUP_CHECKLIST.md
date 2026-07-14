@@ -125,11 +125,12 @@ Tracking docs:
 
 * `docs/AEVRYN_AI_PROVIDER_REVIEW.md`
 * `docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md`
+* `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`
 
 Status:
 
 ```text
-OpenAI is documented as an internal-alpha candidate only. Public-beta provider review not complete.
+OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Provider terms review, production model selection, provider verification, and public-beta approval remain open.
 ```
 
 ---
@@ -238,7 +239,7 @@ Tracking docs:
 Status:
 
 ```text
-Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate selected. Owner review, legal review, backup/provider verification, and final public-beta signoff remain open.
+Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Owner review, legal review, backup/provider verification, and final public-beta signoff remain open.
 ```
 
 ---
