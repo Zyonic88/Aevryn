@@ -78,7 +78,15 @@ Audit records are retained for security, integrity, support, and operational acc
 
 Audit records must remain metadata-only and must not become hidden copies of deleted manuscripts.
 
-Production audit retention windows must be selected before public beta.
+The public-beta audit storage and retention candidate is recorded in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+
+Candidate retention is up to 1 year unless owner/legal/security review selects a different production window.
+
+Audit records may remain after project deletion when needed for security, abuse prevention, legal accountability, incident response, or integrity verification.
+
+Any audit record that remains after deletion must be metadata-only and must not contain deleted story content, source prose, AI payloads, exports, or private storage bytes.
+
+Production audit retention enforcement must be implemented or operationally verified before public beta.
 
 ---
 

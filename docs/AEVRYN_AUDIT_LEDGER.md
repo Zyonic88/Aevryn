@@ -17,7 +17,11 @@ They never preserve the private thing that happened.
 
 Phase 11 introduces the audit ledger contract and a deterministic in-memory implementation.
 
-The production ledger storage adapter is a later deployment/infrastructure decision.
+The public-beta production ledger storage candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+
+The selected candidate is managed PostgreSQL audit tables owned by Aevryn's Project Database environment.
+
+The production adapter, event wiring, retention enforcement, access-control verification, and restore/audit drill remain public-beta blockers.
 
 Current implementation:
 
@@ -136,9 +140,9 @@ Event types are stable machine-readable tokens.
 
 Audit ledger work does not unblock public beta until:
 
-* production storage for audit records is selected
-* audit retention policy is documented
-* audit access controls are documented
+* production storage candidate for audit records is implemented and verified
+* audit retention policy is enforced or operationally verified
+* audit access controls are configured and reviewed
 * security-relevant API and worker events are wired into the ledger
 * deletion events are verified to remain metadata-only
 * ledger integrity verification is part of the release gate
