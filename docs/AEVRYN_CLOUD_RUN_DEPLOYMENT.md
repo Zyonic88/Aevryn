@@ -196,6 +196,9 @@ AEVRYN_METADATA_ONLY_LOGGING=true
 `AEVRYN_WORKER_QUEUE_PROVIDER=managed` currently means the API wires the
 durable PostgreSQL background queue backed by the Project Database
 `background_jobs` table. Do not use the local in-memory queue in production.
+Managed worker runners should call `POST /v2/workers/process` with
+`AEVRYN_WORKER_API_KEY`; the worker key is route-scoped and does not authorize
+general workflow routes.
 
 Secret-backed Cloud Run variables:
 
