@@ -37,6 +37,53 @@ def test_logging_policy_document_exists() -> None:
     assert (ROOT / "docs" / "AEVRYN_LOGGING_POLICY.md").exists()
 
 
+def test_production_observability_policy_document_exists() -> None:
+    """Production observability must have a public-beta policy candidate."""
+    assert (ROOT / "docs" / "AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md").exists()
+
+
+def test_production_observability_policy_preserves_metadata_only_boundary() -> None:
+    """Hosted observability policy must define allowed, forbidden, and retention terms."""
+    document = (ROOT / "docs" / "AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md").read_text(
+        encoding="utf-8"
+    )
+
+    required_terms = (
+        "Decision: Production observability policy candidate",
+        "Status: Selected for owner/security review",
+        "Public beta: Blocked",
+        "Observability explains workflows without preserving user stories.",
+        "request ID",
+        "route template",
+        "workflow kind",
+        "stable machine error code",
+        "provider timeout category",
+        "full manuscripts",
+        "full AI provider prompts",
+        "full AI provider responses",
+        "session tokens",
+        "database URLs",
+        "machine-local paths",
+        "Operational logs and traces: retain up to 30 days.",
+        "Security alerts and incident notes: retain up to 1 year.",
+        "bounded log review",
+        "application-level metadata-only tests remain required",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_logging_policy_links_to_production_observability_policy() -> None:
+    """The V1 logging policy should point to hosted observability controls."""
+    document = (ROOT / "docs" / "AEVRYN_LOGGING_POLICY.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md" in document
+    assert "hosted retention, alert routing, access, and smoke-verification" in document
+
+
 def test_repository_line_endings_are_normalized() -> None:
     """The repository must declare stable text line endings."""
     attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")

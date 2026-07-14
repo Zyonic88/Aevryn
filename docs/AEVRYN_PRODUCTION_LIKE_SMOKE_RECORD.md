@@ -693,7 +693,7 @@ PASSED for hosted log review of the checked import, monitoring, and export smoke
 PASSED for no source prose in sampled hosted logs.
 PASSED for no full AI payloads in sampled hosted logs.
 PASSED for no secret values in sampled hosted logs.
-OPEN for broader production observability policy before public beta.
+OPEN for hosted retention and final bounded-log verification against `docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md` before public beta.
 ```
 
 ---
@@ -723,7 +723,7 @@ A successful production-like smoke must record:
 Complete the remaining release-candidate readiness checks that are outside the browser smoke:
 
 ```text
-Plan broader production observability policy before public beta.
+Verify hosted retention and bounded-log behavior against the production observability policy before public beta.
 Complete public-facing legal, trust, and support publication before public beta.
 Complete backup/restore/audit readiness before public beta.
 Continue prompt-pack and output UX polish before public beta positioning.
@@ -746,5 +746,5 @@ Then record the final result in a dated release-candidate run record.
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, broader observability policy, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, hosted observability verification, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
 ```

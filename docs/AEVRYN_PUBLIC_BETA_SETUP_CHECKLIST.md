@@ -196,12 +196,13 @@ Tracking docs:
 * `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md`
 * `docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md`
 * `docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md`
+* `docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md`
 * `docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md`
 
 Status:
 
 ```text
-Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. api.aevryn.ai custom-domain health smoke returned OK. Frontend, managed-identity, hosted creator workflow, export creation, log review, and smoke project cleanup passed in the hosted production-like environment. Public beta remains blocked by non-smoke readiness items.
+Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. api.aevryn.ai custom-domain health smoke returned OK. Frontend, managed-identity, hosted creator workflow, export creation, log review, and smoke project cleanup passed in the hosted production-like environment. Production observability policy candidate selected for owner/security review. Public beta remains blocked by non-smoke readiness items.
 ```
 
 ---
