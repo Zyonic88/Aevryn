@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 
 from aevryn.api import create_app
 from aevryn.api.app import MAX_IMPORT_CONTENT_BASE64_CHARS
-from aevryn.audit import AuditLedger
+from aevryn.audit import AuditLedger, AuditLedgerRecord
 from aevryn.auth import (
     AuthenticationConfig,
     AuthenticationService,
@@ -865,6 +865,53 @@ def test_import_runs_api_rejects_duplicate_and_cross_user_submissions() -> None:
     )
     assert cross_user.status_code == 404
     assert cross_user.json()["error"] == "import_not_found"
+
+
+def test_import_runs_api_marks_run_failed_when_audit_submission_fails() -> None:
+    """Audit failures after run creation should not strand imports as active."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            audit_ledger=FailingAuditLedger(fail_on="run_submitted"),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+
+    assert submitted.status_code == 503
+    assert submitted.json() == {
+        "error": "audit_record_failed",
+        "detail": "Audit ledger write failed.",
+    }
+    run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
+    assert run.status == "failed"
+    assert run.finished_at == NOW
+    assert run.error_summary == "Audit ledger write failed."
+
+    retry = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_retry", "job_id": "job_retry", "now": SOON},
+    )
+    assert retry.status_code == 503
+    retry_run = repository.get_engine_run(user_id="user_demo", run_id="run_retry")
+    assert retry_run.status == "failed"
 
 
 def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
@@ -3032,6 +3079,39 @@ class RecordingWorkerHandler:
 def auth_headers(token: str) -> dict[str, str]:
     """Return authorization headers for API tests."""
     return {"Authorization": f"Bearer {token}", "X-Aevryn-Now": SOON}
+
+
+class FailingAuditLedger(AuditLedger):
+    """Audit ledger test double that fails selected writes visibly."""
+
+    def __init__(self, *, fail_on: str | None = None) -> None:
+        """Create a ledger that fails all writes or one event type."""
+        super().__init__()
+        self._fail_on = fail_on
+
+    def append(
+        self,
+        *,
+        event_type: str,
+        occurred_at: str,
+        summary: str,
+        actor_id: str = "",
+        project_id: str = "",
+        story_id: str = "",
+        metadata: Mapping[str, str] | None = None,
+    ) -> AuditLedgerRecord:
+        """Raise an audit failure instead of appending selected events."""
+        if self._fail_on is None or event_type == self._fail_on:
+            raise RuntimeError("audit unavailable")
+        return super().append(
+            event_type=event_type,
+            occurred_at=occurred_at,
+            summary=summary,
+            actor_id=actor_id,
+            project_id=project_id,
+            story_id=story_id,
+            metadata=metadata,
+        )
 
 
 def import_content_base64(text: str) -> str:
