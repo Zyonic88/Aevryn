@@ -6,7 +6,12 @@ from dataclasses import replace
 
 import pytest
 
-from aevryn.audit import AuditLedger, AuditLedgerIntegrityError, PostgresqlAuditLedger
+from aevryn.audit import (
+    AuditLedger,
+    AuditLedgerIntegrityError,
+    PostgresqlAuditLedger,
+    postgresql_audit_access_report,
+)
 from aevryn.audit import postgresql as audit_postgresql
 from aevryn.persistence.repository import PersistenceError
 
@@ -279,14 +284,48 @@ def test_postgresql_audit_ledger_detects_tampered_persisted_rows() -> None:
         )
 
 
+def test_postgresql_audit_access_report_returns_metadata_only_privileges() -> None:
+    """Audit access reporting should inspect privileges without reading audit rows."""
+    connection = FakeAuditConnection()
+    connection.access_report_row = (True, True, True, False, False)
+
+    report = postgresql_audit_access_report(
+        "postgresql://example.invalid/aevryn",
+        connect_factory=lambda _: connection,
+    )
+
+    assert report == {
+        "table_exists": True,
+        "can_select": True,
+        "can_insert": True,
+        "can_update": False,
+        "can_delete": False,
+    }
+    assert connection.audit_rows_selected == 0
+
+
+def test_postgresql_audit_access_report_rejects_non_boolean_values() -> None:
+    """Audit access reports should fail if PostgreSQL returns unexpected shapes."""
+    connection = FakeAuditConnection()
+    connection.access_report_row = (True, "yes", True, False, False)
+
+    with pytest.raises(PersistenceError, match="select privilege"):
+        postgresql_audit_access_report(
+            "postgresql://example.invalid/aevryn",
+            connect_factory=lambda _: connection,
+        )
+
+
 class FakeAuditConnection:
     """Minimal connection test double for audit ledger SQL."""
 
     def __init__(self) -> None:
         self.records: list[tuple[object, ...]] = []
+        self.access_report_row: tuple[object, ...] = (True, True, True, False, False)
         self.commits = 0
         self.rollbacks = 0
         self.lock_count = 0
+        self.audit_rows_selected = 0
 
     def __enter__(self) -> FakeAuditConnection:
         return self
@@ -333,7 +372,11 @@ class FakeAuditCursor:
             stored[7] = _jsonb_value(stored[7])
             self.connection.records.append(tuple(stored))
             return
+        if "has_table_privilege" in normalized:
+            self._fetchone = self.connection.access_report_row
+            return
         if "from audit_ledger_records order by sequence" in normalized:
+            self.connection.audit_rows_selected += 1
             self._fetchall = list(self.connection.records)
             return
         raise AssertionError(f"Unexpected SQL: {statement}")

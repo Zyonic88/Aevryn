@@ -206,6 +206,65 @@ class PostgresqlAuditLedger:
         return self._connect_factory(self._database_url)
 
 
+def postgresql_audit_access_report(
+    database_url: str,
+    *,
+    connect_factory: ConnectFactory | None = None,
+) -> dict[str, object]:
+    """Return metadata-only audit table access facts for release gates."""
+    connect = connect_factory or _default_connect_factory()
+    with connect(_required_database_url(database_url)) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    to_regclass('audit_ledger_records') IS NOT NULL AS table_exists,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'SELECT'
+                        ),
+                        false
+                    ) AS can_select,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'INSERT'
+                        ),
+                        false
+                    ) AS can_insert,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'UPDATE'
+                        ),
+                        false
+                    ) AS can_update,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'DELETE'
+                        ),
+                        false
+                    ) AS can_delete;
+                """
+            )
+            row = cursor.fetchone()
+    if row is None:
+        raise PersistenceError("PostgreSQL audit access report returned no rows.")
+    return {
+        "table_exists": _row_bool(row[0], "audit table existence"),
+        "can_select": _row_bool(row[1], "audit select privilege"),
+        "can_insert": _row_bool(row[2], "audit insert privilege"),
+        "can_update": _row_bool(row[3], "audit update privilege"),
+        "can_delete": _row_bool(row[4], "audit delete privilege"),
+    }
+
+
 def _required_database_url(database_url: str) -> str:
     """Return a nonblank PostgreSQL database URL."""
     if not isinstance(database_url, str) or not database_url.strip():
@@ -279,6 +338,13 @@ def _row_sequence(value: object) -> int:
     """Return a PostgreSQL sequence value as a strict integer."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise PersistenceError("PostgreSQL audit sequence must be an integer.")
+    return value
+
+
+def _row_bool(value: object, label: str) -> bool:
+    """Return a PostgreSQL boolean value as a strict bool."""
+    if not isinstance(value, bool):
+        raise PersistenceError(f"PostgreSQL {label} must be a boolean.")
     return value
 
 
