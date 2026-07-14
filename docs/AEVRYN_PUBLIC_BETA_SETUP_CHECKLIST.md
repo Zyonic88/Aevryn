@@ -159,11 +159,12 @@ Tracking docs:
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
 * `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`
 * `docs/AEVRYN_BACKUP_RETENTION.md`
+* `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
 
 Status:
 
 ```text
-Restore plan exists. Production backup and audit decisions not complete.
+Restore plan exists. Public-beta backup retention wording candidate selected for owner/legal review. Production backup provider verification, restore drill, and audit decisions are not complete.
 ```
 
 ---
@@ -237,7 +238,7 @@ Tracking docs:
 Status:
 
 ```text
-Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Owner review, legal review, backup/provider wording, and final public-beta signoff remain open.
+Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate selected. Owner review, legal review, backup/provider verification, and final public-beta signoff remain open.
 ```
 
 ---

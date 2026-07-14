@@ -181,7 +181,9 @@ Current implementation progress:
 
 ```text
 docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
-Production backup provider, retention window, restore execution, audit storage provider, and audit retention remain open.
+Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
+
+Production backup provider verification, restore execution, audit storage provider, and audit retention remain open.
 ```
 
 ---

@@ -240,6 +240,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md",
         "docs/AEVRYN_REPLY_IDENTITY_SETUP.md",
         "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
+        "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
         "GitHub Branch Protection And Hosted Security Controls",
         "Production Provider And Data-Use Review",
         "Backup, Retention, Restore, And Audit",
@@ -254,6 +255,8 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "SPF/DKIM/DMARC received-message verification passed.",
         "Initial public support/trust/privacy pages are published.",
         "Support procedure owner review remains open.",
+        "Public-beta backup retention wording candidate selected for owner/legal review.",
+        "backup/provider verification",
         "Local production config contract passed.",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
@@ -308,7 +311,11 @@ def test_public_trust_page_copy_preserves_plain_language_promises() -> None:
         "Lawful mature fiction is not automatically prohibited.",
         "Attorney safe-harbor review",
         "verified contact aliases must be published accurately",
-        "production backup retention window must be selected",
+        (
+            "production backup retention window must be verified against the selected "
+            "public-beta wording candidate"
+        ),
+        "up to 30 days",
         "AI provider review must be completed",
         "without overpromising public-beta readiness",
     )
@@ -399,8 +406,10 @@ def test_public_site_publication_plan_maps_pages_to_sources() -> None:
         "abuse@aevryn.ai",
         "Implemented with verified contact details",
         "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
+        "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
         "support procedure owner review",
         "full manuscripts",
+        "backup retention wording is verified",
         "AI provider data-use disclosure",
         "final public-beta signoff explicitly approves publication",
     )

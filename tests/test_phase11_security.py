@@ -96,6 +96,36 @@ def test_backup_retention_document_covers_deletion_privacy_controls() -> None:
         "removed from active Aevryn-owned storage",
         "must not be used to recreate deleted stories except for authorized disaster recovery",
         "does not use backups for training, analytics, or support browsing",
+        "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
+        "up to 30 days",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_backup_retention_decision_records_public_beta_candidate() -> None:
+    """Backup retention decision should define the public-beta deletion wording candidate."""
+    document = (ROOT / "docs" / "AEVRYN_BACKUP_RETENTION_DECISION.md").read_text(
+        encoding="utf-8"
+    )
+
+    required_terms = (
+        "Decision: Backup retention wording candidate",
+        "Status: Selected for owner/legal review",
+        "Public beta: Blocked",
+        "Deletion removes active product data. Backups expire on a disclosed schedule.",
+        "Encrypted production backups may retain deleted data for up to 30 days.",
+        "Backups are used only for authorized disaster recovery and service restoration.",
+        (
+            "Backups are not used for AI training, analytics, support browsing, "
+            "or product exploration."
+        ),
+        "Active-storage deletion means Aevryn removes scoped active product data",
+        "be access-limited to authorized recovery operators",
+        "be used only for recovery and restore validation",
+        "be used to bypass a user's deletion decision outside authorized disaster recovery",
+        "Aevryn can truthfully tell users what deletion removes immediately",
     )
 
     for term in required_terms:

@@ -86,4 +86,6 @@ Production audit retention windows must be selected before public beta.
 
 Backup retention is defined in `docs/AEVRYN_BACKUP_RETENTION.md`.
 
-Production backup windows must be disclosed before public beta.
+The selected public-beta wording candidate is recorded in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
+
+Production backup behavior must support the disclosed window before public beta.
