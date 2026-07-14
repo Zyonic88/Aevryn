@@ -151,7 +151,7 @@ This document selects the candidate policy.
 
 The PostgreSQL audit storage adapter is implemented as `PostgresqlAuditLedger` in `src/aevryn/audit/postgresql.py`.
 
-The adapter creates the `audit_ledger_records` table, appends records in a locked transaction, reloads records in sequence order, and verifies the persisted hash chain.
+The adapter creates the `audit_ledger_records` table, appends records inside a transaction-scoped advisory lock, reloads records in sequence order, and verifies the persisted hash chain.
 
 Core API and worker workflow events are wired to the configured audit writer.
 

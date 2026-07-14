@@ -204,6 +204,7 @@ ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
 API_KEYS_ENV = "AEVRYN_API_KEYS"
 DEPLOYMENT_ENV = "AEVRYN_DEPLOYMENT_ENV"
 PROJECT_DATABASE_ADAPTER_ENV = "AEVRYN_PROJECT_DATABASE_ADAPTER"
+PROJECT_DATABASE_BOOTSTRAP_ENV = "AEVRYN_PROJECT_DATABASE_BOOTSTRAP"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 PROJECT_DATABASE_URL_ENV = "AEVRYN_PROJECT_DATABASE_URL"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
@@ -2344,6 +2345,12 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_DEPLOYMENT_ENV=production. Production must be separated from "
             "local, test, and staging environments."
         )
+    if environ.get(PROJECT_DATABASE_BOOTSTRAP_ENV, "").strip().lower() != "false":
+        raise ValueError(
+            "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Schema changes must be applied by "
+            "reviewed migrations, not by the runtime application role."
+        )
     _require_production_extraction_config(environ)
     _require_production_worker_config(environ)
     _require_production_observability_config(environ)
@@ -2518,7 +2525,8 @@ def _platform_services_from_env(
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
     if database_adapter == "postgresql":
         repository: ProjectRepository = PostgresqlProjectRepository(
-            environ.get(PROJECT_DATABASE_URL_ENV, "")
+            environ.get(PROJECT_DATABASE_URL_ENV, ""),
+            bootstrap_schema=_should_bootstrap_project_database(environ),
         )
         if _is_production_environment(environ):
             return _production_postgresql_platform_services(
@@ -2582,8 +2590,18 @@ def _production_postgresql_platform_services(
         ),
         import_content_store,
         storage_service,
-        PostgresqlAuditLedger(environ.get(PROJECT_DATABASE_URL_ENV, "")),
+        PostgresqlAuditLedger(
+            environ.get(PROJECT_DATABASE_URL_ENV, ""),
+            bootstrap_schema=_should_bootstrap_project_database(environ),
+        ),
     )
+
+
+def _should_bootstrap_project_database(environ: Mapping[str, str]) -> bool:
+    """Return whether PostgreSQL adapters may apply schema bootstrap on startup."""
+    if not _is_production_environment(environ):
+        return True
+    return environ.get(PROJECT_DATABASE_BOOTSTRAP_ENV, "").strip().lower() != "false"
 
 
 def _production_authentication_service(

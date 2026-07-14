@@ -1223,6 +1223,7 @@ def test_cloud_run_deployment_document_tracks_hosted_api_runbook() -> None:
         "python -m aevryn.cli api",
         "Cloud Run provides `PORT`.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
         "AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai",
         "Secret-backed Cloud Run variables",
         "AEVRYN_PROJECT_DATABASE_URL",
@@ -1276,6 +1277,48 @@ def test_cloud_run_deployment_document_tracks_hosted_api_runbook() -> None:
 
     for term in ignored_terms:
         assert term in dockerignore
+
+
+def test_database_privilege_template_preserves_append_only_audit_contract() -> None:
+    """Runtime privilege SQL should keep audit history append-only."""
+    document = read_doc("docs/AEVRYN_DATABASE_PRIVILEGE_HARDENING.md")
+    template = read_doc("docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql")
+
+    required_document_terms = (
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
+        "docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql",
+        "audit_ledger_records TRUNCATE: false",
+        "transaction-scoped PostgreSQL advisory lock",
+    )
+
+    for term in required_document_terms:
+        assert term in document
+
+    required_template_terms = (
+        "Replace <runtime_role> only in the reviewed execution copy.",
+        "Cloud Run must use AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false.",
+        'GRANT USAGE ON SCHEMA public TO "<runtime_role>";',
+        "public.background_jobs",
+        "public.project_settings",
+        'GRANT SELECT, INSERT ON TABLE public.audit_ledger_records TO "<runtime_role>";',
+        (
+            'REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.audit_ledger_records '
+            'FROM "<runtime_role>";'
+        ),
+    )
+
+    for term in required_template_terms:
+        assert term in template
+
+    forbidden_terms = (
+        "postgresql://",
+        "postgres://",
+        "YOUR_",
+        "aevryn_app",
+    )
+
+    for term in forbidden_terms:
+        assert term not in template
 
 
 def test_future_ideas_document_preserves_scope_boundary() -> None:

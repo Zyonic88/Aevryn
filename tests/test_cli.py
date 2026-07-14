@@ -495,6 +495,7 @@ def test_production_config_check_reports_ready_contract_without_secrets(
     env_values = {
         "AEVRYN_DEPLOYMENT_ENV": "production",
         "AEVRYN_PROJECT_DATABASE_ADAPTER": "postgresql",
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP": "false",
         "AEVRYN_PROJECT_DATABASE_URL": (
             "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
         ),
@@ -765,6 +766,7 @@ def test_audit_access_report_prints_privileges_without_secrets(
             "can_insert": True,
             "can_update": False,
             "can_delete": False,
+            "can_truncate": False,
         }
 
     monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
@@ -781,6 +783,7 @@ def test_audit_access_report_prints_privileges_without_secrets(
     assert "can_insert=true" in captured.out
     assert "can_update=false" in captured.out
     assert "can_delete=false" in captured.out
+    assert "can_truncate=false" in captured.out
     assert "secrets_printed=0" in captured.out
     assert "ok=audit_access_metadata_reported" in captured.out
     assert "secret-db-password" not in captured.out
@@ -802,6 +805,7 @@ def test_audit_access_report_helper_returns_stable_boolean_text(
             "can_insert": False,
             "can_update": False,
             "can_delete": False,
+            "can_truncate": False,
         }
 
     monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
@@ -816,6 +820,7 @@ def test_audit_access_report_helper_returns_stable_boolean_text(
         "can_insert": "false",
         "can_update": "false",
         "can_delete": "false",
+        "can_truncate": "false",
         "secrets_printed": 0,
         "ok": "audit_access_metadata_reported",
     }
@@ -831,7 +836,7 @@ def test_audit_access_verify_help_describes_append_only_contract(
 
     assert error.value.code == 0
     assert "append-only" in output
-    assert "must not be able to update or delete" in output
+    assert "must not be able to update, delete, or truncate" in output
 
 
 def test_audit_access_verify_reports_success_without_secrets(
@@ -849,6 +854,7 @@ def test_audit_access_verify_reports_success_without_secrets(
             "can_insert": True,
             "can_update": False,
             "can_delete": False,
+            "can_truncate": False,
         }
 
     monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
@@ -861,6 +867,7 @@ def test_audit_access_verify_reports_success_without_secrets(
     assert "ok=audit_access_append_only_verified" in captured.out
     assert "can_update=false" in captured.out
     assert "can_delete=false" in captured.out
+    assert "can_truncate=false" in captured.out
     assert "secret-db-password" not in captured.out
     assert "postgresql://" not in captured.out
     assert "localhost" not in captured.out
@@ -877,6 +884,7 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_insert": False,
                 "can_update": False,
                 "can_delete": False,
+                "can_truncate": False,
             },
             "audit table is missing",
         ),
@@ -887,6 +895,7 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_insert": True,
                 "can_update": False,
                 "can_delete": False,
+                "can_truncate": False,
             },
             "lacks SELECT privilege",
         ),
@@ -897,6 +906,7 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_insert": False,
                 "can_update": False,
                 "can_delete": False,
+                "can_truncate": False,
             },
             "lacks INSERT privilege",
         ),
@@ -907,6 +917,7 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_insert": True,
                 "can_update": True,
                 "can_delete": False,
+                "can_truncate": False,
             },
             "UPDATE privilege is present",
         ),
@@ -917,8 +928,20 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_insert": True,
                 "can_update": False,
                 "can_delete": True,
+                "can_truncate": False,
             },
             "DELETE privilege is present",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": True,
+                "can_insert": True,
+                "can_update": False,
+                "can_delete": False,
+                "can_truncate": True,
+            },
+            "TRUNCATE privilege is present",
         ),
     ),
 )
