@@ -1220,6 +1220,42 @@ describe("App shell routing", () => {
     );
   });
 
+  it("hides internal bundled import filenames in monitoring", async () => {
+    storeAuthenticatedProject();
+    const bundledStatusPayload = {
+      ...projectStatusPayload,
+      latest_import: {
+        ...projectStatusPayload.latest_import,
+        filename: "aevryn_import_bundle.txt",
+      },
+    };
+    vi.mocked(fetch).mockImplementation(
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(bundledStatusPayload)));
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/monitoring"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
+    expect(await screen.findByText("Chapter import")).toBeInTheDocument();
+    expect(screen.queryByText(/aevryn_import_bundle/u)).not.toBeInTheDocument();
+  });
+
   it("reuses dashboard health data when navigating to monitoring inside the freshness window", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));

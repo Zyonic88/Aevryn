@@ -2240,6 +2240,18 @@ def _require_production_extraction_config(environ: Mapping[str, str]) -> None:
         raise ValueError(
             "AEVRYN_OPENAI_MODEL is required when AEVRYN_EXTRACTION_MODE=openai."
         )
+    if not environ.get(OPENAI_TIMEOUT_SECONDS_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_OPENAI_TIMEOUT_SECONDS is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production."
+        )
+    _optional_positive_float(environ, OPENAI_TIMEOUT_SECONDS_ENV, default=30.0)
+    if not environ.get(OPENAI_MAX_RESPONSE_BYTES_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_OPENAI_MAX_RESPONSE_BYTES is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production."
+        )
+    _optional_positive_int(environ, OPENAI_MAX_RESPONSE_BYTES_ENV, default=1_048_576)
 
 
 def _require_production_worker_config(environ: Mapping[str, str]) -> None:

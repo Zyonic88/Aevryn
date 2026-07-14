@@ -360,6 +360,8 @@ def production_extraction_env() -> dict[str, str]:
         EXTRACTION_MODE_ENV: "openai",
         OPENAI_API_KEY_ENV: "openai-api-key-placeholder",
         OPENAI_MODEL_ENV: "gpt-5.4-mini",
+        OPENAI_TIMEOUT_SECONDS_ENV: "90",
+        OPENAI_MAX_RESPONSE_BYTES_ENV: "1048576",
     }
 
 
@@ -661,6 +663,27 @@ def test_create_app_from_env_requires_production_extraction_provider() -> None:
                 **complete_until_extraction,
                 EXTRACTION_MODE_ENV: "openai",
                 OPENAI_API_KEY_ENV: "openai-api-key-placeholder",
+            }
+        )
+
+    with pytest.raises(ValueError, match=OPENAI_TIMEOUT_SECONDS_ENV):
+        create_app_from_env(
+            {
+                **complete_until_extraction,
+                EXTRACTION_MODE_ENV: "openai",
+                OPENAI_API_KEY_ENV: "openai-api-key-placeholder",
+                OPENAI_MODEL_ENV: "gpt-5.4-mini",
+            }
+        )
+
+    with pytest.raises(ValueError, match=OPENAI_MAX_RESPONSE_BYTES_ENV):
+        create_app_from_env(
+            {
+                **complete_until_extraction,
+                EXTRACTION_MODE_ENV: "openai",
+                OPENAI_API_KEY_ENV: "openai-api-key-placeholder",
+                OPENAI_MODEL_ENV: "gpt-5.4-mini",
+                OPENAI_TIMEOUT_SECONDS_ENV: "90",
             }
         )
 
