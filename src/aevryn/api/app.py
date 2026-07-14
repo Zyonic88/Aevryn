@@ -1618,23 +1618,35 @@ def create_app(
                     queue,
                     handler,
                     request_body.now,
-                )
-            run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
-            _append_audit_event(
-                audit_ledger,
-                event_type="run_submitted",
-                occurred_at=request_body.now,
-                summary="Import processing run submitted.",
-                actor_id=user.user_id,
-                project_id=project_id,
-                story_id=story_id,
-                metadata={
-                    "import_id": import_id,
-                    "run_id": run.run_id,
-                    "job_id": request_body.job_id,
-                    "run_status": run.status,
-                },
             )
+            run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
+            try:
+                _append_audit_event(
+                    audit_ledger,
+                    event_type="run_submitted",
+                    occurred_at=request_body.now,
+                    summary="Import processing run submitted.",
+                    actor_id=user.user_id,
+                    project_id=project_id,
+                    story_id=story_id,
+                    metadata={
+                        "import_id": import_id,
+                        "run_id": run.run_id,
+                        "job_id": request_body.job_id,
+                        "run_status": run.status,
+                    },
+                )
+            except HTTPException:
+                repository.update_engine_run(
+                    replace(
+                        run,
+                        status="failed",
+                        status_updated_at=request_body.now,
+                        finished_at=request_body.now,
+                        error_summary="Audit ledger write failed.",
+                    )
+                )
+                raise
         except HTTPException:
             raise
         except (DuplicateRecordError, DuplicateJobError) as error:
