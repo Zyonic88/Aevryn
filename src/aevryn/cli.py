@@ -594,6 +594,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default="AEVRYN_PROJECT_DATABASE_URL",
         help="Process environment variable containing the PostgreSQL database URL.",
     )
+    project_db_smoke_parser.add_argument(
+        "--no-bootstrap",
+        action="store_true",
+        help="Validate an existing schema without attempting DDL.",
+    )
 
     subcommands.add_parser(
         "storage-smoke",
@@ -1132,7 +1137,10 @@ def _handle_project_db_smoke(args: argparse.Namespace) -> None:
     if not database_url_env:
         raise ValueError("--database-url-env cannot be blank.")
     database_url = _required_process_env_value(database_url_env)
-    summary = _run_project_database_smoke(database_url=database_url)
+    summary = _run_project_database_smoke(
+        database_url=database_url,
+        bootstrap_schema=not cast(bool, args.no_bootstrap),
+    )
     for key, value in summary.items():
         print(f"{key}={value}")
 
@@ -1222,9 +1230,16 @@ def _required_process_env_value(key: str) -> str:
     return value
 
 
-def _run_project_database_smoke(*, database_url: str) -> dict[str, object]:
+def _run_project_database_smoke(
+    *,
+    database_url: str,
+    bootstrap_schema: bool = True,
+) -> dict[str, object]:
     """Run a PostgreSQL Project Database smoke test and return metadata only."""
-    repository = PostgresqlProjectRepository(database_url)
+    repository = PostgresqlProjectRepository(
+        database_url,
+        bootstrap_schema=bootstrap_schema,
+    )
     smoke_suffix = uuid4().hex
     user_id = f"user_pg_smoke_{smoke_suffix}"
     email = f"pg-smoke-{smoke_suffix}@example.invalid"
