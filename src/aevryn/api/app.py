@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import json
 import logging
 import os
@@ -254,6 +255,8 @@ OPENAI_ENDPOINT_ENV = "AEVRYN_OPENAI_ENDPOINT"
 OPENAI_TIMEOUT_SECONDS_ENV = "AEVRYN_OPENAI_TIMEOUT_SECONDS"
 OPENAI_MAX_RESPONSE_BYTES_ENV = "AEVRYN_OPENAI_MAX_RESPONSE_BYTES"
 PLATFORM_ENGINE_VERSION = "aevryn_v1"
+AUDIT_METADATA_MAX_VALUE_LENGTH = 120
+AUDIT_REFERENCE_PREFIX_LENGTH = 96
 ALPHA_ACTIVE_RUN_TIMEOUT = timedelta(minutes=30)
 MAX_IMPORT_CONTENT_BYTES = 10 * 1024 * 1024
 MAX_IMPORT_CONTENT_BASE64_CHARS = ((MAX_IMPORT_CONTENT_BYTES + 2) // 3) * 4
@@ -627,7 +630,7 @@ def create_app(
                 occurred_at=request.now,
                 summary="Reset requested.",
                 actor_id=reset.user_id,
-                metadata={"reset_id": request.reset_id},
+                metadata={"reset_id": _audit_reference(request.reset_id)},
             )
         except AuthenticationError as error:
             raise HTTPException(
@@ -1058,8 +1061,8 @@ def create_app(
                 project_id=project_id,
                 story_id=snapshot.story_id,
                 metadata={
-                    "export_id": export.export_id,
-                    "snapshot_id": snapshot.snapshot_id,
+                    "export_id": _audit_reference(export.export_id),
+                    "snapshot_id": _audit_reference(snapshot.snapshot_id),
                     "export_kind": export.export_kind,
                     "export_format": export.export_format,
                 },
@@ -1403,7 +1406,7 @@ def create_app(
                 project_id=project_id,
                 story_id=story_id,
                 metadata={
-                    "import_id": import_record.import_id,
+                    "import_id": _audit_reference(import_record.import_id),
                     "source_format": import_record.source_format,
                     "chapter_count": str(import_record.chapter_count),
                     "scene_count": str(import_record.scene_count),
@@ -1630,9 +1633,9 @@ def create_app(
                     project_id=project_id,
                     story_id=story_id,
                     metadata={
-                        "import_id": import_id,
-                        "run_id": run.run_id,
-                        "job_id": request_body.job_id,
+                        "import_id": _audit_reference(import_id),
+                        "run_id": _audit_reference(run.run_id),
+                        "job_id": _audit_reference(request_body.job_id),
                         "run_status": run.status,
                     },
                 )
@@ -1738,8 +1741,8 @@ def create_app(
                 project_id=run.project_id,
                 story_id=run.story_id,
                 metadata={
-                    "run_id": run.run_id,
-                    "snapshot_id": snapshot.snapshot_id,
+                    "run_id": _audit_reference(run.run_id),
+                    "snapshot_id": _audit_reference(snapshot.snapshot_id),
                     "snapshot_kind": snapshot.snapshot_kind,
                     "media_type": snapshot.content_type,
                 },
@@ -4864,6 +4867,15 @@ def _append_audit_event(
 def _audit_timestamp() -> str:
     """Return a UTC timestamp for audited routes without client body time."""
     return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _audit_reference(value: str) -> str:
+    """Return a concise deterministic reference safe for audit metadata."""
+    clean_value = value.strip()
+    if len(clean_value) <= AUDIT_METADATA_MAX_VALUE_LENGTH:
+        return clean_value
+    digest = hashlib.sha256(clean_value.encode("utf-8")).hexdigest()[:16]
+    return f"{clean_value[:AUDIT_REFERENCE_PREFIX_LENGTH]}:sha256:{digest}"
 
 
 def _auth_session_response(session: Any) -> AuthSessionResponse:

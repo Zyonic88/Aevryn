@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 from collections.abc import Callable, Mapping
@@ -912,6 +913,47 @@ def test_import_runs_api_marks_run_failed_when_audit_submission_fails() -> None:
     assert retry.status_code == 503
     retry_run = repository.get_engine_run(user_id="user_demo", run_id="run_retry")
     assert retry_run.status == "failed"
+
+
+def test_import_runs_api_compacts_long_generated_ids_for_audit_metadata() -> None:
+    """Hosted generated IDs should remain auditable without exceeding metadata caps."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    audit_ledger = AuditLedger()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            audit_ledger=audit_ledger,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    import_id = f"import_source_project_alpha_{'a' * 140}"
+    run_id = f"run_project_alpha_{'b' * 140}"
+    job_id = f"job_project_alpha_{'c' * 140}"
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json={**import_create_payload(), "import_id": import_id},
+    )
+    assert created_import.status_code == 200
+
+    submitted = client.post(
+        f"/v2/projects/project_alpha/stories/story_alpha/imports/{import_id}/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": run_id, "job_id": job_id, "now": NOW},
+    )
+
+    assert submitted.status_code == 200
+    audit_ledger.verify()
+    run_submitted = audit_ledger.records()[-1]
+    assert run_submitted.event_type == "run_submitted"
+    assert run_submitted.metadata["import_id"] == _expected_audit_reference(import_id)
+    assert run_submitted.metadata["run_id"] == _expected_audit_reference(run_id)
+    assert run_submitted.metadata["job_id"] == _expected_audit_reference(job_id)
+    assert all(len(value) <= 120 for value in run_submitted.metadata.values())
 
 
 def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
@@ -3117,6 +3159,15 @@ class FailingAuditLedger(AuditLedger):
 def import_content_base64(text: str) -> str:
     """Return base64-encoded import source for API tests."""
     return base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+
+def _expected_audit_reference(value: str) -> str:
+    """Return the expected compact audit reference for long test IDs."""
+    clean_value = value.strip()
+    if len(clean_value) <= 120:
+        return clean_value
+    digest = hashlib.sha256(clean_value.encode("utf-8")).hexdigest()[:16]
+    return f"{clean_value[:96]}:sha256:{digest}"
 
 
 
