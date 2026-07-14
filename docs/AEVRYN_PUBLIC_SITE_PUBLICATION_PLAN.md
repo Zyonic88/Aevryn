@@ -16,7 +16,7 @@ Status: Started
 Public beta: Blocked
 ```
 
-The required contact aliases are verified. The initial public pages are implemented in the browser app. Owner review, legal review where required, backup/provider wording, and final public-beta signoff remain open.
+The required contact aliases are verified. The initial public pages are implemented in the browser app and reachable on the production app domain. Owner review, legal review where required, backup/provider wording, and final public-beta signoff remain open.
 
 ---
 
@@ -39,7 +39,7 @@ Public copy must not convert internal intent into public promises.
 | Security | `/security` | `docs/AEVRYN_SECURITY.md`, `docs/SECURITY_DISCLOSURE.md` | Implemented as draft; incident-response review required |
 | User Rights | `/user-rights` | `docs/AEVRYN_USER_RIGHTS.md`, `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md` | Implemented; backup wording pending |
 | Content Classification | `/content` | `docs/AEVRYN_CONTENT_CLASSIFICATION.md` | Implemented as draft; legal/provider-policy review required |
-| Support | `/support` | `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`, `docs/AEVRYN_PUBLIC_CONTACTS.md` | Implemented with verified contact details; support procedure review pending |
+| Support | `/support` | `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`, `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`, `docs/AEVRYN_PUBLIC_CONTACTS.md` | Implemented with verified contact details; support procedure owner review pending |
 | Security Disclosure | `/security/disclosure` | `docs/SECURITY_DISCLOSURE.md` | Implemented as draft; safe-harbor review required |
 | Terms | `/terms` | `docs/TERMS_OF_SERVICE.md` | Implemented as draft; attorney review required |
 | Acceptable Use | `/acceptable-use` | `docs/ACCEPTABLE_USE_POLICY.md` | Implemented as draft; attorney review required |
@@ -77,15 +77,14 @@ Support, privacy, security, and abuse pages must tell users not to send:
 
 ---
 
-# Publication Blockers
+# Public Beta Blockers
 
-Public publication remains blocked until:
+Public beta remains blocked until:
 
 * legal-sensitive pages receive owner and attorney review
 * production backup retention wording is selected
 * AI provider data-use disclosure is completed or provider-backed extraction is disabled for public beta
-* links are reachable from the website footer, app footer, or support surface
-* public pages are checked against implementation and deployment behavior
+* support procedure owner review confirms metadata-first triage and escalation handling
 * final public-beta signoff explicitly approves publication
 
 ---

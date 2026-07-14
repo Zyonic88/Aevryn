@@ -61,7 +61,7 @@ Tracking docs:
 Status:
 
 ```text
-Cloudflare routing rules created, inbound delivery passed, Cloudflare inbound DNS/routing health passed, and Cloudflare/Gmail MFA verified. Cloudflare Email Sending SMTP successfully sent support/privacy/security/abuse aliases to zyonic88@gmail.com. SPF/DKIM/DMARC received-message verification passed. Public-page publication remains open.
+Cloudflare routing rules created, inbound delivery passed, Cloudflare inbound DNS/routing health passed, and Cloudflare/Gmail MFA verified. Cloudflare Email Sending SMTP successfully sent support/privacy/security/abuse aliases to zyonic88@gmail.com. SPF/DKIM/DMARC received-message verification passed. Initial public support/trust/privacy pages are published. Support procedure owner review remains open.
 ```
 
 ---
@@ -228,6 +228,7 @@ Tracking docs:
 
 * `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 * `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`
+* `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`
 * `docs/TERMS_OF_SERVICE.md`
 * `docs/PRIVACY_POLICY.md`
 * `docs/ACCEPTABLE_USE_POLICY.md`
@@ -236,7 +237,7 @@ Tracking docs:
 Status:
 
 ```text
-Draft copy exists. Contact verification passed. Publication and legal review are not complete.
+Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Owner review, legal review, backup/provider wording, and final public-beta signoff remain open.
 ```
 
 ---

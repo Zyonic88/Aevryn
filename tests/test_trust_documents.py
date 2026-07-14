@@ -179,6 +179,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
         "docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md",
         "docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md",
+        "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
         "Public beta blocked.",
     )
 
@@ -251,7 +252,8 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Cloudflare Email Sending SMTP successfully sent support/privacy/security/abuse "
         "aliases to zyonic88@gmail.com.",
         "SPF/DKIM/DMARC received-message verification passed.",
-        "Public-page publication remains open.",
+        "Initial public support/trust/privacy pages are published.",
+        "Support procedure owner review remains open.",
         "Local production config contract passed.",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
@@ -321,10 +323,11 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
 
     required_terms = (
         "Gate: Public support and contact readiness",
-        "Status: Contact paths verified; public-page publication pending",
+        "Status: Contact paths verified; public support page published; support procedure drafted",
         "Public beta: Blocked",
         "Users must be able to get help without exposing manuscripts unnecessarily.",
         "The required aliases are provisioned and tested",
+        "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
         "general support",
         "privacy questions",
         "security vulnerability reports",
@@ -336,6 +339,36 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
         "abuse@aevryn.ai",
         "source-prose redaction guidance",
         "Support should not ask for full source prose by default.",
+        "Initial public support page is published at /support",
+        "support procedure owner review",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_support_procedure_defines_metadata_first_triage() -> None:
+    """Support procedure should protect story privacy during public support intake."""
+    document = read_doc("docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md")
+
+    required_terms = (
+        "Procedure: Public support operations",
+        "Status: Draft operational procedure",
+        "Public beta: Blocked",
+        "Support solves the issue with metadata first.",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "If a user writes to the wrong alias, route the request internally",
+        "Allowed Request Metadata",
+        "import ID, run ID, export ID, or request ID",
+        "Source Excerpt Exception",
+        "the requested excerpt is the smallest practical excerpt",
+        "Full manuscripts and full chapters are not valid default support artifacts.",
+        "Initial human acknowledgment within 2 business days.",
+        "metadata-first triage",
+        "Aevryn can triage user support requests through verified product-domain aliases",
     )
 
     for term in required_terms:
@@ -365,6 +398,8 @@ def test_public_site_publication_plan_maps_pages_to_sources() -> None:
         "security@aevryn.ai",
         "abuse@aevryn.ai",
         "Implemented with verified contact details",
+        "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
+        "support procedure owner review",
         "full manuscripts",
         "AI provider data-use disclosure",
         "final public-beta signoff explicitly approves publication",
@@ -919,7 +954,7 @@ def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
         "Operations",
         "Support",
         "Internal V2 release candidate: Signed off",
-        "Public beta remains blocked by public-facing legal/trust/support publication",
+        "Public beta remains blocked by public-facing legal/trust/support review",
         "The release-candidate pass is complete, privacy-preserving, repeatable",
     )
 
