@@ -50,9 +50,9 @@ Aevryn V1 engine is complete.
 
 Aevryn is currently in **V2 Platform Development**.
 
-Current phase: **Phase 12 - Language And Identity Understanding**
+Current phase: **V2 Release Candidate Readiness**
 
-V2 was previously product-complete for private/internal alpha, but hosted alpha testing reopened V2 for Phase 12. Release Candidate Readiness remains blocked until Phase 12 is accepted.
+V2 was previously product-complete for private/internal alpha, but hosted alpha testing reopened V2 for Phase 12. Phase 12 is now accepted, and Release Candidate Readiness is the active V2 track.
 
 Recent completed V2 work:
 
@@ -68,6 +68,7 @@ Recent completed V2 work:
 - Phase 9: Performance
 - Phase 10: Internal Alpha
 - Phase 11: Security & Privacy Hardening
+- Phase 12: Language And Identity Understanding
 - Import workspace view completed
 - Character workspace view completed
 - World workspace view completed
@@ -85,9 +86,8 @@ Future ideas are preserved in `docs/AEVRYN_FUTURE_IDEAS.md`. That document is no
 
 Next expected V2 target:
 
-- Work Phase 12 from `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`.
-- Treat `docs/AEVRYN_TRANSLATION_ENGINE.md` and `docs/AEVRYN_ENTITY_RESOLUTION.md` as the active technical contracts for this phase.
-- Return to V2 Release Candidate Readiness from `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md` only after Phase 12 is accepted.
+- Work V2 Release Candidate Readiness from `docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md`.
+- Treat `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`, `docs/AEVRYN_TRANSLATION_ENGINE.md`, and `docs/AEVRYN_ENTITY_RESOLUTION.md` as accepted quality gates, not open feature scope.
 - Gate 1 Public-Facing Trust Documentation is tracked in `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`.
 - Public support/contact readiness is tracked in `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`.
 - Production infrastructure readiness is tracked in `docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_READINESS.md`.

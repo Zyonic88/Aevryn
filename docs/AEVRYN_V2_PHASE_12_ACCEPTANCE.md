@@ -106,7 +106,7 @@ V2 release-candidate readiness remains blocked until Phase 12 is accepted.
 
 # Current Status
 
-Status: **Acceptance pending hosted browser recheck after alpha-noise fixes**
+Status: **Accepted**
 
 Verified on July 13, 2026:
 
@@ -122,9 +122,14 @@ Verified on July 13, 2026:
   * timeline and continuity summary labels lacked readable separators
 * Branch fixes were implemented and verified locally with frontend lint, tests, and production build
 
-Remaining before Phase 12 acceptance:
+Verified on July 14, 2026:
 
-* Merge and deploy the alpha-noise fixes
-* Recheck hosted Aevryn after deployment
-* Confirm creator-facing views hide raw machine identity artifacts after deployment
-* Confirm translation and entity-resolution metadata appear only as review-safe uncertainty after deployment
+* Alpha-noise fixes were merged through PR #69
+* GitHub checks passed for PR #69: backend gates, frontend gates, CodeQL, dependency audit, repository secret scan, static security scan, and Cloudflare Pages
+* Hosted Aevryn recheck passed on `https://app.aevryn.ai`
+* Dashboard, Overview, Story, Import, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, Exports, and Settings loaded without API unreachable or stuck-loading states
+* Creator-facing views no longer exposed the internal `Source-backed detail available through evidence controls.` placeholder
+* Hosted sweep found no visible `aevryn_import_bundle_`, `source_alpha_`, or `anchor_` machine artifacts
+* Browser console reported no warnings or errors during the hosted recheck
+
+Phase 12 is accepted for V2 release-candidate readiness.
