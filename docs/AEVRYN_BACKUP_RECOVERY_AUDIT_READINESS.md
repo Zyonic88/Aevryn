@@ -39,6 +39,7 @@ Gate 5 builds on:
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/BACKUP_AND_RECOVERY.md`
 * `docs/AEVRYN_AUDIT_LEDGER.md`
+* `docs/AEVRYN_DATABASE_PRIVILEGE_HARDENING.md`
 * `docs/DATA_RETENTION_POLICY.md`
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
 * `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
@@ -208,8 +209,12 @@ chain without printing secrets.
 privilege metadata without reading audit rows or printing secrets.
 `aevryn audit-access-verify` fails closed unless the configured PostgreSQL audit
 role can read and append audit records without update or delete privileges.
+Hosted `aevryn audit-ledger-verify` passed with metadata-only output on
+2026-07-14. Hosted `aevryn audit-access-report` passed with metadata-only
+output, but hosted `aevryn audit-access-verify` failed because the current
+database role has UPDATE and DELETE privileges on `audit_ledger_records`.
 
-Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, hosted audit access verification/report review, hosted release-gate integrity execution, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, restricted audit database role provisioning, hosted audit access verification review, and dated restore/audit drill completion remain open.
 ```
 
 ---
