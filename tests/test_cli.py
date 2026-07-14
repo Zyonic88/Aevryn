@@ -676,8 +676,9 @@ def test_audit_ledger_verify_reports_metadata_without_secrets(
     class FakePostgresqlAuditLedger:
         """Fake ledger for deterministic CLI verification tests."""
 
-        def __init__(self, database_url: str) -> None:
+        def __init__(self, database_url: str, *, bootstrap_schema: bool = True) -> None:
             assert database_url == secret_database_url
+            assert bootstrap_schema is False
 
         def verify(self) -> None:
             return None
@@ -712,8 +713,9 @@ def test_audit_ledger_verify_propagates_integrity_failure_without_database_url(
     class TamperedPostgresqlAuditLedger:
         """Fake ledger that fails hash-chain verification."""
 
-        def __init__(self, database_url: str) -> None:
+        def __init__(self, database_url: str, *, bootstrap_schema: bool = True) -> None:
             assert database_url == secret_database_url
+            assert bootstrap_schema is False
 
         def verify(self) -> None:
             raise ValueError("Audit ledger record hash is invalid.")

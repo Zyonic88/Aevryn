@@ -1308,7 +1308,7 @@ def _run_r2_storage_smoke(
 
 def _run_audit_ledger_verify(*, database_url: str) -> dict[str, object]:
     """Verify the PostgreSQL audit ledger and return metadata only."""
-    ledger = PostgresqlAuditLedger(database_url)
+    ledger = PostgresqlAuditLedger(database_url, bootstrap_schema=False)
     ledger.verify()
     return {
         "adapter": "postgresql",
