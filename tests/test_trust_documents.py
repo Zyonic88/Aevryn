@@ -129,7 +129,7 @@ def test_v2_closeout_document_separates_completion_from_public_beta() -> None:
 
     required_terms = (
         "Version 2 product development was previously complete for private/internal alpha.",
-        "Version 2 is reopened for Phase 12 Language And Identity Understanding.",
+        "Version 2 Phase 12 Language And Identity Understanding is accepted.",
         "Version 2 is not public-beta approved yet.",
         "without touching the CLI",
         "Translation Foundation",
@@ -140,7 +140,8 @@ def test_v2_closeout_document_separates_completion_from_public_beta() -> None:
         "production secret manager",
         "rate limiting at the deployment edge or API gateway",
         "attorney-reviewed Terms of Service",
-        "V2 Platform: Reopened for Phase 12 Language And Identity Understanding.",
+        "V2 Platform: Product scope accepted after Phase 12 Language And Identity Understanding.",
+        "V2 Release Candidate Readiness: Active.",
         "Version 3: Not started.",
     )
 

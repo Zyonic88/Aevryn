@@ -193,11 +193,11 @@ Everything the CLI can do, the API must be able to do.
 | 9 | Performance | Accepted | Budgets, baseline measurements, regression checks, and measured optimizations are in place. |
 | 10 | Internal Alpha | Accepted | Internal alpha path is ready with documented limitations. |
 | 11 | Security & Privacy Hardening | Accepted | Trust-gate docs, tests, scans, deletion/privacy boundaries, and hardening gates are complete; public beta still requires deployment-specific security decisions. |
-| 12 | Language And Identity Understanding | Active | Translation Foundation and Entity Resolution Foundation are now required V2 quality gates before release-candidate readiness can close. |
+| 12 | Language And Identity Understanding | Accepted | Translation Foundation, Entity Resolution Foundation, and hosted alpha-noise recheck are accepted for V2 release-candidate readiness. |
 
-V2 platform product development was previously closed for private/internal alpha. Hosted alpha evidence has reopened V2 for two required story-understanding gates: Translation Foundation and Entity Resolution Foundation.
+V2 platform product development was previously closed for private/internal alpha. Hosted alpha evidence reopened V2 for two required story-understanding gates: Translation Foundation and Entity Resolution Foundation. Phase 12 is now accepted.
 
-The active product work track is Phase 12. V2 Release Candidate Readiness remains blocked until Phase 12 is accepted.
+The active product work track returns to V2 Release Candidate Readiness.
 
 ---
 
@@ -665,7 +665,7 @@ Phase 11 does not include new product features, public launch, payments, collabo
 
 ## Phase 12 - Language And Identity Understanding
 
-Status: **Active**
+Status: **Accepted**
 
 Phase 12 completion is governed by `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`.
 
@@ -714,10 +714,10 @@ without touching the CLI.
 Status:
 
 ```text
-Blocked pending Phase 12 acceptance.
+V2 product scope accepted for release-candidate readiness.
 ```
 
-Public beta remains blocked by Phase 12, production deployment, security, legal, and operating decisions listed in `docs/AEVRYN_V2_CLOSEOUT.md`.
+Public beta remains blocked by production deployment, security, legal, and operating decisions listed in `docs/AEVRYN_V2_CLOSEOUT.md`.
 
 ---
 
