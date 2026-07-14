@@ -238,7 +238,8 @@ Public beta may proceed only if each residual risk is explicit and accepted by t
 | Production observability policy needs hosted verification | Hosted logging and monitoring retention need final public-beta verification | Verify hosted retention, alert routing, and bounded log review against the selected production observability policy | Blocks public beta |
 | Backup retention wording needs production verification | Users need accurate deletion and backup expectations | Verify the selected public-beta backup wording against final production backup behavior | Blocks public beta |
 | AI provider disclosure needs provider verification | Users need accurate expectations for when story excerpts leave Aevryn-owned systems | Verify provider terms, retention, training behavior, abuse monitoring, and final model configuration against the selected disclosure candidate | Blocks public beta |
-| Full backup/restore drill and audit-storage policy remain future readiness work | Recovery confidence is incomplete for public users | Complete public-beta operational readiness before untrusted uploads | Blocks public beta |
+| Restore/audit drill has not run | Recovery confidence is incomplete for public users | Complete a dated restore/audit drill record proving ownership, deletion, audit integrity, and metadata-only restore logs | Blocks public beta |
+| Audit-storage policy is not selected | Audit confidence is incomplete for public users | Select production audit storage, retention, access controls, and release-gate integrity verification | Blocks public beta |
 
 If a risk touches story privacy, deletion, account security, provider training, or data ownership, the default decision should be block.
 

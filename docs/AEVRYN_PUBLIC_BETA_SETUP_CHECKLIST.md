@@ -158,6 +158,7 @@ Verification:
 Tracking docs:
 
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
+* `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
 * `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
@@ -165,7 +166,7 @@ Tracking docs:
 Status:
 
 ```text
-Restore plan exists. Public-beta backup retention wording candidate selected for owner/legal review. Production backup provider verification, restore drill, and audit decisions are not complete.
+Restore plan and restore/audit drill record template exist. Public-beta backup retention wording candidate selected for owner/legal review. Production backup provider verification, dated restore drill execution, and audit decisions are not complete.
 ```
 
 ---

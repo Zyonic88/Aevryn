@@ -822,6 +822,8 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "recovery time objective",
         "backup retention window",
         "restore test",
+        "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
+        "repeatable restore/audit drill record and stop conditions",
         "production audit storage",
         "audit retention",
         "audit access controls",
@@ -842,6 +844,7 @@ def test_restore_test_plan_document_tracks_recovery_privacy_drill() -> None:
         "PostgreSQL project metadata",
         "Cloudflare R2 object references",
         "staging or release-candidate environment",
+        "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
         "full manuscripts",
         "machine-local paths",
         "dedicated test account",
@@ -853,6 +856,34 @@ def test_restore_test_plan_document_tracks_recovery_privacy_drill() -> None:
         "metadata-only",
         "public beta remains blocked",
         "privacy incident",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_restore_audit_drill_record_tracks_public_beta_drill_template() -> None:
+    """Restore/audit drill record should define pass/fail evidence and stop conditions."""
+    document = read_doc("docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md")
+
+    required_terms = (
+        "Record type: Restore and audit drill record",
+        "Status: Template selected",
+        "Public beta: Blocked",
+        "Restore service without restoring private story exposure.",
+        "Production traffic attached",
+        "one disposable story that is deleted before backup capture",
+        "Cross-user project/story reads fail closed",
+        "Source bytes resolve only for the owner",
+        "Export access resolves only for the owner",
+        "Deleted story does not reappear in active product surfaces",
+        "Audit integrity check passes after restore",
+        "full manuscript text appears in logs",
+        "full provider prompts or responses appear in logs",
+        "credentials, tokens, database URLs, provider keys",
+        "Any exposed secret must be rotated.",
+        "Any exposed private story content must be treated as a privacy incident.",
+        "Public beta remains blocked unless the final result is `passed`.",
     )
 
     for term in required_terms:

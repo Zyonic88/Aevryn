@@ -41,6 +41,7 @@ Gate 5 builds on:
 * `docs/AEVRYN_AUDIT_LEDGER.md`
 * `docs/DATA_RETENTION_POLICY.md`
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
+* `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
 
 These documents define the privacy and engineering boundaries.
 
@@ -83,6 +84,8 @@ Before public beta, restore testing must prove:
 Restore tests must not expose full manuscripts in logs, support artifacts, or screenshots.
 
 The concrete restore drill is defined in `docs/AEVRYN_RESTORE_TEST_PLAN.md`.
+
+The required result template is defined in `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`.
 
 ---
 
@@ -181,9 +184,10 @@ Current implementation progress:
 
 ```text
 docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
+docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit drill record and stop conditions.
 Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
 
-Production backup provider verification, restore execution, audit storage provider, and audit retention remain open.
+Production backup provider verification, restore execution, audit storage provider, audit retention, and dated restore/audit drill completion remain open.
 ```
 
 ---
