@@ -11,6 +11,7 @@ from pytest import CaptureFixture, MonkeyPatch
 
 from aevryn.cli import (
     _run_audit_access_report,
+    _run_audit_access_verify,
     _run_audit_ledger_verify,
     _run_production_config_check,
     main,
@@ -818,6 +819,124 @@ def test_audit_access_report_helper_returns_stable_boolean_text(
         "secrets_printed": 0,
         "ok": "audit_access_metadata_reported",
     }
+
+
+def test_audit_access_verify_help_describes_append_only_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Audit access verify help should describe append-only privilege checks."""
+    with pytest.raises(SystemExit) as error:
+        main(["audit-access-verify", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "append-only" in output
+    assert "must not be able to update or delete" in output
+
+
+def test_audit_access_verify_reports_success_without_secrets(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit access verify should pass with read/insert and no update/delete."""
+    secret_database_url = "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+
+    def fake_access_report(database_url: str) -> dict[str, object]:
+        assert database_url == secret_database_url
+        return {
+            "table_exists": True,
+            "can_select": True,
+            "can_insert": True,
+            "can_update": False,
+            "can_delete": False,
+        }
+
+    monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
+    monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
+
+    exit_code = main(["audit-access-verify"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "ok=audit_access_append_only_verified" in captured.out
+    assert "can_update=false" in captured.out
+    assert "can_delete=false" in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "postgresql://" not in captured.out
+    assert "localhost" not in captured.out
+    assert "aevryn_app" not in captured.out
+
+
+@pytest.mark.parametrize(
+    ("report", "expected_error"),
+    (
+        (
+            {
+                "table_exists": False,
+                "can_select": False,
+                "can_insert": False,
+                "can_update": False,
+                "can_delete": False,
+            },
+            "audit table is missing",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": False,
+                "can_insert": True,
+                "can_update": False,
+                "can_delete": False,
+            },
+            "lacks SELECT privilege",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": True,
+                "can_insert": False,
+                "can_update": False,
+                "can_delete": False,
+            },
+            "lacks INSERT privilege",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": True,
+                "can_insert": True,
+                "can_update": True,
+                "can_delete": False,
+            },
+            "UPDATE privilege is present",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": True,
+                "can_insert": True,
+                "can_update": False,
+                "can_delete": True,
+            },
+            "DELETE privilege is present",
+        ),
+    ),
+)
+def test_audit_access_verify_fails_closed_for_unsafe_privileges(
+    monkeypatch: MonkeyPatch,
+    report: dict[str, object],
+    expected_error: str,
+) -> None:
+    """Audit access verify should reject missing or unsafe table privileges."""
+
+    def fake_access_report(database_url: str) -> dict[str, object]:
+        assert database_url == "postgresql://example.invalid/aevryn"
+        return report
+
+    monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
+
+    with pytest.raises(ValueError, match=expected_error):
+        _run_audit_access_verify(database_url="postgresql://example.invalid/aevryn")
 
 
 def test_performance_baseline_help_describes_local_artifact(

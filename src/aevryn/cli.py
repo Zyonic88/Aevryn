@@ -179,6 +179,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "audit-access-report":
             _handle_audit_access_report(args)
             return 0
+        if command == "audit-access-verify":
+            _handle_audit_access_verify(args)
+            return 0
     except FileNotFoundError as error:
         missing_path = error.filename or error.args[0]
         print(f"Error: File not found: {missing_path}", file=sys.stderr)
@@ -642,6 +645,22 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=_RawDefaultsHelpFormatter,
     )
     audit_access_parser.add_argument(
+        "--database-url-env",
+        default="AEVRYN_PROJECT_DATABASE_URL",
+        help="Process environment variable containing the PostgreSQL database URL.",
+    )
+
+    audit_access_verify_parser = subcommands.add_parser(
+        "audit-access-verify",
+        help="Verify PostgreSQL audit table access is append-only and secret-safe.",
+        description=(
+            "Verify PostgreSQL audit table access is append-only and secret-safe. "
+            "The configured database role must be able to read and append audit "
+            "records, but must not be able to update or delete them."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    audit_access_verify_parser.add_argument(
         "--database-url-env",
         default="AEVRYN_PROJECT_DATABASE_URL",
         help="Process environment variable containing the PostgreSQL database URL.",
@@ -1161,6 +1180,16 @@ def _handle_audit_access_report(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_audit_access_verify(args: argparse.Namespace) -> None:
+    """Handle the audit-access-verify command."""
+    database_url_env = cast(str, args.database_url_env)
+    summary = _run_audit_access_verify(
+        database_url=_required_process_env_value(database_url_env)
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _load_local_env_file(path: Path) -> dict[str, str]:
     """Load simple KEY=VALUE pairs from an ignored local env file."""
     if not path.exists():
@@ -1293,6 +1322,22 @@ def _run_audit_ledger_verify(*, database_url: str) -> dict[str, object]:
 def _run_audit_access_report(*, database_url: str) -> dict[str, object]:
     """Report PostgreSQL audit table access metadata without exposing identities."""
     report = postgresql_audit_access_report(database_url)
+    return _audit_access_summary(report, ok="audit_access_metadata_reported")
+
+
+def _run_audit_access_verify(*, database_url: str) -> dict[str, object]:
+    """Verify PostgreSQL audit table access is safe for append-only writes."""
+    report = postgresql_audit_access_report(database_url)
+    _require_audit_access_contract(report)
+    return _audit_access_summary(report, ok="audit_access_append_only_verified")
+
+
+def _audit_access_summary(
+    report: dict[str, object],
+    *,
+    ok: str,
+) -> dict[str, object]:
+    """Return stable metadata-only audit access output."""
     return {
         "adapter": "postgresql",
         "ledger": "audit",
@@ -1302,8 +1347,28 @@ def _run_audit_access_report(*, database_url: str) -> dict[str, object]:
         "can_update": _bool_text(cast(bool, report["can_update"])),
         "can_delete": _bool_text(cast(bool, report["can_delete"])),
         "secrets_printed": 0,
-        "ok": "audit_access_metadata_reported",
+        "ok": ok,
     }
+
+
+def _require_audit_access_contract(report: dict[str, object]) -> None:
+    """Require least-privilege append-only audit table access."""
+    required_true = {
+        "table_exists": "PostgreSQL audit table is missing.",
+        "can_select": "PostgreSQL audit writer lacks SELECT privilege.",
+        "can_insert": "PostgreSQL audit writer lacks INSERT privilege.",
+    }
+    for key, message in required_true.items():
+        if report.get(key) is not True:
+            raise ValueError(message)
+
+    forbidden_true = {
+        "can_update": "PostgreSQL audit append-only contract failed: UPDATE privilege is present.",
+        "can_delete": "PostgreSQL audit append-only contract failed: DELETE privilege is present.",
+    }
+    for key, message in forbidden_true.items():
+        if report.get(key) is True:
+            raise ValueError(message)
 
 
 def _bool_text(value: bool) -> str:
