@@ -153,9 +153,10 @@ The adapter creates the `audit_ledger_records` table, appends records in a locke
 
 Core API and worker workflow events are wired to the configured audit writer.
 
-The covered event set includes project creation/deletion, story creation/deletion,
-import save, run submission, worker drain completion, snapshot creation, and
-export generation.
+The covered event set includes registration, login success/failure, password
+reset request/completion, project creation/deletion, settings changes, cross-user
+settings access denials, story creation/deletion, import save, run submission,
+worker drain completion, snapshot creation, and export generation.
 
 Public beta remains blocked until:
 

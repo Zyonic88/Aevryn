@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 
 from aevryn.api import create_app
 from aevryn.api.app import MAX_IMPORT_CONTENT_BASE64_CHARS
+from aevryn.audit import AuditLedger
 from aevryn.auth import (
     AuthenticationConfig,
     AuthenticationService,
@@ -113,6 +114,77 @@ def test_auth_register_login_me_and_reset_flow() -> None:
         json={"email": "demo@example.com", "password": NEW_PASSWORD, "now": SOON},
     )
     assert new_login.status_code == 200
+
+
+def test_auth_events_append_metadata_only_audit_records() -> None:
+    """Auth routes should audit identity events without emails, passwords, or tokens."""
+    audit_ledger = AuditLedger()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(),
+            audit_ledger=audit_ledger,
+        )
+    )
+
+    registered = client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": "user_demo",
+            "email": "Demo@Example.com",
+            "display_name": "Demo User",
+            "password": PASSWORD,
+            "now": NOW,
+        },
+    )
+    failed_login = client.post(
+        "/v2/auth/login",
+        json={"email": "demo@example.com", "password": "WrongPass123", "now": NOW},
+    )
+    login = client.post(
+        "/v2/auth/login",
+        json={"email": "demo@example.com", "password": PASSWORD, "now": NOW},
+    )
+    reset = client.post(
+        "/v2/auth/password-reset/request",
+        json={"email": "demo@example.com", "reset_id": "reset_demo", "now": NOW},
+    )
+    completed = client.post(
+        "/v2/auth/password-reset/complete",
+        json={
+            "reset_token": reset.json()["reset_token"],
+            "new_password": NEW_PASSWORD,
+            "now": SOON,
+        },
+    )
+
+    assert registered.status_code == 200
+    assert failed_login.status_code == 401
+    assert login.status_code == 200
+    assert reset.status_code == 200
+    assert completed.status_code == 200
+    records = audit_ledger.records()
+    assert tuple(record.event_type for record in records) == (
+        "user_registered",
+        "login_failed",
+        "login_succeeded",
+        "password_reset_requested",
+        "password_reset_completed",
+    )
+    assert records[0].actor_id == "user_demo"
+    assert records[1].metadata == {"failure_code": "invalid_credentials"}
+    assert records[2].actor_id == "user_demo"
+    assert records[3].actor_id == "user_demo"
+    assert records[3].metadata == {"reset_id": "reset_demo"}
+    serialized_records = json.dumps(
+        [record.payload_for_hash() for record in records],
+        sort_keys=True,
+    )
+    assert "demo@example.com" not in serialized_records
+    assert "Demo@Example.com" not in serialized_records
+    assert PASSWORD not in serialized_records
+    assert NEW_PASSWORD not in serialized_records
+    assert "token_" not in serialized_records
+    audit_ledger.verify()
 
 
 def test_auth_endpoints_do_not_require_deployment_api_key() -> None:
@@ -385,6 +457,66 @@ def test_project_settings_api_rejects_invalid_and_cross_user_updates() -> None:
     )
     assert invalid.status_code == 400
     assert invalid.json()["error"] == "project_settings_failed"
+
+
+def test_project_settings_and_cross_user_attempts_append_audit_events() -> None:
+    """Settings writes and access denials should append metadata-only audit records."""
+    audit_ledger = AuditLedger()
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            audit_ledger=audit_ledger,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created.status_code == 200
+
+    updated = client.put(
+        "/v2/projects/project_alpha/settings",
+        headers=auth_headers("token_001"),
+        json={"default_export_format": "json", "locale": "en-GB"},
+    )
+    cross_user = client.put(
+        "/v2/projects/project_alpha/settings",
+        headers=auth_headers("token_002"),
+        json={"default_export_format": "markdown", "locale": "en-US"},
+    )
+
+    assert updated.status_code == 200
+    assert cross_user.status_code == 404
+    settings_events = tuple(
+        record
+        for record in audit_ledger.records()
+        if record.event_type in {"settings_changed", "cross_user_access_attempt"}
+    )
+    assert tuple(record.event_type for record in settings_events) == (
+        "settings_changed",
+        "cross_user_access_attempt",
+    )
+    assert settings_events[0].actor_id == "user_owner"
+    assert settings_events[0].project_id == "project_alpha"
+    assert settings_events[0].metadata == {
+        "default_export_format": "json",
+        "locale": "en-GB",
+    }
+    assert settings_events[1].actor_id == "user_other"
+    assert settings_events[1].project_id == "project_alpha"
+    assert settings_events[1].metadata == {"route": "project_settings"}
+    serialized_records = json.dumps(
+        [record.payload_for_hash() for record in audit_ledger.records()],
+        sort_keys=True,
+    )
+    assert "owner@example.com" not in serialized_records
+    assert "other@example.com" not in serialized_records
+    audit_ledger.verify()
 
 
 def test_project_stories_api_creates_and_lists_stories() -> None:
