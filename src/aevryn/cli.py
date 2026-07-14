@@ -66,7 +66,7 @@ from aevryn.api import (
     create_app,
     create_app_from_env,
 )
-from aevryn.audit import PostgresqlAuditLedger
+from aevryn.audit import PostgresqlAuditLedger, postgresql_audit_access_report
 from aevryn.auth import (
     AuthenticationConfig,
     AuthenticationService,
@@ -175,6 +175,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if command == "audit-ledger-verify":
             _handle_audit_ledger_verify(args)
+            return 0
+        if command == "audit-access-report":
+            _handle_audit_access_report(args)
             return 0
     except FileNotFoundError as error:
         missing_path = error.filename or error.args[0]
@@ -623,6 +626,22 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=_RawDefaultsHelpFormatter,
     )
     audit_verify_parser.add_argument(
+        "--database-url-env",
+        default="AEVRYN_PROJECT_DATABASE_URL",
+        help="Process environment variable containing the PostgreSQL database URL.",
+    )
+
+    audit_access_parser = subcommands.add_parser(
+        "audit-access-report",
+        help="Report PostgreSQL audit table access metadata without printing secrets.",
+        description=(
+            "Report PostgreSQL audit table access metadata without printing secrets. "
+            "This checks table presence and current database privileges without "
+            "dumping audit rows, database URLs, roles, usernames, or hostnames."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    audit_access_parser.add_argument(
         "--database-url-env",
         default="AEVRYN_PROJECT_DATABASE_URL",
         help="Process environment variable containing the PostgreSQL database URL.",
@@ -1132,6 +1151,16 @@ def _handle_audit_ledger_verify(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_audit_access_report(args: argparse.Namespace) -> None:
+    """Handle the audit-access-report command."""
+    database_url_env = cast(str, args.database_url_env)
+    summary = _run_audit_access_report(
+        database_url=_required_process_env_value(database_url_env)
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _load_local_env_file(path: Path) -> dict[str, str]:
     """Load simple KEY=VALUE pairs from an ignored local env file."""
     if not path.exists():
@@ -1259,6 +1288,27 @@ def _run_audit_ledger_verify(*, database_url: str) -> dict[str, object]:
         "secrets_printed": 0,
         "ok": "audit_ledger_postgresql_integrity_verified",
     }
+
+
+def _run_audit_access_report(*, database_url: str) -> dict[str, object]:
+    """Report PostgreSQL audit table access metadata without exposing identities."""
+    report = postgresql_audit_access_report(database_url)
+    return {
+        "adapter": "postgresql",
+        "ledger": "audit",
+        "table_exists": _bool_text(cast(bool, report["table_exists"])),
+        "can_select": _bool_text(cast(bool, report["can_select"])),
+        "can_insert": _bool_text(cast(bool, report["can_insert"])),
+        "can_update": _bool_text(cast(bool, report["can_update"])),
+        "can_delete": _bool_text(cast(bool, report["can_delete"])),
+        "secrets_printed": 0,
+        "ok": "audit_access_metadata_reported",
+    }
+
+
+def _bool_text(value: bool) -> str:
+    """Return a stable lowercase boolean string."""
+    return "true" if value else "false"
 
 
 def _run_production_config_check(environ: dict[str, str]) -> dict[str, object]:

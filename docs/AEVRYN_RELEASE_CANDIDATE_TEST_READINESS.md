@@ -142,6 +142,7 @@ Before public beta, Aevryn needs a production-like deployment smoke test that pr
 * storage references resolve inside project ownership boundaries
 * `aevryn production-config-check` passes without printing secrets
 * `aevryn audit-ledger-verify` passes without printing secrets
+* `aevryn audit-access-report` passes without printing secrets
 * worker processing can complete
 * monitoring observes workflow state
 * export preview works

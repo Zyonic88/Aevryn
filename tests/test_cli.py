@@ -9,7 +9,12 @@ from pathlib import Path
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
-from aevryn.cli import _run_audit_ledger_verify, _run_production_config_check, main
+from aevryn.cli import (
+    _run_audit_access_report,
+    _run_audit_ledger_verify,
+    _run_production_config_check,
+    main,
+)
 from aevryn.importing import StoryImporter
 from aevryn.validation.runner import (
     _extraction_input_digest,
@@ -715,6 +720,104 @@ def test_audit_ledger_verify_propagates_integrity_failure_without_database_url(
 
     with pytest.raises(ValueError, match="record hash"):
         _run_audit_ledger_verify(database_url=secret_database_url)
+
+
+def test_audit_access_report_help_describes_metadata_only_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Audit access help should describe the secret-safe report contract."""
+    with pytest.raises(SystemExit) as error:
+        main(["audit-access-report", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Report PostgreSQL audit table access metadata" in output
+    assert "without printing secrets" in output
+
+
+def test_audit_access_report_requires_database_url_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit access reporting should fail closed when config is absent."""
+    monkeypatch.delenv("AEVRYN_PROJECT_DATABASE_URL", raising=False)
+
+    exit_code = main(["audit-access-report"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_PROJECT_DATABASE_URL is required" in captured.err
+
+
+def test_audit_access_report_prints_privileges_without_secrets(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit access reporting should print only metadata privilege booleans."""
+    secret_database_url = "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+
+    def fake_access_report(database_url: str) -> dict[str, object]:
+        assert database_url == secret_database_url
+        return {
+            "table_exists": True,
+            "can_select": True,
+            "can_insert": True,
+            "can_update": False,
+            "can_delete": False,
+        }
+
+    monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
+    monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
+
+    exit_code = main(["audit-access-report"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "adapter=postgresql" in captured.out
+    assert "ledger=audit" in captured.out
+    assert "table_exists=true" in captured.out
+    assert "can_select=true" in captured.out
+    assert "can_insert=true" in captured.out
+    assert "can_update=false" in captured.out
+    assert "can_delete=false" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=audit_access_metadata_reported" in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "postgresql://" not in captured.out
+    assert "localhost" not in captured.out
+    assert "aevryn_app" not in captured.out
+
+
+def test_audit_access_report_helper_returns_stable_boolean_text(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit access helper should normalize booleans for release records."""
+
+    def fake_access_report(database_url: str) -> dict[str, object]:
+        assert database_url == "postgresql://example.invalid/aevryn"
+        return {
+            "table_exists": True,
+            "can_select": True,
+            "can_insert": False,
+            "can_update": False,
+            "can_delete": False,
+        }
+
+    monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
+
+    assert _run_audit_access_report(
+        database_url="postgresql://example.invalid/aevryn"
+    ) == {
+        "adapter": "postgresql",
+        "ledger": "audit",
+        "table_exists": "true",
+        "can_select": "true",
+        "can_insert": "false",
+        "can_update": "false",
+        "can_delete": "false",
+        "secrets_printed": 0,
+        "ok": "audit_access_metadata_reported",
+    }
 
 
 def test_performance_baseline_help_describes_local_artifact(

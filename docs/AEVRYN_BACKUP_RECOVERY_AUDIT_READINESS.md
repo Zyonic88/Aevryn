@@ -184,7 +184,7 @@ Public beta remains blocked until:
 * disaster recovery procedure is documented
 * production audit storage is selected
 * audit retention is selected
-* audit access controls are documented
+* audit access controls are configured and reviewed through a hosted audit access-control report
 * hosted audit integrity verification is recorded in the release gate
 * deletion and backup language is aligned with production behavior
 
@@ -204,8 +204,10 @@ audit writer when audit storage can be constructed from the supplied deployment
 settings.
 `aevryn audit-ledger-verify` verifies the configured PostgreSQL audit ledger hash
 chain without printing secrets.
+`aevryn audit-access-report` reports configured PostgreSQL audit table and
+privilege metadata without reading audit rows or printing secrets.
 
-Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, audit access-control verification, hosted release-gate integrity execution, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, hosted audit access-control report review, hosted release-gate integrity execution, and dated restore/audit drill completion remain open.
 ```
 
 ---
