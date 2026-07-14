@@ -224,5 +224,5 @@ Current implementation progress:
 ```text
 docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md drafts plain-language public trust, privacy, security, user-rights, content classification, support, and security-disclosure page copy.
 Contact aliases are provisioned and tested.
-Public pages are implemented and production-reachable. Backup retention wording has a public-beta candidate in docs/AEVRYN_BACKUP_RETENTION_DECISION.md. Public beta remains blocked by legal review, backup retention verification, provider review, security operations configuration, support procedure owner review, owner review of the implemented public pages, and final public-beta signoff.
+Public pages are implemented and production-reachable. Backup retention wording has a public-beta candidate in docs/AEVRYN_BACKUP_RETENTION_DECISION.md. AI provider disclosure has a public-beta candidate in docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md. Public beta remains blocked by legal review, backup retention verification, provider review, security operations configuration, support procedure owner review, owner review of the implemented public pages, and final public-beta signoff.
 ```

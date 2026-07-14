@@ -852,6 +852,7 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "Gate: AI Provider And Data Use",
         "Status: Started",
         "Public beta: Blocked",
+        "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
         "Users must know when story content leaves Aevryn-owned systems.",
         "provider name",
         "model family or model configuration",
@@ -859,6 +860,7 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "provider training behavior",
         "No training on user stories without explicit opt-in.",
         "Provider output is not Canon.",
+        "selected public-beta disclosure candidate",
         "metadata-only",
         "provider data-use disclosure",
     )
@@ -873,6 +875,7 @@ def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None
 
     required_terms = (
         "Provider output is never Canon, and provider data use is never hidden.",
+        "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
         "Provider: OpenAI",
         "Status: Internal alpha candidate only",
         "Public beta approval: Not approved",
@@ -888,6 +891,32 @@ def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None
         "No training on user stories without explicit opt-in.",
         "approved_for_public_beta",
         "blocked_pending_terms_review",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_ai_provider_disclosure_decision_records_public_beta_candidate() -> None:
+    """Provider disclosure should name the candidate and keep public beta blocked."""
+    document = read_doc("docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md")
+
+    required_terms = (
+        "Decision: AI provider disclosure candidate",
+        "Status: Selected for owner/legal/provider review",
+        "Public beta: Blocked",
+        "Provider: OpenAI",
+        "Use: Evidence-bounded extraction",
+        "Users must know when story content leaves Aevryn-owned systems.",
+        "The current provider candidate is OpenAI.",
+        "selected story excerpts, scene context, evidence anchors",
+        "Aevryn does not send account passwords, session tokens, API keys",
+        "Provider output is not Canon.",
+        "No training on user stories without explicit opt-in.",
+        "provider-backed extraction must remain disabled for public beta",
+        "full provider prompts",
+        "full provider responses",
+        "final model configuration is recorded",
     )
 
     for term in required_terms:
