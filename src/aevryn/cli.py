@@ -1267,7 +1267,7 @@ def _run_project_database_smoke(
 
     return {
         "adapter": "postgresql",
-        "schema": "bootstrapped",
+        "schema": "bootstrapped" if bootstrap_schema else "existing",
         "records_created": 1,
         "records_deleted": 1,
         "ok": "project_database_postgresql_smoke_completed",
