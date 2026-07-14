@@ -516,7 +516,7 @@ Frontend custom domain: https://app.aevryn.ai
 API custom domain: https://api.aevryn.ai
 Managed identity provider: Supabase Auth
 Provider mode: hosted configured provider
-Status: Planned
+Status: Failed
 ```
 
 This attempt should verify the hosted workflow that remained open after the July 1 and July 2 smoke passes.
@@ -556,17 +556,36 @@ Browser console warnings/errors are reviewed.
 Result:
 
 ```text
-Not run.
+FAILED.
+
+Run date: 2026-07-14.
+Project: RC Smoke 2026-07-14.
+Project ID: project_447d9366_5a2a_4b38_8c28_ab7bf41de973.
+Input: 10 owner-approved TXT chapters, 82,024 bytes.
+Inspected import: 10 chapters, 19 scenes, 327 paragraphs, 1,296 evidence anchors.
+Save import: passed.
+Submit processing: passed.
+Worker state: running state appeared with queued/processing/snapshot/output stepper.
+Final run state: failed.
+Failure summary: AI extraction timed out while reading the provider response. Retry with a smaller chapter batch or increase the provider timeout for large imports.
+Monitoring state: API health ok; project run status failed; worker failed; queued jobs 0; running jobs 0; latest failure visible.
+Refresh restore: passed. Monitoring restored failed state after browser refresh.
+Browser console: no warning/error entries observed during monitoring failure review.
+Cleanup: smoke project deleted from dashboard and no API error appeared during deletion.
 ```
 
 Interpretation:
 
 ```text
-OPEN for hosted import processing workflow smoke.
-OPEN for monitoring workflow status smoke.
-OPEN for export preview smoke.
-OPEN for production-safe worker posture evidence.
-OPEN for hosted log review.
+BLOCKED for hosted import processing workflow smoke until provider timeout behavior is hardened.
+PASSED for hosted import inspection and save workflow.
+PASSED for monitoring workflow status visibility after a failed run.
+PASSED for refresh restore of API-backed failed state.
+PASSED for smoke project deletion cleanup.
+NOT RUN for successful post-processing workspace output review because processing failed.
+NOT RUN for export preview because no snapshot was created.
+FINDING: Monitoring displayed latest import as aevryn_import_bundle.txt. This is metadata only, but it is still creator-facing internal naming noise and should be hidden or replaced with a human label.
+NEXT FIX: harden hosted extraction timeout behavior for 10-chapter imports and remove internal import bundle filename from monitoring.
 ```
 
 ---

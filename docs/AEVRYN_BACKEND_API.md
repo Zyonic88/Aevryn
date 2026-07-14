@@ -343,11 +343,11 @@ AEVRYN_OPENAI_API_KEY=...
 AEVRYN_OPENAI_MODEL=...
 ```
 
-Optional provider settings:
+Provider limits:
 
 ```text
 AEVRYN_OPENAI_ENDPOINT=https://api.openai.com/v1/responses
-AEVRYN_OPENAI_TIMEOUT_SECONDS=30
+AEVRYN_OPENAI_TIMEOUT_SECONDS=90
 AEVRYN_OPENAI_MAX_RESPONSE_BYTES=1048576
 ```
 
@@ -355,9 +355,9 @@ If `AEVRYN_EXTRACTION_MODE` is absent or `demo`, no external model receives stor
 
 If `AEVRYN_EXTRACTION_MODE=openai`, `AEVRYN_OPENAI_API_KEY` and `AEVRYN_OPENAI_MODEL` are required before the app starts.
 
-When `AEVRYN_DEPLOYMENT_ENV=production`, `AEVRYN_EXTRACTION_MODE=openai` is required. Demo extraction is local-only and cannot satisfy the production startup contract.
+When `AEVRYN_DEPLOYMENT_ENV=production`, `AEVRYN_EXTRACTION_MODE=openai`, `AEVRYN_OPENAI_TIMEOUT_SECONDS`, and `AEVRYN_OPENAI_MAX_RESPONSE_BYTES` are required. Demo extraction and hidden provider-limit defaults are local-only and cannot satisfy the production startup contract.
 
-Provider-backed extraction runs one evidence-bounded scene request at a time. Very large imports can exceed the default per-request timeout if a provider response stalls. For internal alpha testing, prefer smaller chapter batches first; raise `AEVRYN_OPENAI_TIMEOUT_SECONDS` only when validating large imports and track the latency separately from correctness.
+Provider-backed extraction runs one evidence-bounded scene request at a time. Very large imports can exceed the per-request timeout if a provider response stalls. For internal alpha testing, prefer smaller chapter batches first; raise `AEVRYN_OPENAI_TIMEOUT_SECONDS` only when validating large imports and track the latency separately from correctness.
 
 Invalid modes, non-positive timeouts, and non-positive response byte limits fail at app creation time.
 
