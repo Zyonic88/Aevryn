@@ -100,7 +100,7 @@ Phase 12 does not include:
 
 Phase 12 is complete only when backend gates, frontend gates, deterministic translation tests, deterministic entity-resolution tests, and a browser alpha pass all succeed.
 
-V2 release-candidate readiness remains blocked until Phase 12 is accepted.
+V2 release-candidate readiness was blocked until Phase 12 acceptance and is now governed by the release-candidate readiness gates.
 
 ---
 
