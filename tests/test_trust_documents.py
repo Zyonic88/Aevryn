@@ -113,7 +113,7 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
             "Safe Harbor Intent",
             "Response Process",
             "security@aevryn.ai",
-            "Public contact information must be verified before launch.",
+            "Public contact information must be published accurately before launch.",
         ),
     }
 
@@ -129,7 +129,7 @@ def test_v2_closeout_document_separates_completion_from_public_beta() -> None:
 
     required_terms = (
         "Version 2 product development was previously complete for private/internal alpha.",
-        "Version 2 is reopened for Phase 12 Language And Identity Understanding.",
+        "Version 2 Phase 12 Language And Identity Understanding is accepted.",
         "Version 2 is not public-beta approved yet.",
         "without touching the CLI",
         "Translation Foundation",
@@ -140,7 +140,8 @@ def test_v2_closeout_document_separates_completion_from_public_beta() -> None:
         "production secret manager",
         "rate limiting at the deployment edge or API gateway",
         "attorney-reviewed Terms of Service",
-        "V2 Platform: Reopened for Phase 12 Language And Identity Understanding.",
+        "V2 Platform: Product scope accepted after Phase 12 Language And Identity Understanding.",
+        "V2 Release Candidate Readiness: Active.",
         "Version 3: Not started.",
     )
 
@@ -153,7 +154,8 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
     document = read_doc("docs/AEVRYN_V2_RELEASE_CANDIDATE_READINESS.md")
 
     required_terms = (
-        "V2 Release Candidate Readiness is blocked until Phase 12 is accepted.",
+        "V2 product scope is accepted after Phase 12 Language And Identity Understanding.",
+        "V2 Release Candidate Readiness is active.",
         "Public beta is not approved yet.",
         "Release Candidate Readiness is not Version 3.",
         "docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md",
@@ -176,6 +178,8 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md",
         "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
         "docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md",
+        "docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md",
+        "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
         "Public beta blocked.",
     )
 
@@ -236,6 +240,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md",
         "docs/AEVRYN_REPLY_IDENTITY_SETUP.md",
         "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
+        "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
         "GitHub Branch Protection And Hosted Security Controls",
         "Production Provider And Data-Use Review",
         "Backup, Retention, Restore, And Audit",
@@ -248,13 +253,16 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Cloudflare Email Sending SMTP successfully sent support/privacy/security/abuse "
         "aliases to zyonic88@gmail.com.",
         "SPF/DKIM/DMARC received-message verification passed.",
-        "Public-page publication remains open.",
+        "Initial public support/trust/privacy pages are published.",
+        "Support procedure owner review remains open.",
+        "Public-beta backup retention wording candidate selected for owner/legal review.",
+        "backup/provider verification",
         "Local production config contract passed.",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
         "2026-07-01 local production-style smoke passed",
         "docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md",
-        "Release-candidate run not complete.",
+        "Internal release-candidate run is completed and signed off.",
         "Public beta: Blocked",
     )
 
@@ -271,10 +279,10 @@ def test_public_trust_readiness_document_tracks_gate_one_blockers() -> None:
         "Status: Started",
         "Public beta: Blocked",
         "Public trust pages must be true, plain-language, and backed by implementation.",
-        "Draft exists. Legal review required.",
-        "Target contact selected. Provisioning and testing required.",
+        "Draft exists. Legal review required. Privacy contact verified.",
+        "Target contact selected and tested. Attorney safe-harbor review required.",
         "Support Contact",
-        "Started. Target contact paths selected; provisioning and testing required.",
+        "Contact paths verified. Public support page publication required.",
         "Plain-Language Requirements",
         "Truthfulness Requirements",
         "Not accepted.",
@@ -302,8 +310,12 @@ def test_public_trust_page_copy_preserves_plain_language_promises() -> None:
         "Aevryn is content-aware, not content-opinionated.",
         "Lawful mature fiction is not automatically prohibited.",
         "Attorney safe-harbor review",
-        "contact aliases must be provisioned and tested",
-        "production backup retention window must be selected",
+        "verified contact aliases must be published accurately",
+        (
+            "production backup retention window must be verified against the selected "
+            "public-beta wording candidate"
+        ),
+        "up to 30 days",
         "AI provider review must be completed",
         "without overpromising public-beta readiness",
     )
@@ -318,9 +330,11 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
 
     required_terms = (
         "Gate: Public support and contact readiness",
-        "Status: Started",
+        "Status: Contact paths verified; public support page published; support procedure drafted",
         "Public beta: Blocked",
         "Users must be able to get help without exposing manuscripts unnecessarily.",
+        "The required aliases are provisioned and tested",
+        "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
         "general support",
         "privacy questions",
         "security vulnerability reports",
@@ -332,6 +346,72 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
         "abuse@aevryn.ai",
         "source-prose redaction guidance",
         "Support should not ask for full source prose by default.",
+        "Initial public support page is published at /support",
+        "support procedure owner review",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_support_procedure_defines_metadata_first_triage() -> None:
+    """Support procedure should protect story privacy during public support intake."""
+    document = read_doc("docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md")
+
+    required_terms = (
+        "Procedure: Public support operations",
+        "Status: Draft operational procedure",
+        "Public beta: Blocked",
+        "Support solves the issue with metadata first.",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "If a user writes to the wrong alias, route the request internally",
+        "Allowed Request Metadata",
+        "import ID, run ID, export ID, or request ID",
+        "Source Excerpt Exception",
+        "the requested excerpt is the smallest practical excerpt",
+        "Full manuscripts and full chapters are not valid default support artifacts.",
+        "Initial human acknowledgment within 2 business days.",
+        "metadata-first triage",
+        "Aevryn can triage user support requests through verified product-domain aliases",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_site_publication_plan_maps_pages_to_sources() -> None:
+    """Public site publication plan should map public pages without approving beta."""
+    document = read_doc("docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md")
+
+    required_terms = (
+        "Plan: Public site publication",
+        "Status: Started",
+        "Public beta: Blocked",
+        "Public pages must say only what Aevryn can truthfully support.",
+        "/trust",
+        "/privacy",
+        "/security",
+        "/user-rights",
+        "/content",
+        "/support",
+        "/security/disclosure",
+        "/terms",
+        "/acceptable-use",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "Implemented with verified contact details",
+        "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
+        "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
+        "support procedure owner review",
+        "full manuscripts",
+        "backup retention wording is verified",
+        "AI provider data-use disclosure",
+        "final public-beta signoff explicitly approves publication",
     )
 
     for term in required_terms:
@@ -579,6 +659,21 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
         assert term in document
 
 
+def test_public_beta_setup_tracks_production_observability_policy() -> None:
+    """Public beta checklist should track hosted observability verification."""
+    document = read_doc("docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md")
+
+    required_terms = (
+        "docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md",
+        "hosted logs and monitoring are metadata-only",
+        "Production observability policy candidate selected for owner/security review.",
+        "Public beta remains blocked by non-smoke readiness items.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
 def test_security_alert_routing_document_tracks_human_alert_paths() -> None:
     """Security alert routing should map hosted alerts to human-owned channels."""
     document = read_doc("docs/AEVRYN_SECURITY_ALERT_ROUTING.md")
@@ -727,11 +822,57 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "recovery time objective",
         "backup retention window",
         "restore test",
+        "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
+        "repeatable restore/audit drill record and stop conditions",
+        "docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md",
+        "managed PostgreSQL audit tables",
         "production audit storage",
         "audit retention",
         "audit access controls",
         "metadata-only",
         "tamper-evident",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_audit_storage_policy_decision_selects_candidate_without_unblocking_beta() -> None:
+    """Audit storage policy should select a candidate while keeping verification honest."""
+    document = read_doc("docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md")
+
+    required_terms = (
+        "Decision: Audit storage policy candidate",
+        "Status: Selected for owner/security review",
+        "Public beta: Blocked",
+        "Audit records explain what happened.",
+        "They never preserve the private thing that happened.",
+        "managed PostgreSQL audit tables",
+        "Project Database environment",
+        "PostgresqlAuditLedger",
+        "append-only",
+        "metadata-only",
+        "full manuscripts",
+        "full source prose",
+        "full AI provider prompts",
+        "full AI provider responses",
+        "credentials",
+        "tokens",
+        "private URLs",
+        "hostnames",
+        "usernames",
+        "machine-local paths",
+        "retained for up to 1 year",
+        "Deletion events may outlive deleted content",
+        "hash-chain verification",
+        "restore/audit drill",
+        "This document selects the candidate policy.",
+        "Core API and worker workflow events are wired to the configured audit writer.",
+        "Public beta remains blocked until",
+        "PostgreSQL audit adapter configuration is verified in hosted production",
+        "worker drain completion",
+        "audit access controls are configured and reviewed",
+        "deletion events are verified as metadata-only",
     )
 
     for term in required_terms:
@@ -747,6 +888,7 @@ def test_restore_test_plan_document_tracks_recovery_privacy_drill() -> None:
         "PostgreSQL project metadata",
         "Cloudflare R2 object references",
         "staging or release-candidate environment",
+        "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
         "full manuscripts",
         "machine-local paths",
         "dedicated test account",
@@ -764,6 +906,34 @@ def test_restore_test_plan_document_tracks_recovery_privacy_drill() -> None:
         assert term in document
 
 
+def test_restore_audit_drill_record_tracks_public_beta_drill_template() -> None:
+    """Restore/audit drill record should define pass/fail evidence and stop conditions."""
+    document = read_doc("docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md")
+
+    required_terms = (
+        "Record type: Restore and audit drill record",
+        "Status: Template selected",
+        "Public beta: Blocked",
+        "Restore service without restoring private story exposure.",
+        "Production traffic attached",
+        "one disposable story that is deleted before backup capture",
+        "Cross-user project/story reads fail closed",
+        "Source bytes resolve only for the owner",
+        "Export access resolves only for the owner",
+        "Deleted story does not reappear in active product surfaces",
+        "Audit integrity check passes after restore",
+        "full manuscript text appears in logs",
+        "full provider prompts or responses appear in logs",
+        "credentials, tokens, database URLs, provider keys",
+        "Any exposed secret must be rotated.",
+        "Any exposed private story content must be treated as a privacy incident.",
+        "Public beta remains blocked unless the final result is `passed`.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
 def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
     """Gate 6 should block public beta on AI provider data-use decisions."""
     document = read_doc("docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md")
@@ -772,6 +942,7 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "Gate: AI Provider And Data Use",
         "Status: Started",
         "Public beta: Blocked",
+        "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
         "Users must know when story content leaves Aevryn-owned systems.",
         "provider name",
         "model family or model configuration",
@@ -779,6 +950,7 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "provider training behavior",
         "No training on user stories without explicit opt-in.",
         "Provider output is not Canon.",
+        "selected public-beta disclosure candidate",
         "metadata-only",
         "provider data-use disclosure",
     )
@@ -793,6 +965,7 @@ def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None
 
     required_terms = (
         "Provider output is never Canon, and provider data use is never hidden.",
+        "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
         "Provider: OpenAI",
         "Status: Internal alpha candidate only",
         "Public beta approval: Not approved",
@@ -808,6 +981,32 @@ def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None
         "No training on user stories without explicit opt-in.",
         "approved_for_public_beta",
         "blocked_pending_terms_review",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_ai_provider_disclosure_decision_records_public_beta_candidate() -> None:
+    """Provider disclosure should name the candidate and keep public beta blocked."""
+    document = read_doc("docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md")
+
+    required_terms = (
+        "Decision: AI provider disclosure candidate",
+        "Status: Selected for owner/legal/provider review",
+        "Public beta: Blocked",
+        "Provider: OpenAI",
+        "Use: Evidence-bounded extraction",
+        "Users must know when story content leaves Aevryn-owned systems.",
+        "The current provider candidate is OpenAI.",
+        "selected story excerpts, scene context, evidence anchors",
+        "Aevryn does not send account passwords, session tokens, API keys",
+        "Provider output is not Canon.",
+        "No training on user stories without explicit opt-in.",
+        "provider-backed extraction must remain disabled for public beta",
+        "full provider prompts",
+        "full provider responses",
+        "final model configuration is recorded",
     )
 
     for term in required_terms:
@@ -844,22 +1043,35 @@ def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
     document = read_doc("docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md")
 
     required_terms = (
-        "Record type: Release Candidate Run Template",
-        "Status: Not run",
+        "Record type: Release Candidate Run Record",
+        "Status: Completed",
+        "Internal release candidate: Signed off",
         "Public beta: Blocked",
+        "rc-v2-2026-07-14-001",
+        "2026-07-14",
+        "f5c19d7e9fc6a7d25139b453590b09dbf48108bd",
+        "Hosted production-like environment",
         "Release Candidate Run ID",
         "Automated Gate Record",
         "Backend tests",
         "Repository secret scan",
         "Production config check",
+        "Performance regression check",
+        "Accepted residual risk",
         "Product Smoke Record",
         "The smoke path must not require CLI knowledge from the tester.",
+        "Delete project",
+        "Project data is removed from active product surfaces",
         "Recovery Record",
         "Can the user continue?",
+        "Can the user continue? Yes for the checked release-candidate path.",
         "Privacy And Trust Record",
         "full manuscripts",
         "full provider prompts",
+        "Provider failures",
         "Production-Like Smoke Record",
+        "Worker processing",
+        "Hosted ten-chapter retry succeeded",
         "Accepted Residual Risks",
         "If a risk touches story privacy",
         "Signoff",
@@ -869,7 +1081,9 @@ def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
         "Legal",
         "Operations",
         "Support",
-        "Release candidate run has not been completed.",
+        "Internal V2 release candidate: Signed off",
+        "Public beta remains blocked by public-facing legal/trust/support review",
+        "The release-candidate pass is complete, privacy-preserving, repeatable",
     )
 
     for term in required_terms:
@@ -884,7 +1098,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-01 hosted managed identity and project smoke passed",
+        "Latest attempt: 2026-07-14 hosted creator workflow retry passed",
         "Production-like smoke proves configuration and workflow safety.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -935,17 +1149,52 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "PASS for authenticated project detail read.",
         "PASS for authenticated project list read.",
         "OPEN for import processing workflow smoke in the hosted environment.",
+        "Hosted Creator Workflow Smoke Plan",
+        "Project ID: project_447d9366_5a2a_4b38_8c28_ab7bf41de973.",
+        "Failure summary: AI extraction timed out while reading the provider response.",
+        "FINDING: Monitoring displayed latest import as aevryn_import_bundle.txt.",
+        "Hosted Creator Workflow Smoke Retry",
+        "Cloud Run revision after timeout hardening: aevryn-api-00021-lk7",
+        "Project ID: project_30c12069_caf1_43da_b91d_de2887097e77.",
+        "Final run state: succeeded.",
+        (
+            "Monitoring import label: latest import displayed as Chapter import, "
+            "not the internal bundle filename."
+        ),
+        (
+            "Export creation: passed. A JSON canon snapshot export was created "
+            "and displayed with a download action."
+        ),
+        (
+            "Export monitoring: export availability yes; export count 1; "
+            "recent event recorded Export Created."
+        ),
+        "Cleanup: passed. Project deletion removed the smoke project from the dashboard",
+        "PASSED for hosted import processing workflow.",
+        "PASSED for export creation from the latest canon snapshot.",
+        "PASSED for smoke project deletion cleanup.",
+        "PASSED for internal release-candidate signoff.",
+        "OPEN for public-beta approval.",
+        "Hosted Log Review",
+        "Sample size: 200 recent service-log lines",
+        "Status: Passed with metadata-only access-log finding",
+        "Request logs did not include manuscript text.",
+        "Request logs did not include full AI provider responses.",
+        "Request logs did not include credentials, tokens, secret values",
+        "PASSED for hosted log review of the checked import, monitoring, and export smoke window.",
+        "PASSED for no source prose in sampled hosted logs.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
         (
-            "managed-identity login completion, and authenticated project "
-            "create/read/list smoke passed"
+            "hosted import processing, monitoring workflow status, hosted export "
+            "creation, bounded hosted log review, smoke project cleanup, and "
+            "internal release-candidate signoff have passed"
         ),
         (
-            "Hosted import processing, monitoring workflow status, export preview, "
-            "production-safe worker posture, log review, and final release-candidate "
-            "signoff have not passed."
+            "Public beta remains blocked by public-facing legal/trust/support "
+            "publication, hosted observability verification, backup/restore/audit readiness, "
+            "prompt-pack polish, and final public-beta approval."
         ),
     )
 

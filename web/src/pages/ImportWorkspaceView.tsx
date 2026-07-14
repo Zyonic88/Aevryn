@@ -460,7 +460,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             </label>
           ) : (
             <p className="field-note">
-              Aevryn will create a story record when you save this import.
+              Aevryn will create the first story when you save this import.
             </p>
           )}
           <div className="form-row-grid">
@@ -632,7 +632,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           !importsQuery.error &&
           (importsQuery.data?.imports.length ?? 0) === 0 ? (
             <EmptyState title="No saved imports">
-              Save import metadata after inspecting source.
+              Save an inspected import before processing chapters.
             </EmptyState>
           ) : null}
           {(importsQuery.data?.imports ?? []).length > 0 ? (

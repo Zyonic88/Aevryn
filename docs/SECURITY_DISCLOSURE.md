@@ -16,9 +16,9 @@ Target security contact:
 security@aevryn.ai
 ```
 
-This alias must be provisioned and tested before public beta.
+This alias is provisioned and tested for inbound receipt, outbound product-domain sending, SPF, DKIM, DMARC, and MFA-protected operator access.
 
-Public contact information must be verified before launch.
+Public contact information must be published accurately before launch.
 
 Public security contact readiness is tracked in `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`.
 

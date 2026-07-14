@@ -20,6 +20,9 @@ Aevryn has provider-backed extraction support for internal alpha.
 
 Public beta still requires production provider selection, data-use review, and user-facing disclosure.
 
+The current public-beta disclosure candidate is recorded in
+`docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`.
+
 ---
 
 # Core Rule
@@ -52,6 +55,8 @@ Current posture:
 This does not approve provider-backed extraction for public beta.
 
 OpenAI is currently supported as an internal-alpha candidate provider only. Public beta approval remains blocked until provider terms, model configuration, retention, training behavior, disclosure, and release-gate coverage are reviewed and recorded.
+
+The disclosure candidate names OpenAI as the current provider candidate, explains the data boundary, and requires provider-backed extraction to remain disabled for public beta unless no-training posture and retention behavior can be verified and disclosed accurately.
 
 ---
 
@@ -184,7 +189,8 @@ Current implementation progress:
 
 ```text
 docs/AEVRYN_AI_PROVIDER_REVIEW.md defines the provider review checklist, OpenAI alpha-candidate status, data-sent boundary, logging boundary, training/retention decision, disclosure requirements, and approval states.
-Provider terms review, production model selection, provider disclosure, and public-beta approval remain open.
+docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md records the selected public-beta disclosure candidate.
+Provider terms review, production model selection, provider verification, and public-beta approval remain open.
 ```
 
 ---

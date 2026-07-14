@@ -119,6 +119,7 @@ from aevryn.api.models import (
     WorldPreviewResponse,
     WorldSheetOutput,
 )
+from aevryn.audit import AuditLedger, PostgresqlAuditLedger
 from aevryn.auth import (
     AuthenticationError,
     AuthenticationService,
@@ -192,6 +193,8 @@ from aevryn.workers import (
     BackgroundWorkerRunSummary,
     DuplicateJobError,
     InMemoryJobQueue,
+    JobNotFoundError,
+    PostgresqlBackgroundJobQueue,
     ProjectImportSnapshotHandler,
 )
 
@@ -286,6 +289,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         background_job_handler,
         import_content_store,
         storage_service,
+        audit_ledger,
     ) = _platform_services_from_env(active_environ)
     return create_app(
         allowed_origins=_allowed_origins_from_env(active_environ),
@@ -296,6 +300,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         background_job_handler=background_job_handler,
         import_content_store=import_content_store,
         storage_service=storage_service,
+        audit_ledger=audit_ledger,
         auto_process_import_runs=_env_flag_is_true(
             active_environ,
             WORKER_AUTO_PROCESS_SUBMISSIONS_ENV,
@@ -314,6 +319,7 @@ def create_app(
     background_job_handler: BackgroundJobHandler | None = None,
     import_content_store: ImportContentStore | None = None,
     storage_service: StorageService | None = None,
+    audit_ledger: AuditLedger | PostgresqlAuditLedger | None = None,
     auto_process_import_runs: bool = False,
 ) -> FastAPI:
     """Create the Aevryn Backend API application.
@@ -327,6 +333,7 @@ def create_app(
         background_job_handler: Optional Phase 3 worker handler for queued jobs.
         import_content_store: Optional storage adapter for uploaded source bytes.
         storage_service: Optional storage adapter for generated exports.
+        audit_ledger: Optional metadata-only audit writer for workflow events.
         auto_process_import_runs: Optional alpha bridge that starts one worker
             drain after a run is submitted. Production persistent queue runners
             should replace this bridge before public beta.
@@ -347,6 +354,7 @@ def create_app(
             422: {"model": ErrorResponse},
         },
     )
+    app.state.audit_ledger = audit_ledger
     if allowed_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -491,6 +499,13 @@ def create_app(
                 password=request.password,
                 now=request.now,
             )
+            _append_audit_event(
+                audit_ledger,
+                event_type="user_registered",
+                occurred_at=request.now,
+                summary="User registered.",
+                actor_id=result.user.user_id,
+            )
         except PasswordPolicyError as error:
             raise HTTPException(
                 status_code=400,
@@ -519,15 +534,36 @@ def create_app(
                 now=request.now,
             )
         except InvalidCredentialsError as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="login_failed",
+                occurred_at=request.now,
+                summary="Login failed.",
+                metadata={"failure_code": "invalid_credentials"},
+            )
             raise HTTPException(
                 status_code=401,
                 detail={"error": "invalid_credentials", "detail": str(error)},
             ) from error
         except AuthenticationError as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="login_failed",
+                occurred_at=request.now,
+                summary="Login failed.",
+                metadata={"failure_code": "authentication_error"},
+            )
             raise HTTPException(
                 status_code=400,
                 detail={"error": "login_failed", "detail": str(error)},
             ) from error
+        _append_audit_event(
+            audit_ledger,
+            event_type="login_succeeded",
+            occurred_at=request.now,
+            summary="Login succeeded.",
+            actor_id=session.user.user_id,
+        )
         return _auth_session_response(session)
 
     @app.get(
@@ -584,6 +620,14 @@ def create_app(
                 reset_id=request.reset_id,
                 now=request.now,
             )
+            _append_audit_event(
+                audit_ledger,
+                event_type="password_reset_requested",
+                occurred_at=request.now,
+                summary="Reset requested.",
+                actor_id=reset.user_id,
+                metadata={"reset_id": request.reset_id},
+            )
         except AuthenticationError as error:
             raise HTTPException(
                 status_code=400,
@@ -611,6 +655,12 @@ def create_app(
                 reset_token=request.reset_token,
                 new_password=request.new_password,
                 now=request.now,
+            )
+            _append_audit_event(
+                audit_ledger,
+                event_type="password_reset_completed",
+                occurred_at=request.now,
+                summary="Reset completed.",
             )
         except PasswordPolicyError as error:
             raise HTTPException(
@@ -675,6 +725,14 @@ def create_app(
                 updated_at=request_body.now,
             )
             repository.create_project(project)
+            _append_audit_event(
+                audit_ledger,
+                event_type="project_created",
+                occurred_at=request_body.now,
+                summary="Project created.",
+                actor_id=user.user_id,
+                project_id=project.project_id,
+            )
         except ValueError as error:
             raise HTTPException(
                 status_code=400,
@@ -728,6 +786,9 @@ def create_app(
             authentication_service=authentication_service,
         )
         try:
+            repository.get_project(user_id=user.user_id, project_id=project_id)
+            if background_job_queue is not None:
+                background_job_queue.delete_project_jobs(project_id)
             deletion = repository.delete_project(user_id=user.user_id, project_id=project_id)
             if import_content_store is not None:
                 for import_record in deletion.deleted_imports:
@@ -739,6 +800,18 @@ def create_app(
                 )
                 for export_record in deletion.deleted_exports:
                     export_storage.delete_export_bytes(export_record)
+            _append_audit_event(
+                audit_ledger,
+                event_type="project_deleted",
+                occurred_at=_audit_timestamp(),
+                summary="Project permanently deleted.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={
+                    "deleted_imports": str(len(deletion.deleted_imports)),
+                    "deleted_exports": str(len(deletion.deleted_exports)),
+                },
+            )
         except (AccessDeniedError, RecordNotFoundError) as error:
             raise HTTPException(
                 status_code=404,
@@ -806,7 +879,33 @@ def create_app(
                 locale=_normalized_locale(request_body.locale),
             )
             repository.save_project_settings(settings)
-        except (AccessDeniedError, RecordNotFoundError) as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="settings_changed",
+                occurred_at=_audit_timestamp(),
+                summary="Project settings changed.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={
+                    "default_export_format": settings.default_export_format,
+                    "locale": settings.locale,
+                },
+            )
+        except AccessDeniedError as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="cross_user_access_attempt",
+                occurred_at=_audit_timestamp(),
+                summary="Cross-user project access denied.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={"route": "project_settings"},
+            )
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except RecordNotFoundError as error:
             raise HTTPException(
                 status_code=404,
                 detail={"error": "project_not_found", "detail": "Project not found."},
@@ -949,6 +1048,21 @@ def create_app(
                     created_at=request_body.now,
                 )
             )
+            _append_audit_event(
+                audit_ledger,
+                event_type="export_generated",
+                occurred_at=request_body.now,
+                summary="Export generated.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=snapshot.story_id,
+                metadata={
+                    "export_id": export.export_id,
+                    "snapshot_id": snapshot.snapshot_id,
+                    "export_kind": export.export_kind,
+                    "export_format": export.export_format,
+                },
+            )
         except (AccessDeniedError, RecordNotFoundError) as error:
             raise HTTPException(
                 status_code=404,
@@ -1081,6 +1195,15 @@ def create_app(
                 updated_at=request_body.now,
             )
             repository.create_story(story)
+            _append_audit_event(
+                audit_ledger,
+                event_type="story_created",
+                occurred_at=request_body.now,
+                summary="Story created.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=story.story_id,
+            )
         except (AccessDeniedError, RecordNotFoundError) as error:
             raise HTTPException(
                 status_code=404,
@@ -1120,10 +1243,22 @@ def create_app(
                 project_id=project_id,
                 story_id=story_id,
             )
+            if background_job_queue is not None:
+                background_job_queue.delete_story_jobs(story_id)
             deleted_imports = repository.delete_story(user_id=user.user_id, story_id=story_id)
             if import_content_store is not None:
                 for import_record in deleted_imports:
                     import_content_store.delete_import_content(import_record.storage_ref)
+            _append_audit_event(
+                audit_ledger,
+                event_type="story_deleted",
+                occurred_at=_audit_timestamp(),
+                summary="Story permanently deleted.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+                metadata={"deleted_imports": str(len(deleted_imports))},
+            )
         except (AccessDeniedError, RecordNotFoundError, ValueError) as error:
             raise HTTPException(
                 status_code=404,
@@ -1258,6 +1393,22 @@ def create_app(
                     _decode_base64(request_body.content_base64),
                 )
             repository.record_import(import_record)
+            _append_audit_event(
+                audit_ledger,
+                event_type="import_saved",
+                occurred_at=request_body.now,
+                summary="Import metadata saved.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+                metadata={
+                    "import_id": import_record.import_id,
+                    "source_format": import_record.source_format,
+                    "chapter_count": str(import_record.chapter_count),
+                    "scene_count": str(import_record.scene_count),
+                    "evidence_anchor_count": str(import_record.evidence_anchor_count),
+                },
+            )
         except DuplicateRecordError as error:
             raise HTTPException(
                 status_code=409,
@@ -1468,6 +1619,21 @@ def create_app(
                     request_body.now,
                 )
             run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
+            _append_audit_event(
+                audit_ledger,
+                event_type="run_submitted",
+                occurred_at=request_body.now,
+                summary="Import processing run submitted.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                story_id=story_id,
+                metadata={
+                    "import_id": import_id,
+                    "run_id": run.run_id,
+                    "job_id": request_body.job_id,
+                    "run_status": run.status,
+                },
+            )
         except HTTPException:
             raise
         except (DuplicateRecordError, DuplicateJobError) as error:
@@ -1505,6 +1671,18 @@ def create_app(
                 finished_at=request_body.finished_at,
                 max_jobs=request_body.max_jobs,
             )
+            _append_audit_event(
+                audit_ledger,
+                event_type="worker_processed",
+                occurred_at=request_body.finished_at,
+                summary="Worker drain completed.",
+                metadata={
+                    "claimed_jobs": str(summary.claimed_jobs),
+                    "succeeded_jobs": str(summary.succeeded_jobs),
+                    "failed_jobs": str(summary.failed_jobs),
+                    "max_jobs": str(request_body.max_jobs),
+                },
+            )
         except ValueError as error:
             raise HTTPException(
                 status_code=400,
@@ -1539,6 +1717,20 @@ def create_app(
                 created_at=request_body.now,
             )
             repository.store_snapshot(snapshot)
+            _append_audit_event(
+                audit_ledger,
+                event_type="snapshot_created",
+                occurred_at=request_body.now,
+                summary="Snapshot stored.",
+                project_id=run.project_id,
+                story_id=run.story_id,
+                metadata={
+                    "run_id": run.run_id,
+                    "snapshot_id": snapshot.snapshot_id,
+                    "snapshot_kind": snapshot.snapshot_kind,
+                    "media_type": snapshot.content_type,
+                },
+            )
         except RecordNotFoundError as error:
             raise HTTPException(
                 status_code=404,
@@ -2066,8 +2258,13 @@ def _require_true_flag(environ: Mapping[str, str], key: str) -> None:
 def _require_production_security_config(environ: Mapping[str, str]) -> None:
     """Reject production startup when required security config is missing."""
     deployment_env = environ.get(DEPLOYMENT_ENV, "").strip().lower()
-    if deployment_env not in {"prod", "production"}:
+    if not deployment_env:
         return
+    if deployment_env != "production":
+        raise ValueError(
+            "AEVRYN_DEPLOYMENT_ENV must be 'production' for production startup or "
+            "unset for local development."
+        )
 
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
     if database_adapter != "postgresql":
@@ -2147,6 +2344,7 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_DEPLOYMENT_ENV=production. Production must be separated from "
             "local, test, and staging environments."
         )
+    _require_production_extraction_config(environ)
     _require_production_worker_config(environ)
     _require_production_observability_config(environ)
     identity_provider = environ.get(IDENTITY_PROVIDER_ENV, "").strip().lower()
@@ -2209,6 +2407,36 @@ def _require_production_identity_config(environ: Mapping[str, str]) -> None:
         )
     _require_true_flag(environ, PASSWORD_RESET_ENABLED_ENV)
     _require_true_flag(environ, ACCOUNT_DELETION_HANDOFF_ENV)
+
+
+def _require_production_extraction_config(environ: Mapping[str, str]) -> None:
+    """Reject production startup without a real extraction provider."""
+    mode = environ.get(EXTRACTION_MODE_ENV, "").strip().lower()
+    if mode != "openai":
+        raise ValueError(
+            "AEVRYN_EXTRACTION_MODE=openai is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Demo extraction is local-only."
+        )
+    if not environ.get(OPENAI_API_KEY_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_OPENAI_API_KEY is required when AEVRYN_EXTRACTION_MODE=openai."
+        )
+    if not environ.get(OPENAI_MODEL_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_OPENAI_MODEL is required when AEVRYN_EXTRACTION_MODE=openai."
+        )
+    if not environ.get(OPENAI_TIMEOUT_SECONDS_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_OPENAI_TIMEOUT_SECONDS is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production."
+        )
+    _optional_positive_float(environ, OPENAI_TIMEOUT_SECONDS_ENV, default=30.0)
+    if not environ.get(OPENAI_MAX_RESPONSE_BYTES_ENV, "").strip():
+        raise ValueError(
+            "AEVRYN_OPENAI_MAX_RESPONSE_BYTES is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production."
+        )
+    _optional_positive_int(environ, OPENAI_MAX_RESPONSE_BYTES_ENV, default=1_048_576)
 
 
 def _require_production_worker_config(environ: Mapping[str, str]) -> None:
@@ -2284,6 +2512,7 @@ def _platform_services_from_env(
     BackgroundJobHandler | None,
     ImportContentStore | None,
     StorageService | None,
+    AuditLedger | PostgresqlAuditLedger | None,
 ]:
     """Return configured platform services from deployment environment settings."""
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
@@ -2310,7 +2539,7 @@ def _platform_services_from_env(
 
     database_path = environ.get(PROJECT_DATABASE_PATH_ENV, "").strip()
     if not database_path:
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
 
     project_database_path = Path(database_path)
     repository = JsonProjectRepository(project_database_path)
@@ -2333,6 +2562,7 @@ def _production_postgresql_platform_services(
     BackgroundJobHandler,
     ImportContentStore,
     StorageService,
+    PostgresqlAuditLedger,
 ]:
     """Return production storage services after fail-closed environment validation."""
     authentication_service = _production_authentication_service(
@@ -2344,7 +2574,7 @@ def _production_postgresql_platform_services(
     return (
         authentication_service,
         repository,
-        InMemoryJobQueue(),
+        PostgresqlBackgroundJobQueue(environ.get(PROJECT_DATABASE_URL_ENV, "")),
         ProjectImportSnapshotHandler(
             repository,
             import_content_store,
@@ -2352,6 +2582,7 @@ def _production_postgresql_platform_services(
         ),
         import_content_store,
         storage_service,
+        PostgresqlAuditLedger(environ.get(PROJECT_DATABASE_URL_ENV, "")),
     )
 
 
@@ -2393,6 +2624,7 @@ def _local_platform_services(
     BackgroundJobHandler,
     ImportContentStore,
     StorageService,
+    AuditLedger,
 ]:
     """Return browser-ready local platform services for one project repository."""
     if environ.get(STORAGE_PROVIDER_ENV, "").strip().lower() == "r2":
@@ -2422,6 +2654,7 @@ def _local_platform_services(
         ),
         import_content_store,
         storage_service,
+        AuditLedger(),
     )
 
 
@@ -2473,7 +2706,7 @@ def _worker_extractor_from_env(environ: Mapping[str, str]) -> SceneExtractor | N
 
 def _is_production_environment(environ: Mapping[str, str]) -> bool:
     """Return whether the environment is configured as production."""
-    return environ.get(DEPLOYMENT_ENV, "").strip().lower() in {"prod", "production"}
+    return environ.get(DEPLOYMENT_ENV, "").strip().lower() == "production"
 
 
 def _auth_store_path_from_env(
@@ -3037,18 +3270,29 @@ def _translation_review_items(
             issue_code = _translation_issue_code(
                 _string_payload_value(issue, "issue_code")
             )
+            possible_meaning_count = _int_payload_value(
+                issue,
+                "possible_meaning_count",
+            )
             try:
                 items.append(
                     ProjectTranslationReviewItem(
                         issue_code=issue_code,
-                        issue_label=_translation_issue_label(issue_code),
+                        issue_label=_translation_issue_label(
+                            issue_code,
+                            possible_meaning_count=possible_meaning_count,
+                        ),
                         chapter_id=_string_payload_value(unit, "source_chapter_id"),
                         scene_id=_string_payload_value(unit, "source_scene_id"),
                         evidence_anchor_count=_int_payload_value(
                             issue,
                             "evidence_anchor_count",
                         ),
-                        reason=_translation_review_reason(issue_code),
+                        possible_meaning_count=possible_meaning_count,
+                        reason=_translation_review_reason(
+                            issue_code,
+                            possible_meaning_count=possible_meaning_count,
+                        ),
                     )
                 )
             except (ValueError, ValidationError):
@@ -3063,15 +3307,30 @@ def _translation_issue_code(value: str) -> str:
     return "translation_review_required"
 
 
-def _translation_issue_label(issue_code: str) -> str:
+def _translation_issue_label(
+    issue_code: str,
+    *,
+    possible_meaning_count: int = 0,
+) -> str:
     """Return creator-facing translation review copy."""
+    if issue_code == "translation_review_required" and possible_meaning_count > 1:
+        return "Multiple meanings need review"
     if issue_code == "translation_review_required":
         return "Glossary term needs review"
     return "Translation needs review"
 
 
-def _translation_review_reason(issue_code: str) -> str:
+def _translation_review_reason(
+    issue_code: str,
+    *,
+    possible_meaning_count: int = 0,
+) -> str:
     """Return stable metadata-only translation review copy."""
+    if issue_code == "translation_review_required" and possible_meaning_count > 1:
+        return (
+            "Aevryn found multiple plausible meanings and preserved the original term "
+            "for review."
+        )
     if issue_code == "translation_review_required":
         return "Aevryn preserved an uncertain term for review."
     return "Aevryn preserved uncertain translation context for review."
@@ -4393,15 +4652,19 @@ def _reconcile_orphaned_project_runs(
                 and _run_is_stale(run, now)
             )
             if job_is_stale_running:
+                error_summary = "Processing timed out before completion. Retry is available."
+                background_job_queue.fail(
+                    job_id=job_id,
+                    failed_at=now,
+                    error_summary=error_summary,
+                )
                 repository.update_engine_run(
                     replace(
                         run,
                         status="failed",
                         status_updated_at=now,
                         finished_at=now,
-                        error_summary=(
-                            "Processing timed out before completion. Retry is available."
-                        ),
+                        error_summary=error_summary,
                     )
                 )
             continue
@@ -4420,7 +4683,7 @@ def _queue_job_is_running(background_job_queue: BackgroundJobQueue, job_id: str)
     """Return true when an existing queue job is stuck in the running state."""
     try:
         return background_job_queue.get(job_id).status == "running"
-    except Exception:
+    except JobNotFoundError:
         return False
 
 
@@ -4524,6 +4787,53 @@ def _project_storage_error(error: PersistenceError) -> HTTPException:
         status_code=503,
         detail={"error": "project_storage_failed", "detail": str(error)},
     )
+
+
+def _append_audit_event(
+    audit_ledger: AuditLedger | PostgresqlAuditLedger | None,
+    *,
+    event_type: str,
+    occurred_at: str,
+    summary: str,
+    actor_id: str = "",
+    project_id: str = "",
+    story_id: str = "",
+    metadata: Mapping[str, str] | None = None,
+) -> None:
+    """Append a metadata-only audit event or fail the workflow visibly."""
+    if audit_ledger is None:
+        return
+    try:
+        audit_ledger.append(
+            event_type=event_type,
+            occurred_at=occurred_at,
+            summary=summary,
+            actor_id=actor_id,
+            project_id=project_id,
+            story_id=story_id,
+            metadata=metadata or {},
+        )
+    except Exception as error:
+        logger.exception(
+            "audit_ledger_append_failed",
+            extra={
+                "audit_event_type": event_type,
+                "project_id": project_id,
+                "story_id": story_id,
+            },
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "audit_record_failed",
+                "detail": "Audit ledger write failed.",
+            },
+        ) from error
+
+
+def _audit_timestamp() -> str:
+    """Return a UTC timestamp for audited routes without client body time."""
+    return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def _auth_session_response(session: Any) -> AuthSessionResponse:

@@ -365,6 +365,7 @@ const projectSettingsPayload = {
   default_export_format: "markdown",
   locale: "en-US",
 };
+const sourceBackedPlaceholder = "Source-backed detail available through evidence controls.";
 const storyAlphaPayload = {
   story_id: "story_alpha",
   project_id: projectAlpha.id,
@@ -617,14 +618,21 @@ const projectOutputsPayload = {
     {
       ...characterPreviewPayload.character_profiles[0],
       character_id: "character_mark_duplicate",
+      display_name: sourceBackedPlaceholder,
+      subtitle: sourceBackedPlaceholder,
       aliases: { title: "Aliases", items: ["Captain Mark"] },
       titles: { title: "Titles", items: ["Captain"] },
-      descriptions: { title: "Descriptions", items: ["human male captain"] },
+      descriptions: { title: "Descriptions", items: ["human male captain", sourceBackedPlaceholder] },
       race: { title: "Race", items: ["Human"] },
       gender: { title: "Gender", items: ["Male"] },
       recent_changes: {
         title: "Recent Changes",
-        items: ["display_name -> Mark", "gender -> Male", "current_weapon -> Rusty Dagger"],
+        items: [
+          "display_name -> Mark",
+          "gender -> Male",
+          "current_weapon -> Rusty Dagger",
+          sourceBackedPlaceholder,
+        ],
       },
       evidence_summary: "8 verified facts",
     },
@@ -695,6 +703,13 @@ const manyPromptPacks = Array.from({ length: 28 }, (_, index) => ({
 function storeAuthenticatedProject() {
   window.localStorage.setItem("aevryn.session", JSON.stringify(session));
   window.localStorage.setItem("aevryn.projects", JSON.stringify([projectAlpha]));
+}
+
+function projectApiFallbackResponse(url: string): Promise<Response> {
+  if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+    return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+  }
+  return Promise.resolve(new Response("{}", { status: 404 }));
 }
 
 function projectOutputsPath(projectId: string): string {
@@ -900,7 +915,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.authLogin) || url.endsWith(API_PATHS.authRegister)) {
           return Promise.resolve(new Response(JSON.stringify(session)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
   });
@@ -990,7 +1005,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1205,6 +1220,42 @@ describe("App shell routing", () => {
     );
   });
 
+  it("hides internal bundled import filenames in monitoring", async () => {
+    storeAuthenticatedProject();
+    const bundledStatusPayload = {
+      ...projectStatusPayload,
+      latest_import: {
+        ...projectStatusPayload.latest_import,
+        filename: "aevryn_import_bundle.txt",
+      },
+    };
+    vi.mocked(fetch).mockImplementation(
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(bundledStatusPayload)));
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/monitoring"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
+    expect(await screen.findByText("Chapter import")).toBeInTheDocument();
+    expect(screen.queryByText(/aevryn_import_bundle/u)).not.toBeInTheDocument();
+  });
+
   it("reuses dashboard health data when navigating to monitoring inside the freshness window", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
@@ -1228,7 +1279,7 @@ describe("App shell routing", () => {
       if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
         return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -1334,7 +1385,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.sourceFormats)) {
           return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1397,6 +1448,9 @@ describe("App shell routing", () => {
     );
     const timelineDetailRows = timelineOutput.querySelectorAll("details.detail-disclosure");
     expect(timelineDetailRows.length).toBeGreaterThanOrEqual(1);
+    expect(timelineDetailRows[0]?.querySelector("summary")).toHaveTextContent(
+      /Chapter 1, Scene 1\s+-\s+Chapter 1 \/ Scene 1; 1 change/u,
+    );
     timelineDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview timeline" }));
@@ -1433,6 +1487,9 @@ describe("App shell routing", () => {
     );
     const continuityDetailRows = continuityOutput.querySelectorAll("details.detail-disclosure");
     expect(continuityDetailRows.length).toBeGreaterThanOrEqual(1);
+    expect(continuityDetailRows[0]?.querySelector("summary")).toHaveTextContent(
+      /Chapter 1, Scene 1\s+-\s+\d+ changes?; \d+ still known/u,
+    );
     continuityDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
     expect(continuityOutput).toHaveTextContent("1 still known");
     await user.click(screen.getByText("Developer preview"));
@@ -1496,7 +1553,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1598,7 +1655,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.projects)) {
           return Promise.resolve(new Response(JSON.stringify({ projects: [] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1629,7 +1686,7 @@ describe("App shell routing", () => {
             new Response(JSON.stringify({ projects: [projectAlphaPayload, projectBetaPayload] })),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1671,7 +1728,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -1733,7 +1790,7 @@ describe("App shell routing", () => {
       ) {
         return Promise.resolve(new Response(null, { status: 204 }));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -1874,7 +1931,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.sourceFormats)) {
         return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2013,7 +2070,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2116,7 +2173,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2184,7 +2241,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.importsInspect)) {
           return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2289,7 +2346,7 @@ describe("App shell routing", () => {
             ),
           );
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2399,7 +2456,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.importsInspect)) {
         return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2504,7 +2561,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.sourceFormats)) {
         return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2628,7 +2685,7 @@ describe("App shell routing", () => {
       if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
         return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2749,7 +2806,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.capabilities)) {
         return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -2760,7 +2817,7 @@ describe("App shell routing", () => {
     );
 
     expect(
-      await screen.findByText("Aevryn will create a story record when you save this import."),
+      await screen.findByText("Aevryn will create the first story when you save this import."),
     ).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
@@ -2854,7 +2911,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
           return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -2943,7 +3000,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
           return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3046,7 +3103,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
           return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3130,18 +3187,21 @@ describe("App shell routing", () => {
     expect(characterCard).not.toBeNull();
     expect(characterCard?.querySelector(".character-portrait")).toHaveTextContent("M");
     expect(characterCard?.querySelector("details.profile-disclosure")).not.toHaveAttribute("open");
+    const markCard = within(characterCard as HTMLElement);
     expect(screen.getAllByRole("heading", { name: "Mark" })).toHaveLength(1);
-    expect(screen.getByRole("heading", { name: "Race" })).toBeInTheDocument();
-    expect(screen.getByText("Human")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Gender" })).toBeInTheDocument();
-    expect(screen.getByText("Male")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Aliases" })).toBeInTheDocument();
-    expect(screen.getByText("Captain Mark")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Titles" })).toBeInTheDocument();
-    expect(screen.getByText("Captain")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Descriptions" })).toBeInTheDocument();
-    expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Race" })).toBeInTheDocument();
+    expect(markCard.getByText("Human")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Gender" })).toBeInTheDocument();
+    expect(markCard.getByText("Male")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Aliases" })).toBeInTheDocument();
+    expect(markCard.getByText("Captain Mark")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Titles" })).toBeInTheDocument();
+    expect(markCard.getByText("Captain")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Descriptions" })).toBeInTheDocument();
+    expect(markCard.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
+    expect(screen.queryByText(sourceBackedPlaceholder)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Unknown character" })).toBeInTheDocument();
     expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();
     expect(screen.getAllByText("Glossary term needs review").length).toBeGreaterThanOrEqual(1);
     expect(
@@ -3177,10 +3237,11 @@ describe("App shell routing", () => {
     expect(screen.queryByText("Title: The general")).not.toBeInTheDocument();
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
-    expect(screen.getByText("11 verified facts")).toBeInTheDocument();
+    expect(screen.getByText("8 verified facts")).toBeInTheDocument();
   });
 
   it("renders a safe project overview with identity review metadata", async () => {
+    const user = userEvent.setup();
     storeAuthenticatedProject();
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
@@ -3213,9 +3274,9 @@ describe("App shell routing", () => {
       if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
         return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={["/projects/project_alpha/overview"]}>
         <App />
       </MemoryRouter>,
@@ -3244,6 +3305,18 @@ describe("App shell routing", () => {
       "href",
       "/projects/project_alpha/monitoring",
     );
+    await waitFor(() =>
+      expect(container.querySelectorAll("details.identity-review-panel")).toHaveLength(2),
+    );
+    const [identityDisclosure, translationDisclosure] = Array.from(
+      container.querySelectorAll("details.identity-review-panel"),
+    ) as HTMLDetailsElement[];
+    expect(identityDisclosure.open).toBe(false);
+    expect(translationDisclosure.open).toBe(false);
+    await user.click(identityDisclosure.querySelector("summary") as HTMLElement);
+    await user.click(translationDisclosure.querySelector("summary") as HTMLElement);
+    expect(identityDisclosure.open).toBe(true);
+    expect(translationDisclosure.open).toBe(true);
     expect(screen.getByText("Title: The general")).toBeInTheDocument();
     expect(
       screen.getByText("Chapter 1, Scene 1; 2 possible matches; 87% confidence; held for review"),
@@ -3293,7 +3366,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
           return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3316,6 +3389,9 @@ describe("App shell routing", () => {
     const promptBodies = selectedPack.querySelectorAll("details.prompt-disclosure");
     expect(promptBodies).toHaveLength(4);
     promptBodies.forEach((body) => expect(body).not.toHaveAttribute("open"));
+    expect(
+      within(selectedPack).getByText(/Show Image Prompt - \d+ prompt details ready\./u),
+    ).toBeInTheDocument();
     await user.click(within(selectedPack).getByRole("button", { name: "Copy Image Prompt" }));
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Scene 1 image prompt detail")),
@@ -3386,7 +3462,7 @@ describe("App shell routing", () => {
         if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
           return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3433,7 +3509,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3463,13 +3539,27 @@ describe("App shell routing", () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
 
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={["/projects/project_alpha/world"]}>
         <App />
       </MemoryRouter>,
     );
 
     expect(await screen.findByRole("heading", { name: "World" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(container.querySelector("details.identity-review-panel > summary")).toBeInTheDocument(),
+    );
+    const identityReviewToggle = container.querySelector(
+      "details.identity-review-panel > summary",
+    ) as HTMLElement;
+    const identityReviewDisclosure = container.querySelector(
+      "details.identity-review-panel",
+    ) as HTMLDetailsElement;
+    expect(identityReviewToggle).toBeInTheDocument();
+    expect(identityReviewDisclosure.open).toBe(false);
+    await user.click(identityReviewToggle);
+    expect(identityReviewDisclosure.open).toBe(true);
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByText("Developer preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}The hangar was quiet.");
@@ -3499,6 +3589,8 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Timeline" })).toBeInTheDocument();
+    expect(await screen.findByText("Chapter 1 / Scene 1; 1 change")).toBeInTheDocument();
+    expect(await screen.findByText("Chapter 2 / Scene 1; 1 change")).toBeInTheDocument();
     await user.click(screen.getByText("Developer preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
@@ -3550,6 +3642,9 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Continuity" })).toBeInTheDocument();
+    expect(await screen.findByLabelText("Chapter 1, Scene 1 continuity details")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Chapter 2, Scene 1 continuity details")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Scene 1 continuity details")).not.toBeInTheDocument();
     await user.click(screen.getByText("Developer preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
@@ -3602,6 +3697,10 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
+    const promptPreviewResult = screen.getByRole("region", { name: "Prompt pack preview result" });
+    expect(
+      within(promptPreviewResult).getByText(/Show Image Prompt - \d+ prompt details ready\./u),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Image Prompt" }).length).toBeGreaterThanOrEqual(
       1,
     );
@@ -3648,7 +3747,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3717,7 +3816,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3761,9 +3860,17 @@ describe("App shell routing", () => {
     expect(
       await screen.findByRole("heading", { name: "source_alpha_production_pack.md" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("production_pack")).toBeInTheDocument();
-    expect(screen.getByText("markdown")).toBeInTheDocument();
-    expect(screen.getByText("text/markdown; charset=utf-8")).toBeInTheDocument();
+    const exportPreviewResult = screen.getByRole("region", { name: "Export preview result" });
+    expect(within(exportPreviewResult).getByText("Production Pack")).toBeInTheDocument();
+    expect(within(exportPreviewResult).getByText("Markdown")).toBeInTheDocument();
+    expect(
+      within(exportPreviewResult).getByText("text/markdown; charset=utf-8"),
+    ).toBeInTheDocument();
+    const exportContent = within(exportPreviewResult)
+      .getByText(/Show export content - \d+ characters/u)
+      .closest("details");
+    expect(exportContent).not.toBeNull();
+    expect(exportContent).not.toHaveAttribute("open");
     expect(
       screen.getAllByText(/Generate this image using only accepted Aevryn canon/u).length,
     ).toBeGreaterThanOrEqual(1);
@@ -3782,6 +3889,8 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Stored Exports" })).toBeInTheDocument();
     expect(await screen.findByText("alpha-canon-snapshot.json")).toBeInTheDocument();
+    expect(screen.getByText(/Canon Snapshot \/ JSON \| 128 B \|/u)).toBeInTheDocument();
+    expect(screen.queryByText(/Â/u)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create snapshot export" }));
 
     await waitFor(() => {
@@ -3860,7 +3969,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3910,7 +4019,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -3959,7 +4068,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4029,7 +4138,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4101,7 +4210,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4147,7 +4256,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4220,7 +4329,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4266,7 +4375,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4338,7 +4447,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4383,7 +4492,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4437,7 +4546,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4499,7 +4608,7 @@ describe("App shell routing", () => {
         if (url.endsWith(API_PATHS.capabilities)) {
           return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
         }
-        return Promise.resolve(new Response("{}", { status: 404 }));
+        return projectApiFallbackResponse(url);
       }),
     );
 
@@ -4529,7 +4638,7 @@ describe("App shell routing", () => {
       if (url.endsWith(API_PATHS.capabilities)) {
         return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -4609,9 +4718,21 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Settings Areas" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Project Defaults/u })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Project Active Defaults/u })).toHaveAttribute(
       "href",
       "#project-settings",
+    );
+    expect(screen.getByRole("link", { name: /Account Managed/u })).toHaveAttribute(
+      "href",
+      "#account-settings",
+    );
+    expect(screen.getByRole("link", { name: /Privacy & Data Protected/u })).toHaveAttribute(
+      "href",
+      "#privacy-data-settings",
+    );
+    expect(screen.getByRole("link", { name: /Diagnostics Hidden/u })).toHaveAttribute(
+      "href",
+      "#diagnostics-settings",
     );
     expect(screen.getByRole("heading", { name: "Workspace Preferences" })).toBeInTheDocument();
     const accountPanel = screen.getByRole("heading", { name: "Account" }).closest("section");
@@ -4625,7 +4746,10 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/does not give Aevryn ownership/u)).toBeInTheDocument();
     expect(document.body).not.toHaveTextContent("session-token");
-    expect(await screen.findByDisplayValue("en-US")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText("Locale")).toHaveValue("en-US"));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Save settings" })).toBeEnabled(),
+    );
     await user.selectOptions(screen.getByLabelText("Default export format"), "json");
     await user.clear(screen.getByLabelText("Locale"));
     await user.type(screen.getByLabelText("Locale"), "en-GB");
@@ -4695,7 +4819,7 @@ describe("App shell routing", () => {
       if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
         return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
       }
-      return Promise.resolve(new Response("{}", { status: 404 }));
+      return projectApiFallbackResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -4709,9 +4833,9 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: /Beta Story Select story/ }));
 
     expect(window.localStorage.getItem("aevryn.activeStory.project_alpha")).toBe("story_beta");
-    await user.click(screen.getByRole("button", { name: "Delete Beta Story" }));
+    await user.click(screen.getByRole("button", { name: "Delete story Beta Story" }));
 
-    expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete project Beta Story?");
+    expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete story Beta Story?");
     expect(confirmSpy).toHaveBeenNthCalledWith(2, "Story data will be lost forever, are you sure?");
     expect(await screen.findByText("Alpha Story")).toBeInTheDocument();
     expect(screen.queryByText("Beta Story")).not.toBeInTheDocument();

@@ -17,15 +17,24 @@ They never preserve the private thing that happened.
 
 Phase 11 introduces the audit ledger contract and a deterministic in-memory implementation.
 
-The production ledger storage adapter is a later deployment/infrastructure decision.
+The public-beta production ledger storage candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+
+The selected candidate is managed PostgreSQL audit tables owned by Aevryn's Project Database environment.
+
+The production adapter and core workflow event wiring are implemented.
+
+Hosted production configuration verification, retention enforcement, access-control verification, release-gate integrity verification, and the restore/audit drill remain public-beta blockers.
 
 Current implementation:
 
 * `AuditLedger`
 * `AuditLedgerRecord`
 * `AuditLedgerIntegrityError`
+* `PostgresqlAuditLedger`
 
 The implementation lives in `src/aevryn/audit/`.
+
+`PostgresqlAuditLedger` implements the selected PostgreSQL audit storage candidate by creating `audit_ledger_records`, appending records inside a locked transaction, reloading records in sequence order, and verifying the persisted hash chain.
 
 ---
 
@@ -108,24 +117,29 @@ story_deleted | Deleted story text: ...
 
 ---
 
-# Candidate Event Types
+# Implemented Event Types
 
-Initial event types should include:
+The API now appends metadata-only records for:
 
 * `user_registered`
 * `login_succeeded`
 * `login_failed`
+* `password_reset_requested`
+* `password_reset_completed`
 * `project_created`
+* `project_deleted`
+* `settings_changed`
+* `cross_user_access_attempt`
 * `story_created`
 * `story_deleted`
 * `import_saved`
 * `run_submitted`
-* `worker_started`
-* `worker_failed`
-* `worker_succeeded`
+* `worker_processed`
 * `snapshot_created`
 * `export_generated`
-* `settings_changed`
+
+Additional candidate event types still needed before public beta include:
+
 * `security_configuration_failed`
 
 Event types are stable machine-readable tokens.
@@ -136,9 +150,10 @@ Event types are stable machine-readable tokens.
 
 Audit ledger work does not unblock public beta until:
 
-* production storage for audit records is selected
-* audit retention policy is documented
-* audit access controls are documented
-* security-relevant API and worker events are wired into the ledger
+* hosted production configuration verifies the PostgreSQL audit adapter
+* audit retention policy is enforced or operationally verified
+* audit access controls are configured and reviewed
+* remaining security-relevant configuration events are wired into the ledger
 * deletion events are verified to remain metadata-only
 * ledger integrity verification is part of the release gate
+* restore/audit drill results are recorded with `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`

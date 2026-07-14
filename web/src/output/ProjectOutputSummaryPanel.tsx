@@ -16,7 +16,7 @@ import type {
 } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, LoadingMessage } from "../components/Feedback";
-import { formatDateTime, formatRunStatus } from "../formatting/display";
+import { formatDateTime, formatRunStatus, formatSceneScope } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
 import {
   compactIdentityReviewItems,
@@ -28,7 +28,13 @@ import {
   translationReviewDetails,
   translationReviewKey,
 } from "./languageIdentityDisplay";
-import { readableOutputItems, readablePromptText } from "./readableOutput";
+import {
+  isInternalOutputPlaceholder,
+  readableOutputItems,
+  readableOutputText,
+  readablePromptSummary,
+  readablePromptText,
+} from "./readableOutput";
 
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
@@ -129,7 +135,9 @@ function ProjectOutputSummary({
       </dl>
       <LanguageIdentityStatus outputs={outputs} />
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
-      {surface === "characters" ? <IdentityReviewPanel outputs={outputs} /> : null}
+      {hasIdentityReviewItems(outputs) ? (
+        <IdentityReviewPanel outputs={outputs} defaultOpen={surface === "characters"} />
+      ) : null}
       <ReadableSurfacePanels surface={surface} outputs={outputs} />
       {surfaceSummary.status === "waiting" ? (
         <EmptyState title="No extracted canon content yet">
@@ -139,6 +147,11 @@ function ProjectOutputSummary({
       ) : null}
     </section>
   );
+}
+
+function hasIdentityReviewItems(outputs: ProjectOutputs): boolean {
+  const summary = outputs.language_identity;
+  return summary.identity_ambiguous_count + summary.identity_unresolved_count > 0;
 }
 
 function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
@@ -200,7 +213,13 @@ function identityReviewAction(status: string): string {
   return "Aevryn marked this reference for review";
 }
 
-function IdentityReviewPanel({ outputs }: { outputs: ProjectOutputs }) {
+function IdentityReviewPanel({
+  outputs,
+  defaultOpen,
+}: {
+  outputs: ProjectOutputs;
+  defaultOpen: boolean;
+}) {
   const [statusFilter, setStatusFilter] = useState<"all" | "ambiguous" | "unresolved">("all");
   const summary = outputs.language_identity;
   const reviewTotal = summary.identity_ambiguous_count + summary.identity_unresolved_count;
@@ -215,61 +234,64 @@ function IdentityReviewPanel({ outputs }: { outputs: ProjectOutputs }) {
   }
 
   return (
-    <section className="identity-review-panel" aria-label="Identity review">
-      <div className="identity-review-heading">
-        <div>
-          <h3>Identity Review</h3>
-          <p>
-            {summary.identity_resolved_count.toLocaleString()} resolved,{" "}
-            {summary.identity_ambiguous_count.toLocaleString()} ambiguous,{" "}
-            {summary.identity_unresolved_count.toLocaleString()} unresolved.
+    <details className="identity-review-panel" open={defaultOpen}>
+      <summary>Identity Review</summary>
+      <section aria-label="Identity review">
+        <div className="identity-review-heading">
+          <div>
+            <h3>Identity Review</h3>
+            <p>
+              {summary.identity_resolved_count.toLocaleString()} resolved,{" "}
+              {summary.identity_ambiguous_count.toLocaleString()} ambiguous,{" "}
+              {summary.identity_unresolved_count.toLocaleString()} unresolved.
+            </p>
+          </div>
+          <div className="segmented-control" aria-label="Identity review filter">
+            <button
+              type="button"
+              aria-pressed={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              aria-pressed={statusFilter === "ambiguous"}
+              onClick={() => setStatusFilter("ambiguous")}
+            >
+              Ambiguous
+            </button>
+            <button
+              type="button"
+              aria-pressed={statusFilter === "unresolved"}
+              onClick={() => setStatusFilter("unresolved")}
+            >
+              Unresolved
+            </button>
+          </div>
+        </div>
+        {reviewTotal > reviewItems.length ? (
+          <p className="result-summary">
+            Showing {reviewItems.length.toLocaleString()} representative review examples from{" "}
+            {reviewTotal.toLocaleString()} references that need attention.
           </p>
-        </div>
-        <div className="segmented-control" aria-label="Identity review filter">
-          <button
-            type="button"
-            aria-pressed={statusFilter === "all"}
-            onClick={() => setStatusFilter("all")}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            aria-pressed={statusFilter === "ambiguous"}
-            onClick={() => setStatusFilter("ambiguous")}
-          >
-            Ambiguous
-          </button>
-          <button
-            type="button"
-            aria-pressed={statusFilter === "unresolved"}
-            onClick={() => setStatusFilter("unresolved")}
-          >
-            Unresolved
-          </button>
-        </div>
-      </div>
-      {reviewTotal > reviewItems.length ? (
-        <p className="result-summary">
-          Showing {reviewItems.length.toLocaleString()} representative review examples from{" "}
-          {reviewTotal.toLocaleString()} references that need attention.
-        </p>
-      ) : null}
-      {filteredItems.length > 0 ? (
-        <div className="compact-list">
-          {filteredItems.map((item) => (
-            <div className="compact-row identity-review-row" key={identityReviewKey(item)}>
-              <strong>{identityReviewTitle(item)}</strong>
-              <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <EmptyState title="No matching identity reviews">
-          No identity review examples match this filter.
-        </EmptyState>
-      )}
-    </section>
+        ) : null}
+        {filteredItems.length > 0 ? (
+          <div className="compact-list">
+            {filteredItems.map((item) => (
+              <div className="compact-row identity-review-row" key={identityReviewKey(item)}>
+                <strong>{identityReviewTitle(item)}</strong>
+                <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="No matching identity reviews">
+            No identity review examples match this filter.
+          </EmptyState>
+        )}
+      </section>
+    </details>
   );
 }
 
@@ -347,10 +369,11 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
 }
 
 function bestSubtitle(left: string, right: string): string {
-  if (left && left !== "Unknown") {
+  const readableLeft = readableCharacterSubtitle(left);
+  if (readableLeft !== "Unknown") {
     return left;
   }
-  return right || left;
+  return readableCharacterSubtitle(right) !== "Unknown" ? right : readableLeft;
 }
 
 function mergeSection(left: OutputSection, right: OutputSection): OutputSection {
@@ -373,15 +396,17 @@ function mergedEvidenceSummary(left: string, right: string): string {
 
 function CharacterPanel({ profile }: { profile: CharacterProfile }) {
   const recentChanges = characterRecentChanges(profile);
+  const displayName = readableCharacterName(profile.display_name);
+  const subtitle = readableCharacterSubtitle(profile.subtitle);
   return (
     <article className="profile-card character-profile-card">
       <header className="character-profile-header">
         <div className="character-portrait" aria-hidden="true">
-          {characterInitials(profile.display_name)}
+          {characterInitials(displayName)}
         </div>
         <div>
-          <h3>{profile.display_name}</h3>
-          <p>{profile.subtitle}</p>
+          <h3>{displayName}</h3>
+          <p>{subtitle}</p>
         </div>
       </header>
       <details className="profile-disclosure">
@@ -433,13 +458,31 @@ function characterRecentChanges(profile: CharacterProfile): OutputSection {
   };
 }
 
+function readableCharacterSubtitle(subtitle: string): string {
+  if (!subtitle || subtitle === "Unknown" || isInternalOutputPlaceholder(subtitle)) {
+    return "Unknown";
+  }
+  return readableOutputText(subtitle);
+}
+
+function readableCharacterName(name: string): string {
+  if (!name || name === "Unknown" || isInternalOutputPlaceholder(name)) {
+    return "Unknown character";
+  }
+  return readableOutputText(name);
+}
+
 function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(CHARACTER_CARD_PAGE_SIZE);
   const normalizedQuery = query.trim().toLowerCase();
   const filteredProfiles = normalizedQuery
     ? profiles.filter((profile) =>
-        [profile.display_name, profile.subtitle, profile.evidence_summary]
+        [
+          readableCharacterName(profile.display_name),
+          readableCharacterSubtitle(profile.subtitle),
+          profile.evidence_summary,
+        ]
           .join(" ")
           .toLowerCase()
           .includes(normalizedQuery),
@@ -545,7 +588,10 @@ function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
         >
           <summary>
             <strong>{group.title}</strong>
-            <span>{group.subtitle}</span>
+            <span aria-hidden="true"> - </span>
+            <span>
+              {group.subtitle}; {timelineGroupChangeLabel(group.changes.length)}
+            </span>
           </summary>
           <ul>
             {group.changes.map((change) => (
@@ -635,14 +681,15 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
         total={scenesWithChanges.length}
         label="continuity scenes"
       />
-      {visibleScenes.map((scene, index) => (
+      {visibleScenes.map((scene) => (
         <details
           className="compact-row timeline-change-group detail-disclosure"
           key={scene.scene_id}
-          aria-label={`Scene ${index + 1} continuity details`}
+          aria-label={`${formatSceneScope(scene.scene_id)} continuity details`}
         >
           <summary>
-            <strong>{`Scene ${index + 1}`}</strong>
+            <strong>{formatSceneScope(scene.scene_id)}</strong>
+            <span aria-hidden="true"> - </span>
             <span>{continuitySceneSummary(scene)}</span>
           </summary>
           <div className="continuity-change-grid">
@@ -757,6 +804,10 @@ function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): stri
   const changeLabel = `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
   const stableLabel = `${stableCount.toLocaleString()} still known`;
   return `${changeLabel}; ${stableLabel}`;
+}
+
+function timelineGroupChangeLabel(changeCount: number): string {
+  return `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
 }
 
 function continuityChangeCount(scene: ContinuityReport["scenes"][number]): number {
@@ -878,6 +929,7 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
     section,
     full ? {} : { maxItems: MAX_VISIBLE_PROMPT_DETAILS },
   );
+  const promptSummary = readablePromptSummary(section);
 
   async function copyPrompt() {
     const clipboard = navigator.clipboard;
@@ -911,7 +963,9 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
         </div>
       </div>
       <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
-        <summary>Show prompt</summary>
+        <summary>
+          Show {section.title} - {promptSummary}
+        </summary>
         <p>{promptText}</p>
       </details>
     </section>

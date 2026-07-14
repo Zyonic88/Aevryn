@@ -383,6 +383,6 @@ Do not build:
 * Image generation
 * Video generation
 * Production media pipelines
-* Public launch pages
+* Broad public-launch marketing pages outside the release-readiness trust, legal, privacy, support, and security surface
 * Chatbot behavior
 * Broad redesigns during private-alpha hardening

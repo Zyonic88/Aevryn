@@ -41,6 +41,7 @@ Gate 5 builds on:
 * `docs/AEVRYN_AUDIT_LEDGER.md`
 * `docs/DATA_RETENTION_POLICY.md`
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
+* `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
 
 These documents define the privacy and engineering boundaries.
 
@@ -84,6 +85,8 @@ Restore tests must not expose full manuscripts in logs, support artifacts, or sc
 
 The concrete restore drill is defined in `docs/AEVRYN_RESTORE_TEST_PLAN.md`.
 
+The required result template is defined in `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`.
+
 ---
 
 # Disaster Recovery
@@ -119,6 +122,15 @@ Audit records must remain append-only, tamper-evident, and metadata-only.
 
 Audit storage must not contain full source prose, full AI responses, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths.
 
+The public-beta audit storage candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+
+The selected candidate uses managed PostgreSQL audit tables owned by Aevryn's Project Database environment.
+
+`PostgresqlAuditLedger` implements the selected storage adapter.
+
+Core API and worker workflow events now append metadata-only audit records through
+the configured audit writer.
+
 ---
 
 # Audit Event Coverage
@@ -129,13 +141,12 @@ Public beta should capture security-relevant and workflow-relevant events, inclu
 * login success and failure
 * password reset request
 * project creation
+* project deletion
 * story creation
 * story deletion
 * import saved
 * run submitted
-* worker started
-* worker failed
-* worker succeeded
+* worker drain completion
 * snapshot created
 * export generated
 * settings changed
@@ -181,7 +192,15 @@ Current implementation progress:
 
 ```text
 docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
-Production backup provider, retention window, restore execution, audit storage provider, and audit retention remain open.
+docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit drill record and stop conditions.
+Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
+Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+`PostgresqlAuditLedger` implements the selected PostgreSQL adapter.
+Core API and worker workflow events are wired to the configured audit writer.
+Identity, password reset, project settings, and cross-user settings access-denial
+events are wired to the configured audit writer.
+
+Production backup provider verification, restore execution, hosted production audit adapter verification, remaining configuration-failure audit event coverage, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
 ```
 
 ---

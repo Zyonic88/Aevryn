@@ -25,7 +25,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!session || !isSessionRefreshable(session)) {
-      setIsSessionRestoring(false);
       return;
     }
 

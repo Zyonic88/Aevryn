@@ -14,7 +14,7 @@ It is separate from the final release-candidate run record because smoke attempt
 Record type: Production-Like Smoke Attempt Log
 Status: Started
 Public beta: Blocked
-Latest attempt: 2026-07-01 hosted managed identity and project smoke passed
+Latest attempt: 2026-07-14 hosted creator workflow retry passed
 ```
 
 Production-like smoke is partially complete.
@@ -31,7 +31,9 @@ Hosted frontend/API custom-domain header smoke has passed.
 
 Hosted browser-flow smoke verified login/register availability, protected frontend-route redirects, protected API-route authentication, managed-identity login completion, authenticated project create/read/list, and clean browser console output.
 
-Hosted import processing, monitoring workflow status, export preview, production-safe worker posture, log review, and final release-candidate signoff are still not complete.
+Hosted import processing, monitoring workflow status, export creation, production-safe worker posture, and hosted browser UI sweep have passed for the retry smoke.
+
+Final release-candidate signoff is still not complete.
 
 ---
 
@@ -506,6 +508,196 @@ No real user password, API key, storage credential, database URL, Supabase servi
 
 ---
 
+# Attempt 2026-07-14 - Hosted Creator Workflow Smoke Plan
+
+Environment:
+
+```text
+Execution surface: in-app browser against hosted frontend and API
+Frontend custom domain: https://app.aevryn.ai
+API custom domain: https://api.aevryn.ai
+Managed identity provider: Supabase Auth
+Provider mode: hosted configured provider
+Status: Failed
+```
+
+This attempt should verify the hosted workflow that remained open after the July 1 and July 2 smoke passes.
+
+Required browser actions:
+
+```text
+Log in with the managed test user.
+Open the dashboard.
+Create a release-candidate smoke project.
+Create or select a story.
+Upload owner-approved test chapters.
+Inspect the import.
+Save the import.
+Submit processing once.
+Observe project run state without browser-side worker draining.
+Wait for processing to finish or fail clearly.
+Open Monitoring and confirm workflow state is API-provided.
+Review Characters, World, Timeline, Scenes, Continuity, Prompt Packs, Exports, and Settings.
+Create an export preview if the hosted workflow exposes the export action.
+Refresh the browser and confirm API-backed state restores.
+Delete the smoke project and confirm it disappears from active product surfaces.
+```
+
+Required metadata-only checks:
+
+```text
+No full source prose in browser diagnostics, monitoring, API errors, or logs.
+No full AI provider response in browser diagnostics, monitoring, API errors, or logs.
+No credentials, tokens, private URLs, hostnames, usernames, or machine-local paths in visible output.
+No creator-facing source-backed placeholder text, import bundle IDs, source IDs, or evidence anchor IDs.
+No stuck "submitting" or "processing" state after the run finishes or fails.
+No duplicate processing run is created from one submit action.
+Browser console warnings/errors are reviewed.
+```
+
+Result:
+
+```text
+FAILED.
+
+Run date: 2026-07-14.
+Project: RC Smoke 2026-07-14.
+Project ID: project_447d9366_5a2a_4b38_8c28_ab7bf41de973.
+Input: 10 owner-approved TXT chapters, 82,024 bytes.
+Inspected import: 10 chapters, 19 scenes, 327 paragraphs, 1,296 evidence anchors.
+Save import: passed.
+Submit processing: passed.
+Worker state: running state appeared with queued/processing/snapshot/output stepper.
+Final run state: failed.
+Failure summary: AI extraction timed out while reading the provider response. Retry with a smaller chapter batch or increase the provider timeout for large imports.
+Monitoring state: API health ok; project run status failed; worker failed; queued jobs 0; running jobs 0; latest failure visible.
+Refresh restore: passed. Monitoring restored failed state after browser refresh.
+Browser console: no warning/error entries observed during monitoring failure review.
+Cleanup: smoke project deleted from dashboard and no API error appeared during deletion.
+```
+
+Interpretation:
+
+```text
+BLOCKED for hosted import processing workflow smoke until provider timeout behavior is hardened.
+PASSED for hosted import inspection and save workflow.
+PASSED for monitoring workflow status visibility after a failed run.
+PASSED for refresh restore of API-backed failed state.
+PASSED for smoke project deletion cleanup.
+NOT RUN for successful post-processing workspace output review because processing failed.
+NOT RUN for export preview because no snapshot was created.
+FINDING: Monitoring displayed latest import as aevryn_import_bundle.txt. This is metadata only, but it is still creator-facing internal naming noise and should be hidden or replaced with a human label.
+NEXT FIX: harden hosted extraction timeout behavior for 10-chapter imports and remove internal import bundle filename from monitoring.
+```
+
+---
+
+# Attempt 2026-07-14 - Hosted Creator Workflow Smoke Retry
+
+Environment:
+
+```text
+Execution surface: in-app browser against hosted frontend and API
+Frontend custom domain: https://app.aevryn.ai
+API custom domain: https://api.aevryn.ai
+Managed identity provider: Supabase Auth
+Provider mode: hosted configured provider
+Cloud Run revision after timeout hardening: aevryn-api-00021-lk7
+Status: Passed
+```
+
+Result:
+
+```text
+PASSED.
+
+Run date: 2026-07-14.
+Project: RC Smoke Retry 2026-07-14.
+Project ID: project_30c12069_caf1_43da_b91d_de2887097e77.
+Input: 10 owner-approved TXT chapters, 82,024 bytes.
+Inspected import: 10 chapters, 19 scenes, 327 paragraphs, 1,296 evidence anchors.
+Save import: passed.
+Submit processing: passed.
+Worker state: queued/processing/snapshot/output stepper appeared.
+Final run state: succeeded.
+Snapshot state: canon snapshot ready.
+Duplicate run check: one processing run was created from one submit action.
+Monitoring state: API health ok; project run status succeeded; worker idle; queued jobs 0; running jobs 0; latest failure absent.
+Monitoring import label: latest import displayed as Chapter import, not the internal bundle filename.
+Refresh restore: passed. Monitoring restored succeeded state after browser refresh.
+Workspace sweep: Overview, Story, Import, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, Exports, and Settings loaded without known internal-noise blockers.
+Export creation: passed. A JSON canon snapshot export was created and displayed with a download action.
+Export monitoring: export availability yes; export count 1; recent event recorded Export Created.
+Browser console: no warning/error entries observed during monitoring and workspace review.
+Cleanup: passed. Project deletion removed the smoke project from the dashboard, reduced the dashboard count to 2 projects, and direct navigation to the deleted project returned the dashboard without API errors.
+```
+
+Known non-blocking findings:
+
+```text
+Identity review summaries appear across several output tabs. This is truthful metadata, but visually repetitive and should be considered for UX hardening.
+Some output tabs still contain expected Unknown/No-data states where canon evidence is incomplete.
+```
+
+Interpretation:
+
+```text
+PASSED for hosted import inspection and save workflow.
+PASSED for hosted import processing workflow.
+PASSED for monitoring workflow status visibility after a successful run.
+PASSED for refresh restore of API-backed succeeded state.
+PASSED for export creation from the latest canon snapshot.
+PASSED for metadata-only workflow events.
+PASSED for hiding internal import bundle filenames from Monitoring.
+PASSED for the checked browser console warnings/errors.
+PASSED for smoke project deletion cleanup.
+PASSED for internal release-candidate signoff.
+OPEN for public-beta approval.
+```
+
+---
+
+# Attempt 2026-07-14 - Hosted Log Review
+
+Environment:
+
+```text
+Execution surface: Google Cloud Run bounded service-log sample
+Service: aevryn-api
+Region: us-central1
+Sample size: 200 recent service-log lines
+Status: Passed with metadata-only access-log finding
+```
+
+Observed metadata:
+
+```text
+Request logs included public API routes, HTTP methods, HTTP statuses, project IDs, story IDs, and Google-managed proxy addresses.
+Request logs did not include manuscript text.
+Request logs did not include full AI provider responses.
+Request logs did not include credentials, tokens, secret values, database URLs, storage keys, Supabase keys, worker keys, session secrets, usernames, or machine-local paths.
+No warning/error entries appeared in the sampled hosted service logs.
+```
+
+Finding:
+
+```text
+Cloud Run and Uvicorn access logs include route-level workflow metadata.
+This is acceptable for the current production-like smoke because it is metadata-only, but it should remain part of future privacy review before public beta.
+```
+
+Interpretation:
+
+```text
+PASSED for hosted log review of the checked import, monitoring, and export smoke window.
+PASSED for no source prose in sampled hosted logs.
+PASSED for no full AI payloads in sampled hosted logs.
+PASSED for no secret values in sampled hosted logs.
+OPEN for hosted retention and final bounded-log verification against `docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md` before public beta.
+```
+
+---
+
 # Required Successful Smoke
 
 A successful production-like smoke must record:
@@ -518,17 +710,26 @@ A successful production-like smoke must record:
 | API startup | production app starts with local-only adapters rejected | Passed on Cloud Run |
 | HTTPS/CORS | public origins are explicit and HTTPS-only | Health endpoint passed on Cloud Run and api.aevryn.ai; app.aevryn.ai frontend header smoke and API CORS origin check passed |
 | Managed identity | protected routes require managed identity tokens | Passed for unauthenticated redirects/API 401 and hosted Supabase login completion |
-| Worker processing | import processing completes through production-safe worker posture | Not run in production-like environment |
-| Monitoring | workflow state is observable through metadata-only status | Not run in production-like environment |
-| Export preview | export preview works through storage-reference boundaries | Not run in production-like environment |
+| Worker processing | import processing completes through production-safe worker posture | Passed for hosted ten-chapter smoke retry |
+| Monitoring | workflow state is observable through metadata-only status | Passed for hosted successful run and export event |
+| Export preview | export preview works through storage-reference boundaries | Passed for hosted JSON snapshot export creation |
 | Authenticated project workflow | create/read/list project metadata through hosted API | Passed for RC Smoke Test Project |
-| Logs | no manuscripts, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths | Passed for the checked hosted browser/API smoke; still required for import/worker smoke |
+| Logs | no manuscripts, credentials, tokens, private URLs, usernames, machine-local paths, or full AI payloads | Passed for bounded hosted Cloud Run log review; route-level metadata remains expected access-log data |
 
 ---
 
 # Next Action
 
-Run the smoke commands again only after the production-like environment has the required secret-backed settings loaded:
+Complete the remaining release-candidate readiness checks that are outside the browser smoke:
+
+```text
+Verify hosted retention and bounded-log behavior against the production observability policy before public beta.
+Complete public-facing legal, trust, and support publication before public beta.
+Complete backup/restore/audit readiness before public beta.
+Continue prompt-pack and output UX polish before public beta positioning.
+```
+
+If local production-style smoke must be repeated before final signoff, use metadata-only commands:
 
 ```powershell
 $env:PYTHONPATH="src"
@@ -537,7 +738,7 @@ python -m aevryn.cli project-db-smoke
 python -m aevryn.cli storage-smoke
 ```
 
-Then run the browser/API smoke against the production-like API and record the result in this document or in a dated release-candidate run record.
+Then record the final result in a dated release-candidate run record.
 
 ---
 
@@ -545,5 +746,5 @@ Then run the browser/API smoke against the production-like API and record the re
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, and authenticated project create/read/list smoke passed. Hosted import processing, monitoring workflow status, export preview, production-safe worker posture, log review, and final release-candidate signoff have not passed.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, hosted observability verification, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
 ```

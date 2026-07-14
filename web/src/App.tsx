@@ -9,6 +9,17 @@ import { PublicOnlyRoute } from "./components/PublicOnlyRoute";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ProjectWorkspacePage } from "./pages/ProjectWorkspacePage";
+import {
+  AcceptableUsePage,
+  ContentClassificationPage,
+  PrivacyPage,
+  SecurityDisclosurePage,
+  SecurityPage,
+  SupportPage,
+  TermsPage,
+  TrustPage,
+  UserRightsPage,
+} from "./pages/PublicInfoPages";
 import { RegisterPage } from "./pages/RegisterPage";
 
 export function App() {
@@ -18,6 +29,15 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Routes>
+          <Route path="/trust" element={<TrustPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/security" element={<SecurityPage />} />
+          <Route path="/security/disclosure" element={<SecurityDisclosurePage />} />
+          <Route path="/user-rights" element={<UserRightsPage />} />
+          <Route path="/content" element={<ContentClassificationPage />} />
+          <Route path="/support" element={<SupportPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/acceptable-use" element={<AcceptableUsePage />} />
           <Route element={<PublicOnlyRoute />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

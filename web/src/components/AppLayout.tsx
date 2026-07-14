@@ -24,6 +24,8 @@ export function AppLayout() {
         </Link>
         <nav className="topnav" aria-label="Primary navigation">
           <NavLink to="/dashboard">Dashboard</NavLink>
+          <NavLink to="/trust">Trust</NavLink>
+          <NavLink to="/support">Support</NavLink>
         </nav>
         <div className="account-chip">
           <span>{session?.display_name}</span>

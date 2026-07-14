@@ -69,6 +69,11 @@ export function LoginPage() {
         <p className="auth-switch">
           New to Aevryn? <Link to="/register">Create an account</Link>
         </p>
+        <nav className="auth-links" aria-label="Public information">
+          <Link to="/trust">Trust</Link>
+          <Link to="/support">Support</Link>
+          <Link to="/privacy">Privacy</Link>
+        </nav>
       </section>
     </main>
   );

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from aevryn.entity_resolution.models import (
     EntityIdentityProfile,
     ResolutionCandidate,
@@ -142,6 +144,16 @@ class EntityResolutionEngine:
     ) -> ResolutionCandidate | None:
         """Return the best candidate score for one profile."""
         normalized_reference = _normalized_phrase(reference.text)
+        if _is_pronoun_phrase(normalized_reference):
+            for pronoun in profile.pronouns:
+                if normalized_reference == _normalized_phrase(pronoun):
+                    return ResolutionCandidate(
+                        entity_id=profile.entity_id,
+                        confidence=0.87,
+                        match_kind="pronoun",
+                        matched_text=pronoun,
+                    )
+            return None
         if normalized_reference == _normalized_phrase(profile.canonical_name):
             return ResolutionCandidate(
                 entity_id=profile.entity_id,
@@ -165,6 +177,14 @@ class EntityResolutionEngine:
                     match_kind="title",
                     matched_text=title,
                 )
+        for honorific in profile.honorifics:
+            if normalized_reference == _normalized_phrase(honorific):
+                return ResolutionCandidate(
+                    entity_id=profile.entity_id,
+                    confidence=0.9,
+                    match_kind="honorific",
+                    matched_text=honorific,
+                )
         for description in profile.descriptions:
             if normalized_reference == _normalized_phrase(description):
                 return ResolutionCandidate(
@@ -173,6 +193,9 @@ class EntityResolutionEngine:
                     match_kind="description",
                     matched_text=description,
                 )
+        relationship_score = _relationship_label_score(normalized_reference, profile)
+        if relationship_score is not None:
+            return relationship_score
         for pronoun in profile.pronouns:
             if normalized_reference == _normalized_phrase(pronoun):
                 return ResolutionCandidate(
@@ -181,6 +204,10 @@ class EntityResolutionEngine:
                     match_kind="pronoun",
                     matched_text=pronoun,
                 )
+
+        title_name_score = _title_name_score(normalized_reference, profile)
+        if title_name_score is not None:
+            return title_name_score
 
         soft_score = _soft_description_score(normalized_reference, profile)
         if soft_score is None:
@@ -202,6 +229,7 @@ def _validated_profiles(
 
 def _normalized_phrase(value: str) -> str:
     """Return a comparison-safe phrase."""
+    value = _without_possessive_suffixes(value)
     normalized = "".join(
         character.lower() if character.isalnum() else " "
         for character in value.strip()
@@ -214,6 +242,27 @@ def _normalized_phrase(value: str) -> str:
     return " ".join(parts)
 
 
+def _is_pronoun_phrase(value: str) -> bool:
+    """Return whether a normalized phrase is only a pronoun reference."""
+    return value in {
+        "he",
+        "him",
+        "his",
+        "she",
+        "her",
+        "hers",
+        "they",
+        "them",
+        "their",
+        "theirs",
+    }
+
+
+def _without_possessive_suffixes(value: str) -> str:
+    """Remove common possessive suffixes without changing owner text."""
+    return re.sub(r"(?:['\u2019]s|\u00e2\u20ac\u2122s)\b", "", value, flags=re.IGNORECASE)
+
+
 def _soft_description_score(
     normalized_reference: str,
     profile: EntityIdentityProfile,
@@ -224,7 +273,7 @@ def _soft_description_score(
         return None
 
     best: ResolutionCandidate | None = None
-    for description in profile.descriptions + profile.titles:
+    for description in profile.descriptions:
         normalized_description = _normalized_phrase(description)
         description_tokens = _expanded_identity_tokens(normalized_description)
         if not description_tokens:
@@ -250,6 +299,71 @@ def _soft_description_score(
         if best is None or candidate.confidence > best.confidence:
             best = candidate
     return best
+
+
+def _title_name_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Return a high-confidence candidate for supported title/name references."""
+    reference_tokens = set(normalized_reference.split())
+    if len(reference_tokens) < 2:
+        return None
+
+    title_token_sets = tuple(
+        _expanded_identity_tokens(_normalized_phrase(title))
+        for title in profile.titles
+    )
+    name_token_sets = tuple(
+        _expanded_identity_tokens(_normalized_phrase(name))
+        for name in (profile.canonical_name, *profile.aliases)
+    )
+    for title_tokens in title_token_sets:
+        if not title_tokens or not title_tokens.issubset(reference_tokens):
+            continue
+        for name_tokens in name_token_sets:
+            if not name_tokens or not name_tokens.issubset(reference_tokens):
+                continue
+            return ResolutionCandidate(
+                entity_id=profile.entity_id,
+                confidence=0.97,
+                match_kind="title_name",
+                matched_text=f"{profile.canonical_name} with title",
+            )
+    return None
+
+
+def _relationship_label_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Return a candidate for explicit relationship labels."""
+    for relationship_label in profile.relationship_labels:
+        normalized_label = _normalized_phrase(relationship_label)
+        if normalized_reference in {
+            normalized_label,
+            _possessive_relationship_variant(normalized_label),
+        }:
+            return ResolutionCandidate(
+                entity_id=profile.entity_id,
+                confidence=0.91,
+                match_kind="relationship_label",
+                matched_text=relationship_label,
+            )
+    return None
+
+
+def _possessive_relationship_variant(normalized_label: str) -> str:
+    """Convert labels like "sister of zhao chen" to "zhao chen sister"."""
+    label_parts = normalized_label.split()
+    if len(label_parts) < 3 or "of" not in label_parts:
+        return normalized_label
+    of_index = label_parts.index("of")
+    relationship = label_parts[:of_index]
+    owner = label_parts[of_index + 1 :]
+    if not relationship or not owner:
+        return normalized_label
+    return " ".join((*owner, *relationship))
 
 
 def _description_variant_confidence(
