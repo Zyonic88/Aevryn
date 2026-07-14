@@ -629,7 +629,7 @@ Workspace sweep: Overview, Story, Import, Characters, World, Timeline, Scenes, C
 Export creation: passed. A JSON canon snapshot export was created and displayed with a download action.
 Export monitoring: export availability yes; export count 1; recent event recorded Export Created.
 Browser console: no warning/error entries observed during monitoring and workspace review.
-Cleanup: not run in this pass; project deletion requires explicit confirmation because it permanently removes the smoke project.
+Cleanup: passed. Project deletion removed the smoke project from the dashboard, reduced the dashboard count to 2 projects, and direct navigation to the deleted project returned the dashboard without API errors.
 ```
 
 Known non-blocking findings:
@@ -650,8 +650,9 @@ PASSED for export creation from the latest canon snapshot.
 PASSED for metadata-only workflow events.
 PASSED for hiding internal import bundle filenames from Monitoring.
 PASSED for the checked browser console warnings/errors.
-OPEN for optional smoke project deletion cleanup.
-OPEN for final release-candidate signoff.
+PASSED for smoke project deletion cleanup.
+PASSED for internal release-candidate signoff.
+OPEN for public-beta approval.
 ```
 
 ---
@@ -722,10 +723,10 @@ A successful production-like smoke must record:
 Complete the remaining release-candidate readiness checks that are outside the browser smoke:
 
 ```text
-Decide whether to delete the July 14 smoke retry project.
-Run any final release-candidate gate commands.
-Record final release-candidate signoff separately from this smoke-attempt log.
 Plan broader production observability policy before public beta.
+Complete public-facing legal, trust, and support publication before public beta.
+Complete backup/restore/audit readiness before public beta.
+Continue prompt-pack and output UX polish before public beta positioning.
 ```
 
 If local production-style smoke must be repeated before final signoff, use metadata-only commands:
@@ -745,5 +746,5 @@ Then record the final result in a dated release-candidate run record.
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, and bounded hosted log review have passed. Optional smoke cleanup, broader observability policy, and final release-candidate signoff have not passed.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, broader observability policy, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
 ```
