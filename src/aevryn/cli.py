@@ -1366,7 +1366,10 @@ def _require_audit_access_contract(report: dict[str, object]) -> None:
     forbidden_true = {
         "can_update": "PostgreSQL audit append-only contract failed: UPDATE privilege is present.",
         "can_delete": "PostgreSQL audit append-only contract failed: DELETE privilege is present.",
-        "can_truncate": "PostgreSQL audit append-only contract failed: TRUNCATE privilege is present.",
+        "can_truncate": (
+            "PostgreSQL audit append-only contract failed: "
+            "TRUNCATE privilege is present."
+        ),
     }
     for key, message in forbidden_true.items():
         if report.get(key) is True:
