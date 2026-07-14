@@ -163,11 +163,12 @@ Tracking docs:
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
 * `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`
+* `docs/AEVRYN_DATABASE_PRIVILEGE_HARDENING.md`
 
 Status:
 
 ```text
-Restore plan and restore/audit drill record template exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Audit integrity, access verification, and access-report commands exist. Production backup provider verification, dated restore drill execution, hosted production audit adapter verification, retention enforcement, hosted access-control verification/report review, and hosted release-gate integrity verification are not complete.
+Restore plan and restore/audit drill record template exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Audit integrity, access verification, and access-report commands exist. Hosted audit integrity verification passed with metadata-only output. Hosted audit access report passed, but append-only access verification failed because the current database role has UPDATE and DELETE privileges on `audit_ledger_records`. Production backup provider verification, dated restore drill execution, hosted production audit adapter verification, retention enforcement, restricted audit database role provisioning, hosted access-control verification review, and restore/audit drill completion are not complete.
 ```
 
 ---
