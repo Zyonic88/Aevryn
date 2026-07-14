@@ -298,6 +298,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
     return create_app(
         allowed_origins=_allowed_origins_from_env(active_environ),
         api_keys=_api_keys_from_env(active_environ),
+        worker_api_keys=_worker_api_keys_from_env(active_environ),
         authentication_service=authentication_service,
         project_repository=project_repository,
         background_job_queue=background_job_queue,
@@ -315,6 +316,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
 def create_app(
     allowed_origins: Sequence[str] = (),
     api_keys: Sequence[str] = (),
+    worker_api_keys: Sequence[str] = (),
     authentication_service: (
         AuthenticationService | ManagedIdentityAuthenticationAdapter | None
     ) = None,
@@ -331,6 +333,7 @@ def create_app(
     Parameters:
         allowed_origins: Optional browser origins allowed by CORS middleware.
         api_keys: Optional deployment API keys that protect workflow routes.
+        worker_api_keys: Optional keys that may drain internal worker routes.
         authentication_service: Optional Phase 4 authentication service.
         project_repository: Optional Phase 6 project storage repository.
         background_job_queue: Optional Phase 3 queue for engine run submission.
@@ -346,6 +349,7 @@ def create_app(
         Configured FastAPI application.
     """
     normalized_api_keys = _normalize_api_keys(api_keys)
+    normalized_worker_api_keys = _normalize_api_keys(worker_api_keys)
     app = FastAPI(
         title="Aevryn Backend API",
         version="2.0.0",
@@ -375,7 +379,11 @@ def create_app(
     ) -> Response:
         """Attach identity headers and enforce optional workflow authentication."""
         request_id = _request_id(request)
-        auth_error = _authentication_error(request, normalized_api_keys)
+        auth_error = _authentication_error(
+            request,
+            normalized_api_keys,
+            normalized_worker_api_keys,
+        )
         response = auth_error if auth_error is not None else await call_next(request)
         response.headers["X-Aevryn-API-Version"] = API_VERSION
         response.headers["X-Aevryn-Engine"] = "Aevryn"
@@ -2245,6 +2253,11 @@ def _api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
     return _normalize_api_keys(environ.get(API_KEYS_ENV, "").split(","))
 
 
+def _worker_api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
+    """Return internal worker API keys from deployment environment settings."""
+    return _normalize_api_keys((environ.get(WORKER_API_KEY_ENV, ""),))
+
+
 def _require_https_origins(environ: Mapping[str, str]) -> None:
     """Require production CORS origins to use HTTPS."""
     for origin in _allowed_origins_from_env(environ):
@@ -2835,9 +2848,15 @@ def _normalize_api_keys(api_keys: Sequence[str]) -> tuple[str, ...]:
 def _authentication_error(
     request: Request,
     api_keys: Sequence[str],
+    worker_api_keys: Sequence[str] = (),
 ) -> JSONResponse | None:
     """Return an authentication error for protected routes when configured."""
-    if not api_keys or not _is_auth_protected_route(request):
+    allowed_keys = _allowed_api_keys_for_request(
+        request=request,
+        api_keys=api_keys,
+        worker_api_keys=worker_api_keys,
+    )
+    if not allowed_keys:
         return None
 
     provided_key = _extract_api_key(request)
@@ -2849,7 +2868,7 @@ def _authentication_error(
                 detail="A valid API key is required for this workflow route.",
             ).model_dump(),
         )
-    if provided_key not in api_keys:
+    if provided_key not in allowed_keys:
         return JSONResponse(
             status_code=403,
             content=ErrorResponse(
@@ -2859,6 +2878,28 @@ def _authentication_error(
         )
 
     return None
+
+
+def _allowed_api_keys_for_request(
+    *,
+    request: Request,
+    api_keys: Sequence[str],
+    worker_api_keys: Sequence[str],
+) -> tuple[str, ...]:
+    """Return route-scoped deployment keys accepted for one request."""
+    if not _is_auth_protected_route(request):
+        return ()
+    if _is_worker_process_route(request):
+        return tuple(dict.fromkeys((*api_keys, *worker_api_keys)))
+    return tuple(api_keys)
+
+
+def _is_worker_process_route(request: Request) -> bool:
+    """Return whether a request drains the internal worker boundary."""
+    return (
+        request.method.upper() == "POST"
+        and request.url.path == "/v2/workers/process"
+    )
 
 
 def _is_auth_protected_route(request: Request) -> bool:

@@ -2432,6 +2432,37 @@ def test_worker_process_api_uses_deployment_api_key_when_configured() -> None:
     assert authorized.json()["claimed_jobs"] == 0
 
 
+def test_worker_process_api_accepts_dedicated_worker_api_key() -> None:
+    """Internal worker routes should accept the required worker API key."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            api_keys=("deployment-key",),
+            worker_api_keys=("worker-key",),
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=InMemoryJobQueue(),
+            background_job_handler=RecordingWorkerHandler(),
+        )
+    )
+
+    worker_authorized = client.post(
+        "/v2/workers/process",
+        headers={"X-Aevryn-API-Key": "worker-key"},
+        json={"started_at": NOW, "finished_at": NOW, "max_jobs": 1},
+    )
+    workflow_rejected = client.post(
+        "/v2/extraction-prompts",
+        headers={"X-Aevryn-API-Key": "worker-key"},
+        json={},
+    )
+
+    assert worker_authorized.status_code == 200
+    assert worker_authorized.json()["claimed_jobs"] == 0
+    assert workflow_rejected.status_code == 403
+    assert workflow_rejected.json()["error"] == "invalid_api_key"
+
+
 def test_worker_snapshot_api_stores_and_lists_completed_run_outputs() -> None:
     """Worker snapshots should persist only after a run succeeds and list by scope."""
     repository = InMemoryProjectRepository()
