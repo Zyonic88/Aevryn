@@ -886,7 +886,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-01 hosted managed identity and project smoke passed",
+        "Latest attempt: 2026-07-14 hosted creator workflow retry passed",
         "Production-like smoke proves configuration and workflow safety.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -937,16 +937,38 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "PASS for authenticated project detail read.",
         "PASS for authenticated project list read.",
         "OPEN for import processing workflow smoke in the hosted environment.",
+        "Hosted Creator Workflow Smoke Plan",
+        "Project ID: project_447d9366_5a2a_4b38_8c28_ab7bf41de973.",
+        "Failure summary: AI extraction timed out while reading the provider response.",
+        "FINDING: Monitoring displayed latest import as aevryn_import_bundle.txt.",
+        "Hosted Creator Workflow Smoke Retry",
+        "Cloud Run revision after timeout hardening: aevryn-api-00021-lk7",
+        "Project ID: project_30c12069_caf1_43da_b91d_de2887097e77.",
+        "Final run state: succeeded.",
+        (
+            "Monitoring import label: latest import displayed as Chapter import, "
+            "not the internal bundle filename."
+        ),
+        (
+            "Export creation: passed. A JSON canon snapshot export was created "
+            "and displayed with a download action."
+        ),
+        (
+            "Export monitoring: export availability yes; export count 1; "
+            "recent event recorded Export Created."
+        ),
+        "PASSED for hosted import processing workflow.",
+        "PASSED for export creation from the latest canon snapshot.",
+        "OPEN for final release-candidate signoff.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
         (
-            "managed-identity login completion, and authenticated project "
-            "create/read/list smoke passed"
+            "hosted import processing, monitoring workflow status, and hosted "
+            "export creation have passed"
         ),
         (
-            "Hosted import processing, monitoring workflow status, export preview, "
-            "production-safe worker posture, log review, and final release-candidate "
+            "Hosted log review, optional smoke cleanup, and final release-candidate "
             "signoff have not passed."
         ),
     )
