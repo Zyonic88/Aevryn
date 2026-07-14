@@ -133,7 +133,7 @@ The release gate must include audit integrity verification before public beta.
 Required verification:
 
 * append-only application write path exists
-* hash-chain verification passes
+* `aevryn audit-ledger-verify` passes without printing secrets
 * tamper detection fails closed
 * deletion events remain metadata-only
 * restore/audit drill confirms ledger integrity after restore
@@ -164,7 +164,7 @@ Public beta remains blocked until:
 * PostgreSQL audit adapter configuration is verified in hosted production
 * audit retention behavior is enforced or operationally documented
 * audit access controls are configured and reviewed
-* hash-chain verification is included in the release gate
+* hosted hash-chain verification result is recorded in the release gate
 * deletion events are verified as metadata-only
 * restore/audit drill is completed with dated results
 

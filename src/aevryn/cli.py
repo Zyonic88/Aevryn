@@ -173,6 +173,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "production-config-check":
             _handle_production_config_check()
             return 0
+        if command == "audit-ledger-verify":
+            _handle_audit_ledger_verify(args)
+            return 0
     except FileNotFoundError as error:
         missing_path = error.filename or error.args[0]
         print(f"Error: File not found: {missing_path}", file=sys.stderr)
@@ -607,6 +610,22 @@ def _build_parser() -> argparse.ArgumentParser:
             "current managed-identity blocker as metadata."
         ),
         formatter_class=_RawDefaultsHelpFormatter,
+    )
+
+    audit_verify_parser = subcommands.add_parser(
+        "audit-ledger-verify",
+        help="Verify the PostgreSQL audit ledger hash chain without printing secrets.",
+        description=(
+            "Verify the PostgreSQL audit ledger hash chain without printing secrets. "
+            "Reads the database URL from an environment variable and reports "
+            "metadata-only release-gate status."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    audit_verify_parser.add_argument(
+        "--database-url-env",
+        default="AEVRYN_PROJECT_DATABASE_URL",
+        help="Process environment variable containing the PostgreSQL database URL.",
     )
 
     return parser
@@ -1103,6 +1122,16 @@ def _handle_production_config_check() -> None:
         print(f"{key}={value}")
 
 
+def _handle_audit_ledger_verify(args: argparse.Namespace) -> None:
+    """Handle the audit-ledger-verify command."""
+    database_url_env = cast(str, args.database_url_env)
+    summary = _run_audit_ledger_verify(
+        database_url=_required_process_env_value(database_url_env)
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _load_local_env_file(path: Path) -> dict[str, str]:
     """Load simple KEY=VALUE pairs from an ignored local env file."""
     if not path.exists():
@@ -1216,6 +1245,19 @@ def _run_r2_storage_smoke(
         "objects_created": 1,
         "objects_deleted": 1,
         "ok": "storage_r2_smoke_completed",
+    }
+
+
+def _run_audit_ledger_verify(*, database_url: str) -> dict[str, object]:
+    """Verify the PostgreSQL audit ledger and return metadata only."""
+    ledger = PostgresqlAuditLedger(database_url)
+    ledger.verify()
+    return {
+        "adapter": "postgresql",
+        "ledger": "audit",
+        "records_verified": len(ledger.records()),
+        "secrets_printed": 0,
+        "ok": "audit_ledger_postgresql_integrity_verified",
     }
 
 

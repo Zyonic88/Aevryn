@@ -185,7 +185,7 @@ Public beta remains blocked until:
 * production audit storage is selected
 * audit retention is selected
 * audit access controls are documented
-* audit integrity verification is part of the release gate
+* hosted audit integrity verification is recorded in the release gate
 * deletion and backup language is aligned with production behavior
 
 Current implementation progress:
@@ -202,8 +202,10 @@ events are wired to the configured audit writer.
 Production configuration check failures are wired to the configured PostgreSQL
 audit writer when audit storage can be constructed from the supplied deployment
 settings.
+`aevryn audit-ledger-verify` verifies the configured PostgreSQL audit ledger hash
+chain without printing secrets.
 
-Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, audit access-control verification, hosted release-gate integrity execution, and dated restore/audit drill completion remain open.
 ```
 
 ---
