@@ -199,7 +199,7 @@ Tracking docs:
 Status:
 
 ```text
-Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. api.aevryn.ai custom-domain health smoke returned OK. Frontend, managed-identity, and creator workflow smoke are not complete.
+Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. api.aevryn.ai custom-domain health smoke returned OK. Frontend, managed-identity, hosted creator workflow, export creation, log review, and smoke project cleanup passed in the hosted production-like environment. Public beta remains blocked by non-smoke readiness items.
 ```
 
 ---
@@ -236,7 +236,7 @@ Tracking docs:
 Status:
 
 ```text
-Draft copy exists. Publication, contact verification, and legal review not complete.
+Draft copy exists. Contact verification passed. Publication and legal review are not complete.
 ```
 
 ---
@@ -268,7 +268,7 @@ Tracking docs:
 Status:
 
 ```text
-Run record template exists. Release-candidate run not complete.
+Internal release-candidate run is completed and signed off. Public beta signoff remains blocked by listed residual risks.
 ```
 
 ---

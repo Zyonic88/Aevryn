@@ -104,6 +104,7 @@ Gate tracking:
 * `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`
 * `docs/AEVRYN_PUBLIC_CONTACTS.md`
 * `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
+* `docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md`
 * `docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md`
 
 Acceptance:
@@ -336,4 +337,5 @@ Current external setup progress:
 
 ```text
 docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md consolidates remaining external setup blockers and verification artifacts.
+docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md maps public pages, source documents, verified contact paths, and publication blockers.
 ```
