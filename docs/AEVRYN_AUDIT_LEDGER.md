@@ -28,8 +28,11 @@ Current implementation:
 * `AuditLedger`
 * `AuditLedgerRecord`
 * `AuditLedgerIntegrityError`
+* `PostgresqlAuditLedger`
 
 The implementation lives in `src/aevryn/audit/`.
+
+`PostgresqlAuditLedger` implements the selected PostgreSQL audit storage candidate by creating `audit_ledger_records`, appending records inside a locked transaction, reloading records in sequence order, and verifying the persisted hash chain.
 
 ---
 
@@ -140,7 +143,7 @@ Event types are stable machine-readable tokens.
 
 Audit ledger work does not unblock public beta until:
 
-* production storage candidate for audit records is implemented and verified
+* production storage adapter for audit records is configured in production
 * audit retention policy is enforced or operationally verified
 * audit access controls are configured and reviewed
 * security-relevant API and worker events are wired into the ledger

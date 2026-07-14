@@ -147,11 +147,15 @@ The restore/audit drill record lives in `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.
 
 This document selects the candidate policy.
 
-It does not claim production audit storage is implemented.
+The PostgreSQL audit storage adapter is implemented as `PostgresqlAuditLedger` in `src/aevryn/audit/postgresql.py`.
+
+The adapter creates the `audit_ledger_records` table, appends records in a locked transaction, reloads records in sequence order, and verifies the persisted hash chain.
+
+This does not claim production API or worker events are wired to the adapter yet.
 
 Public beta remains blocked until:
 
-* PostgreSQL audit schema or audit tables are implemented
+* PostgreSQL audit adapter is configured in production
 * API and worker events are wired to the production audit adapter
 * audit retention behavior is enforced or operationally documented
 * audit access controls are configured and reviewed
@@ -166,8 +170,8 @@ Public beta remains blocked until:
 This decision is accepted when:
 
 ```text
-Production audit records are stored in managed PostgreSQL as metadata-only, append-only,
-tamper-evident records; deletion events can outlive deleted content without preserving it;
-and public beta remains blocked until implementation, retention, access, and restore/audit
-verification are complete.
+Production audit records can be stored in managed PostgreSQL as metadata-only,
+append-only, tamper-evident records; deletion events can outlive deleted content
+without preserving it; and public beta remains blocked until production
+configuration, event wiring, retention, access, and restore/audit verification are complete.
 ```

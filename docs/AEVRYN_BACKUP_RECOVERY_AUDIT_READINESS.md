@@ -126,7 +126,9 @@ The public-beta audit storage candidate is selected in `docs/AEVRYN_AUDIT_STORAG
 
 The selected candidate uses managed PostgreSQL audit tables owned by Aevryn's Project Database environment.
 
-Selection does not mean production audit storage is implemented or verified.
+`PostgresqlAuditLedger` implements the selected storage adapter.
+
+Selection and adapter implementation do not mean production API or worker events are wired to the adapter yet.
 
 ---
 
@@ -193,8 +195,9 @@ docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, re
 docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit drill record and stop conditions.
 Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
 Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+`PostgresqlAuditLedger` implements the selected PostgreSQL adapter.
 
-Production backup provider verification, restore execution, audit adapter implementation, audit event wiring, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, production audit adapter configuration, audit event wiring, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
 ```
 
 ---
