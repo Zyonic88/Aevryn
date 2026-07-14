@@ -106,6 +106,7 @@ class PostgresqlAuditLedger:
         metadata: Mapping[str, str] | None = None,
     ) -> AuditLedgerRecord:
         """Append one metadata-only record in a serialized transaction."""
+        canonical_occurred_at = _canonical_occurrence_time(occurred_at)
         with self._connect() as connection:
             try:
                 with connection.cursor() as cursor:
@@ -141,7 +142,7 @@ class PostgresqlAuditLedger:
                     record = AuditLedgerRecord(
                         sequence=sequence,
                         event_type=event_type,
-                        occurred_at=occurred_at,
+                        occurred_at=canonical_occurred_at,
                         summary=summary,
                         actor_id=actor_id,
                         project_id=project_id,
@@ -344,8 +345,28 @@ def _record_from_row(row: tuple[object, ...]) -> AuditLedgerRecord:
 def _timestamp_to_utc_string(value: object) -> str:
     """Return persisted timestamp values as canonical UTC strings."""
     if isinstance(value, datetime):
-        return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+        return _datetime_to_canonical_utc_string(value)
     return str(value)
+
+
+def _canonical_occurrence_time(value: str) -> str:
+    """Return occurrence time in the same form PostgreSQL reloads for hashing."""
+    clean_value = value.strip()
+    try:
+        parsed = datetime.fromisoformat(clean_value.replace("Z", "+00:00"))
+    except ValueError:
+        return clean_value
+    if parsed.tzinfo is None:
+        return clean_value
+    return _datetime_to_canonical_utc_string(parsed)
+
+
+def _datetime_to_canonical_utc_string(value: datetime) -> str:
+    """Return a stable UTC timestamp string with database-safe precision."""
+    return value.astimezone(UTC).isoformat(timespec="milliseconds").replace(
+        "+00:00",
+        "Z",
+    )
 
 
 def _row_sequence(value: object) -> int:

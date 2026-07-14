@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import UTC, datetime
 
 import pytest
 
@@ -236,6 +237,36 @@ def test_postgresql_audit_ledger_appends_and_reloads_hash_chained_records() -> N
     reloaded.verify()
 
 
+def test_postgresql_audit_ledger_verifies_datetime_timestamp_roundtrip() -> None:
+    """PostgreSQL timestamp objects should preserve audit hash verification."""
+    connection = FakeAuditConnection()
+    ledger = PostgresqlAuditLedger(
+        "postgresql://example.invalid/aevryn",
+        connect_factory=lambda _: connection,
+    )
+
+    appended = ledger.append(
+        event_type="project_created",
+        occurred_at="2026-06-29T00:00:00Z",
+        actor_id="user_alpha",
+        project_id="project_alpha",
+        summary="Project created.",
+    )
+    stored = connection.records[0]
+
+    assert appended.occurred_at == "2026-06-29T00:00:00.000Z"
+    assert stored[2] == datetime(2026, 6, 29, tzinfo=UTC)
+
+    reloaded = PostgresqlAuditLedger(
+        "postgresql://example.invalid/aevryn",
+        connect_factory=lambda _: connection,
+        bootstrap_schema=False,
+    )
+
+    assert reloaded.records()[0].occurred_at == "2026-06-29T00:00:00.000Z"
+    reloaded.verify()
+
+
 def test_postgresql_audit_ledger_rolls_back_sensitive_metadata() -> None:
     """Rejected audit metadata should not insert hidden source payloads."""
     connection = FakeAuditConnection()
@@ -378,6 +409,7 @@ class FakeAuditCursor:
             return
         if normalized.startswith("insert into audit_ledger_records"):
             stored = list(params)
+            stored[2] = _stored_timestamp(stored[2])
             stored[7] = _jsonb_value(stored[7])
             self.connection.records.append(tuple(stored))
             return
@@ -403,3 +435,11 @@ def _jsonb_value(value: object) -> object:
         if hasattr(value, attribute_name):
             return getattr(value, attribute_name)
     return value
+
+
+def _stored_timestamp(value: object) -> object:
+    """Return timestamp values as psycopg would read them from timestamptz."""
+    if not isinstance(value, str):
+        return value
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return parsed.astimezone(UTC)
