@@ -137,10 +137,13 @@ The API now appends metadata-only records for:
 * `worker_processed`
 * `snapshot_created`
 * `export_generated`
-
-Additional candidate event types still needed before public beta include:
-
 * `security_configuration_failed`
+
+The `security_configuration_failed` event is emitted by the production
+configuration check when a PostgreSQL audit ledger can be constructed from the
+provided deployment settings. If the audit storage settings themselves are
+missing or unreachable, Aevryn still fails closed and does not claim an audit
+record was written.
 
 Event types are stable machine-readable tokens.
 
@@ -153,7 +156,6 @@ Audit ledger work does not unblock public beta until:
 * hosted production configuration verifies the PostgreSQL audit adapter
 * audit retention policy is enforced or operationally verified
 * audit access controls are configured and reviewed
-* remaining security-relevant configuration events are wired into the ledger
 * deletion events are verified to remain metadata-only
 * ledger integrity verification is part of the release gate
 * restore/audit drill results are recorded with `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`

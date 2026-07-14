@@ -16,17 +16,57 @@ from uuid import uuid4
 from fastapi import FastAPI
 
 from aevryn.api import (
+    ACCOUNT_DELETION_HANDOFF_ENV,
     ALLOWED_ORIGINS_ENV,
+    API_KEYS_ENV,
     DEPLOYMENT_ENV,
+    ENVIRONMENT_NAME_ENV,
+    EXTRACTION_MODE_ENV,
+    HSTS_ENABLED_ENV,
+    HTTPS_ONLY_ENV,
+    IDENTITY_PROVIDER_ENV,
+    IDENTITY_PROVIDER_NAME_ENV,
+    IMPORT_STORAGE_PATH_ENV,
+    LOG_DESTINATION_ENV,
+    LOG_RETENTION_DAYS_ENV,
+    METADATA_ONLY_LOGGING_ENV,
+    MONITORING_DESTINATION_ENV,
+    MONITORING_RETENTION_DAYS_ENV,
+    OPENAI_API_KEY_ENV,
+    OPENAI_MODEL_ENV,
+    PASSWORD_RESET_ENABLED_ENV,
+    PROJECT_DATABASE_ADAPTER_ENV,
+    PROJECT_DATABASE_PATH_ENV,
+    PROJECT_DATABASE_URL_ENV,
+    PUBLIC_API_BASE_URL_ENV,
+    PUBLIC_FRONTEND_BASE_URL_ENV,
     R2_ACCESS_KEY_ID_ENV,
+    R2_ACCOUNT_ID_ENV,
     R2_BUCKET_ENV,
     R2_ENDPOINT_URL_ENV,
     R2_REGION_ENV,
     R2_SECRET_ACCESS_KEY_ENV,
+    SECRET_MANAGER_ENV,
+    SECURITY_ALERTS_ENABLED_ENV,
+    SESSION_AUTHORITY_ENV,
+    SESSION_SECRET_ENV,
     STORAGE_PROVIDER_ENV,
+    SUPABASE_ANON_KEY_ENV,
+    SUPABASE_JWKS_URL_ENV,
+    SUPABASE_JWT_ALGORITHM_ENV,
+    SUPABASE_JWT_SECRET_ENV,
+    SUPABASE_SERVICE_ROLE_KEY_ENV,
+    SUPABASE_URL_ENV,
+    WORKER_API_KEY_ENV,
+    WORKER_CONCURRENCY_ENV,
+    WORKER_MAX_RETRIES_ENV,
+    WORKER_QUEUE_PROVIDER_ENV,
+    WORKER_RUNTIME_ENV,
+    WORKER_TIMEOUT_SECONDS_ENV,
     create_app,
     create_app_from_env,
 )
+from aevryn.audit import PostgresqlAuditLedger
 from aevryn.auth import (
     AuthenticationConfig,
     AuthenticationService,
@@ -1183,7 +1223,14 @@ def _run_production_config_check(environ: dict[str, str]) -> dict[str, object]:
     """Check the production startup contract and return metadata only."""
     if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
         raise ValueError(f"{DEPLOYMENT_ENV}=production is required.")
-    create_app_from_env(environ)
+    try:
+        create_app_from_env(environ)
+    except ValueError as error:
+        if not _record_production_config_failure_if_possible(environ, error):
+            raise ValueError(
+                f"{error} Production config failure audit was not recorded."
+            ) from error
+        raise
     return {
         "deployment_env": "production",
         "startup_contract": "ready",
@@ -1191,6 +1238,97 @@ def _run_production_config_check(environ: dict[str, str]) -> dict[str, object]:
         "secrets_printed": 0,
         "ok": "production_config_contract_checked",
     }
+
+
+def _record_production_config_failure_if_possible(
+    environ: dict[str, str],
+    error: ValueError,
+) -> bool:
+    """Record a metadata-only production config failure when audit storage exists."""
+    if environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower() != "postgresql":
+        return False
+    database_url = environ.get(PROJECT_DATABASE_URL_ENV, "").strip()
+    if not database_url:
+        return False
+
+    try:
+        ledger = PostgresqlAuditLedger(database_url)
+        ledger.append(
+            event_type="security_configuration_failed",
+            occurred_at=datetime.now(UTC).isoformat(timespec="milliseconds").replace(
+                "+00:00",
+                "Z",
+            ),
+            summary="Production config check failed.",
+            metadata={"failure_code": _production_config_failure_code(str(error))},
+        )
+    except Exception:
+        return False
+
+    return True
+
+
+def _production_config_failure_code(message: str) -> str:
+    """Return a stable machine code for a production config failure message."""
+    normalized = message.lower()
+    known_fields = (
+        DEPLOYMENT_ENV,
+        PROJECT_DATABASE_ADAPTER_ENV,
+        PROJECT_DATABASE_PATH_ENV,
+        PROJECT_DATABASE_URL_ENV,
+        ALLOWED_ORIGINS_ENV,
+        PUBLIC_FRONTEND_BASE_URL_ENV,
+        PUBLIC_API_BASE_URL_ENV,
+        HTTPS_ONLY_ENV,
+        HSTS_ENABLED_ENV,
+        API_KEYS_ENV,
+        STORAGE_PROVIDER_ENV,
+        IMPORT_STORAGE_PATH_ENV,
+        R2_BUCKET_ENV,
+        R2_ACCOUNT_ID_ENV,
+        R2_ENDPOINT_URL_ENV,
+        R2_ACCESS_KEY_ID_ENV,
+        R2_SECRET_ACCESS_KEY_ENV,
+        SECRET_MANAGER_ENV,
+        ENVIRONMENT_NAME_ENV,
+        EXTRACTION_MODE_ENV,
+        OPENAI_API_KEY_ENV,
+        OPENAI_MODEL_ENV,
+        WORKER_RUNTIME_ENV,
+        WORKER_QUEUE_PROVIDER_ENV,
+        WORKER_API_KEY_ENV,
+        WORKER_TIMEOUT_SECONDS_ENV,
+        WORKER_MAX_RETRIES_ENV,
+        WORKER_CONCURRENCY_ENV,
+        LOG_DESTINATION_ENV,
+        MONITORING_DESTINATION_ENV,
+        LOG_RETENTION_DAYS_ENV,
+        MONITORING_RETENTION_DAYS_ENV,
+        SECURITY_ALERTS_ENABLED_ENV,
+        METADATA_ONLY_LOGGING_ENV,
+        IDENTITY_PROVIDER_ENV,
+        IDENTITY_PROVIDER_NAME_ENV,
+        SUPABASE_URL_ENV,
+        SUPABASE_JWKS_URL_ENV,
+        SUPABASE_JWT_ALGORITHM_ENV,
+        SUPABASE_JWT_SECRET_ENV,
+        SUPABASE_ANON_KEY_ENV,
+        SUPABASE_SERVICE_ROLE_KEY_ENV,
+        SESSION_AUTHORITY_ENV,
+        SESSION_SECRET_ENV,
+        PASSWORD_RESET_ENABLED_ENV,
+        ACCOUNT_DELETION_HANDOFF_ENV,
+    )
+    field_positions = {
+        field: normalized.find(field.lower())
+        for field in known_fields
+        if field.lower() in normalized
+    }
+    if field_positions:
+        first_field = min(field_positions, key=field_positions.__getitem__)
+        return f"missing_or_invalid_{first_field.lower()}"
+
+    return "invalid_production_configuration"
 
 
 def _run_provider_api_workflow_smoke(

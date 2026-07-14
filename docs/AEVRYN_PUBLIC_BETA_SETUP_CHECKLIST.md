@@ -167,7 +167,7 @@ Tracking docs:
 Status:
 
 ```text
-Restore plan and restore/audit drill record template exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Production backup provider verification, dated restore drill execution, production audit adapter configuration, audit event wiring, retention enforcement, access-control verification, and release-gate integrity verification are not complete.
+Restore plan and restore/audit drill record template exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Production backup provider verification, dated restore drill execution, hosted production audit adapter verification, retention enforcement, access-control verification, and release-gate integrity verification are not complete.
 ```
 
 ---

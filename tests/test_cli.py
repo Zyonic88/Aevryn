@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
-from aevryn.cli import main
+from aevryn.cli import _run_production_config_check, main
 from aevryn.importing import StoryImporter
 from aevryn.validation.runner import (
     _extraction_input_digest,
@@ -553,6 +553,83 @@ def test_production_config_check_reports_ready_contract_without_secrets(
     for secret_value in secret_values:
         assert secret_value not in captured.out
         assert secret_value not in captured.err
+
+
+def test_production_config_check_audits_failures_when_ledger_is_available(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Production config failures should append stable metadata-only audit records."""
+    appended_records: list[dict[str, object]] = []
+
+    class FakePostgresqlAuditLedger:
+        """Capture audit writes without connecting to PostgreSQL."""
+
+        def __init__(self, database_url: str) -> None:
+            self.database_url = database_url
+
+        def append(self, **kwargs: object) -> object:
+            appended_records.append(kwargs)
+            return object()
+
+    monkeypatch.setattr("aevryn.cli.PostgresqlAuditLedger", FakePostgresqlAuditLedger)
+
+    with pytest.raises(ValueError, match="AEVRYN_API_ALLOWED_ORIGINS") as error:
+        _run_production_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_PROJECT_DATABASE_ADAPTER": "postgresql",
+                "AEVRYN_PROJECT_DATABASE_URL": (
+                    "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+                ),
+            }
+        )
+    assert "AEVRYN_API_ALLOWED_ORIGINS" in str(error.value)
+    assert "secret-db-password" not in str(error.value)
+    assert "audit was not recorded" not in str(error.value)
+
+    assert appended_records == [
+        {
+            "event_type": "security_configuration_failed",
+            "occurred_at": appended_records[0]["occurred_at"],
+            "summary": "Production config check failed.",
+            "metadata": {
+                "failure_code": "missing_or_invalid_aevryn_api_allowed_origins",
+            },
+        }
+    ]
+    serialized_record = json.dumps(appended_records[0], sort_keys=True)
+    assert "secret-db-password" not in serialized_record
+    assert "postgresql://" not in serialized_record
+
+
+def test_production_config_check_preserves_failure_when_audit_unavailable(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit unavailability should not hide the original config failure."""
+
+    class UnavailablePostgresqlAuditLedger:
+        """Fail construction to simulate an unreachable audit database."""
+
+        def __init__(self, _database_url: str) -> None:
+            raise RuntimeError("audit storage unavailable")
+
+    monkeypatch.setattr(
+        "aevryn.cli.PostgresqlAuditLedger",
+        UnavailablePostgresqlAuditLedger,
+    )
+
+    with pytest.raises(ValueError, match="audit was not recorded") as error:
+        _run_production_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_PROJECT_DATABASE_ADAPTER": "postgresql",
+                "AEVRYN_PROJECT_DATABASE_URL": (
+                    "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+                ),
+            }
+        )
+    assert "AEVRYN_API_ALLOWED_ORIGINS" in str(error.value)
+    assert "secret-db-password" not in str(error.value)
 
 
 def test_performance_baseline_help_describes_local_artifact(

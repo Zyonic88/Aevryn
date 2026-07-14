@@ -199,8 +199,11 @@ Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STO
 Core API and worker workflow events are wired to the configured audit writer.
 Identity, password reset, project settings, and cross-user settings access-denial
 events are wired to the configured audit writer.
+Production configuration check failures are wired to the configured PostgreSQL
+audit writer when audit storage can be constructed from the supplied deployment
+settings.
 
-Production backup provider verification, restore execution, hosted production audit adapter verification, remaining configuration-failure audit event coverage, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
 ```
 
 ---
