@@ -506,6 +506,71 @@ No real user password, API key, storage credential, database URL, Supabase servi
 
 ---
 
+# Attempt 2026-07-14 - Hosted Creator Workflow Smoke Plan
+
+Environment:
+
+```text
+Execution surface: in-app browser against hosted frontend and API
+Frontend custom domain: https://app.aevryn.ai
+API custom domain: https://api.aevryn.ai
+Managed identity provider: Supabase Auth
+Provider mode: hosted configured provider
+Status: Planned
+```
+
+This attempt should verify the hosted workflow that remained open after the July 1 and July 2 smoke passes.
+
+Required browser actions:
+
+```text
+Log in with the managed test user.
+Open the dashboard.
+Create a release-candidate smoke project.
+Create or select a story.
+Upload owner-approved test chapters.
+Inspect the import.
+Save the import.
+Submit processing once.
+Observe project run state without browser-side worker draining.
+Wait for processing to finish or fail clearly.
+Open Monitoring and confirm workflow state is API-provided.
+Review Characters, World, Timeline, Scenes, Continuity, Prompt Packs, Exports, and Settings.
+Create an export preview if the hosted workflow exposes the export action.
+Refresh the browser and confirm API-backed state restores.
+Delete the smoke project and confirm it disappears from active product surfaces.
+```
+
+Required metadata-only checks:
+
+```text
+No full source prose in browser diagnostics, monitoring, API errors, or logs.
+No full AI provider response in browser diagnostics, monitoring, API errors, or logs.
+No credentials, tokens, private URLs, hostnames, usernames, or machine-local paths in visible output.
+No creator-facing source-backed placeholder text, import bundle IDs, source IDs, or evidence anchor IDs.
+No stuck "submitting" or "processing" state after the run finishes or fails.
+No duplicate processing run is created from one submit action.
+Browser console warnings/errors are reviewed.
+```
+
+Result:
+
+```text
+Not run.
+```
+
+Interpretation:
+
+```text
+OPEN for hosted import processing workflow smoke.
+OPEN for monitoring workflow status smoke.
+OPEN for export preview smoke.
+OPEN for production-safe worker posture evidence.
+OPEN for hosted log review.
+```
+
+---
+
 # Required Successful Smoke
 
 A successful production-like smoke must record:
@@ -528,7 +593,9 @@ A successful production-like smoke must record:
 
 # Next Action
 
-Run the smoke commands again only after the production-like environment has the required secret-backed settings loaded:
+Run the July 14 hosted creator workflow smoke plan against the production-like hosted frontend and API.
+
+If local production-style smoke must be repeated before the hosted run, use metadata-only commands:
 
 ```powershell
 $env:PYTHONPATH="src"
@@ -537,7 +604,7 @@ python -m aevryn.cli project-db-smoke
 python -m aevryn.cli storage-smoke
 ```
 
-Then run the browser/API smoke against the production-like API and record the result in this document or in a dated release-candidate run record.
+Then record the hosted browser/API result in this document or in a dated release-candidate run record.
 
 ---
 
