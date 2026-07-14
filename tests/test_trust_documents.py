@@ -867,10 +867,10 @@ def test_audit_storage_policy_decision_selects_candidate_without_unblocking_beta
         "hash-chain verification",
         "restore/audit drill",
         "This document selects the candidate policy.",
-        "This does not claim production API or worker events are wired to the adapter yet.",
+        "Core API and worker workflow events are wired to the configured audit writer.",
         "Public beta remains blocked until",
-        "PostgreSQL audit adapter is configured in production",
-        "API and worker events are wired",
+        "PostgreSQL audit adapter configuration is verified in hosted production",
+        "worker drain completion",
         "audit access controls are configured and reviewed",
         "deletion events are verified as metadata-only",
     )
