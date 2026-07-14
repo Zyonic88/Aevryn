@@ -197,8 +197,10 @@ Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKU
 Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
 `PostgresqlAuditLedger` implements the selected PostgreSQL adapter.
 Core API and worker workflow events are wired to the configured audit writer.
+Identity, password reset, project settings, and cross-user settings access-denial
+events are wired to the configured audit writer.
 
-Production backup provider verification, restore execution, hosted production audit adapter verification, remaining identity/settings/access audit event coverage, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, hosted production audit adapter verification, remaining configuration-failure audit event coverage, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
 ```
 
 ---

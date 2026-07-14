@@ -427,7 +427,11 @@ def test_workflow_mutations_append_metadata_only_audit_events(tmp_path: Path) ->
     ):
         assert response.status_code in {200, 204}, response.text
 
-    records = audit_ledger.records()
+    records = tuple(
+        record
+        for record in audit_ledger.records()
+        if record.event_type != "user_registered"
+    )
     assert tuple(record.event_type for record in records) == (
         "project_created",
         "story_created",
@@ -464,7 +468,7 @@ def test_workflow_mutations_append_metadata_only_audit_events(tmp_path: Path) ->
 
 def test_configured_audit_writer_failure_blocks_workflow_completion() -> None:
     """Workflow routes should not claim completion when audit writing fails."""
-    audit_ledger = _FailingAuditLedger()
+    audit_ledger = _FailingAuditLedger(fail_on="project_created")
     repository = InMemoryProjectRepository()
     auth_store = InMemoryCredentialStore()
     session_store = InMemorySessionStore()
@@ -597,6 +601,11 @@ class _NoSnapshotBackgroundJobHandler:
 class _FailingAuditLedger(AuditLedger):
     """Audit ledger test double that fails writes visibly."""
 
+    def __init__(self, *, fail_on: str | None = None) -> None:
+        """Create a ledger that fails all events or one selected event."""
+        super().__init__()
+        self._fail_on = fail_on
+
     def append(
         self,
         *,
@@ -609,7 +618,17 @@ class _FailingAuditLedger(AuditLedger):
         metadata: Mapping[str, str] | None = None,
     ) -> AuditLedgerRecord:
         """Raise an audit failure instead of appending."""
-        raise RuntimeError("audit unavailable")
+        if self._fail_on is None or event_type == self._fail_on:
+            raise RuntimeError("audit unavailable")
+        return super().append(
+            event_type=event_type,
+            occurred_at=occurred_at,
+            summary=summary,
+            actor_id=actor_id,
+            project_id=project_id,
+            story_id=story_id,
+            metadata=metadata,
+        )
 
 
 def test_create_app_from_env_requires_production_https_edge_config() -> None:

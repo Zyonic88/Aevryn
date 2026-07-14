@@ -117,12 +117,19 @@ story_deleted | Deleted story text: ...
 
 ---
 
-# Implemented Workflow Event Types
+# Implemented Event Types
 
 The API now appends metadata-only records for:
 
+* `user_registered`
+* `login_succeeded`
+* `login_failed`
+* `password_reset_requested`
+* `password_reset_completed`
 * `project_created`
 * `project_deleted`
+* `settings_changed`
+* `cross_user_access_attempt`
 * `story_created`
 * `story_deleted`
 * `import_saved`
@@ -133,13 +140,7 @@ The API now appends metadata-only records for:
 
 Additional candidate event types still needed before public beta include:
 
-* `user_registered`
-* `login_succeeded`
-* `login_failed`
-* `password_reset_requested`
-* `settings_changed`
 * `security_configuration_failed`
-* `cross_user_access_attempt`
 
 Event types are stable machine-readable tokens.
 
@@ -152,7 +153,7 @@ Audit ledger work does not unblock public beta until:
 * hosted production configuration verifies the PostgreSQL audit adapter
 * audit retention policy is enforced or operationally verified
 * audit access controls are configured and reviewed
-* remaining security-relevant identity/settings/access events are wired into the ledger
+* remaining security-relevant configuration events are wired into the ledger
 * deletion events are verified to remain metadata-only
 * ledger integrity verification is part of the release gate
 * restore/audit drill results are recorded with `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`

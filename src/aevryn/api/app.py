@@ -499,6 +499,13 @@ def create_app(
                 password=request.password,
                 now=request.now,
             )
+            _append_audit_event(
+                audit_ledger,
+                event_type="user_registered",
+                occurred_at=request.now,
+                summary="User registered.",
+                actor_id=result.user.user_id,
+            )
         except PasswordPolicyError as error:
             raise HTTPException(
                 status_code=400,
@@ -527,15 +534,36 @@ def create_app(
                 now=request.now,
             )
         except InvalidCredentialsError as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="login_failed",
+                occurred_at=request.now,
+                summary="Login failed.",
+                metadata={"failure_code": "invalid_credentials"},
+            )
             raise HTTPException(
                 status_code=401,
                 detail={"error": "invalid_credentials", "detail": str(error)},
             ) from error
         except AuthenticationError as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="login_failed",
+                occurred_at=request.now,
+                summary="Login failed.",
+                metadata={"failure_code": "authentication_error"},
+            )
             raise HTTPException(
                 status_code=400,
                 detail={"error": "login_failed", "detail": str(error)},
             ) from error
+        _append_audit_event(
+            audit_ledger,
+            event_type="login_succeeded",
+            occurred_at=request.now,
+            summary="Login succeeded.",
+            actor_id=session.user.user_id,
+        )
         return _auth_session_response(session)
 
     @app.get(
@@ -592,6 +620,14 @@ def create_app(
                 reset_id=request.reset_id,
                 now=request.now,
             )
+            _append_audit_event(
+                audit_ledger,
+                event_type="password_reset_requested",
+                occurred_at=request.now,
+                summary="Reset requested.",
+                actor_id=reset.user_id,
+                metadata={"reset_id": request.reset_id},
+            )
         except AuthenticationError as error:
             raise HTTPException(
                 status_code=400,
@@ -619,6 +655,12 @@ def create_app(
                 reset_token=request.reset_token,
                 new_password=request.new_password,
                 now=request.now,
+            )
+            _append_audit_event(
+                audit_ledger,
+                event_type="password_reset_completed",
+                occurred_at=request.now,
+                summary="Reset completed.",
             )
         except PasswordPolicyError as error:
             raise HTTPException(
@@ -837,7 +879,33 @@ def create_app(
                 locale=_normalized_locale(request_body.locale),
             )
             repository.save_project_settings(settings)
-        except (AccessDeniedError, RecordNotFoundError) as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="settings_changed",
+                occurred_at=_audit_timestamp(),
+                summary="Project settings changed.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={
+                    "default_export_format": settings.default_export_format,
+                    "locale": settings.locale,
+                },
+            )
+        except AccessDeniedError as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="cross_user_access_attempt",
+                occurred_at=_audit_timestamp(),
+                summary="Cross-user project access denied.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={"route": "project_settings"},
+            )
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except RecordNotFoundError as error:
             raise HTTPException(
                 status_code=404,
                 detail={"error": "project_not_found", "detail": "Project not found."},
