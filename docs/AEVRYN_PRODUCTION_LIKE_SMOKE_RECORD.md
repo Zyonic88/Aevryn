@@ -656,6 +656,47 @@ OPEN for final release-candidate signoff.
 
 ---
 
+# Attempt 2026-07-14 - Hosted Log Review
+
+Environment:
+
+```text
+Execution surface: Google Cloud Run bounded service-log sample
+Service: aevryn-api
+Region: us-central1
+Sample size: 200 recent service-log lines
+Status: Passed with metadata-only access-log finding
+```
+
+Observed metadata:
+
+```text
+Request logs included public API routes, HTTP methods, HTTP statuses, project IDs, story IDs, and Google-managed proxy addresses.
+Request logs did not include manuscript text.
+Request logs did not include full AI provider responses.
+Request logs did not include credentials, tokens, secret values, database URLs, storage keys, Supabase keys, worker keys, session secrets, usernames, or machine-local paths.
+No warning/error entries appeared in the sampled hosted service logs.
+```
+
+Finding:
+
+```text
+Cloud Run and Uvicorn access logs include route-level workflow metadata.
+This is acceptable for the current production-like smoke because it is metadata-only, but it should remain part of future privacy review before public beta.
+```
+
+Interpretation:
+
+```text
+PASSED for hosted log review of the checked import, monitoring, and export smoke window.
+PASSED for no source prose in sampled hosted logs.
+PASSED for no full AI payloads in sampled hosted logs.
+PASSED for no secret values in sampled hosted logs.
+OPEN for broader production observability policy before public beta.
+```
+
+---
+
 # Required Successful Smoke
 
 A successful production-like smoke must record:
@@ -672,7 +713,7 @@ A successful production-like smoke must record:
 | Monitoring | workflow state is observable through metadata-only status | Passed for hosted successful run and export event |
 | Export preview | export preview works through storage-reference boundaries | Passed for hosted JSON snapshot export creation |
 | Authenticated project workflow | create/read/list project metadata through hosted API | Passed for RC Smoke Test Project |
-| Logs | no manuscripts, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths | Passed for the checked hosted browser/API and import/worker smoke surfaces; deeper hosted log review still required before final signoff |
+| Logs | no manuscripts, credentials, tokens, private URLs, usernames, machine-local paths, or full AI payloads | Passed for bounded hosted Cloud Run log review; route-level metadata remains expected access-log data |
 
 ---
 
@@ -681,10 +722,10 @@ A successful production-like smoke must record:
 Complete the remaining release-candidate readiness checks that are outside the browser smoke:
 
 ```text
-Review hosted Cloud Run logs for metadata-only boundaries.
 Decide whether to delete the July 14 smoke retry project.
 Run any final release-candidate gate commands.
 Record final release-candidate signoff separately from this smoke-attempt log.
+Plan broader production observability policy before public beta.
 ```
 
 If local production-style smoke must be repeated before final signoff, use metadata-only commands:
@@ -704,5 +745,5 @@ Then record the final result in a dated release-candidate run record.
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, and hosted export creation have passed. Hosted log review, optional smoke cleanup, and final release-candidate signoff have not passed.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, and bounded hosted log review have passed. Optional smoke cleanup, broader observability policy, and final release-candidate signoff have not passed.
 ```
