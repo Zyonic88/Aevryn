@@ -659,6 +659,21 @@ def test_security_operations_readiness_document_tracks_gate_four() -> None:
         assert term in document
 
 
+def test_public_beta_setup_tracks_production_observability_policy() -> None:
+    """Public beta checklist should track hosted observability verification."""
+    document = read_doc("docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md")
+
+    required_terms = (
+        "docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md",
+        "hosted logs and monitoring are metadata-only",
+        "Production observability policy candidate selected for owner/security review.",
+        "Public beta remains blocked by non-smoke readiness items.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
 def test_security_alert_routing_document_tracks_human_alert_paths() -> None:
     """Security alert routing should map hosted alerts to human-owned channels."""
     document = read_doc("docs/AEVRYN_SECURITY_ALERT_ROUTING.md")
@@ -1103,7 +1118,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         ),
         (
             "Public beta remains blocked by public-facing legal/trust/support "
-            "publication, broader observability policy, backup/restore/audit readiness, "
+            "publication, hosted observability verification, backup/restore/audit readiness, "
             "prompt-pack polish, and final public-beta approval."
         ),
     )
