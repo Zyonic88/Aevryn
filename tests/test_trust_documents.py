@@ -113,7 +113,7 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
             "Safe Harbor Intent",
             "Response Process",
             "security@aevryn.ai",
-            "Public contact information must be verified before launch.",
+            "Public contact information must be published accurately before launch.",
         ),
     }
 
@@ -178,6 +178,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "docs/AEVRYN_PRODUCTION_INFRASTRUCTURE_DECISIONS.md",
         "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
         "docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md",
+        "docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md",
         "Public beta blocked.",
     )
 
@@ -256,7 +257,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "2026-07-01 local smoke attempt verified fail-closed behavior",
         "2026-07-01 local production-style smoke passed",
         "docs/AEVRYN_CLOUD_RUN_DEPLOYMENT.md",
-        "Release-candidate run not complete.",
+        "Internal release-candidate run is completed and signed off.",
         "Public beta: Blocked",
     )
 
@@ -273,10 +274,10 @@ def test_public_trust_readiness_document_tracks_gate_one_blockers() -> None:
         "Status: Started",
         "Public beta: Blocked",
         "Public trust pages must be true, plain-language, and backed by implementation.",
-        "Draft exists. Legal review required.",
-        "Target contact selected. Provisioning and testing required.",
+        "Draft exists. Legal review required. Privacy contact verified.",
+        "Target contact selected and tested. Attorney safe-harbor review required.",
         "Support Contact",
-        "Started. Target contact paths selected; provisioning and testing required.",
+        "Contact paths verified. Public support page publication required.",
         "Plain-Language Requirements",
         "Truthfulness Requirements",
         "Not accepted.",
@@ -304,7 +305,7 @@ def test_public_trust_page_copy_preserves_plain_language_promises() -> None:
         "Aevryn is content-aware, not content-opinionated.",
         "Lawful mature fiction is not automatically prohibited.",
         "Attorney safe-harbor review",
-        "contact aliases must be provisioned and tested",
+        "verified contact aliases must be published accurately",
         "production backup retention window must be selected",
         "AI provider review must be completed",
         "without overpromising public-beta readiness",
@@ -320,9 +321,10 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
 
     required_terms = (
         "Gate: Public support and contact readiness",
-        "Status: Started",
+        "Status: Contact paths verified; public-page publication pending",
         "Public beta: Blocked",
         "Users must be able to get help without exposing manuscripts unnecessarily.",
+        "The required aliases are provisioned and tested",
         "general support",
         "privacy questions",
         "security vulnerability reports",
@@ -334,6 +336,37 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
         "abuse@aevryn.ai",
         "source-prose redaction guidance",
         "Support should not ask for full source prose by default.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_site_publication_plan_maps_pages_to_sources() -> None:
+    """Public site publication plan should map public pages without approving beta."""
+    document = read_doc("docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md")
+
+    required_terms = (
+        "Plan: Public site publication",
+        "Status: Started",
+        "Public beta: Blocked",
+        "Public pages must say only what Aevryn can truthfully support.",
+        "/trust",
+        "/privacy",
+        "/security",
+        "/user-rights",
+        "/content",
+        "/support",
+        "/security/disclosure",
+        "/terms",
+        "/acceptable-use",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "full manuscripts",
+        "AI provider data-use disclosure",
+        "final public-beta signoff explicitly approves publication",
     )
 
     for term in required_terms:
@@ -852,7 +885,7 @@ def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
         "Public beta: Blocked",
         "rc-v2-2026-07-14-001",
         "2026-07-14",
-        "db19d5b8aa2953db82d051bef9c45385f25ef728",
+        "f5c19d7e9fc6a7d25139b453590b09dbf48108bd",
         "Hosted production-like environment",
         "Release Candidate Run ID",
         "Automated Gate Record",

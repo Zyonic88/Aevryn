@@ -81,7 +81,7 @@ Source:
 Readiness:
 
 ```text
-Draft exists. Legal review required.
+Draft exists. Legal review required. Privacy contact verified.
 ```
 
 Required before public beta:
@@ -90,7 +90,7 @@ Required before public beta:
 * production provider list
 * data residency statement
 * production retention windows
-* public privacy contact
+* publish verified privacy contact
 
 ## Security Explanation
 
@@ -102,7 +102,7 @@ Source:
 Readiness:
 
 ```text
-Draft exists. Production details required.
+Draft exists. Production details required. Security contact verified.
 ```
 
 Required before public beta:
@@ -111,7 +111,7 @@ Required before public beta:
 * production secret manager
 * hosted secret scanning and dependency alert posture
 * production monitoring posture
-* incident response contact path
+* publish verified incident response contact path
 
 ## Content Classification Explanation
 
@@ -142,12 +142,12 @@ Source:
 Readiness:
 
 ```text
-Target contact selected. Provisioning and testing required.
+Target contact selected and tested. Attorney safe-harbor review required.
 ```
 
 Required before public beta:
 
-* security report email or intake form
+* publish security report email or intake form
 * response expectations
 * safe-harbor language reviewed by counsel
 * public scope statement
@@ -162,12 +162,12 @@ Source:
 Readiness:
 
 ```text
-Started. Target contact paths selected; provisioning and testing required.
+Contact paths verified. Public support page publication required.
 ```
 
 Required before public beta:
 
-* support contact path
+* publish support contact path
 * bug-report instructions
 * privacy-preserving report guidance
 * abuse-report path
@@ -223,5 +223,6 @@ Current implementation progress:
 
 ```text
 docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md drafts plain-language public trust, privacy, security, user-rights, content classification, support, and security-disclosure page copy.
-Publication remains blocked by contact alias provisioning, legal review, backup retention selection, provider review, security operations configuration, and final public-beta signoff.
+Contact aliases are provisioned and tested.
+Publication remains blocked by legal review, backup retention selection, provider review, security operations configuration, public-page implementation, and final public-beta signoff.
 ```

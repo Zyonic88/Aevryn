@@ -10,13 +10,15 @@ This document defines the public contact and support paths Aevryn needs before p
 
 ```text
 Gate: Public support and contact readiness
-Status: Started
+Status: Contact paths verified; public-page publication pending
 Public beta: Blocked
 ```
 
 Aevryn target support, privacy, security, and abuse contact paths are selected for the `aevryn.ai` product domain.
 
-The aliases still need to be provisioned, tested, and added to public pages before public beta.
+The required aliases are provisioned and tested for inbound receipt, outbound product-domain sending, SPF, DKIM, DMARC, mailbox filtering, and MFA-protected operator access.
+
+The remaining work is public-page publication and operational support procedure review before public beta.
 
 ---
 
@@ -167,14 +169,10 @@ privacy@aevryn.ai
 
 Public beta remains blocked until:
 
-* support contact path is provisioned and tested
-* privacy contact path is provisioned and tested
-* security report contact path is provisioned and tested
-* abuse report path is provisioned and tested
-* deletion/account help path is provisioned and tested
 * contact paths are added to public trust/legal pages
 * support instructions include source-prose redaction guidance
 * security disclosure includes report intake details
+* support operators review the no-full-manuscripts-by-default handling rule
 
 Current implementation progress:
 

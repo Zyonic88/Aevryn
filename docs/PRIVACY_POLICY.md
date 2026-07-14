@@ -84,8 +84,8 @@ Target privacy contact:
 privacy@aevryn.ai
 ```
 
-This alias must be provisioned and tested before public beta.
+This alias is provisioned and tested for inbound receipt, outbound product-domain sending, SPF, DKIM, DMARC, and MFA-protected operator access.
 
-Public privacy contact information must be verified before public launch.
+Public privacy contact information must be published accurately before public launch.
 
 Public privacy contact readiness is tracked in `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`.
