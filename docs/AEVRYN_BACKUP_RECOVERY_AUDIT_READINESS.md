@@ -184,7 +184,7 @@ Public beta remains blocked until:
 * disaster recovery procedure is documented
 * production audit storage is selected
 * audit retention is selected
-* audit access controls are configured and reviewed through a hosted audit access-control report
+* audit access controls are configured and reviewed through hosted audit access verification and reporting
 * hosted audit integrity verification is recorded in the release gate
 * deletion and backup language is aligned with production behavior
 
@@ -206,8 +206,10 @@ settings.
 chain without printing secrets.
 `aevryn audit-access-report` reports configured PostgreSQL audit table and
 privilege metadata without reading audit rows or printing secrets.
+`aevryn audit-access-verify` fails closed unless the configured PostgreSQL audit
+role can read and append audit records without update or delete privileges.
 
-Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, hosted audit access-control report review, hosted release-gate integrity execution, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, hosted audit access verification/report review, hosted release-gate integrity execution, and dated restore/audit drill completion remain open.
 ```
 
 ---
