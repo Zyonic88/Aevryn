@@ -618,6 +618,7 @@ const projectOutputsPayload = {
     {
       ...characterPreviewPayload.character_profiles[0],
       character_id: "character_mark_duplicate",
+      display_name: sourceBackedPlaceholder,
       subtitle: sourceBackedPlaceholder,
       aliases: { title: "Aliases", items: ["Captain Mark"] },
       titles: { title: "Titles", items: ["Captain"] },
@@ -3150,19 +3151,21 @@ describe("App shell routing", () => {
     expect(characterCard).not.toBeNull();
     expect(characterCard?.querySelector(".character-portrait")).toHaveTextContent("M");
     expect(characterCard?.querySelector("details.profile-disclosure")).not.toHaveAttribute("open");
+    const markCard = within(characterCard as HTMLElement);
     expect(screen.getAllByRole("heading", { name: "Mark" })).toHaveLength(1);
-    expect(screen.getByRole("heading", { name: "Race" })).toBeInTheDocument();
-    expect(screen.getByText("Human")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Gender" })).toBeInTheDocument();
-    expect(screen.getByText("Male")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Aliases" })).toBeInTheDocument();
-    expect(screen.getByText("Captain Mark")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Titles" })).toBeInTheDocument();
-    expect(screen.getByText("Captain")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Descriptions" })).toBeInTheDocument();
-    expect(screen.getByText("Rusty Dagger")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Race" })).toBeInTheDocument();
+    expect(markCard.getByText("Human")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Gender" })).toBeInTheDocument();
+    expect(markCard.getByText("Male")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Aliases" })).toBeInTheDocument();
+    expect(markCard.getByText("Captain Mark")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Titles" })).toBeInTheDocument();
+    expect(markCard.getByText("Captain")).toBeInTheDocument();
+    expect(markCard.getByRole("heading", { name: "Descriptions" })).toBeInTheDocument();
+    expect(markCard.getByText("Rusty Dagger")).toBeInTheDocument();
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
     expect(screen.queryByText(sourceBackedPlaceholder)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Unknown character" })).toBeInTheDocument();
     expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();
     expect(screen.getAllByText("Glossary term needs review").length).toBeGreaterThanOrEqual(1);
     expect(
@@ -3198,7 +3201,7 @@ describe("App shell routing", () => {
     expect(screen.queryByText("Title: The general")).not.toBeInTheDocument();
     expect(screen.queryByText("anchor_001")).not.toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
-    expect(screen.getByText("11 verified facts")).toBeInTheDocument();
+    expect(screen.getByText("8 verified facts")).toBeInTheDocument();
   });
 
   it("renders a safe project overview with identity review metadata", async () => {

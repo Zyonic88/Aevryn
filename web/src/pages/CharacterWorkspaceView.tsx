@@ -178,15 +178,16 @@ function CharacterPreviewResult({ result }: { result: CharacterPreview }) {
 }
 
 function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
+  const displayName = readableCharacterName(profile.display_name);
   const subtitle = readableCharacterSubtitle(profile.subtitle);
   return (
     <article className="profile-card character-profile-card">
       <header className="character-profile-header">
         <div className="character-portrait" aria-hidden="true">
-          {characterInitials(profile.display_name)}
+          {characterInitials(displayName)}
         </div>
         <div>
-          <h3>{profile.display_name}</h3>
+          <h3>{displayName}</h3>
           <p>{subtitle}</p>
         </div>
       </header>
@@ -219,6 +220,13 @@ function readableCharacterSubtitle(subtitle: string): string {
     return "Unknown";
   }
   return readableOutputText(subtitle);
+}
+
+function readableCharacterName(name: string): string {
+  if (!name || name === "Unknown" || isInternalOutputPlaceholder(name)) {
+    return "Unknown character";
+  }
+  return readableOutputText(name);
 }
 
 function characterInitials(name: string): string {
