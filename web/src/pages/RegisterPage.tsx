@@ -84,6 +84,11 @@ export function RegisterPage() {
         <p className="auth-switch">
           Already have access? <Link to="/login">Log in</Link>
         </p>
+        <nav className="auth-links" aria-label="Public information">
+          <Link to="/trust">Trust</Link>
+          <Link to="/support">Support</Link>
+          <Link to="/privacy">Privacy</Link>
+        </nav>
       </section>
     </main>
   );

@@ -224,5 +224,5 @@ Current implementation progress:
 ```text
 docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md drafts plain-language public trust, privacy, security, user-rights, content classification, support, and security-disclosure page copy.
 Contact aliases are provisioned and tested.
-Publication remains blocked by legal review, backup retention selection, provider review, security operations configuration, public-page implementation, and final public-beta signoff.
+Publication remains blocked by legal review, backup retention selection, provider review, security operations configuration, owner review of the implemented public pages, and final public-beta signoff.
 ```

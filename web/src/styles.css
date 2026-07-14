@@ -152,6 +152,27 @@ input:focus {
   font-weight: 700;
 }
 
+.auth-links,
+.public-nav,
+.public-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.auth-links {
+  padding-top: 12px;
+  border-top: 1px solid #e2e7ee;
+}
+
+.auth-links a,
+.public-nav a,
+.public-footer a {
+  color: #2d5f8f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .form-error {
   color: #9b2f2f;
 }
@@ -550,6 +571,105 @@ input:focus {
   line-height: 1.6;
 }
 
+.public-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  background: #f5f7fa;
+}
+
+.public-topbar {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 24px;
+  border-bottom: 1px solid #d9e0e9;
+  background: #ffffff;
+}
+
+.public-hero,
+.public-content,
+.public-footer {
+  width: min(1080px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.public-hero {
+  display: grid;
+  gap: 12px;
+  padding: 48px 0 24px;
+}
+
+.public-hero h1,
+.public-hero p {
+  margin: 0;
+}
+
+.public-hero h1 {
+  max-width: 780px;
+  color: #151922;
+  font-size: 40px;
+  line-height: 1.1;
+}
+
+.public-hero > p:not(.eyebrow):not(.public-status) {
+  max-width: 760px;
+  color: #40516a;
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.public-status {
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d8dee7;
+  border-radius: 6px;
+  color: #40516a;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.public-content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding-bottom: 40px;
+}
+
+.public-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 18px;
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.public-card h2,
+.public-card p {
+  margin: 0;
+}
+
+.public-card h2 {
+  color: #171d27;
+  font-size: 18px;
+}
+
+.public-card p {
+  color: #40516a;
+  line-height: 1.55;
+}
+
+.public-footer {
+  padding: 18px 0 28px;
+  border-top: 1px solid #d9e0e9;
+}
+
 @media (max-width: 820px) {
   .topbar {
     grid-template-columns: 1fr;
@@ -584,6 +704,29 @@ input:focus {
   .workspace-sidebar {
     border-right: 0;
     border-bottom: 1px solid #d8dee7;
+  }
+
+  .public-topbar {
+    display: grid;
+    padding: 16px;
+  }
+
+  .public-hero,
+  .public-content,
+  .public-footer {
+    width: min(100% - 32px, 1080px);
+  }
+
+  .public-hero {
+    padding-top: 32px;
+  }
+
+  .public-hero h1 {
+    font-size: 32px;
+  }
+
+  .public-content {
+    grid-template-columns: 1fr;
   }
 }
 
