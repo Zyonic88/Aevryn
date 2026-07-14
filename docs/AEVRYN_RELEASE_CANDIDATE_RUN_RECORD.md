@@ -187,7 +187,7 @@ Verify no test output exposes:
 | Monitoring | Metadata-only | Passed | Monitoring exposed status, counts, events, and summaries only |
 | Audit records | Metadata-only | Passed with limitation | Workflow events were metadata-only; broader audit-storage policy remains public-beta work |
 | Error messages | Concise and source-prose-free | Passed | Timeout failure summary was concise and source-prose-free |
-| Support guidance | Redaction guidance present | Passed with limitation | Public support docs exist; public website publication remains open |
+| Support guidance | Redaction guidance present | Passed with limitation | Public support page is published; support procedure owner review remains open |
 | Browser UI | No unnecessary machine noise | Passed with limitation | Known internal IDs and bundle names absent; some repetitive identity-review metadata remains |
 | Export preview | User-triggered only | Passed | Export was created only after explicit user-authorized click |
 | Provider failures | No full provider payloads | Passed | No full provider payload surfaced in UI or sampled logs |
@@ -219,7 +219,7 @@ Prompt Packs load and are usable for alpha/RC verification, but prompt richness 
 Identity review summaries appear across several output tabs and should be condensed in UX hardening.
 Some Unknown/No-data states remain where accepted canon evidence is incomplete.
 Settings and broader user profile preferences remain intentionally minimal.
-Public trust/legal/support website publication is not complete.
+Initial public trust/legal/support pages are published; owner/legal review and final public-beta approval remain incomplete.
 Broader production observability policy remains open before public beta.
 ```
 
@@ -233,7 +233,7 @@ Public beta may proceed only if each residual risk is explicit and accepted by t
 | --- | --- | --- | --- |
 | Prompt richness is still below final product ambition | Generated image/video prompts may need user editing | Continue prompt-pack hardening before beta marketing claims | Accepted for internal RC only; blocks public-beta positioning if not improved |
 | Output UX polish remains alpha-grade in some tabs | Users may find repeated summaries or dense cards tiring | Continue UX hardening before broad public beta | Accepted for internal RC only |
-| Public legal/trust/support pages are not published | Public users lack complete external terms and trust surface | Publish and review public-facing site/legal docs before public beta | Blocks public beta |
+| Public legal/trust/support pages need owner and legal review | Public users may see draft wording that is not public-beta approved | Review public-facing site/legal docs before public beta | Blocks public beta |
 | Broader observability policy is not finalized | Hosted logging policy needs more explicit public-beta controls | Define production observability policy and retention boundaries | Blocks public beta |
 | Full backup/restore drill and audit-storage policy remain future readiness work | Recovery confidence is incomplete for public users | Complete public-beta operational readiness before untrusted uploads | Blocks public beta |
 
@@ -247,10 +247,10 @@ If a risk touches story privacy, deletion, account security, provider training, 
 | --- | --- | --- | --- |
 | Product | Accepted for internal V2 release-candidate checkpoint; public beta blocked by listed product polish and public-surface work | Aetherra Labs project owner | 2026-07-14 |
 | Security | Accepted for internal V2 release-candidate checkpoint; public beta blocked by broader observability and operations policy | Aetherra Labs project owner | 2026-07-14 |
-| Privacy | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public trust/legal/support publication is complete | Aetherra Labs project owner | 2026-07-14 |
+| Privacy | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public trust/legal/support review is complete | Aetherra Labs project owner | 2026-07-14 |
 | Legal | Not approved for public beta; legal documents require owner and attorney review before public launch | Aetherra Labs project owner | 2026-07-14 |
 | Operations | Accepted for internal V2 release-candidate checkpoint; public beta blocked by backup/restore/audit and observability follow-up | Aetherra Labs project owner | 2026-07-14 |
-| Support | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public support surfaces are published | Aetherra Labs project owner | 2026-07-14 |
+| Support | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public support procedure owner review is complete | Aetherra Labs project owner | 2026-07-14 |
 
 If one person holds multiple responsibilities, each responsibility must still be explicitly accepted.
 
@@ -261,7 +261,7 @@ If one person holds multiple responsibilities, each responsibility must still be
 ```text
 Internal V2 release candidate: Signed off
 Public beta: Blocked
-Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, and bounded log review passed. Public beta remains blocked by public-facing legal/trust/support publication, broader observability policy, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, and initial public page publication passed. Public beta remains blocked by public-facing legal/trust/support review, broader observability policy, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
 ```
 
 ---

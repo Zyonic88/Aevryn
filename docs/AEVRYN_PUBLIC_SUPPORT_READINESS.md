@@ -10,7 +10,7 @@ This document defines the public contact and support paths Aevryn needs before p
 
 ```text
 Gate: Public support and contact readiness
-Status: Contact paths verified; public-page publication pending
+Status: Contact paths verified; public support page published; support procedure drafted
 Public beta: Blocked
 ```
 
@@ -18,7 +18,7 @@ Aevryn target support, privacy, security, and abuse contact paths are selected f
 
 The required aliases are provisioned and tested for inbound receipt, outbound product-domain sending, SPF, DKIM, DMARC, mailbox filtering, and MFA-protected operator access.
 
-The remaining work is public-page publication and operational support procedure review before public beta.
+The remaining work is owner review of the public support procedure, backup/deletion wording alignment, and legal-sensitive support wording review before public beta.
 
 ---
 
@@ -54,6 +54,8 @@ Target public contact paths are defined in `docs/AEVRYN_PUBLIC_CONTACTS.md`.
 Provisioning and verification are tracked in `docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md`.
 
 Outbound reply identity setup is tracked in `docs/AEVRYN_REPLY_IDENTITY_SETUP.md`.
+
+Operational support handling is tracked in `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`.
 
 Target aliases:
 
@@ -173,6 +175,7 @@ Public beta remains blocked until:
 * support instructions include source-prose redaction guidance
 * security disclosure includes report intake details
 * support operators review the no-full-manuscripts-by-default handling rule
+* support procedure review confirms metadata-first triage and escalation handling
 
 Current implementation progress:
 
@@ -186,7 +189,8 @@ Cloudflare MFA and Gmail MFA are enabled.
 Cloudflare Email Sending is the preferred outbound candidate.
 Support/privacy/security/abuse outbound reply tests passed to zyonic88@gmail.com.
 SPF/DKIM/DMARC received-message verification passed.
-Public-page publication remains open.
+Initial public support page is published at /support with verified contact details and private-story redaction guidance.
+Public support procedure exists in docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md and awaits support procedure owner review.
 ```
 
 ---
