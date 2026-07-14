@@ -396,15 +396,16 @@ function mergedEvidenceSummary(left: string, right: string): string {
 
 function CharacterPanel({ profile }: { profile: CharacterProfile }) {
   const recentChanges = characterRecentChanges(profile);
+  const displayName = readableCharacterName(profile.display_name);
   const subtitle = readableCharacterSubtitle(profile.subtitle);
   return (
     <article className="profile-card character-profile-card">
       <header className="character-profile-header">
         <div className="character-portrait" aria-hidden="true">
-          {characterInitials(profile.display_name)}
+          {characterInitials(displayName)}
         </div>
         <div>
-          <h3>{profile.display_name}</h3>
+          <h3>{displayName}</h3>
           <p>{subtitle}</p>
         </div>
       </header>
@@ -464,13 +465,24 @@ function readableCharacterSubtitle(subtitle: string): string {
   return readableOutputText(subtitle);
 }
 
+function readableCharacterName(name: string): string {
+  if (!name || name === "Unknown" || isInternalOutputPlaceholder(name)) {
+    return "Unknown character";
+  }
+  return readableOutputText(name);
+}
+
 function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(CHARACTER_CARD_PAGE_SIZE);
   const normalizedQuery = query.trim().toLowerCase();
   const filteredProfiles = normalizedQuery
     ? profiles.filter((profile) =>
-        [profile.display_name, readableCharacterSubtitle(profile.subtitle), profile.evidence_summary]
+        [
+          readableCharacterName(profile.display_name),
+          readableCharacterSubtitle(profile.subtitle),
+          profile.evidence_summary,
+        ]
           .join(" ")
           .toLowerCase()
           .includes(normalizedQuery),
