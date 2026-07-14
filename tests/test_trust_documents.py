@@ -824,11 +824,54 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "restore test",
         "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
         "repeatable restore/audit drill record and stop conditions",
+        "docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md",
+        "managed PostgreSQL audit tables",
         "production audit storage",
         "audit retention",
         "audit access controls",
         "metadata-only",
         "tamper-evident",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_audit_storage_policy_decision_selects_candidate_without_unblocking_beta() -> None:
+    """Audit storage policy should select a candidate while keeping verification honest."""
+    document = read_doc("docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md")
+
+    required_terms = (
+        "Decision: Audit storage policy candidate",
+        "Status: Selected for owner/security review",
+        "Public beta: Blocked",
+        "Audit records explain what happened.",
+        "They never preserve the private thing that happened.",
+        "managed PostgreSQL audit tables",
+        "Project Database environment",
+        "append-only",
+        "metadata-only",
+        "full manuscripts",
+        "full source prose",
+        "full AI provider prompts",
+        "full AI provider responses",
+        "credentials",
+        "tokens",
+        "private URLs",
+        "hostnames",
+        "usernames",
+        "machine-local paths",
+        "retained for up to 1 year",
+        "Deletion events may outlive deleted content",
+        "hash-chain verification",
+        "restore/audit drill",
+        "This document selects the candidate policy.",
+        "It does not claim production audit storage is implemented.",
+        "Public beta remains blocked until",
+        "PostgreSQL audit schema or audit tables are implemented",
+        "API and worker events are wired",
+        "audit access controls are configured and reviewed",
+        "deletion events are verified as metadata-only",
     )
 
     for term in required_terms:

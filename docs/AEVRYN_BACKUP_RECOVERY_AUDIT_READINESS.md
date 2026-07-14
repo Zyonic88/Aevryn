@@ -122,6 +122,12 @@ Audit records must remain append-only, tamper-evident, and metadata-only.
 
 Audit storage must not contain full source prose, full AI responses, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths.
 
+The public-beta audit storage candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+
+The selected candidate uses managed PostgreSQL audit tables owned by Aevryn's Project Database environment.
+
+Selection does not mean production audit storage is implemented or verified.
+
 ---
 
 # Audit Event Coverage
@@ -186,8 +192,9 @@ Current implementation progress:
 docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
 docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit drill record and stop conditions.
 Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
+Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
 
-Production backup provider verification, restore execution, audit storage provider, audit retention, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, audit adapter implementation, audit event wiring, audit retention enforcement, audit access-control verification, release-gate integrity verification, and dated restore/audit drill completion remain open.
 ```
 
 ---
