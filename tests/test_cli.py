@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
-from aevryn.cli import _run_production_config_check, main
+from aevryn.cli import _run_audit_ledger_verify, _run_production_config_check, main
 from aevryn.importing import StoryImporter
 from aevryn.validation.runner import (
     _extraction_input_digest,
@@ -630,6 +630,91 @@ def test_production_config_check_preserves_failure_when_audit_unavailable(
         )
     assert "AEVRYN_API_ALLOWED_ORIGINS" in str(error.value)
     assert "secret-db-password" not in str(error.value)
+
+
+def test_audit_ledger_verify_help_describes_metadata_only_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Audit verify help should describe the metadata-only release gate."""
+    with pytest.raises(SystemExit) as error:
+        main(["audit-ledger-verify", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Verify the PostgreSQL audit ledger hash chain" in output
+    assert "without printing secrets" in output
+
+
+def test_audit_ledger_verify_requires_database_url_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit verify should fail closed when the database URL is absent."""
+    monkeypatch.delenv("AEVRYN_PROJECT_DATABASE_URL", raising=False)
+
+    exit_code = main(["audit-ledger-verify"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_PROJECT_DATABASE_URL is required" in captured.err
+
+
+def test_audit_ledger_verify_reports_metadata_without_secrets(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit verify should report counts and never print the database URL."""
+    secret_database_url = "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+
+    class FakePostgresqlAuditLedger:
+        """Fake ledger for deterministic CLI verification tests."""
+
+        def __init__(self, database_url: str) -> None:
+            assert database_url == secret_database_url
+
+        def verify(self) -> None:
+            return None
+
+        def records(self) -> tuple[object, ...]:
+            return (object(), object(), object())
+
+    monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
+    monkeypatch.setattr("aevryn.cli.PostgresqlAuditLedger", FakePostgresqlAuditLedger)
+
+    exit_code = main(["audit-ledger-verify"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "adapter=postgresql" in captured.out
+    assert "ledger=audit" in captured.out
+    assert "records_verified=3" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=audit_ledger_postgresql_integrity_verified" in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "postgresql://" not in captured.out
+    assert "secret-db-password" not in captured.err
+    assert "postgresql://" not in captured.err
+
+
+def test_audit_ledger_verify_propagates_integrity_failure_without_database_url(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit verify should fail visibly without printing database credentials."""
+    secret_database_url = "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+
+    class TamperedPostgresqlAuditLedger:
+        """Fake ledger that fails hash-chain verification."""
+
+        def __init__(self, database_url: str) -> None:
+            assert database_url == secret_database_url
+
+        def verify(self) -> None:
+            raise ValueError("Audit ledger record hash is invalid.")
+
+    monkeypatch.setattr("aevryn.cli.PostgresqlAuditLedger", TamperedPostgresqlAuditLedger)
+
+    with pytest.raises(ValueError, match="record hash"):
+        _run_audit_ledger_verify(database_url=secret_database_url)
 
 
 def test_performance_baseline_help_describes_local_artifact(

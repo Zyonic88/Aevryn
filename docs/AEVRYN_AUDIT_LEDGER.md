@@ -21,9 +21,12 @@ The public-beta production ledger storage candidate is selected in `docs/AEVRYN_
 
 The selected candidate is managed PostgreSQL audit tables owned by Aevryn's Project Database environment.
 
-The production adapter and core workflow event wiring are implemented.
+The production adapter, core workflow event wiring, configuration-failure event
+wiring, and release-gate integrity verification command are implemented.
 
-Hosted production configuration verification, retention enforcement, access-control verification, release-gate integrity verification, and the restore/audit drill remain public-beta blockers.
+Hosted production configuration verification, retention enforcement,
+access-control verification, hosted release-gate integrity execution, and the
+restore/audit drill remain public-beta blockers.
 
 Current implementation:
 
@@ -35,6 +38,16 @@ Current implementation:
 The implementation lives in `src/aevryn/audit/`.
 
 `PostgresqlAuditLedger` implements the selected PostgreSQL audit storage candidate by creating `audit_ledger_records`, appending records inside a locked transaction, reloading records in sequence order, and verifying the persisted hash chain.
+
+The release gate can run:
+
+```powershell
+python -m aevryn.cli audit-ledger-verify
+```
+
+The command reads `AEVRYN_PROJECT_DATABASE_URL`, verifies the PostgreSQL audit
+ledger hash chain, prints metadata-only status, and does not print database
+credentials.
 
 ---
 
@@ -157,5 +170,5 @@ Audit ledger work does not unblock public beta until:
 * audit retention policy is enforced or operationally verified
 * audit access controls are configured and reviewed
 * deletion events are verified to remain metadata-only
-* ledger integrity verification is part of the release gate
+* hosted ledger integrity verification is recorded in the release gate
 * restore/audit drill results are recorded with `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
