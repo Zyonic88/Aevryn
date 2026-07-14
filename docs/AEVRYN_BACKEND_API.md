@@ -820,7 +820,10 @@ The request includes:
 
 The route returns claimed, succeeded, and failed job counts.
 
-When deployment API keys are configured, this internal workflow route requires `X-Aevryn-API-Key` or an equivalent bearer API key.
+When deployment API keys are configured, this internal workflow route requires
+`X-Aevryn-API-Key` or an equivalent bearer API key. `POST /v2/workers/process`
+also accepts the dedicated `AEVRYN_WORKER_API_KEY` so managed worker runners do
+not need a general workflow API key.
 
 The route updates queue status and durable engine run status.
 
@@ -846,7 +849,8 @@ Invalid snapshot kinds, invalid serialized JSON, incomplete runs, and wrong run 
 
 Duplicate snapshot IDs fail clearly.
 
-When deployment API keys are configured, this internal workflow route requires `X-Aevryn-API-Key` or an equivalent bearer API key.
+When deployment API keys are configured, this internal workflow route requires
+`X-Aevryn-API-Key` or an equivalent bearer API key.
 
 ## `POST /v2/projects/preview`
 
