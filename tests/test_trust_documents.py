@@ -960,16 +960,24 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "PASSED for hosted import processing workflow.",
         "PASSED for export creation from the latest canon snapshot.",
         "OPEN for final release-candidate signoff.",
+        "Hosted Log Review",
+        "Sample size: 200 recent service-log lines",
+        "Status: Passed with metadata-only access-log finding",
+        "Request logs did not include manuscript text.",
+        "Request logs did not include full AI provider responses.",
+        "Request logs did not include credentials, tokens, secret values",
+        "PASSED for hosted log review of the checked import, monitoring, and export smoke window.",
+        "PASSED for no source prose in sampled hosted logs.",
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
         (
-            "hosted import processing, monitoring workflow status, and hosted "
-            "export creation have passed"
+            "hosted import processing, monitoring workflow status, hosted export "
+            "creation, and bounded hosted log review have passed"
         ),
         (
-            "Hosted log review, optional smoke cleanup, and final release-candidate "
-            "signoff have not passed."
+            "Optional smoke cleanup, broader observability policy, and final "
+            "release-candidate signoff have not passed."
         ),
     )
 
