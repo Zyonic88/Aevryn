@@ -17,6 +17,8 @@ from aevryn.persistence.repository import PersistenceError
 
 ConnectFactory = Callable[[str], Any]
 
+_AUDIT_APPEND_LOCK_ID = 4_287_629_133_911_001
+
 
 class PostgresqlAuditLedger:
     """Durable append-only audit ledger backed by PostgreSQL."""
@@ -103,11 +105,14 @@ class PostgresqlAuditLedger:
         story_id: str = "",
         metadata: Mapping[str, str] | None = None,
     ) -> AuditLedgerRecord:
-        """Append one metadata-only record in a locked transaction."""
+        """Append one metadata-only record in a serialized transaction."""
         with self._connect() as connection:
             try:
                 with connection.cursor() as cursor:
-                    cursor.execute("LOCK TABLE audit_ledger_records IN EXCLUSIVE MODE;")
+                    cursor.execute(
+                        "SELECT pg_advisory_xact_lock(%s);",
+                        (_AUDIT_APPEND_LOCK_ID,),
+                    )
                     cursor.execute(
                         """
                         SELECT
@@ -250,7 +255,15 @@ def postgresql_audit_access_report(
                             'DELETE'
                         ),
                         false
-                    ) AS can_delete;
+                    ) AS can_delete,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'TRUNCATE'
+                        ),
+                        false
+                    ) AS can_truncate;
                 """
             )
             row = cursor.fetchone()
@@ -262,6 +275,7 @@ def postgresql_audit_access_report(
         "can_insert": _row_bool(row[2], "audit insert privilege"),
         "can_update": _row_bool(row[3], "audit update privilege"),
         "can_delete": _row_bool(row[4], "audit delete privilege"),
+        "can_truncate": _row_bool(row[5], "audit truncate privilege"),
     }
 
 

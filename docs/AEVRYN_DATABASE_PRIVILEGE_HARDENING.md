@@ -35,6 +35,16 @@ The production application role should have only the database privileges require
 
 Privileged database administration must be separate from normal Cloud Run application traffic.
 
+Schema bootstrap and migrations must be separate from normal Cloud Run application traffic.
+
+Production runtime must use:
+
+```text
+AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false
+```
+
+This prevents the hosted API from relying on schema-creation or schema-alteration privileges during startup.
+
 ---
 
 # Audit Table Target
@@ -46,6 +56,7 @@ audit_ledger_records SELECT: true
 audit_ledger_records INSERT: true
 audit_ledger_records UPDATE: false
 audit_ledger_records DELETE: false
+audit_ledger_records TRUNCATE: false
 ```
 
 The hosted release gate is:
@@ -82,6 +93,39 @@ Do not weaken `audit-access-verify` to pass a privileged role.
 
 ---
 
+# Provisioning Procedure
+
+This procedure must be performed with an administrative database connection and must not print credentials, database URLs, hostnames, usernames, or role names in logs.
+
+Reviewed SQL template:
+
+```text
+docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql
+```
+
+1. Confirm the current schema exists and the hosted audit ledger verifies.
+2. Create or update the restricted runtime database role through a reviewed migration or Supabase SQL editor session.
+3. Grant the runtime role only the privileges required for normal application behavior.
+4. Grant `SELECT` and `INSERT` on `audit_ledger_records`.
+5. Revoke `UPDATE`, `DELETE`, and `TRUNCATE` on `audit_ledger_records`.
+6. Grant sequence privileges only if the runtime role requires them for tables with sequences.
+7. Update the production database URL secret to use the restricted runtime role.
+8. Set `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` in Cloud Run.
+9. Redeploy Cloud Run.
+10. Run the verification gates in this document.
+
+The runtime role may read, insert, update, and delete normal product records where required by project workflows, project deletion, import processing, background jobs, snapshots, exports, and settings.
+
+The runtime role must not update or delete audit history.
+
+The runtime role must not truncate audit history.
+
+Audit append serialization uses a transaction-scoped PostgreSQL advisory lock so audit writes do not require table-level update/delete privileges.
+
+Migration/admin credentials must remain separate and must not be used by Cloud Run.
+
+---
+
 # Verification
 
 Required verification after remediation:
@@ -89,8 +133,9 @@ Required verification after remediation:
 * `aevryn production-config-check` passes without printing secrets
 * `aevryn audit-ledger-verify` passes without printing secrets
 * `aevryn audit-access-report` reports SELECT and INSERT as true
-* `aevryn audit-access-report` reports UPDATE and DELETE as false
+* `aevryn audit-access-report` reports UPDATE, DELETE, and TRUNCATE as false
 * `aevryn audit-access-verify` passes
+* `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` is present in the hosted runtime configuration
 * hosted API startup still succeeds
 * hosted import processing still appends workflow audit events
 * sampled hosted logs remain metadata-only

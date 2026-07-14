@@ -38,7 +38,7 @@ Current implementation:
 
 The implementation lives in `src/aevryn/audit/`.
 
-`PostgresqlAuditLedger` implements the selected PostgreSQL audit storage candidate by creating `audit_ledger_records`, appending records inside a locked transaction, reloading records in sequence order, and verifying the persisted hash chain.
+`PostgresqlAuditLedger` implements the selected PostgreSQL audit storage candidate by creating `audit_ledger_records`, appending records inside a transaction-scoped advisory lock, reloading records in sequence order, and verifying the persisted hash chain.
 
 The release gate can run:
 

@@ -37,6 +37,7 @@ from aevryn.api import (
     OPENAI_TIMEOUT_SECONDS_ENV,
     PASSWORD_RESET_ENABLED_ENV,
     PROJECT_DATABASE_ADAPTER_ENV,
+    PROJECT_DATABASE_BOOTSTRAP_ENV,
     PROJECT_DATABASE_PATH_ENV,
     PROJECT_DATABASE_URL_ENV,
     PUBLIC_API_BASE_URL_ENV,
@@ -857,6 +858,15 @@ def test_create_app_from_env_requires_production_secret_and_environment_config()
             }
         )
 
+    with pytest.raises(ValueError, match=PROJECT_DATABASE_BOOTSTRAP_ENV):
+        create_app_from_env(
+            {
+                **complete_until_secret_manager,
+                SECRET_MANAGER_ENV: "deployment",
+                ENVIRONMENT_NAME_ENV: "production",
+            }
+        )
+
 
 def test_create_app_from_env_requires_production_extraction_provider() -> None:
     """Production mode should reject local demo extraction."""
@@ -874,6 +884,7 @@ def test_create_app_from_env_requires_production_extraction_provider() -> None:
         R2_SECRET_ACCESS_KEY_ENV: "secret-key",
         SECRET_MANAGER_ENV: "deployment",
         ENVIRONMENT_NAME_ENV: "production",
+        PROJECT_DATABASE_BOOTSTRAP_ENV: "false",
     }
 
     with pytest.raises(ValueError, match=EXTRACTION_MODE_ENV):
@@ -944,6 +955,7 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
         R2_SECRET_ACCESS_KEY_ENV: "secret-key",
         SECRET_MANAGER_ENV: "deployment",
         ENVIRONMENT_NAME_ENV: "production",
+        PROJECT_DATABASE_BOOTSTRAP_ENV: "false",
         **production_extraction_env(),
         **production_worker_env(),
         **production_observability_env(),
@@ -1117,9 +1129,12 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
     class FakePostgresqlProjectRepository(InMemoryProjectRepository):
         """Test double for PostgreSQL repository selection."""
 
-        def __init__(self, database_url: str) -> None:
+        constructed_bootstrap_flags: list[bool] = []
+
+        def __init__(self, database_url: str, *, bootstrap_schema: bool = True) -> None:
             super().__init__()
             self.database_url = database_url
+            self.constructed_bootstrap_flags.append(bootstrap_schema)
 
     class FakeR2Storage:
         """Test double for R2 storage selection."""
@@ -1199,9 +1214,11 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
         """Test double for durable production audit ledger selection."""
 
         constructed_database_urls: list[str] = []
+        constructed_bootstrap_flags: list[bool] = []
 
-        def __init__(self, database_url: str) -> None:
+        def __init__(self, database_url: str, *, bootstrap_schema: bool = True) -> None:
             self.constructed_database_urls.append(database_url)
+            self.constructed_bootstrap_flags.append(bootstrap_schema)
 
         def append(
             self,
@@ -1253,6 +1270,8 @@ def test_create_app_from_env_fails_closed_without_production_identity_provider(
     assert FakePostgresqlAuditLedger.constructed_database_urls == [
         "postgresql://aevryn.example/project"
     ]
+    assert FakePostgresqlProjectRepository.constructed_bootstrap_flags == [False]
+    assert FakePostgresqlAuditLedger.constructed_bootstrap_flags == [False]
     assert register.status_code == 400
     assert register.json()["error"] == "registration_failed"
     assert "Managed identity provider owns registration" in register.json()["detail"]
@@ -1274,6 +1293,7 @@ def test_create_app_from_env_requires_production_worker_runtime_config() -> None
         R2_SECRET_ACCESS_KEY_ENV: "secret-key",
         SECRET_MANAGER_ENV: "deployment",
         ENVIRONMENT_NAME_ENV: "production",
+        PROJECT_DATABASE_BOOTSTRAP_ENV: "false",
         **production_extraction_env(),
     }
 
@@ -1347,6 +1367,7 @@ def test_create_app_from_env_requires_production_observability_config() -> None:
         R2_SECRET_ACCESS_KEY_ENV: "secret-key",
         SECRET_MANAGER_ENV: "deployment",
         ENVIRONMENT_NAME_ENV: "production",
+        PROJECT_DATABASE_BOOTSTRAP_ENV: "false",
         **production_extraction_env(),
         **production_worker_env(),
     }
@@ -1413,9 +1434,12 @@ def test_create_app_from_env_wires_r2_import_storage_for_postgresql_alpha(
     class FakePostgresqlProjectRepository(InMemoryProjectRepository):
         """Test double for PostgreSQL repository selection."""
 
-        def __init__(self, database_url: str) -> None:
+        constructed_bootstrap_flags: list[bool] = []
+
+        def __init__(self, database_url: str, *, bootstrap_schema: bool = True) -> None:
             super().__init__()
             self.database_url = database_url
+            self.constructed_bootstrap_flags.append(bootstrap_schema)
 
     class FakeR2Storage:
         """Test double for R2 storage selection."""
@@ -1484,6 +1508,7 @@ def test_create_app_from_env_wires_r2_import_storage_for_postgresql_alpha(
         "project_storage": "configured",
         "import_content_storage": "configured",
     }
+    assert FakePostgresqlProjectRepository.constructed_bootstrap_flags == [True]
 
 
 def test_create_app_from_env_wires_postgresql_browser_services(
@@ -1495,7 +1520,7 @@ def test_create_app_from_env_wires_postgresql_browser_services(
     class FakePostgresqlProjectRepository(InMemoryProjectRepository):
         """Test double for PostgreSQL repository selection."""
 
-        def __init__(self, database_url: str) -> None:
+        def __init__(self, database_url: str, *, bootstrap_schema: bool = True) -> None:
             super().__init__()
             self.database_url = database_url
 

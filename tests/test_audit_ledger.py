@@ -226,6 +226,7 @@ def test_postgresql_audit_ledger_appends_and_reloads_hash_chained_records() -> N
     )
 
     assert connection.commits == 3
+    assert connection.advisory_lock_count == 2
     assert tuple(record.event_type for record in reloaded.records()) == (
         "project_created",
         "story_deleted",
@@ -287,7 +288,7 @@ def test_postgresql_audit_ledger_detects_tampered_persisted_rows() -> None:
 def test_postgresql_audit_access_report_returns_metadata_only_privileges() -> None:
     """Audit access reporting should inspect privileges without reading audit rows."""
     connection = FakeAuditConnection()
-    connection.access_report_row = (True, True, True, False, False)
+    connection.access_report_row = (True, True, True, False, False, False)
 
     report = postgresql_audit_access_report(
         "postgresql://example.invalid/aevryn",
@@ -300,6 +301,7 @@ def test_postgresql_audit_access_report_returns_metadata_only_privileges() -> No
         "can_insert": True,
         "can_update": False,
         "can_delete": False,
+        "can_truncate": False,
     }
     assert connection.audit_rows_selected == 0
 
@@ -307,7 +309,7 @@ def test_postgresql_audit_access_report_returns_metadata_only_privileges() -> No
 def test_postgresql_audit_access_report_rejects_non_boolean_values() -> None:
     """Audit access reports should fail if PostgreSQL returns unexpected shapes."""
     connection = FakeAuditConnection()
-    connection.access_report_row = (True, "yes", True, False, False)
+    connection.access_report_row = (True, "yes", True, False, False, False)
 
     with pytest.raises(PersistenceError, match="select privilege"):
         postgresql_audit_access_report(
@@ -321,10 +323,17 @@ class FakeAuditConnection:
 
     def __init__(self) -> None:
         self.records: list[tuple[object, ...]] = []
-        self.access_report_row: tuple[object, ...] = (True, True, True, False, False)
+        self.access_report_row: tuple[object, ...] = (
+            True,
+            True,
+            True,
+            False,
+            False,
+            False,
+        )
         self.commits = 0
         self.rollbacks = 0
-        self.lock_count = 0
+        self.advisory_lock_count = 0
         self.audit_rows_selected = 0
 
     def __enter__(self) -> FakeAuditConnection:
@@ -361,8 +370,8 @@ class FakeAuditCursor:
         normalized = " ".join(statement.lower().split())
         if normalized.startswith("create table") or normalized.startswith("create index"):
             return
-        if normalized.startswith("lock table audit_ledger_records"):
-            self.connection.lock_count += 1
+        if normalized.startswith("select pg_advisory_xact_lock"):
+            self.connection.advisory_lock_count += 1
             return
         if "from audit_ledger_records order by sequence desc" in normalized:
             self._fetchone = self.connection.records[-1] if self.connection.records else None

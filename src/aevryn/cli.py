@@ -656,7 +656,7 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "Verify PostgreSQL audit table access is append-only and secret-safe. "
             "The configured database role must be able to read and append audit "
-            "records, but must not be able to update or delete them."
+            "records, but must not be able to update, delete, or truncate them."
         ),
         formatter_class=_RawDefaultsHelpFormatter,
     )
@@ -1346,6 +1346,7 @@ def _audit_access_summary(
         "can_insert": _bool_text(cast(bool, report["can_insert"])),
         "can_update": _bool_text(cast(bool, report["can_update"])),
         "can_delete": _bool_text(cast(bool, report["can_delete"])),
+        "can_truncate": _bool_text(cast(bool, report["can_truncate"])),
         "secrets_printed": 0,
         "ok": ok,
     }
@@ -1365,6 +1366,10 @@ def _require_audit_access_contract(report: dict[str, object]) -> None:
     forbidden_true = {
         "can_update": "PostgreSQL audit append-only contract failed: UPDATE privilege is present.",
         "can_delete": "PostgreSQL audit append-only contract failed: DELETE privilege is present.",
+        "can_truncate": (
+            "PostgreSQL audit append-only contract failed: "
+            "TRUNCATE privilege is present."
+        ),
     }
     for key, message in forbidden_true.items():
         if report.get(key) is True:
