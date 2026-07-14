@@ -68,6 +68,8 @@ Restore tests should verify:
 * deleted story behavior
 * no unexpected source-prose exposure in restore logs
 
+The repeatable drill result must be recorded using `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`.
+
 ---
 
 # Disaster Recovery

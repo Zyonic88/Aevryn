@@ -142,3 +142,4 @@ Audit ledger work does not unblock public beta until:
 * security-relevant API and worker events are wired into the ledger
 * deletion events are verified to remain metadata-only
 * ledger integrity verification is part of the release gate
+* restore/audit drill results are recorded with `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
