@@ -324,6 +324,7 @@ def test_project_db_smoke_help_describes_postgresql_smoke(
     assert error.value.code == 0
     assert "metadata-only PostgreSQL Project Database smoke test" in output
     assert "--database-url-env" in output
+    assert "--no-bootstrap" in output
 
 
 def test_project_db_smoke_requires_process_env(
@@ -348,10 +349,15 @@ def test_project_db_smoke_reads_env_without_printing_url(
     database_url = "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
     monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", database_url)
 
-    def fake_smoke(*, database_url: str) -> dict[str, object]:
+    def fake_smoke(
+        *,
+        database_url: str,
+        bootstrap_schema: bool = True,
+    ) -> dict[str, object]:
         assert database_url == (
             "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
         )
+        assert bootstrap_schema is True
         return {
             "adapter": "postgresql",
             "ok": "project_database_postgresql_smoke_completed",
@@ -369,6 +375,37 @@ def test_project_db_smoke_reads_env_without_printing_url(
     assert "secret-db-password" not in captured.err
     assert database_url not in captured.out
     assert database_url not in captured.err
+
+
+def test_project_db_smoke_can_validate_existing_schema_without_bootstrap(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Production runtime smoke checks should be able to avoid DDL."""
+    database_url = "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
+    monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", database_url)
+
+    def fake_smoke(
+        *,
+        database_url: str,
+        bootstrap_schema: bool = True,
+    ) -> dict[str, object]:
+        assert database_url.endswith("/aevryn_dev")
+        assert bootstrap_schema is False
+        return {
+            "adapter": "postgresql",
+            "ok": "project_database_postgresql_smoke_completed",
+        }
+
+    monkeypatch.setattr("aevryn.cli._run_project_database_smoke", fake_smoke)
+
+    exit_code = main(["project-db-smoke", "--no-bootstrap"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "ok=project_database_postgresql_smoke_completed" in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "secret-db-password" not in captured.err
 
 
 def test_storage_smoke_help_describes_r2_storage_check(
