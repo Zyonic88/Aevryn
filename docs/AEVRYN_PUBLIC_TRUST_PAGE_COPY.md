@@ -67,7 +67,7 @@ Aetherra Labs does not train on user stories without explicit opt-in.
 
 Aevryn is designed to avoid putting full manuscripts, full chapters, full AI responses, credentials, tokens, private URLs, or machine-local paths into logs, monitoring, diagnostics, or support workflows.
 
-When you delete a story, Aevryn removes it from active Aevryn-owned storage. Production backups may retain deleted data for a disclosed recovery window. That window must be published before public beta.
+When you delete a story, Aevryn removes it from active Aevryn-owned product storage. The current public-beta wording candidate says encrypted production backups may retain deleted project or story data for up to 30 days for authorized disaster recovery only. Backups are not used for AI training, analytics, support browsing, or product exploration.
 
 Privacy questions should go to privacy@aevryn.ai.
 ```
@@ -117,7 +117,7 @@ Your exports: you own them.
 
 Aevryn is a tool for understanding your work. It is not a claim over your work.
 
-You should be able to export your data and delete your projects. Deleted stories are removed from active Aevryn-owned storage. If encrypted backups retain deleted data for a limited recovery window, that window will be disclosed.
+You should be able to export your data and delete your projects. Deleted stories are removed from active Aevryn-owned product storage. The current public-beta wording candidate says encrypted backups may retain deleted project or story data for up to 30 days for authorized disaster recovery only.
 
 AI training is off by default. Aetherra Labs does not train on user stories without explicit opt-in.
 
@@ -206,7 +206,7 @@ Before these pages can be published for public beta:
 
 * verified contact aliases must be published accurately
 * legal-sensitive pages must be attorney-reviewed
-* production backup retention window must be selected
+* production backup retention window must be verified against the selected public-beta wording candidate
 * AI provider review must be completed or provider-backed extraction must remain disabled
 * production security operations must be configured
 * claims must be checked against the final public-beta deployment

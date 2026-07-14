@@ -42,6 +42,8 @@ Before public beta, Aetherra Labs must define:
 * recovery time objective
 * backup retention window
 
+The selected public-beta backup retention wording candidate is recorded in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
+
 ---
 
 # Encryption

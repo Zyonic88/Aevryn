@@ -45,6 +45,8 @@ describe("public information pages", () => {
 
     expect(screen.getByText("Draft for attorney review before public launch.")).toBeInTheDocument();
     expect(screen.getByText("Privacy questions should go to privacy@aevryn.ai.")).toBeInTheDocument();
+    expect(screen.getByText(/up to 30 days for authorized disaster recovery only/u)).toBeInTheDocument();
+    expect(screen.getByText(/Backups are not used for AI training, analytics/u)).toBeInTheDocument();
   });
 
   it("links public pages from the login screen", () => {

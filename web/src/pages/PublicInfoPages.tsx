@@ -120,7 +120,8 @@ export function PrivacyPage() {
           title: "Deletion And Backups",
           body: [
             "Deletion removes active Aevryn-owned project and story storage.",
-            "Production backups may retain deleted data for a disclosed recovery window. That window must be published before public beta.",
+            "The current public-beta wording candidate says encrypted production backups may retain deleted project or story data for up to 30 days for authorized disaster recovery only.",
+            "Backups are not used for AI training, analytics, support browsing, or product exploration.",
           ],
         },
         {

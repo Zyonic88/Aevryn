@@ -235,6 +235,7 @@ Public beta may proceed only if each residual risk is explicit and accepted by t
 | Output UX polish remains alpha-grade in some tabs | Users may find repeated summaries or dense cards tiring | Continue UX hardening before broad public beta | Accepted for internal RC only |
 | Public legal/trust/support pages need owner and legal review | Public users may see draft wording that is not public-beta approved | Review public-facing site/legal docs before public beta | Blocks public beta |
 | Broader observability policy is not finalized | Hosted logging policy needs more explicit public-beta controls | Define production observability policy and retention boundaries | Blocks public beta |
+| Backup retention wording needs production verification | Users need accurate deletion and backup expectations | Verify the selected public-beta backup wording against final production backup behavior | Blocks public beta |
 | Full backup/restore drill and audit-storage policy remain future readiness work | Recovery confidence is incomplete for public users | Complete public-beta operational readiness before untrusted uploads | Blocks public beta |
 
 If a risk touches story privacy, deletion, account security, provider training, or data ownership, the default decision should be block.
@@ -249,7 +250,7 @@ If a risk touches story privacy, deletion, account security, provider training, 
 | Security | Accepted for internal V2 release-candidate checkpoint; public beta blocked by broader observability and operations policy | Aetherra Labs project owner | 2026-07-14 |
 | Privacy | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public trust/legal/support review is complete | Aetherra Labs project owner | 2026-07-14 |
 | Legal | Not approved for public beta; legal documents require owner and attorney review before public launch | Aetherra Labs project owner | 2026-07-14 |
-| Operations | Accepted for internal V2 release-candidate checkpoint; public beta blocked by backup/restore/audit and observability follow-up | Aetherra Labs project owner | 2026-07-14 |
+| Operations | Accepted for internal V2 release-candidate checkpoint; public beta blocked by backup verification, restore/audit, and observability follow-up | Aetherra Labs project owner | 2026-07-14 |
 | Support | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public support procedure owner review is complete | Aetherra Labs project owner | 2026-07-14 |
 
 If one person holds multiple responsibilities, each responsibility must still be explicitly accepted.
@@ -261,7 +262,7 @@ If one person holds multiple responsibilities, each responsibility must still be
 ```text
 Internal V2 release candidate: Signed off
 Public beta: Blocked
-Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, and initial public page publication passed. Public beta remains blocked by public-facing legal/trust/support review, broader observability policy, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, and initial public page publication passed. Public beta remains blocked by public-facing legal/trust/support review, broader observability policy, backup retention verification, restore/audit readiness, prompt-pack polish, and final public-beta approval.
 ```
 
 ---

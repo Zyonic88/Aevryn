@@ -58,7 +58,9 @@ Aetherra Labs does not train on uploaded stories without explicit opt-in.
 
 Retention principles are defined in `docs/DATA_RETENTION_POLICY.md`.
 
-Deletion removes active Aevryn-owned project/story storage. Production backups may retain deleted data for a disclosed recovery window.
+Deletion removes active Aevryn-owned project/story storage. The current public-beta wording candidate says encrypted production backups may retain deleted project or story data for up to 30 days for authorized disaster recovery only.
+
+Backup retention wording is tracked in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md` and requires legal review before public launch.
 
 ---
 
