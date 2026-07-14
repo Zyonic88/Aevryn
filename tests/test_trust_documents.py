@@ -846,22 +846,35 @@ def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
     document = read_doc("docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md")
 
     required_terms = (
-        "Record type: Release Candidate Run Template",
-        "Status: Not run",
+        "Record type: Release Candidate Run Record",
+        "Status: Completed",
+        "Internal release candidate: Signed off",
         "Public beta: Blocked",
+        "rc-v2-2026-07-14-001",
+        "2026-07-14",
+        "db19d5b8aa2953db82d051bef9c45385f25ef728",
+        "Hosted production-like environment",
         "Release Candidate Run ID",
         "Automated Gate Record",
         "Backend tests",
         "Repository secret scan",
         "Production config check",
+        "Performance regression check",
+        "Accepted residual risk",
         "Product Smoke Record",
         "The smoke path must not require CLI knowledge from the tester.",
+        "Delete project",
+        "Project data is removed from active product surfaces",
         "Recovery Record",
         "Can the user continue?",
+        "Can the user continue? Yes for the checked release-candidate path.",
         "Privacy And Trust Record",
         "full manuscripts",
         "full provider prompts",
+        "Provider failures",
         "Production-Like Smoke Record",
+        "Worker processing",
+        "Hosted ten-chapter retry succeeded",
         "Accepted Residual Risks",
         "If a risk touches story privacy",
         "Signoff",
@@ -871,7 +884,9 @@ def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
         "Legal",
         "Operations",
         "Support",
-        "Release candidate run has not been completed.",
+        "Internal V2 release candidate: Signed off",
+        "Public beta remains blocked by public-facing legal/trust/support publication",
+        "The release-candidate pass is complete, privacy-preserving, repeatable",
     )
 
     for term in required_terms:
@@ -957,9 +972,12 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
             "Export monitoring: export availability yes; export count 1; "
             "recent event recorded Export Created."
         ),
+        "Cleanup: passed. Project deletion removed the smoke project from the dashboard",
         "PASSED for hosted import processing workflow.",
         "PASSED for export creation from the latest canon snapshot.",
-        "OPEN for final release-candidate signoff.",
+        "PASSED for smoke project deletion cleanup.",
+        "PASSED for internal release-candidate signoff.",
+        "OPEN for public-beta approval.",
         "Hosted Log Review",
         "Sample size: 200 recent service-log lines",
         "Status: Passed with metadata-only access-log finding",
@@ -973,11 +991,13 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Passed locally",
         (
             "hosted import processing, monitoring workflow status, hosted export "
-            "creation, and bounded hosted log review have passed"
+            "creation, bounded hosted log review, smoke project cleanup, and "
+            "internal release-candidate signoff have passed"
         ),
         (
-            "Optional smoke cleanup, broader observability policy, and final "
-            "release-candidate signoff have not passed."
+            "Public beta remains blocked by public-facing legal/trust/support "
+            "publication, broader observability policy, backup/restore/audit readiness, "
+            "prompt-pack polish, and final public-beta approval."
         ),
     )
 
