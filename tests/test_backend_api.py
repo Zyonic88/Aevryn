@@ -1702,6 +1702,37 @@ def test_create_app_from_env_configures_api_keys() -> None:
     assert response.status_code == 200
 
 
+def test_create_app_from_env_configures_worker_api_key_for_worker_route() -> None:
+    """Environment worker key should authorize only the internal worker route."""
+    client = TestClient(
+        create_app_from_env(
+            {
+                API_KEYS_ENV: "deployment-key",
+                WORKER_API_KEY_ENV: "worker-key",
+            }
+        )
+    )
+
+    worker_response = client.post(
+        "/v2/workers/process",
+        headers={"X-Aevryn-API-Key": "worker-key"},
+        json={
+            "started_at": "2026-06-27T00:00:00Z",
+            "finished_at": "2026-06-27T00:00:00Z",
+            "max_jobs": 1,
+        },
+    )
+    workflow_response = client.post(
+        "/v2/extraction-prompts",
+        headers={"X-Aevryn-API-Key": "worker-key"},
+        json={},
+    )
+
+    assert worker_response.status_code != 403
+    assert workflow_response.status_code == 403
+    assert workflow_response.json()["error"] == "invalid_api_key"
+
+
 def test_worker_extractor_env_defaults_to_demo_mode() -> None:
     """Provider-backed extraction should not be enabled implicitly."""
     assert _worker_extractor_from_env({}) is None
