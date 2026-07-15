@@ -221,6 +221,31 @@ Recommended public-beta runner shape:
 * The browser never calls `/v2/workers/process` and never receives worker
   credentials.
 
+Current alpha wiring:
+
+* Cloud Run service: `aevryn-api`
+* Cloud Run Job: `aevryn-worker-drain`
+* Cloud Scheduler job: `aevryn-worker-drain-every-2-min`
+* Schedule: every two minutes, `America/Denver`
+* Job command: `python -m aevryn.cli worker-drain --max-jobs 1 --timeout-seconds 180`
+* Job environment: `AEVRYN_PUBLIC_API_BASE_URL=https://api.aevryn.ai`
+* Job secret: `AEVRYN_WORKER_API_KEY=AEVRYN_WORKER_API_KEY:latest`
+* Scheduler authentication: project compute service account with
+  `roles/run.invoker` scoped to the `aevryn-worker-drain` job.
+
+Verified alpha smoke result:
+
+```text
+status=200
+claimed_jobs=0
+succeeded_jobs=0
+failed_jobs=0
+ok=hosted_worker_drain_completed
+```
+
+This smoke output is metadata-only. It must not include worker credentials,
+source prose, AI payloads, or user manuscript content.
+
 Secret-backed Cloud Run variables:
 
 ```text
