@@ -7,6 +7,9 @@ import base64
 import json
 import os
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -170,6 +173,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "storage-smoke":
             _handle_storage_smoke()
             return 0
+        if command == "worker-drain":
+            _handle_worker_drain(args)
+            return 0
         if command == "production-config-check":
             _handle_production_config_check()
             return 0
@@ -262,7 +268,8 @@ def _build_parser() -> argparse.ArgumentParser:
             "  aevryn api --host 127.0.0.1 --port 8000 "
             "--allowed-origin http://localhost:5173\n"
             "  aevryn project-db-smoke\n"
-            "  aevryn storage-smoke"
+            "  aevryn storage-smoke\n"
+            "  aevryn worker-drain"
         ),
         formatter_class=_RawDefaultsHelpFormatter,
     )
@@ -610,6 +617,39 @@ def _build_parser() -> argparse.ArgumentParser:
             "storage secrets."
         ),
         formatter_class=_RawDefaultsHelpFormatter,
+    )
+
+    worker_drain_parser = subcommands.add_parser(
+        "worker-drain",
+        help="Drain queued worker jobs through the hosted API boundary.",
+        description=(
+            "Drain queued worker jobs through the hosted API boundary. "
+            "Reads AEVRYN_PUBLIC_API_BASE_URL and AEVRYN_WORKER_API_KEY from "
+            "process environment variables and never prints the worker key."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    worker_drain_parser.add_argument(
+        "--api-url-env",
+        default=PUBLIC_API_BASE_URL_ENV,
+        help="Process environment variable containing the public API base URL.",
+    )
+    worker_drain_parser.add_argument(
+        "--worker-key-env",
+        default=WORKER_API_KEY_ENV,
+        help="Process environment variable containing the worker API key.",
+    )
+    worker_drain_parser.add_argument(
+        "--max-jobs",
+        type=int,
+        default=1,
+        help="Maximum number of queued jobs to drain in this run.",
+    )
+    worker_drain_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=180.0,
+        help="HTTP timeout for the worker drain request.",
     )
 
     subcommands.add_parser(
@@ -1161,6 +1201,31 @@ def _handle_storage_smoke() -> None:
         print(f"{key}={value}")
 
 
+def _handle_worker_drain(args: argparse.Namespace) -> None:
+    """Handle the worker-drain command."""
+    api_url_env = cast(str, args.api_url_env).strip()
+    worker_key_env = cast(str, args.worker_key_env).strip()
+    max_jobs = cast(int, args.max_jobs)
+    timeout_seconds = cast(float, args.timeout_seconds)
+    if not api_url_env:
+        raise ValueError("--api-url-env cannot be blank.")
+    if not worker_key_env:
+        raise ValueError("--worker-key-env cannot be blank.")
+    if max_jobs < 1:
+        raise ValueError("--max-jobs must be a positive integer.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+
+    summary = _run_hosted_worker_drain(
+        api_url=_required_process_env_value(api_url_env),
+        worker_api_key=_required_process_env_value(worker_key_env),
+        max_jobs=max_jobs,
+        timeout_seconds=timeout_seconds,
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_production_config_check() -> None:
     """Handle the production-config-check command."""
     summary = _run_production_config_check(dict(os.environ))
@@ -1657,6 +1722,80 @@ def _run_provider_api_workflow_smoke(
         "outputs_contains_source_sentence": "Mira opened the brass gate" in outputs.text,
         "ok": "provider_api_workflow_synthetic_completed",
     }
+
+
+def _run_hosted_worker_drain(
+    *,
+    api_url: str,
+    worker_api_key: str,
+    max_jobs: int,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Drain hosted worker jobs through the production API route."""
+    normalized_api_url = api_url.rstrip("/")
+    parsed_api_url = urllib.parse.urlsplit(normalized_api_url)
+    if parsed_api_url.scheme != "https" or not parsed_api_url.netloc:
+        raise ValueError("AEVRYN_PUBLIC_API_BASE_URL must use https:// for worker-drain.")
+    if not worker_api_key.strip():
+        raise ValueError("AEVRYN_WORKER_API_KEY is required for worker-drain.")
+    if max_jobs < 1:
+        raise ValueError("--max-jobs must be a positive integer.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    payload = json.dumps(
+        {
+            "started_at": now,
+            "finished_at": now,
+            "max_jobs": max_jobs,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        f"{normalized_api_url}/v2/workers/process",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "X-Aevryn-API-Key": worker_api_key,
+        },
+        method="POST",
+    )
+    try:
+        # Bandit B310: URL scheme and host are validated above; this CLI is only for the
+        # configured hosted API boundary and never accepts arbitrary URL schemes.
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:  # nosec B310
+            response_payload = json.loads(response.read().decode("utf-8"))
+            status_code = response.status
+    except urllib.error.HTTPError as error:
+        detail = _hosted_worker_error_detail(error)
+        raise ValueError(f"worker-drain request failed with HTTP {error.code}: {detail}") from error
+    except urllib.error.URLError as error:
+        raise ValueError("worker-drain request failed before receiving a response.") from error
+
+    return {
+        "status": status_code,
+        "claimed_jobs": int(response_payload["claimed_jobs"]),
+        "succeeded_jobs": int(response_payload["succeeded_jobs"]),
+        "failed_jobs": int(response_payload["failed_jobs"]),
+        "ok": "hosted_worker_drain_completed",
+    }
+
+
+def _hosted_worker_error_detail(error: urllib.error.HTTPError) -> str:
+    """Return a bounded worker-drain error detail without exposing credentials."""
+    try:
+        payload = json.loads(error.read().decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return "request_failed"
+    detail = str(payload.get("error") or payload.get("detail") or "request_failed")
+    safe_detail = "".join(
+        character
+        for character in detail
+        if character.isalnum() or character in {"_", "-", ":", " "}
+    ).strip()
+    return (safe_detail or "request_failed")[:160]
+
 
 def _require_response_ok(status_code: int, text: str, label: str) -> None:
     """Raise a compact smoke-test error for failed API calls."""

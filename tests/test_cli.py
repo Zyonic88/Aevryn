@@ -4,6 +4,8 @@ import json
 import os
 import re
 import shutil
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -489,6 +491,103 @@ def test_storage_smoke_reads_env_without_printing_credentials(
     assert "secret-r2-secret-key" not in captured.out
     assert "secret-r2-access-key" not in captured.err
     assert "secret-r2-secret-key" not in captured.err
+
+
+def test_worker_drain_help_describes_managed_runner(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Worker drain help should describe the hosted worker runner contract."""
+    with pytest.raises(SystemExit) as error:
+        main(["worker-drain", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Drain queued worker jobs through the hosted API boundary" in output
+    assert "--api-url-env" in output
+    assert "--worker-key-env" in output
+    assert "--max-jobs" in output
+
+
+def test_worker_drain_requires_process_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Worker drain should fail before network access when env is missing."""
+    monkeypatch.delenv("AEVRYN_PUBLIC_API_BASE_URL", raising=False)
+    monkeypatch.delenv("AEVRYN_WORKER_API_KEY", raising=False)
+
+    exit_code = main(["worker-drain"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_PUBLIC_API_BASE_URL is required" in captured.err
+
+
+def test_worker_drain_calls_hosted_api_without_printing_key(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Worker drain should use the worker key without echoing it."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.setenv("AEVRYN_WORKER_API_KEY", "secret-worker-key")
+    captured_requests: list[urllib.request.Request] = []
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return json.dumps(
+                {
+                    "claimed_jobs": 1,
+                    "succeeded_jobs": 1,
+                    "failed_jobs": 0,
+                }
+            ).encode("utf-8")
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        *,
+        timeout: float,
+    ) -> FakeResponse:
+        captured_requests.append(request)
+        assert timeout == 12.5
+        return FakeResponse()
+
+    monkeypatch.setattr("aevryn.cli.urllib.request.urlopen", fake_urlopen)
+
+    exit_code = main(
+        [
+            "worker-drain",
+            "--max-jobs",
+            "3",
+            "--timeout-seconds",
+            "12.5",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "claimed_jobs=1" in captured.out
+    assert "succeeded_jobs=1" in captured.out
+    assert "ok=hosted_worker_drain_completed" in captured.out
+    assert "secret-worker-key" not in captured.out
+    assert "secret-worker-key" not in captured.err
+    request = captured_requests[0]
+    assert request.full_url == "https://api.aevryn.ai/v2/workers/process"
+    assert request.get_method() == "POST"
+    assert request.get_header("X-aevryn-api-key") == "secret-worker-key"
+    request_data = request.data
+    assert isinstance(request_data, bytes)
+    payload = json.loads(request_data.decode("utf-8"))
+    assert payload["max_jobs"] == 3
+    assert payload["started_at"].endswith("Z")
+    assert payload["finished_at"].endswith("Z")
 
 
 def test_production_config_check_help_describes_metadata_only_contract(
