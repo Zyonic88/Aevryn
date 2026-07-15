@@ -200,6 +200,27 @@ Managed worker runners should call `POST /v2/workers/process` with
 `AEVRYN_WORKER_API_KEY`; the worker key is route-scoped and does not authorize
 general workflow routes.
 
+The container also exposes a production-safe worker runner command:
+
+```powershell
+python -m aevryn.cli worker-drain --max-jobs 1
+```
+
+The command reads `AEVRYN_PUBLIC_API_BASE_URL` and `AEVRYN_WORKER_API_KEY` from
+the runtime environment, calls the hosted worker route, and prints only worker
+counts. It must be run by managed infrastructure with deployment secrets
+injected, not by placing worker credentials in scheduler payloads, docs, logs,
+or frontend code.
+
+Recommended public-beta runner shape:
+
+* Cloud Run service owns the public API.
+* Cloud Run Job runs `python -m aevryn.cli worker-drain --max-jobs 1`.
+* Secret Manager injects `AEVRYN_WORKER_API_KEY` into the job.
+* Cloud Scheduler triggers the Cloud Run Job on a short interval.
+* The browser never calls `/v2/workers/process` and never receives worker
+  credentials.
+
 Secret-backed Cloud Run variables:
 
 ```text
