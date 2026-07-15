@@ -3130,7 +3130,11 @@ def _project_status_output(
         run_count=len(runs),
         latest_import=_project_status_import(latest_import) if latest_import else None,
         latest_engine_run=_project_status_run(latest_run) if latest_run else None,
-        worker=_project_status_worker(background_job_queue),
+        worker=_project_status_worker(
+            background_job_queue,
+            project_id=project_id,
+            latest_run=latest_run,
+        ),
         snapshots=ProjectStatusSnapshots(
             available=bool(snapshots),
             count=len(snapshots),
@@ -4381,27 +4385,40 @@ def _project_status_run(run: EngineRunRecord) -> ProjectStatusRun:
 
 def _project_status_worker(
     background_job_queue: BackgroundJobQueue | None,
+    *,
+    project_id: str,
+    latest_run: EngineRunRecord | None,
 ) -> ProjectStatusWorker:
     """Return metadata-only worker and job queue state."""
     if background_job_queue is None:
         return ProjectStatusWorker(state="unconfigured")
-    snapshot = background_job_queue.snapshot()
-    if snapshot.running_jobs > 0:
+    jobs = tuple(
+        job for job in background_job_queue.list_jobs() if job.project_id == project_id
+    )
+    queued_jobs = sum(1 for job in jobs if job.status == "queued")
+    running_jobs = sum(1 for job in jobs if job.status == "running")
+    succeeded_jobs = sum(1 for job in jobs if job.status == "succeeded")
+    failed_jobs = sum(1 for job in jobs if job.status == "failed")
+    next_job_id = next(
+        (job.job_id for job in jobs if job.status == "queued"),
+        "",
+    )
+    if running_jobs > 0:
         state = "running"
-    elif snapshot.queued_jobs > 0:
+    elif queued_jobs > 0:
         state = "queued"
-    elif snapshot.failed_jobs > 0:
+    elif latest_run is not None and latest_run.status == "failed":
         state = "failed"
     else:
         state = "idle"
     return ProjectStatusWorker(
         state=state,
-        total_jobs=snapshot.total_jobs,
-        queued_jobs=snapshot.queued_jobs,
-        running_jobs=snapshot.running_jobs,
-        succeeded_jobs=snapshot.succeeded_jobs,
-        failed_jobs=snapshot.failed_jobs,
-        next_job_id=snapshot.next_job_id,
+        total_jobs=len(jobs),
+        queued_jobs=queued_jobs,
+        running_jobs=running_jobs,
+        succeeded_jobs=succeeded_jobs,
+        failed_jobs=failed_jobs,
+        next_job_id=next_job_id,
     )
 
 
