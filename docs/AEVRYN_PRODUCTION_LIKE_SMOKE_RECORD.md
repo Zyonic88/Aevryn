@@ -785,6 +785,8 @@ Verify hosted retention and bounded-log behavior against the production observab
 Run `provider-config-check` against the hosted production-like environment before provider smoke or final signoff.
 Run `observability-config-check` against the hosted production-like environment before the final bounded hosted log review.
 Provision or switch Cloud Run to a restricted PostgreSQL application role that preserves audit SELECT/INSERT but removes audit UPDATE/DELETE privileges.
+Use `docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md` for the secret-safe
+runtime role rotation and hosted audit access verification sequence.
 Complete public-facing legal, trust, and support publication before public beta.
 Complete backup/restore/audit readiness before public beta.
 Continue prompt-pack and output UX polish before public beta positioning.

@@ -227,6 +227,8 @@ Hosted `aevryn audit-ledger-verify` passed with metadata-only output on
 2026-07-14. Hosted `aevryn audit-access-report` passed with metadata-only
 output, but hosted `aevryn audit-access-verify` failed because the current
 database role has UPDATE and DELETE privileges on `audit_ledger_records`.
+The restricted runtime role remediation runbook is
+`docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md`.
 
 Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, restricted audit database role provisioning, hosted audit access verification review, and dated restore/audit drill completion remain open.
 ```

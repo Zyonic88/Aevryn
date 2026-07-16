@@ -104,6 +104,12 @@ Reviewed SQL template:
 docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql
 ```
 
+Operational runbook:
+
+```text
+docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md
+```
+
 1. Confirm the current schema exists and the hosted audit ledger verifies.
 2. Create or update the restricted runtime database role through a reviewed migration or Supabase SQL editor session.
 3. Grant the runtime role only the privileges required for normal application behavior.

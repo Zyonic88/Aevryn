@@ -1298,10 +1298,12 @@ def test_database_privilege_template_preserves_append_only_audit_contract() -> N
     """Runtime privilege SQL should keep audit history append-only."""
     document = read_doc("docs/AEVRYN_DATABASE_PRIVILEGE_HARDENING.md")
     template = read_doc("docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql")
+    runbook = read_doc("docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md")
 
     required_document_terms = (
         "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
         "docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql",
+        "docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md",
         "audit_ledger_records TRUNCATE: false",
         "audit_ledger_records TABLE OWNER: false",
         "is_table_owner=false",
@@ -1328,6 +1330,23 @@ def test_database_privilege_template_preserves_append_only_audit_contract() -> N
 
     for term in required_template_terms:
         assert term in template
+
+    required_runbook_terms = (
+        "Do not use the administrative `postgres` connection string in Cloud Run.",
+        "Do not use the Supabase service role key as the PostgreSQL runtime password.",
+        "AEVRYN_PROJECT_DATABASE_URL",
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
+        "can_update=false",
+        "can_delete=false",
+        "can_truncate=false",
+        "is_table_owner=false",
+        "ok=audit_access_append_only_verified",
+        "Do not weaken the command or tests.",
+        "No source prose, credentials, storage URLs, or full AI payloads",
+    )
+
+    for term in required_runbook_terms:
+        assert term in runbook
 
     forbidden_terms = (
         "postgresql://",
