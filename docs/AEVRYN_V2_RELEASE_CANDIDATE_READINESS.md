@@ -209,6 +209,7 @@ Required before public beta:
 * production audit storage selected
 * audit retention selected
 * audit access controls documented
+* hosted audit access verification passes with a restricted runtime database role
 
 Source docs:
 
@@ -220,6 +221,19 @@ Source docs:
 Gate tracking:
 
 * `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`
+
+Operational command sequence:
+
+```powershell
+python -m aevryn.cli production-config-check
+python -m aevryn.cli audit-ledger-verify
+python -m aevryn.cli audit-access-report
+python -m aevryn.cli audit-access-verify
+```
+
+`audit-access-verify` must pass before public beta. If it fails because the
+runtime database role can update, delete, or truncate `audit_ledger_records`,
+provision a restricted runtime role and rerun the hosted verification.
 
 Acceptance:
 

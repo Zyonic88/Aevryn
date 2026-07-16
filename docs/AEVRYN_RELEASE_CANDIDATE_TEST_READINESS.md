@@ -142,12 +142,17 @@ Before public beta, Aevryn needs a production-like deployment smoke test that pr
 * storage references resolve inside project ownership boundaries
 * `aevryn production-config-check` passes without printing secrets
 * `aevryn audit-ledger-verify` passes without printing secrets
-* `aevryn audit-access-verify` passes without printing secrets
 * `aevryn audit-access-report` passes without printing secrets
+* `aevryn audit-access-verify` passes without printing secrets
 * worker processing can complete
 * monitoring observes workflow state
 * export preview works
 * logs remain metadata-only
+
+Run audit access reporting before audit access verification so the release
+record captures the metadata-only privilege summary even when verification fails
+closed. Public beta remains blocked if the configured runtime role can update,
+delete, or truncate audit rows.
 
 This does not require public launch, but it must run outside the purely local private-alpha path.
 

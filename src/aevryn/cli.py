@@ -658,7 +658,7 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "Check production startup configuration without printing secrets. "
             "This verifies the fail-closed production contract and reports the "
-            "current managed-identity blocker as metadata."
+            "public-beta approval boundary as metadata."
         ),
         formatter_class=_RawDefaultsHelpFormatter,
     )
