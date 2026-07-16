@@ -758,6 +758,7 @@ A successful production-like smoke must record:
 | Check | Expected Result | Status |
 | --- | --- | --- |
 | Production config check | `startup_contract=ready`, `secrets_printed=0` | Passed locally |
+| Provider config check | explicit provider mode, key presence, model, timeout, response-size boundary, no provider keys printed | Required before final public-beta smoke signoff |
 | Observability config check | hosted logs/monitoring, bounded retention, metadata-only logging, security alerts | Required before final public-beta smoke signoff |
 | PostgreSQL smoke | create/read/delete synthetic metadata record succeeds | Passed locally |
 | R2 storage smoke | write/read/delete tiny synthetic private object succeeds | Passed locally |
@@ -781,6 +782,7 @@ Complete the remaining release-candidate readiness checks that are outside the b
 
 ```text
 Verify hosted retention and bounded-log behavior against the production observability policy before public beta.
+Run `provider-config-check` against the hosted production-like environment before provider smoke or final signoff.
 Run `observability-config-check` against the hosted production-like environment before the final bounded hosted log review.
 Provision or switch Cloud Run to a restricted PostgreSQL application role that preserves audit SELECT/INSERT but removes audit UPDATE/DELETE privileges.
 Complete public-facing legal, trust, and support publication before public beta.
@@ -793,6 +795,7 @@ If local production-style smoke must be repeated before final signoff, use metad
 ```powershell
 $env:PYTHONPATH="src"
 python -m aevryn.cli production-config-check
+python -m aevryn.cli provider-config-check
 python -m aevryn.cli observability-config-check
 python -m aevryn.cli project-db-smoke
 python -m aevryn.cli storage-smoke

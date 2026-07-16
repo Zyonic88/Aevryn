@@ -48,6 +48,7 @@ Current posture:
 * external AI extraction is not the default worker path
 * provider-backed extraction must be explicitly configured
 * missing provider key or model configuration fails closed
+* provider configuration can be checked without printing provider keys
 * provider smoke tests use synthetic text only
 * provider failures must not log source prose or full provider responses
 * provider extraction proposes candidates; it does not own Canon truth
@@ -57,6 +58,17 @@ This does not approve provider-backed extraction for public beta.
 OpenAI is currently supported as an internal-alpha candidate provider only. Public beta approval remains blocked until provider terms, model configuration, retention, training behavior, disclosure, and release-gate coverage are reviewed and recorded.
 
 The disclosure candidate names OpenAI as the current provider candidate, explains the data boundary, and requires provider-backed extraction to remain disabled for public beta unless no-training posture and retention behavior can be verified and disclosed accurately.
+
+Run this metadata-only configuration check before provider smoke or public-beta signoff:
+
+```powershell
+python -m aevryn.cli provider-config-check
+```
+
+The command verifies explicit provider mode, OpenAI key presence, model, timeout,
+and response-size boundary without printing secrets. It does not approve
+provider-backed extraction for public beta and does not replace owner, legal, or
+provider review.
 
 ---
 
@@ -190,6 +202,7 @@ Current implementation progress:
 ```text
 docs/AEVRYN_AI_PROVIDER_REVIEW.md defines the provider review checklist, OpenAI alpha-candidate status, data-sent boundary, logging boundary, training/retention decision, disclosure requirements, and approval states.
 docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md records the selected public-beta disclosure candidate.
+`aevryn provider-config-check` verifies provider configuration metadata without printing provider keys.
 Provider terms review, production model selection, provider verification, and public-beta approval remain open.
 ```
 

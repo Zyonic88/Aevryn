@@ -17,6 +17,7 @@ from aevryn.cli import (
     _run_audit_ledger_verify,
     _run_observability_config_check,
     _run_production_config_check,
+    _run_provider_config_check,
     main,
 )
 from aevryn.importing import StoryImporter
@@ -314,6 +315,110 @@ def test_provider_smoke_reads_env_file_without_printing_key(
     assert "ok=provider_api_workflow_synthetic_completed" in captured.out
     assert "secret-provider-key" not in captured.out
     assert "secret-provider-key" not in captured.err
+
+
+def test_provider_config_check_help_describes_provider_review_boundary(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Provider config check help should not imply public-beta approval."""
+    with pytest.raises(SystemExit) as error:
+        main(["provider-config-check", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "provider extraction configuration" in output
+    assert "does not approve provider use for public beta" in output
+
+
+def test_provider_config_check_reports_metadata_only_contract(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Provider config check should print provider metadata and no keys."""
+    env_values = {
+        "AEVRYN_DEPLOYMENT_ENV": "production",
+        "AEVRYN_EXTRACTION_MODE": "openai",
+        "AEVRYN_OPENAI_API_KEY": "secret-openai-key",
+        "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+        "AEVRYN_OPENAI_TIMEOUT_SECONDS": "90",
+        "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "1048576",
+    }
+    for key, value in env_values.items():
+        monkeypatch.setenv(key, value)
+
+    exit_code = main(["provider-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "deployment_env=production" in captured.out
+    assert "provider=openai" in captured.out
+    assert "extraction_mode=openai" in captured.out
+    assert "model=gpt-5.4-mini" in captured.out
+    assert "timeout_seconds=90.0" in captured.out
+    assert "max_response_bytes=1048576" in captured.out
+    assert "provider_review=required" in captured.out
+    assert "public_beta=blocked_until_provider_review" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=provider_config_contract_checked" in captured.out
+    assert "secret-openai-key" not in captured.out
+    assert "secret-openai-key" not in captured.err
+
+
+def test_provider_config_check_rejects_demo_mode() -> None:
+    """Production provider config should reject demo extraction mode."""
+    with pytest.raises(ValueError, match="AEVRYN_EXTRACTION_MODE=openai"):
+        _run_provider_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_EXTRACTION_MODE": "demo",
+                "AEVRYN_OPENAI_API_KEY": "secret-openai-key",
+                "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+                "AEVRYN_OPENAI_TIMEOUT_SECONDS": "90",
+                "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "1048576",
+            }
+        )
+
+
+def test_provider_config_check_requires_provider_key_without_printing_it() -> None:
+    """Provider config should fail before use when the key is absent."""
+    with pytest.raises(ValueError, match="AEVRYN_OPENAI_API_KEY") as error:
+        _run_provider_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_EXTRACTION_MODE": "openai",
+                "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+                "AEVRYN_OPENAI_TIMEOUT_SECONDS": "90",
+                "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "1048576",
+            }
+        )
+    assert "secret" not in str(error.value).lower()
+
+
+def test_provider_config_check_rejects_invalid_provider_bounds() -> None:
+    """Provider timeout and response-size limits should fail closed."""
+    with pytest.raises(ValueError, match="AEVRYN_OPENAI_TIMEOUT_SECONDS"):
+        _run_provider_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_EXTRACTION_MODE": "openai",
+                "AEVRYN_OPENAI_API_KEY": "secret-openai-key",
+                "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+                "AEVRYN_OPENAI_TIMEOUT_SECONDS": "0",
+                "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "1048576",
+            }
+        )
+
+    with pytest.raises(ValueError, match="AEVRYN_OPENAI_MAX_RESPONSE_BYTES"):
+        _run_provider_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_EXTRACTION_MODE": "openai",
+                "AEVRYN_OPENAI_API_KEY": "secret-openai-key",
+                "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+                "AEVRYN_OPENAI_TIMEOUT_SECONDS": "90",
+                "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "-1",
+            }
+        )
 
 
 def test_project_db_smoke_help_describes_postgresql_smoke(
