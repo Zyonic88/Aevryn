@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,6 +37,20 @@ const capabilitiesPayload = {
   export_capabilities: [],
   platform_limits: [],
 };
+
+const validExportAiResponseText = "[]";
+
+function fillExportDeveloperPreviewFields(
+  sourceText = "Chapter 1\nMark carried a dagger.",
+  aiResponseText = validExportAiResponseText,
+) {
+  fireEvent.change(screen.getByLabelText("Source text"), {
+    target: { value: sourceText },
+  });
+  fireEvent.change(screen.getByLabelText("AI response JSON"), {
+    target: { value: aiResponseText },
+  });
+}
 const sourceFormatsPayload = {
   supported: [
     {
@@ -1524,6 +1538,7 @@ describe("App shell routing", () => {
       "MARKDOWN",
     );
     await user.click(screen.getByText("Developer preview"));
+    fillExportDeveloperPreviewFields();
     await user.click(await screen.findByRole("button", { name: "Preview export" }));
     expect(
       await screen.findByRole("heading", { name: "source_alpha_production_pack.md" }),
@@ -3850,8 +3865,11 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Exports" })).toBeInTheDocument();
     await user.click(screen.getByText("Developer preview"));
-    await user.clear(screen.getByLabelText("Source text"));
-    await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
+    expect(
+      screen.getByText(/Developer preview requires real source text and extraction JSON/u),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Preview export" })).toBeDisabled();
+    fillExportDeveloperPreviewFields();
     await user.selectOptions(screen.getByLabelText("Export"), "production_pack:markdown");
     await user.clear(screen.getByLabelText("Character IDs"));
     await user.type(screen.getByLabelText("Character IDs"), "character_mark");
@@ -3926,6 +3944,7 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Exports" })).toBeInTheDocument();
     await user.click(screen.getByText("Developer preview"));
+    fillExportDeveloperPreviewFields();
     await user.click(screen.getByRole("button", { name: "Preview export" }));
     expect(
       await screen.findByRole("heading", { name: "source_alpha_production_pack.md" }),
@@ -3981,6 +4000,7 @@ describe("App shell routing", () => {
 
     await screen.findByRole("heading", { name: "Exports" });
     await user.click(screen.getByText("Developer preview"));
+    fillExportDeveloperPreviewFields();
     await user.click(screen.getByRole("button", { name: "Preview export" }));
     expect(
       await screen.findByRole("heading", { name: "source_alpha_production_pack.md" }),
@@ -4031,6 +4051,7 @@ describe("App shell routing", () => {
 
     await screen.findByRole("heading", { name: "Exports" });
     await user.click(screen.getByText("Developer preview"));
+    fillExportDeveloperPreviewFields();
     await user.click(screen.getByRole("button", { name: "Preview export" }));
     expect(await screen.findByText("Export preview failed.")).toBeInTheDocument();
 
