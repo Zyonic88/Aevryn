@@ -769,6 +769,7 @@ Version 3 begins only after the Version 2 platform lets creators use Aevryn with
 * Publishing Engine
 * Payments
 * Subscriptions
+* Credit-based paid production usage
 * Teams
 * Cloud Collaboration
 
@@ -779,6 +780,10 @@ Version 3 begins only after the Version 2 platform lets creators use Aevryn with
 The Canon Engine remains the source of truth.
 
 No production, collaboration, or monetization system may replace Canon.
+
+Future monetization should follow the principle documented in
+`docs/AEVRYN_FUTURE_IDEAS.md`: subscriptions pay for platform access, while
+credits are reserved for expensive media generation and production batching.
 
 ---
 
