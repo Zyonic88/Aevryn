@@ -507,6 +507,58 @@ def test_presentation_engine_dedupes_and_limits_prompt_lines() -> None:
     assert view.image_prompt.items[0].endswith("...")
 
 
+def test_presentation_engine_keeps_prompt_safeguards_visible() -> None:
+    """Prompt presentation must not trim production safety guidance."""
+    _card, context, analysis, pack = build_outputs()
+    engine = PresentationEngine()
+    scene = engine.scene_sheet(context=context, analysis=analysis)
+
+    view = engine.production_pack(pack=pack, scene=scene)
+    prompt_lines = view.image_prompt.items
+
+    assert any("Extra characters" in line for line in prompt_lines)
+    assert any("Do not render names" in line for line in prompt_lines)
+    assert any("Do not turn department" in line for line in prompt_lines)
+    assert any("Style must not override accepted Canon" in line for line in prompt_lines)
+
+
+def test_presentation_engine_preserves_prompt_safeguards_when_prompt_is_long() -> None:
+    """Long prompt presentation keeps Canon guardrails instead of only early filler."""
+    _card, context, analysis, pack = build_outputs()
+    filler_lines = [f"- Production detail {index:03d}" for index in range(80)]
+    prompt_bundle = PromptBundle(
+        image_prompt="\n".join(
+            [
+                "Image generation task.",
+                *filler_lines,
+                (
+                    "- Do not add facts, characters, items, locations, or "
+                    "relationships without evidence."
+                ),
+                (
+                    "- Do not render names, entity IDs, project labels, scene titles, "
+                    "prompt headings, captions, subtitles, or UI panels."
+                ),
+                "- Style must not override accepted Canon.",
+            ]
+        ),
+        narration_prompt=pack.prompt_bundle.narration_prompt,
+        camera_prompt=pack.prompt_bundle.camera_prompt,
+        animation_prompt=pack.prompt_bundle.animation_prompt,
+    )
+    compact_pack = replace(pack, prompt_bundle=prompt_bundle)
+    engine = PresentationEngine()
+    scene = engine.scene_sheet(context=context, analysis=analysis)
+
+    view = engine.production_pack(pack=compact_pack, scene=scene)
+    prompt_lines = view.image_prompt.items
+
+    assert len(prompt_lines) == 48
+    assert any("without evidence" in line for line in prompt_lines)
+    assert any("Do not render names" in line for line in prompt_lines)
+    assert any("Style must not override accepted Canon" in line for line in prompt_lines)
+
+
 def test_presentation_engine_removes_prompt_structural_placeholders() -> None:
     """Prompt presentation should not expose raw prompt section placeholders."""
     _card, context, analysis, pack = build_outputs()

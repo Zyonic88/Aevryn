@@ -186,6 +186,97 @@ This engine consumes Canon-backed scene understanding and never modifies Canon i
 
 ---
 
+# Idea 004 - Production Batching And Fair Usage Credits
+
+## Summary
+
+Allow creators to batch expensive production work such as image generation, video generation, voice synthesis, narration rendering, and multi-chapter media workflows.
+
+This is future paid production scope.
+
+It does not belong to Version 2 public beta.
+
+## Product Boundary
+
+Version 2 may expose scene-level Prompt Packs.
+
+Version 2 should not generate images, videos, voices, or paid media outputs inside Aevryn.
+
+Future production batching may allow creators to run:
+
+* one scene
+* one chapter
+* selected scenes
+* selected chapters
+* up to a configured batch limit
+* full production workflows when cost controls exist
+
+## Monetization Principle
+
+```text
+Subscription pays for access.
+Credits pay for expensive generation.
+```
+
+Subscriptions should cover Aevryn's core intelligence and platform workflow:
+
+* projects
+* imports
+* Canon processing
+* character sheets
+* world sheets
+* timeline views
+* scene sheets
+* prompt packs
+* normal exports
+* reasonable storage limits
+
+Credits should be reserved for work with real variable provider or compute cost:
+
+* image generation
+* video generation
+* voice synthesis
+* narration rendering
+* large production batches
+* premium AI provider runs
+
+## Fairness Rules
+
+Core Aevryn workflow actions should not silently drain credits.
+
+Paid plans should include monthly credits when media generation exists.
+
+Extra credits should be optional.
+
+Credit pricing should be based on actual provider cost, runtime cost, storage cost, and a reasonable margin.
+
+Credit usage should be shown before a batch starts.
+
+Failed provider calls should not charge users unless a provider has already charged Aetherra Labs and the policy clearly says so.
+
+## Future Required Controls
+
+Production batching requires:
+
+* cost estimates before execution
+* user confirmation before credit spend
+* queueing
+* retries
+* cancellation
+* batch progress
+* provider failure handling
+* generated asset storage
+* usage history
+* billing history
+* abuse limits
+* support visibility without exposing private manuscripts
+
+This system must consume Canon, Prompt Packs, Production Presets, and user-approved generation settings.
+
+It must not alter Canon.
+
+---
+
 # Future Ideas
 
 Additional ideas will be appended here as they are developed.
