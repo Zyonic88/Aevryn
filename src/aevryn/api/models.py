@@ -494,6 +494,7 @@ class ProjectTranslationReviewItem(BaseModel):
     chapter_id: str = ""
     scene_id: str = ""
     evidence_anchor_count: int = 0
+    possible_meaning_count: int = Field(default=0, ge=0)
     reason: str = ""
 
 

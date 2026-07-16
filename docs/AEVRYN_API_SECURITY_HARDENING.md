@@ -49,6 +49,10 @@ Discovery routes remain public metadata routes.
 
 Duplicate API keys are rejected at app creation.
 
+The internal worker drain route, `POST /v2/workers/process`, may also use the
+dedicated `AEVRYN_WORKER_API_KEY`. That worker key is scoped to the worker route
+and does not authorize general workflow routes.
+
 ## Upload And Request-Size Boundary
 
 Import source content is limited to 10 MiB decoded bytes per request.

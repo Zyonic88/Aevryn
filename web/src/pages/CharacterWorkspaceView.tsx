@@ -13,7 +13,7 @@ import {
   buildCharacterPreviewPayload,
   canSubmitCharacterPreviewInput,
 } from "../previewing/previewPayload";
-import { readableOutputItems } from "../output/readableOutput";
+import { isInternalOutputPlaceholder, readableOutputItems, readableOutputText } from "../output/readableOutput";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
@@ -178,15 +178,17 @@ function CharacterPreviewResult({ result }: { result: CharacterPreview }) {
 }
 
 function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
+  const displayName = readableCharacterName(profile.display_name);
+  const subtitle = readableCharacterSubtitle(profile.subtitle);
   return (
     <article className="profile-card character-profile-card">
       <header className="character-profile-header">
         <div className="character-portrait" aria-hidden="true">
-          {characterInitials(profile.display_name)}
+          {characterInitials(displayName)}
         </div>
         <div>
-          <h3>{profile.display_name}</h3>
-          <p>{profile.subtitle}</p>
+          <h3>{displayName}</h3>
+          <p>{subtitle}</p>
         </div>
       </header>
       <details className="profile-disclosure">
@@ -211,6 +213,20 @@ function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
       <p className="evidence-note">{profile.evidence_summary}</p>
     </article>
   );
+}
+
+function readableCharacterSubtitle(subtitle: string): string {
+  if (!subtitle || subtitle === "Unknown" || isInternalOutputPlaceholder(subtitle)) {
+    return "Unknown";
+  }
+  return readableOutputText(subtitle);
+}
+
+function readableCharacterName(name: string): string {
+  if (!name || name === "Unknown" || isInternalOutputPlaceholder(name)) {
+    return "Unknown character";
+  }
+  return readableOutputText(name);
 }
 
 function characterInitials(name: string): string {

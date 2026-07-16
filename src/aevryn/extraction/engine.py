@@ -122,6 +122,7 @@ class EntityExtractionEngine:
                 ),
                 relationships=result.relationships,
                 state_changes=result.state_changes,
+                rejected_candidate_count=result.rejected_candidate_count,
             )
             for result in results
         )
@@ -282,6 +283,7 @@ class EntityExtractionEngine:
                     or state_change.valid_until_anchor_id in allowed_anchor_ids
                 )
             ),
+            rejected_candidate_count=result.rejected_candidate_count,
         )
         rejected_count = (
             len(result.entities)
@@ -301,7 +303,14 @@ class EntityExtractionEngine:
                     "rejected_candidates": rejected_count,
                 },
             )
-        return filtered
+        return ExtractionResult(
+            scene_id=filtered.scene_id,
+            entities=filtered.entities,
+            facts=filtered.facts,
+            relationships=filtered.relationships,
+            state_changes=filtered.state_changes,
+            rejected_candidate_count=result.rejected_candidate_count + rejected_count,
+        )
 
     @staticmethod
     def _validate_entity(

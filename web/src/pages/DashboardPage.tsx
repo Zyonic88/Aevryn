@@ -146,7 +146,7 @@ export function DashboardPage() {
         ) : null}
         {!projectsQuery.isLoading && !projectsQuery.error && projects.length === 0 ? (
           <EmptyState title="No projects yet">
-            Create a project to start importing story chapters.
+            Create a project to import chapters and build Canon-backed workspace output.
           </EmptyState>
         ) : null}
         {projects.length > 0 ? (
@@ -166,7 +166,7 @@ export function DashboardPage() {
                   disabled={deleteProjectMutation.isPending}
                   onClick={() => requestProjectDeletion(project.id, project.name)}
                 >
-                  X
+                  <span aria-hidden="true">×</span>
                 </button>
               </div>
             ))}

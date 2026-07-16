@@ -67,3 +67,11 @@ The logging policy is V1 ready when:
 * User-facing CLI output remains separate from operational logging.
 * No core subsystem uses `print`.
 * Tests verify the logging boundary.
+
+---
+
+# Production Extension
+
+Production observability is governed by `docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md`.
+
+That policy keeps the V1 logging boundary but adds hosted retention, alert routing, access, and smoke-verification requirements for public beta.

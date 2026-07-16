@@ -221,7 +221,7 @@ class SceneAnalyzer:
         facts: tuple[Fact, ...],
         relationships: tuple[Relationship, ...],
     ) -> str:
-        """Infer scene purpose from canon changes."""
+        """Derive scene purpose from accepted canon labels."""
         labels = SceneAnalyzer._combined_labels(facts=facts, relationships=relationships)
         if any(label in labels for label in ("challenge", "duel", "contest")):
             return "Advance a direct challenge and the character's current objective."
@@ -255,7 +255,7 @@ class SceneAnalyzer:
         facts: tuple[Fact, ...],
         relationships: tuple[Relationship, ...],
     ) -> str:
-        """Infer conflict from accepted canon labels."""
+        """Derive conflict from accepted canon labels."""
         labels = SceneAnalyzer._combined_labels(facts=facts, relationships=relationships)
         if any(label in labels for label in ("challenge", "duel", "contest")):
             return "A direct challenge creates immediate pressure."
@@ -277,7 +277,7 @@ class SceneAnalyzer:
         facts: tuple[Fact, ...],
         relationships: tuple[Relationship, ...],
     ) -> str:
-        """Infer broad mood from accepted canon labels."""
+        """Derive broad mood from accepted canon labels."""
         text = SceneAnalyzer._combined_labels(facts=facts, relationships=relationships)
         if any(label in text for label in ("trial training", "training", "operation")):
             return "Focused and operational"
@@ -423,7 +423,7 @@ class SceneAnalyzer:
         facts: Iterable[Fact],
         fallback_facts: Iterable[Fact] = (),
     ) -> tuple[str, ...]:
-        """Return explicit or inferred emotional labels from facts."""
+        """Return canon-derived emotional labels from accepted facts."""
         emotions = SceneAnalyzer._values_for_attributes(
             facts=facts,
             attributes={

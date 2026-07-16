@@ -175,7 +175,7 @@ function ProjectStatusSummary({ status }: { status: ProjectStatus }) {
       <dl className="monitoring-detail-grid">
         <div>
           <dt>Latest import</dt>
-          <dd>{status.latest_import?.filename ?? "none"}</dd>
+          <dd>{status.latest_import ? monitoringImportLabel(status.latest_import) : "none"}</dd>
         </div>
         <div>
           <dt>Latest run</dt>
@@ -204,6 +204,17 @@ function ProjectStatusSummary({ status }: { status: ProjectStatus }) {
 
 function projectStatusQueryKey(projectId: string, sessionToken: string | undefined) {
   return ["project-status", projectId, sessionToken] as const;
+}
+
+function monitoringImportLabel(importRecord: ProjectStatus["latest_import"]): string {
+  if (!importRecord) {
+    return "none";
+  }
+  const filename = importRecord.filename.trim().toLowerCase();
+  if (filename === "aevryn_import_bundle.txt" || filename.startsWith("aevryn_import_bundle.")) {
+    return "Chapter import";
+  }
+  return importRecord.filename;
 }
 
 function workflowEventLabel(eventType: string): string {

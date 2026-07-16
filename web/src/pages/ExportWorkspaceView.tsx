@@ -16,10 +16,6 @@ import {
 } from "../previewing/previewPayload";
 import type { ProjectSummary } from "../projects/projectStore";
 
-const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
-const DEFAULT_AI_RESPONSE =
-  '{\n  "entities": [],\n  "facts": [],\n  "relationships": [],\n  "state_changes": []\n}';
-
 const exportOptions = [
   { kind: "character_profile", format: "markdown", label: "Character Profile / Markdown" },
   { kind: "scene_sheet", format: "markdown", label: "Scene Sheet / Markdown" },
@@ -38,8 +34,8 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [sourceId, setSourceId] = useState(project.id.replace(/^project_/, "source_"));
   const [filename, setFilename] = useState("chapter_001.txt");
   const [title, setTitle] = useState(project.name);
-  const [sourceText, setSourceText] = useState(DEFAULT_SOURCE_TEXT);
-  const [aiResponseText, setAiResponseText] = useState(DEFAULT_AI_RESPONSE);
+  const [sourceText, setSourceText] = useState("");
+  const [aiResponseText, setAiResponseText] = useState("");
   const [characterIdsText, setCharacterIdsText] = useState("");
   const [worldEntityIdsText, setWorldEntityIdsText] = useState("");
   const [sceneId, setSceneId] = useState("");
@@ -173,6 +169,10 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
       <DeveloperPreviewToggle>
         <section>
           <h2>Export Preview</h2>
+          <p className="field-note">
+            Developer preview requires real source text and extraction JSON. It does not run with
+            simulated source, placeholder AI output, or empty success paths.
+          </p>
           <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
@@ -206,6 +206,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
             <textarea
               value={sourceText}
               onChange={(event) => setSourceText(event.target.value)}
+              required
               rows={8}
             />
           </label>
@@ -214,6 +215,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
             <textarea
               value={aiResponseText}
               onChange={(event) => setAiResponseText(event.target.value)}
+              required
               rows={8}
             />
           </label>
@@ -323,8 +325,9 @@ function ProjectStoredExportsPanel({
               <div>
                 <h3>{exportRecord.filename}</h3>
                 <p>
-                  {exportRecord.export_kind} / {exportRecord.export_format} ·{" "}
-                  {formatBytes(exportRecord.size)} · {formatDateTime(exportRecord.created_at)}
+                  {readableExportKind(exportRecord.export_kind)} /{" "}
+                  {readableExportFormat(exportRecord.export_format)} |{" "}
+                  {formatBytes(exportRecord.size)} | {formatDateTime(exportRecord.created_at)}
                 </p>
               </div>
               <button
@@ -348,24 +351,31 @@ function ProjectStoredExportsPanel({
 }
 
 function ExportPreviewResult({ result }: { result: ExportPreview }) {
+  const contentSummary = `${result.content.length.toLocaleString()} character${
+    result.content.length === 1 ? "" : "s"
+  }`;
+
   return (
     <section className="project-panel" aria-label="Export preview result">
       <h2>{result.filename}</h2>
       <dl className="metric-grid export-metadata">
         <div>
           <dt>Kind</dt>
-          <dd>{result.export_kind}</dd>
+          <dd>{readableExportKind(result.export_kind)}</dd>
         </div>
         <div>
           <dt>Format</dt>
-          <dd>{result.export_format}</dd>
+          <dd>{readableExportFormat(result.export_format)}</dd>
         </div>
         <div>
           <dt>Content Type</dt>
           <dd>{result.content_type}</dd>
         </div>
       </dl>
-      <pre className="export-preview-content">{result.content}</pre>
+      <details className="detail-disclosure export-preview-disclosure">
+        <summary>Show export content - {contentSummary}</summary>
+        <pre className="export-preview-content">{result.content}</pre>
+      </details>
     </section>
   );
 }
@@ -404,6 +414,36 @@ function safeFilename(value: string): string {
     .replace(/[^a-z0-9]+/gu, "-")
     .replace(/^-+|-+$/gu, "");
   return cleaned || "aevryn-project";
+}
+
+function readableExportKind(value: string): string {
+  const labels: Record<string, string> = {
+    canon: "Canon Snapshot",
+    character_profile: "Character Profile",
+    continuity_report: "Continuity Report",
+    production_pack: "Production Pack",
+    prompt_bundle: "Prompt Bundle",
+    scene_sheet: "Scene Sheet",
+    world_sheet: "World Sheet",
+  };
+  return labels[value] ?? readableExportToken(value);
+}
+
+function readableExportFormat(value: string): string {
+  const labels: Record<string, string> = {
+    csv: "CSV",
+    json: "JSON",
+    markdown: "Markdown",
+  };
+  return labels[value] ?? readableExportToken(value);
+}
+
+function readableExportToken(value: string): string {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+    .join(" ");
 }
 
 function newExportId(): string {

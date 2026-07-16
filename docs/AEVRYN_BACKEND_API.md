@@ -263,7 +263,8 @@ Supabase bearer token
 
 The boundary maps external provider subjects to stable Aevryn user IDs without storing provider tokens. Supabase ES256 and RS256 JWT/JWKS verification are wired into the production API app factory for asymmetric signing keys, with ES256 preferred for public beta. Supabase HS256 JWT verification is also supported when `AEVRYN_SUPABASE_JWT_ALGORITHM=hs256` and `AEVRYN_SUPABASE_JWT_SECRET` is supplied by deployment secrets. Public beta still requires production-like smoke execution.
 
-Production worker runtime is intentionally fail-closed until a managed queue/runtime is selected and wired:
+Production worker runtime is intentionally fail-closed unless managed worker
+settings are present:
 
 ```text
 AEVRYN_WORKER_RUNTIME=managed
@@ -275,6 +276,11 @@ AEVRYN_WORKER_CONCURRENCY=1
 ```
 
 These variables document the production worker contract. The local in-memory queue remains private-alpha only.
+When `AEVRYN_DEPLOYMENT_ENV=production`, `AEVRYN_WORKER_QUEUE_PROVIDER=managed`
+wires a PostgreSQL-backed durable queue using the Project Database
+`background_jobs` table. Production startup must not use `InMemoryJobQueue`.
+The remaining public-beta work is operational hosted worker execution and smoke
+evidence, not replacing an in-memory queue after the fact.
 
 Production observability is intentionally fail-closed until hosted logs, hosted monitoring, retention, and security alert routing are selected:
 
@@ -337,11 +343,11 @@ AEVRYN_OPENAI_API_KEY=...
 AEVRYN_OPENAI_MODEL=...
 ```
 
-Optional provider settings:
+Provider limits:
 
 ```text
 AEVRYN_OPENAI_ENDPOINT=https://api.openai.com/v1/responses
-AEVRYN_OPENAI_TIMEOUT_SECONDS=30
+AEVRYN_OPENAI_TIMEOUT_SECONDS=90
 AEVRYN_OPENAI_MAX_RESPONSE_BYTES=1048576
 ```
 
@@ -349,7 +355,9 @@ If `AEVRYN_EXTRACTION_MODE` is absent or `demo`, no external model receives stor
 
 If `AEVRYN_EXTRACTION_MODE=openai`, `AEVRYN_OPENAI_API_KEY` and `AEVRYN_OPENAI_MODEL` are required before the app starts.
 
-Provider-backed extraction runs one evidence-bounded scene request at a time. Very large imports can exceed the default per-request timeout if a provider response stalls. For internal alpha testing, prefer smaller chapter batches first; raise `AEVRYN_OPENAI_TIMEOUT_SECONDS` only when validating large imports and track the latency separately from correctness.
+When `AEVRYN_DEPLOYMENT_ENV=production`, `AEVRYN_EXTRACTION_MODE=openai`, `AEVRYN_OPENAI_TIMEOUT_SECONDS`, and `AEVRYN_OPENAI_MAX_RESPONSE_BYTES` are required. Demo extraction and hidden provider-limit defaults are local-only and cannot satisfy the production startup contract.
+
+Provider-backed extraction runs one evidence-bounded scene request at a time. Very large imports can exceed the per-request timeout if a provider response stalls. For internal alpha testing, prefer smaller chapter batches first; raise `AEVRYN_OPENAI_TIMEOUT_SECONDS` only when validating large imports and track the latency separately from correctness.
 
 Invalid modes, non-positive timeouts, and non-positive response byte limits fail at app creation time.
 
@@ -812,7 +820,10 @@ The request includes:
 
 The route returns claimed, succeeded, and failed job counts.
 
-When deployment API keys are configured, this internal workflow route requires `X-Aevryn-API-Key` or an equivalent bearer API key.
+When deployment API keys are configured, this internal workflow route requires
+`X-Aevryn-API-Key` or an equivalent bearer API key. `POST /v2/workers/process`
+also accepts the dedicated `AEVRYN_WORKER_API_KEY` so managed worker runners do
+not need a general workflow API key.
 
 The route updates queue status and durable engine run status.
 
@@ -838,7 +849,8 @@ Invalid snapshot kinds, invalid serialized JSON, incomplete runs, and wrong run 
 
 Duplicate snapshot IDs fail clearly.
 
-When deployment API keys are configured, this internal workflow route requires `X-Aevryn-API-Key` or an equivalent bearer API key.
+When deployment API keys are configured, this internal workflow route requires
+`X-Aevryn-API-Key` or an equivalent bearer API key.
 
 ## `POST /v2/projects/preview`
 

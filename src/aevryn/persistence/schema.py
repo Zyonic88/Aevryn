@@ -269,6 +269,23 @@ PROJECT_DATABASE_SCHEMA = SchemaDefinition(
             ),
         ),
         TableDefinition(
+            name="background_jobs",
+            columns=(
+                ColumnDefinition("job_id", "text", primary_key=True),
+                ColumnDefinition("kind", "text"),
+                ColumnDefinition("run_id", "text"),
+                ColumnDefinition("project_id", "text"),
+                ColumnDefinition("story_id", "text"),
+                ColumnDefinition("import_id", "text"),
+                ColumnDefinition("status", "text"),
+                ColumnDefinition("queued_at", "timestamptz"),
+                ColumnDefinition("status_updated_at", "timestamptz"),
+                ColumnDefinition("attempts", "integer"),
+                ColumnDefinition("max_attempts", "integer"),
+                ColumnDefinition("error_summary", "text"),
+            ),
+        ),
+        TableDefinition(
             name="snapshots",
             columns=(
                 ColumnDefinition("snapshot_id", "text", primary_key=True),
@@ -339,6 +356,32 @@ PROJECT_DATABASE_SCHEMA = SchemaDefinition(
             "(status IN ('succeeded', 'failed') AND finished_at IS NOT NULL))",
         ),
         CheckConstraintDefinition(
+            "chk_background_jobs_kind",
+            "background_jobs",
+            "kind IN ('process_import')",
+        ),
+        CheckConstraintDefinition(
+            "chk_background_jobs_status",
+            "background_jobs",
+            "status IN ('queued', 'running', 'succeeded', 'failed')",
+        ),
+        CheckConstraintDefinition(
+            "chk_background_jobs_attempts_non_negative",
+            "background_jobs",
+            "attempts >= 0",
+        ),
+        CheckConstraintDefinition(
+            "chk_background_jobs_max_attempts_positive",
+            "background_jobs",
+            "max_attempts >= 1",
+        ),
+        CheckConstraintDefinition(
+            "chk_background_jobs_error_summary_by_status",
+            "background_jobs",
+            "((status = 'failed' AND error_summary <> '') OR "
+            "(status <> 'failed' AND error_summary = ''))",
+        ),
+        CheckConstraintDefinition(
             "chk_snapshots_snapshot_kind",
             "snapshots",
             "snapshot_kind IN ('canon', 'timeline', 'character_profile', "
@@ -356,6 +399,17 @@ PROJECT_DATABASE_SCHEMA = SchemaDefinition(
         IndexDefinition("idx_imports_story_id", "imports", ("story_id",)),
         IndexDefinition("idx_engine_runs_project_id", "engine_runs", ("project_id",)),
         IndexDefinition("idx_engine_runs_story_id", "engine_runs", ("story_id",)),
+        IndexDefinition("idx_background_jobs_status", "background_jobs", ("status",)),
+        IndexDefinition(
+            "idx_background_jobs_project_id",
+            "background_jobs",
+            ("project_id",),
+        ),
+        IndexDefinition(
+            "idx_background_jobs_queued_order",
+            "background_jobs",
+            ("queued_at", "job_id"),
+        ),
         IndexDefinition("idx_snapshots_project_id", "snapshots", ("project_id",)),
         IndexDefinition(
             "idx_snapshots_story_kind",
