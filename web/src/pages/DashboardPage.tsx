@@ -153,7 +153,11 @@ export function DashboardPage() {
           <div className="project-list">
             {projects.map((project) => (
               <div key={project.id} className="project-row project-row-action">
-                <Link to={`/projects/${project.id}`} className="project-select-link">
+                <Link
+                  to={`/projects/${project.id}`}
+                  className="project-select-link"
+                  aria-label={`${project.name} Updated ${formatDateTime(project.updatedAt)} Open workspace`}
+                >
                   <strong>{project.name}</strong>
                   <span>Updated {formatDateTime(project.updatedAt)}</span>
                   <small>Open workspace</small>

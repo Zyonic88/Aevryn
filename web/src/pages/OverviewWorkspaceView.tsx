@@ -99,7 +99,7 @@ function ProjectOverview({
         <h2>Quick Actions</h2>
         <div className="quick-action-grid">
           {overviewActions(project.id, outputs).map((action) => (
-            <NavLink key={action.to} to={action.to}>
+            <NavLink key={action.to} to={action.to} aria-label={`${action.title} ${action.detail}`}>
               <strong>{action.title}</strong>
               <span>{action.detail}</span>
             </NavLink>

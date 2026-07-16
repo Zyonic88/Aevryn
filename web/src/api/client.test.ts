@@ -626,7 +626,7 @@ describe("AevrynApiClient", () => {
 
   it("downloads stored project exports with authentication", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(new Blob(["{}"], { type: "application/json" }), {
+      new Response("{}", {
         headers: {
           "Content-Disposition": 'attachment; filename="alpha-canon-snapshot.json"',
           "Content-Type": "application/json",

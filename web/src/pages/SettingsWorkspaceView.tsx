@@ -241,7 +241,7 @@ function SettingsAreaCard({
   description: string;
 }) {
   return (
-    <a href={href}>
+    <a href={href} aria-label={`${title} ${status} ${description}`}>
       <span className="settings-area-heading">
         <strong>{title}</strong>
         <span className="settings-area-status">{status}</span>
