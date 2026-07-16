@@ -17,15 +17,60 @@ They never preserve the private thing that happened.
 
 Phase 11 introduces the audit ledger contract and a deterministic in-memory implementation.
 
-The production ledger storage adapter is a later deployment/infrastructure decision.
+The public-beta production ledger storage candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+
+The selected candidate is managed PostgreSQL audit tables owned by Aevryn's Project Database environment.
+
+The production adapter, core workflow event wiring, configuration-failure event
+wiring, release-gate integrity verification command, metadata-only access report
+command, and append-only access verification command are implemented.
+
+Hosted production configuration verification, retention enforcement,
+access-control verification, hosted release-gate integrity execution, and the
+restore/audit drill remain public-beta blockers.
 
 Current implementation:
 
 * `AuditLedger`
 * `AuditLedgerRecord`
 * `AuditLedgerIntegrityError`
+* `PostgresqlAuditLedger`
 
 The implementation lives in `src/aevryn/audit/`.
+
+`PostgresqlAuditLedger` implements the selected PostgreSQL audit storage candidate by creating `audit_ledger_records`, appending records inside a transaction-scoped advisory lock, reloading records in sequence order, and verifying the persisted hash chain.
+
+The release gate can run:
+
+```powershell
+python -m aevryn.cli audit-ledger-verify
+```
+
+The command reads `AEVRYN_PROJECT_DATABASE_URL`, verifies the PostgreSQL audit
+ledger hash chain, prints metadata-only status, and does not print database
+credentials.
+
+The access-control review gate can run:
+
+```powershell
+python -m aevryn.cli audit-access-verify
+```
+
+The command reads `AEVRYN_PROJECT_DATABASE_URL`, verifies that the configured
+database role can read and append audit records, verifies that `UPDATE` and
+`DELETE` privileges are absent, prints metadata-only status, and does not print
+database credentials, roles, usernames, or hostnames.
+
+When an operator needs the underlying privilege facts, the diagnostic report can
+run:
+
+```powershell
+python -m aevryn.cli audit-access-report
+```
+
+The report command reads `AEVRYN_PROJECT_DATABASE_URL`, reports audit table
+presence and current database privileges as metadata, does not read audit rows,
+and does not print database credentials, roles, usernames, or hostnames.
 
 ---
 
@@ -108,25 +153,33 @@ story_deleted | Deleted story text: ...
 
 ---
 
-# Candidate Event Types
+# Implemented Event Types
 
-Initial event types should include:
+The API now appends metadata-only records for:
 
 * `user_registered`
 * `login_succeeded`
 * `login_failed`
+* `password_reset_requested`
+* `password_reset_completed`
 * `project_created`
+* `project_deleted`
+* `settings_changed`
+* `cross_user_access_attempt`
 * `story_created`
 * `story_deleted`
 * `import_saved`
 * `run_submitted`
-* `worker_started`
-* `worker_failed`
-* `worker_succeeded`
+* `worker_processed`
 * `snapshot_created`
 * `export_generated`
-* `settings_changed`
 * `security_configuration_failed`
+
+The `security_configuration_failed` event is emitted by the production
+configuration check when a PostgreSQL audit ledger can be constructed from the
+provided deployment settings. If the audit storage settings themselves are
+missing or unreachable, Aevryn still fails closed and does not claim an audit
+record was written.
 
 Event types are stable machine-readable tokens.
 
@@ -136,9 +189,9 @@ Event types are stable machine-readable tokens.
 
 Audit ledger work does not unblock public beta until:
 
-* production storage for audit records is selected
-* audit retention policy is documented
-* audit access controls are documented
-* security-relevant API and worker events are wired into the ledger
+* hosted production configuration verifies the PostgreSQL audit adapter
+* audit retention policy is enforced or operationally verified
+* hosted audit access verification and report are recorded and reviewed
 * deletion events are verified to remain metadata-only
-* ledger integrity verification is part of the release gate
+* hosted ledger integrity verification is recorded in the release gate
+* restore/audit drill results are recorded with `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`

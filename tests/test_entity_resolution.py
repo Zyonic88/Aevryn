@@ -5,6 +5,8 @@ import pytest
 from aevryn.entity_resolution import (
     EntityIdentityProfile,
     EntityResolutionEngine,
+    ResolutionCandidate,
+    ResolvedReference,
     SurfaceReference,
 )
 
@@ -52,6 +54,27 @@ def test_resolves_alias_title_description_and_pronoun_to_same_identity() -> None
     assert decisions[5].confidence == 0.87
 
 
+def test_resolves_unicode_equivalent_alias_to_same_identity() -> None:
+    """Equivalent Unicode forms should not fragment identity resolution."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Cafe\u0301 Captain", "anchor_unicode_alias"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_cafe_captain",
+                canonical_name="Mira",
+                aliases=("Caf\u00e9 Captain",),
+                evidence_anchor_ids=("anchor_unicode_alias",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_cafe_captain"
+    assert decision.candidates[0].match_kind == "alias"
+
+
 def test_pronoun_resolution_stays_ambiguous_with_multiple_context_candidates() -> None:
     """Pronouns should not merge identities when context supports multiple candidates."""
     engine = EntityResolutionEngine()
@@ -92,6 +115,27 @@ def test_pronoun_resolution_requires_contextual_identity_support() -> None:
     assert decision.reason == "Pronoun reference requires contextual identity support."
 
 
+def test_pronoun_surface_does_not_resolve_as_canonical_name() -> None:
+    """Pronoun-looking extraction artifacts should not bypass pronoun safety rules."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("She", "anchor_026"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_she",
+                canonical_name="She",
+                evidence_anchor_ids=("anchor_026",),
+            ),
+        ),
+        context_entity_ids=("character_she",),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.candidates == ()
+
+
 def test_low_confidence_description_remains_unresolved_candidate() -> None:
     """Soft matches should remain candidates instead of silently merging entities."""
     engine = EntityResolutionEngine()
@@ -128,6 +172,115 @@ def test_resolves_supported_description_variant_to_same_identity() -> None:
     assert decision.entity_id == "character_charlotte"
     assert decision.confidence == 0.82
     assert decision.candidates[0].match_kind == "description_variant"
+
+
+def test_resolves_title_name_variant_without_prebuilt_alias() -> None:
+    """Title plus canonical name should resolve through explicit title/name support."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("General Charlotte", "anchor_032"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_charlotte",
+                canonical_name="Charlotte",
+                titles=("General",),
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_charlotte"
+    assert decision.confidence == 0.97
+    assert decision.candidates[0].match_kind == "title_name"
+
+
+def test_resolves_explicit_relationship_label_variant() -> None:
+    """Family-role references should resolve only when explicitly profile-backed."""
+    engine = EntityResolutionEngine()
+
+    decisions = tuple(
+        engine.resolve_reference(
+            SurfaceReference(reference_text, f"anchor_032a_{index}"),
+            (
+                EntityIdentityProfile(
+                    entity_id="character_jiang_shasha",
+                    canonical_name="Jiang Shasha",
+                    relationship_labels=("sister of Zhao Chen",),
+                    evidence_anchor_ids=("anchor_002",),
+                ),
+            ),
+        )
+        for index, reference_text in enumerate(
+            (
+                "Zhao Chen's sister",
+                "Zhao Chen’s sister",
+                "Zhao Chen’S sister",
+            ),
+            start=1,
+        )
+    )
+
+    assert tuple(decision.status for decision in decisions) == ("resolved",) * 3
+    assert tuple(decision.entity_id for decision in decisions) == (
+        "character_jiang_shasha",
+    ) * 3
+    assert tuple(decision.confidence for decision in decisions) == (0.91,) * 3
+    assert tuple(decision.candidates[0].match_kind for decision in decisions) == (
+        "relationship_label",
+    ) * 3
+
+
+def test_shared_honorific_stays_ambiguous() -> None:
+    """Honorifics should not merge identities when multiple profiles carry the same title."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Senior Brother", "anchor_032c"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_li_wei",
+                canonical_name="Li Wei",
+                honorifics=("Senior Brother",),
+                evidence_anchor_ids=("anchor_010",),
+            ),
+            EntityIdentityProfile(
+                entity_id="character_han_feng",
+                canonical_name="Han Feng",
+                honorifics=("Senior Brother",),
+                evidence_anchor_ids=("anchor_011",),
+            ),
+        ),
+    )
+
+    assert decision.status == "ambiguous"
+    assert decision.entity_id is None
+    assert {candidate.entity_id for candidate in decision.candidates} == {
+        "character_han_feng",
+        "character_li_wei",
+    }
+
+
+def test_title_with_different_name_does_not_resolve_from_title_alone() -> None:
+    """A shared title should not merge a different named surface reference."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("General Li", "anchor_032b"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_charlotte",
+                canonical_name="Charlotte",
+                titles=("General",),
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.candidates == ()
 
 
 def test_description_variant_stays_ambiguous_when_multiple_profiles_fit() -> None:
@@ -252,5 +405,75 @@ def test_identity_profiles_reject_duplicate_aliases() -> None:
         EntityIdentityProfile(
             entity_id="character_charlotte",
             canonical_name="Charlotte",
-            aliases=("General Charlotte", "General Charlotte"),
+            aliases=("General Charlotte", " general charlotte "),
+        )
+
+
+def test_identity_profiles_reject_unicode_equivalent_duplicate_aliases() -> None:
+    """Alias uniqueness should compare normalized Unicode, not raw code points."""
+    with pytest.raises(ValueError, match="aliases must be unique"):
+        EntityIdentityProfile(
+            entity_id="character_cafe_captain",
+            canonical_name="Mira",
+            aliases=("Caf\u00e9 Captain", "Cafe\u0301 Captain"),
+        )
+
+
+def test_identity_profile_surface_lists_must_be_tuples() -> None:
+    """Identity profile surfaces should not accept loose strings as sequences."""
+    with pytest.raises(ValueError, match="aliases must be a tuple"):
+        EntityIdentityProfile(
+            entity_id="character_charlotte",
+            canonical_name="Charlotte",
+            aliases="General Charlotte",  # type: ignore[arg-type]
+        )
+
+
+def test_identity_profiles_reject_duplicate_relationship_labels() -> None:
+    """Relationship labels should stay deterministic."""
+    with pytest.raises(ValueError, match="relationship labels must be unique"):
+        EntityIdentityProfile(
+            entity_id="character_jiang_shasha",
+            canonical_name="Jiang Shasha",
+            relationship_labels=("sister of Zhao Chen", " Sister of Zhao Chen "),
+        )
+
+
+def test_resolved_reference_candidates_must_be_a_tuple() -> None:
+    """Resolution candidate metadata should not accept mutable sequences."""
+    with pytest.raises(ValueError, match="candidates must be a tuple"):
+        ResolvedReference(
+            reference=SurfaceReference("Charlotte", "anchor_050"),
+            status="ambiguous",
+            candidates=[
+                ResolutionCandidate(
+                    entity_id="character_charlotte",
+                    confidence=0.99,
+                    match_kind="canonical_name",
+                    matched_text="Charlotte",
+                )
+            ],  # type: ignore[arg-type]
+        )
+
+
+def test_resolved_reference_rejects_duplicate_candidate_entity_ids() -> None:
+    """One resolution decision should not carry duplicate candidates for one identity."""
+    with pytest.raises(ValueError, match="candidate entity IDs must be unique"):
+        ResolvedReference(
+            reference=SurfaceReference("Charlotte", "anchor_051"),
+            status="ambiguous",
+            candidates=(
+                ResolutionCandidate(
+                    entity_id="character_charlotte",
+                    confidence=0.99,
+                    match_kind="canonical_name",
+                    matched_text="Charlotte",
+                ),
+                ResolutionCandidate(
+                    entity_id="character_charlotte",
+                    confidence=0.95,
+                    match_kind="alias",
+                    matched_text="General Charlotte",
+                ),
+            ),
         )

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from fastapi.testclient import TestClient
 
 from aevryn.api import create_app
 from aevryn.api.app import MAX_IMPORT_CONTENT_BASE64_CHARS
+from aevryn.audit import AuditLedger, AuditLedgerRecord
 from aevryn.auth import (
     AuthenticationConfig,
     AuthenticationService,
@@ -32,7 +34,7 @@ from aevryn.persistence import (
     SnapshotRecord,
 )
 from aevryn.storage import LocalFilesystemStorage, StorageObjectNotFoundError
-from aevryn.workers import InMemoryJobQueue, ProjectImportSnapshotHandler
+from aevryn.workers import InMemoryJobQueue, JobNotFoundError, ProjectImportSnapshotHandler
 from aevryn.workers.models import BackgroundJob
 
 NOW = "2026-06-27T00:00:00Z"
@@ -113,6 +115,77 @@ def test_auth_register_login_me_and_reset_flow() -> None:
         json={"email": "demo@example.com", "password": NEW_PASSWORD, "now": SOON},
     )
     assert new_login.status_code == 200
+
+
+def test_auth_events_append_metadata_only_audit_records() -> None:
+    """Auth routes should audit identity events without emails, passwords, or tokens."""
+    audit_ledger = AuditLedger()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(),
+            audit_ledger=audit_ledger,
+        )
+    )
+
+    registered = client.post(
+        "/v2/auth/register",
+        json={
+            "user_id": "user_demo",
+            "email": "Demo@Example.com",
+            "display_name": "Demo User",
+            "password": PASSWORD,
+            "now": NOW,
+        },
+    )
+    failed_login = client.post(
+        "/v2/auth/login",
+        json={"email": "demo@example.com", "password": "WrongPass123", "now": NOW},
+    )
+    login = client.post(
+        "/v2/auth/login",
+        json={"email": "demo@example.com", "password": PASSWORD, "now": NOW},
+    )
+    reset = client.post(
+        "/v2/auth/password-reset/request",
+        json={"email": "demo@example.com", "reset_id": "reset_demo", "now": NOW},
+    )
+    completed = client.post(
+        "/v2/auth/password-reset/complete",
+        json={
+            "reset_token": reset.json()["reset_token"],
+            "new_password": NEW_PASSWORD,
+            "now": SOON,
+        },
+    )
+
+    assert registered.status_code == 200
+    assert failed_login.status_code == 401
+    assert login.status_code == 200
+    assert reset.status_code == 200
+    assert completed.status_code == 200
+    records = audit_ledger.records()
+    assert tuple(record.event_type for record in records) == (
+        "user_registered",
+        "login_failed",
+        "login_succeeded",
+        "password_reset_requested",
+        "password_reset_completed",
+    )
+    assert records[0].actor_id == "user_demo"
+    assert records[1].metadata == {"failure_code": "invalid_credentials"}
+    assert records[2].actor_id == "user_demo"
+    assert records[3].actor_id == "user_demo"
+    assert records[3].metadata == {"reset_id": "reset_demo"}
+    serialized_records = json.dumps(
+        [record.payload_for_hash() for record in records],
+        sort_keys=True,
+    )
+    assert "demo@example.com" not in serialized_records
+    assert "Demo@Example.com" not in serialized_records
+    assert PASSWORD not in serialized_records
+    assert NEW_PASSWORD not in serialized_records
+    assert "token_" not in serialized_records
+    audit_ledger.verify()
 
 
 def test_auth_endpoints_do_not_require_deployment_api_key() -> None:
@@ -385,6 +458,66 @@ def test_project_settings_api_rejects_invalid_and_cross_user_updates() -> None:
     )
     assert invalid.status_code == 400
     assert invalid.json()["error"] == "project_settings_failed"
+
+
+def test_project_settings_and_cross_user_attempts_append_audit_events() -> None:
+    """Settings writes and access denials should append metadata-only audit records."""
+    audit_ledger = AuditLedger()
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            audit_ledger=audit_ledger,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created.status_code == 200
+
+    updated = client.put(
+        "/v2/projects/project_alpha/settings",
+        headers=auth_headers("token_001"),
+        json={"default_export_format": "json", "locale": "en-GB"},
+    )
+    cross_user = client.put(
+        "/v2/projects/project_alpha/settings",
+        headers=auth_headers("token_002"),
+        json={"default_export_format": "markdown", "locale": "en-US"},
+    )
+
+    assert updated.status_code == 200
+    assert cross_user.status_code == 404
+    settings_events = tuple(
+        record
+        for record in audit_ledger.records()
+        if record.event_type in {"settings_changed", "cross_user_access_attempt"}
+    )
+    assert tuple(record.event_type for record in settings_events) == (
+        "settings_changed",
+        "cross_user_access_attempt",
+    )
+    assert settings_events[0].actor_id == "user_owner"
+    assert settings_events[0].project_id == "project_alpha"
+    assert settings_events[0].metadata == {
+        "default_export_format": "json",
+        "locale": "en-GB",
+    }
+    assert settings_events[1].actor_id == "user_other"
+    assert settings_events[1].project_id == "project_alpha"
+    assert settings_events[1].metadata == {"route": "project_settings"}
+    serialized_records = json.dumps(
+        [record.payload_for_hash() for record in audit_ledger.records()],
+        sort_keys=True,
+    )
+    assert "owner@example.com" not in serialized_records
+    assert "other@example.com" not in serialized_records
+    audit_ledger.verify()
 
 
 def test_project_stories_api_creates_and_lists_stories() -> None:
@@ -735,6 +868,94 @@ def test_import_runs_api_rejects_duplicate_and_cross_user_submissions() -> None:
     assert cross_user.json()["error"] == "import_not_found"
 
 
+def test_import_runs_api_marks_run_failed_when_audit_submission_fails() -> None:
+    """Audit failures after run creation should not strand imports as active."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            audit_ledger=FailingAuditLedger(fail_on="run_submitted"),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+
+    assert submitted.status_code == 503
+    assert submitted.json() == {
+        "error": "audit_record_failed",
+        "detail": "Audit ledger write failed.",
+    }
+    run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
+    assert run.status == "failed"
+    assert run.finished_at == NOW
+    assert run.error_summary == "Audit ledger write failed."
+
+    retry = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_retry", "job_id": "job_retry", "now": SOON},
+    )
+    assert retry.status_code == 503
+    retry_run = repository.get_engine_run(user_id="user_demo", run_id="run_retry")
+    assert retry_run.status == "failed"
+
+
+def test_import_runs_api_compacts_long_generated_ids_for_audit_metadata() -> None:
+    """Hosted generated IDs should remain auditable without exceeding metadata caps."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    audit_ledger = AuditLedger()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            audit_ledger=audit_ledger,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    import_id = f"import_source_project_alpha_{'a' * 140}"
+    run_id = f"run_project_alpha_{'b' * 140}"
+    job_id = f"job_project_alpha_{'c' * 140}"
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json={**import_create_payload(), "import_id": import_id},
+    )
+    assert created_import.status_code == 200
+
+    submitted = client.post(
+        f"/v2/projects/project_alpha/stories/story_alpha/imports/{import_id}/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": run_id, "job_id": job_id, "now": NOW},
+    )
+
+    assert submitted.status_code == 200
+    audit_ledger.verify()
+    run_submitted = audit_ledger.records()[-1]
+    assert run_submitted.event_type == "run_submitted"
+    assert run_submitted.metadata["import_id"] == _expected_audit_reference(import_id)
+    assert run_submitted.metadata["run_id"] == _expected_audit_reference(run_id)
+    assert run_submitted.metadata["job_id"] == _expected_audit_reference(job_id)
+    assert all(len(value) <= 120 for value in run_submitted.metadata.values())
+
+
 def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
     """Story deletion should remove scoped metadata, exports, and source bytes."""
     repository = InMemoryProjectRepository()
@@ -773,6 +994,19 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
         json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
     )
     assert processed.status_code == 200
+    queue.enqueue(
+        BackgroundJob(
+            job_id="job_other_story",
+            kind="process_import",
+            run_id="run_other_story",
+            project_id="project_alpha",
+            story_id="story_other",
+            import_id="import_other",
+            status="queued",
+            queued_at=NOW,
+            status_updated_at=NOW,
+        )
+    )
     repository.record_export(
         ExportRecord(
             export_id="export_alpha",
@@ -834,6 +1068,9 @@ def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
         repository.get_export("user_owner", "export_alpha")
     with pytest.raises(ImportContentNotFoundError):
         content_store.read_import_content(storage_ref)
+    with pytest.raises(JobNotFoundError):
+        queue.get("job_alpha")
+    assert queue.get("job_other_story").story_id == "story_other"
 
 
 def test_delete_project_api_hard_deletes_metadata_and_private_bytes(tmp_path: Path) -> None:
@@ -875,6 +1112,19 @@ def test_delete_project_api_hard_deletes_metadata_and_private_bytes(tmp_path: Pa
         json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
     )
     assert processed.status_code == 200
+    queue.enqueue(
+        BackgroundJob(
+            job_id="job_other_project",
+            kind="process_import",
+            run_id="run_other_project",
+            project_id="project_other",
+            story_id="story_other",
+            import_id="import_other",
+            status="queued",
+            queued_at=NOW,
+            status_updated_at=NOW,
+        )
+    )
     export_storage_ref = "storage://projects/project_alpha/exports/export_alpha/canon.md"
     storage.save_object(
         storage_ref=export_storage_ref,
@@ -923,6 +1173,9 @@ def test_delete_project_api_hard_deletes_metadata_and_private_bytes(tmp_path: Pa
         content_store.read_import_content(import_storage_ref)
     with pytest.raises(StorageObjectNotFoundError):
         storage.read_object(export_storage_ref)
+    with pytest.raises(JobNotFoundError):
+        queue.get("job_alpha")
+    assert queue.get("job_other_project").project_id == "project_other"
 
 
 def test_phase11_project_surfaces_fail_closed_across_users() -> None:
@@ -1300,6 +1553,52 @@ def test_project_runs_api_marks_stale_running_queue_jobs_failed() -> None:
     assert runs[0]["error_summary"] == (
         "Processing timed out before completion. Retry is available."
     )
+    job = queue.get("job_alpha")
+    assert job.status == "failed"
+    assert job.error_summary == "Processing timed out before completion. Retry is available."
+    assert queue.snapshot().running_jobs == 0
+
+
+def test_project_runs_api_does_not_hide_queue_adapter_failures() -> None:
+    """Unexpected queue adapter failures should not be treated as idle jobs."""
+
+    class BrokenGetQueue(InMemoryJobQueue):
+        def get(self, job_id: str) -> BackgroundJob:
+            raise RuntimeError(f"Queue adapter failed for {job_id}.")
+
+    repository = InMemoryProjectRepository()
+    authentication_service = auth_service(repository=repository)
+    queue = BrokenGetQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=authentication_service,
+            project_repository=repository,
+            background_job_queue=queue,
+        ),
+        raise_server_exceptions=False,
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted.status_code == 200
+
+    listed = client.get(
+        "/v2/projects/project_alpha/runs",
+        headers=auth_headers("token_001"),
+    )
+
+    assert listed.status_code == 500
+    assert repository.get_engine_run("user_owner", "run_alpha").status == "pending"
 
 
 def test_import_runs_api_requires_configured_queue() -> None:
@@ -1592,6 +1891,94 @@ def test_project_status_reports_metadata_only_monitoring_summary(
     assert getattr(record, "worker_state", "") == "idle"
     assert "Mark carried a rusty dagger" not in caplog_record_text(caplog)
     assert "storage://exports/canon.md" not in caplog_record_text(caplog)
+
+
+def test_project_status_worker_state_ignores_other_project_terminal_failures() -> None:
+    """Project monitoring should not inherit stale failures from other projects."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    import_content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=import_content_store,
+            ),
+            import_content_store=import_content_store,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    saved_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json={
+            "import_id": "import_alpha",
+            "source_id": "source_alpha",
+            "filename": "chapter_001.txt",
+            "content_base64": base64.b64encode(b"Chapter 1\nAlpha.").decode("ascii"),
+            "title": "Alpha Source",
+            "now": NOW,
+        },
+    )
+    assert saved_import.status_code == 200
+    queue.enqueue(
+        BackgroundJob(
+            job_id="job_old_failure",
+            kind="process_import",
+            run_id="run_old_failure",
+            project_id="project_other",
+            story_id="story_other",
+            import_id="import_other",
+            status="queued",
+            queued_at=NOW,
+            status_updated_at=NOW,
+        )
+    )
+    assert queue.claim_next(claimed_at=SOON) is not None
+    queue.fail(
+        job_id="job_old_failure",
+        failed_at="2026-06-27T00:45:00Z",
+        error_summary="Old unrelated failure.",
+    )
+    submitted_run = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted_run.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={
+            "started_at": SOON,
+            "finished_at": "2026-06-27T00:45:00Z",
+            "max_jobs": 1,
+        },
+    )
+    assert processed.status_code == 200
+
+    response = client.get(
+        "/v2/projects/project_alpha/status",
+        headers=auth_headers("token_001"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    assert payload["latest_engine_run"]["status"] == "succeeded"
+    assert payload["worker"] == {
+        "state": "idle",
+        "total_jobs": 1,
+        "queued_jobs": 0,
+        "running_jobs": 0,
+        "succeeded_jobs": 1,
+        "failed_jobs": 0,
+        "next_job_id": "",
+    }
+    assert payload["latest_failure_summary"] == ""
 
 
 def test_project_status_responses_include_request_ids() -> None:
@@ -1929,6 +2316,7 @@ def test_project_outputs_translation_review_items_are_stable_metadata() -> None:
                                         "issue_code": "translation_review_required",
                                         "issue_label": "Glossary term needs review",
                                         "evidence_anchor_count": 1,
+                                        "possible_meaning_count": 2,
                                         "source_term": "private_source_term",
                                         "message": "Private issue prose.",
                                     }
@@ -1950,11 +2338,15 @@ def test_project_outputs_translation_review_items_are_stable_metadata() -> None:
     assert summary["translation_review_items"] == [
         {
             "issue_code": "translation_review_required",
-            "issue_label": "Glossary term needs review",
+            "issue_label": "Multiple meanings need review",
             "chapter_id": "source_alpha_chapter_001",
             "scene_id": "source_alpha_chapter_001_scene_001",
             "evidence_anchor_count": 1,
-            "reason": "Aevryn preserved an uncertain term for review.",
+            "possible_meaning_count": 2,
+            "reason": (
+                "Aevryn found multiple plausible meanings and preserved the original term "
+                "for review."
+            ),
         }
     ]
     assert "private_source_term" not in response.text
@@ -2126,6 +2518,37 @@ def test_worker_process_api_uses_deployment_api_key_when_configured() -> None:
     assert unauthorized.json()["error"] == "authentication_required"
     assert authorized.status_code == 200
     assert authorized.json()["claimed_jobs"] == 0
+
+
+def test_worker_process_api_accepts_dedicated_worker_api_key() -> None:
+    """Internal worker routes should accept the required worker API key."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            api_keys=("deployment-key",),
+            worker_api_keys=("worker-key",),
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=InMemoryJobQueue(),
+            background_job_handler=RecordingWorkerHandler(),
+        )
+    )
+
+    worker_authorized = client.post(
+        "/v2/workers/process",
+        headers={"X-Aevryn-API-Key": "worker-key"},
+        json={"started_at": NOW, "finished_at": NOW, "max_jobs": 1},
+    )
+    workflow_rejected = client.post(
+        "/v2/extraction-prompts",
+        headers={"X-Aevryn-API-Key": "worker-key"},
+        json={},
+    )
+
+    assert worker_authorized.status_code == 200
+    assert worker_authorized.json()["claimed_jobs"] == 0
+    assert workflow_rejected.status_code == 403
+    assert workflow_rejected.json()["error"] == "invalid_api_key"
 
 
 def test_worker_snapshot_api_stores_and_lists_completed_run_outputs() -> None:
@@ -2819,9 +3242,51 @@ def auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}", "X-Aevryn-Now": SOON}
 
 
+class FailingAuditLedger(AuditLedger):
+    """Audit ledger test double that fails selected writes visibly."""
+
+    def __init__(self, *, fail_on: str | None = None) -> None:
+        """Create a ledger that fails all writes or one event type."""
+        super().__init__()
+        self._fail_on = fail_on
+
+    def append(
+        self,
+        *,
+        event_type: str,
+        occurred_at: str,
+        summary: str,
+        actor_id: str = "",
+        project_id: str = "",
+        story_id: str = "",
+        metadata: Mapping[str, str] | None = None,
+    ) -> AuditLedgerRecord:
+        """Raise an audit failure instead of appending selected events."""
+        if self._fail_on is None or event_type == self._fail_on:
+            raise RuntimeError("audit unavailable")
+        return super().append(
+            event_type=event_type,
+            occurred_at=occurred_at,
+            summary=summary,
+            actor_id=actor_id,
+            project_id=project_id,
+            story_id=story_id,
+            metadata=metadata,
+        )
+
+
 def import_content_base64(text: str) -> str:
     """Return base64-encoded import source for API tests."""
     return base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+
+def _expected_audit_reference(value: str) -> str:
+    """Return the expected compact audit reference for long test IDs."""
+    clean_value = value.strip()
+    if len(clean_value) <= 120:
+        return clean_value
+    digest = hashlib.sha256(clean_value.encode("utf-8")).hexdigest()[:16]
+    return f"{clean_value[:96]}:sha256:{digest}"
 
 
 

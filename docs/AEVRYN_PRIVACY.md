@@ -95,6 +95,7 @@ When a user deletes a story, Aevryn must remove:
 * snapshots scoped to that story
 * exports scoped to that story
 * derived output records scoped to that story
+* queued or completed background job metadata scoped to that story
 
 Deletion must not create a new hidden manuscript copy in an audit log, monitoring event, error payload, or support artifact.
 

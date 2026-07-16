@@ -36,7 +36,7 @@ Automated readiness gates passed. Manual alpha UX pass found release-candidate b
 
 Known Limitations:
 
-Production database, identity provider, object storage, deployment, public launch, payments, collaboration, media generation, and broad visual redesign remain out of Phase 10 scope. Web Import remains unavailable. Worker interruption is observable through status, but durable retry/reclaim policy belongs to a later production worker phase.
+Production database, identity provider, object storage, deployment, public launch, payments, collaboration, media generation, and broad visual redesign remain out of Phase 10 scope. Web Import remains unavailable. Worker interruption is observable through status. Production now has a PostgreSQL-backed durable queue contract, but hosted worker reclaim/retry policy still belongs to release-readiness hardening.
 
 Can the tester continue?
 
@@ -133,7 +133,7 @@ PASS for automated recovery checks. Manual interruption review remains pending.
 
 Known Limitations:
 
-Automated coverage proves refresh recovery, session-expiry return, failed-run visibility, status API failure handling, and running worker interruption observability. It does not yet prove production worker restart/reclaim semantics because production worker infrastructure is out of Phase 10 scope.
+Automated coverage proves refresh recovery, session-expiry return, failed-run visibility, status API failure handling, and running worker interruption observability. It does not yet prove hosted production worker restart/reclaim semantics against the PostgreSQL-backed queue.
 
 Can the internal operator continue?
 

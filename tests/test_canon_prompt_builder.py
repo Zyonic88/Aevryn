@@ -37,7 +37,8 @@ def test_canon_prompt_builder_builds_image_prompt_from_scene_context() -> None:
     assert "Generate this image using only accepted Aevryn canon." in prompt
     assert "Scene Summary:" in prompt
     assert "Purpose:" in prompt
-    assert "Character: Mark (character_mark)" in prompt
+    assert "Character: Mark" in prompt
+    assert "Character: Mark (character_mark)" not in prompt
     assert "- Current Weapon: Iron Sword" in prompt
     assert "Mark retains Current Weapon: Iron Sword" in prompt
 
@@ -47,7 +48,8 @@ def test_canon_prompt_builder_builds_narration_prompt_without_guessing() -> None
     prompt = CanonPromptBuilder().build_narration_prompt(build_context())
 
     assert "Narrate using only accepted canon facts." in prompt
-    assert "Character: Mark (character_mark)" in prompt
+    assert "Character: Mark" in prompt
+    assert "Character: Mark (character_mark)" not in prompt
 
 
 def test_canon_prompt_builder_builds_camera_prompt_without_new_canon() -> None:
@@ -55,7 +57,8 @@ def test_canon_prompt_builder_builds_camera_prompt_without_new_canon() -> None:
     prompt = CanonPromptBuilder().build_camera_prompt(build_context())
 
     assert "Describe camera framing without inventing new canon." in prompt
-    assert "Character: Mark (character_mark)" in prompt
+    assert "Character: Mark" in prompt
+    assert "Character: Mark (character_mark)" not in prompt
 
 
 def test_canon_prompt_builder_builds_animation_prompt_from_facts() -> None:
@@ -166,6 +169,45 @@ def test_canon_prompt_builder_includes_current_scene_visual_anchors() -> None:
     )
 
 
+def test_canon_prompt_builder_includes_action_visual_anchors() -> None:
+    """Image prompts include current-scene body language as visual anchors."""
+    imported_source = StoryImporter().import_text(
+        source_id="source_action_visual",
+        title="Action Visual Story",
+        text=(
+            "Chapter 1\n"
+            "Mira smiled at the warning. "
+            "She crossed her arms before Leo entered. "
+            "The argument continued without any new equipment."
+        ),
+    )
+    scene = imported_source.story.chapters[0].scenes[0]
+    database = CanonDatabase()
+    database.store_character(
+        Character(
+            entity=Entity(
+                entity_id="character_mira",
+                entity_type="character",
+                display_name="Mira",
+            )
+        )
+    )
+    database.store_chapter(imported_source.story.chapters[0])
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id=scene.scene_id,
+        character_ids=("character_mira",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "Mira smiled at the warning." in prompt
+    assert "She crossed her arms before Leo entered." in prompt
+
+
 def test_canon_prompt_builder_includes_scene_world_context_and_exclusions() -> None:
     """Image prompts include connected world facts and explicit generation exclusions."""
     imported_source = build_imported_source()
@@ -206,6 +248,55 @@ def test_canon_prompt_builder_includes_scene_world_context_and_exclusions() -> N
     assert "Mark Owns Iron Sword" in prompt
     assert "Do not include unless supported by this scene:" in prompt
     assert "Later canon objects or rewards" in prompt
+
+
+def test_canon_prompt_builder_includes_confirmed_visible_character_traits() -> None:
+    """Image prompts include scene-relevant visible traits only when Canon accepts them."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("gender", "Male"),
+        ("race", "Human"),
+        ("species", "Human"),
+        ("expression", "Worried"),
+        ("posture", "Guarded stance"),
+        ("rank", "Cadet"),
+    ):
+        fact_id = f"fact_mark_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_008",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_mark_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_008_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "- Gender: Male" in prompt
+    assert "- Race: Human" in prompt
+    assert "- Species: Human" in prompt
+    assert "- Expression: Worried" in prompt
+    assert "- Posture: Guarded stance" in prompt
+    assert "- Rank: Cadet" in prompt
+    assert "Appearance: Not specified by accepted canon." not in prompt
 
 
 def test_canon_prompt_builder_separates_facts_composition_lighting_and_style() -> None:

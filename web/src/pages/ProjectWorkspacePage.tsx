@@ -5,7 +5,7 @@ import { ApiError, apiClient } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
 import { projectSummaryFromApiProject } from "../projects/projectMapping";
-import { readProjects, type ProjectSummary } from "../projects/projectStore";
+import { type ProjectSummary } from "../projects/projectStore";
 import { CharacterWorkspaceView } from "./CharacterWorkspaceView";
 import { ContinuityWorkspaceView } from "./ContinuityWorkspaceView";
 import { ExportWorkspaceView } from "./ExportWorkspaceView";
@@ -47,15 +47,11 @@ export function ProjectWorkspacePage() {
       apiClient.getProject(requireProjectId(projectId), requireSessionToken(session), new Date().toISOString()),
     enabled: session !== null && projectId !== undefined,
   });
-  const legacyProject = readProjects().find((candidate) => candidate.id === projectId) ?? null;
-
   if (projectId === undefined) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const project = projectQuery.data
-    ? projectSummaryFromApiProject(projectQuery.data)
-    : legacyProject;
+  const project = projectQuery.data ? projectSummaryFromApiProject(projectQuery.data) : null;
 
   if (projectQuery.isLoading && project === null) {
     return <LoadingMessage>Loading project.</LoadingMessage>;

@@ -53,7 +53,7 @@ AI can help propose structure. AI does not own truth. Your story wins.
 Readiness:
 
 ```text
-Draft only. Attorney review, provider disclosure, production retention windows, and privacy contact verification required.
+Draft only. Attorney review, provider disclosure, and production retention windows required. Privacy contact is verified.
 ```
 
 Draft copy:
@@ -67,9 +67,11 @@ Aetherra Labs does not train on user stories without explicit opt-in.
 
 Aevryn is designed to avoid putting full manuscripts, full chapters, full AI responses, credentials, tokens, private URLs, or machine-local paths into logs, monitoring, diagnostics, or support workflows.
 
-When you delete a story, Aevryn removes it from active Aevryn-owned storage. Production backups may retain deleted data for a disclosed recovery window. That window must be published before public beta.
+When you delete a story, Aevryn removes it from active Aevryn-owned product storage. The current public-beta wording candidate says encrypted production backups may retain deleted project or story data for up to 30 days for authorized disaster recovery only. Backups are not used for AI training, analytics, support browsing, or product exploration.
 
-Privacy questions should go to privacy@aevryn.ai after that mailbox is provisioned and tested.
+When provider-backed extraction is enabled, Aevryn may send selected story excerpts, scene context, evidence anchors, extraction instructions, and structured-output requirements to a reviewed AI provider. The current provider candidate is OpenAI. Provider output is not Canon; Aevryn validates provider output against story evidence before accepting anything into project state. Provider-backed extraction must remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, and no-training posture are reviewed, documented, and disclosed accurately.
+
+Privacy questions should go to privacy@aevryn.ai.
 ```
 
 ---
@@ -79,7 +81,7 @@ Privacy questions should go to privacy@aevryn.ai after that mailbox is provision
 Readiness:
 
 ```text
-Draft only. Production monitoring, incident response, branch protection, and contact verification required.
+Draft only. Production monitoring, incident response, branch protection, and public-page publication required. Security contact is verified.
 ```
 
 Draft copy:
@@ -93,7 +95,7 @@ The website does not grant authority by itself. Backend authorization decides wh
 
 Uploaded manuscripts and generated exports must remain private. Aevryn is designed so diagnostics and support workflows can investigate problems without asking for full source prose by default.
 
-Security vulnerability reports should go to security@aevryn.ai after that mailbox is provisioned and tested.
+Security vulnerability reports should go to security@aevryn.ai.
 ```
 
 ---
@@ -117,7 +119,7 @@ Your exports: you own them.
 
 Aevryn is a tool for understanding your work. It is not a claim over your work.
 
-You should be able to export your data and delete your projects. Deleted stories are removed from active Aevryn-owned storage. If encrypted backups retain deleted data for a limited recovery window, that window will be disclosed.
+You should be able to export your data and delete your projects. Deleted stories are removed from active Aevryn-owned product storage. The current public-beta wording candidate says encrypted backups may retain deleted project or story data for up to 30 days for authorized disaster recovery only.
 
 AI training is off by default. Aetherra Labs does not train on user stories without explicit opt-in.
 
@@ -153,7 +155,7 @@ Content classification does not change ownership. Your stories remain yours.
 Readiness:
 
 ```text
-Draft only. Contact aliases must be provisioned and tested before publication.
+Draft-ready for contact details. Legal-sensitive publication and support procedure review still required.
 ```
 
 Draft copy:
@@ -189,7 +191,7 @@ Draft copy:
 ```text
 Aetherra Labs welcomes good-faith security reports for Aevryn.
 
-Please report suspected vulnerabilities privately to security@aevryn.ai after that mailbox is provisioned and tested.
+Please report suspected vulnerabilities privately to security@aevryn.ai.
 
 Reports should include the affected component, reproduction steps, impact, screenshots or logs without private story content, and suggested remediation if available.
 
@@ -204,10 +206,10 @@ No vulnerability report should require private user manuscripts.
 
 Before these pages can be published for public beta:
 
-* contact aliases must be provisioned and tested
+* verified contact aliases must be published accurately
 * legal-sensitive pages must be attorney-reviewed
-* production backup retention window must be selected
-* AI provider review must be completed or provider-backed extraction must remain disabled
+* production backup retention window must be verified against the selected public-beta wording candidate
+* AI provider review must be completed against the selected disclosure candidate or provider-backed extraction must remain disabled
 * production security operations must be configured
 * claims must be checked against the final public-beta deployment
 

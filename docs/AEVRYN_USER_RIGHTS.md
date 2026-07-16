@@ -38,7 +38,9 @@ You should be able to export your data.
 
 You should be able to delete your projects.
 
-Deletion must remove story data from active Aevryn-owned storage. If production backups retain deleted data for a disclosed recovery window, that must be explained clearly.
+Deletion must remove story data from active Aevryn-owned storage.
+
+The current public-beta wording candidate says encrypted production backups may retain deleted project or story data for up to 30 days for authorized disaster recovery only. Backups must not be used for AI training, analytics, support browsing, or product exploration.
 
 ---
 
@@ -49,6 +51,10 @@ Off by default.
 Opt-in only.
 
 Aetherra Labs does not train on user stories without explicit opt-in.
+
+Provider-backed extraction must be disclosed before public beta.
+
+The current AI provider disclosure candidate names OpenAI as the internal-alpha provider candidate and requires provider-backed extraction to remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, and no-training posture are reviewed, documented, and disclosed accurately.
 
 ---
 

@@ -148,7 +148,8 @@ def test_prompt_sheet_markdown_exports_clean_prompt_bundle() -> None:
     markdown = ExportEngine().prompt_sheet_markdown(bundle)
 
     assert "## Image Prompt" in markdown
-    assert "Character: Mark (character_mark)" in markdown
+    assert "Character: Mark" in markdown
+    assert "Character: Mark (character_mark)" not in markdown
 
 
 def test_production_pack_markdown_exports_scene_analysis() -> None:

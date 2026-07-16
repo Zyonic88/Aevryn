@@ -7,6 +7,7 @@ from aevryn.workers.models import (
     BackgroundQueueSnapshot,
     BackgroundWorkerRunSummary,
 )
+from aevryn.workers.postgresql_queue import PostgresqlBackgroundJobQueue
 from aevryn.workers.queue import (
     BackgroundJobQueue,
     DuplicateJobError,
@@ -37,5 +38,6 @@ __all__ = [
     "InvalidJobTransitionError",
     "JobNotFoundError",
     "JobQueueError",
+    "PostgresqlBackgroundJobQueue",
     "ProjectImportSnapshotHandler",
 ]

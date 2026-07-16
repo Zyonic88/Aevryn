@@ -71,9 +71,26 @@ Backups must not become:
 
 ---
 
+# Public-Beta Wording Candidate
+
+The selected public-beta wording candidate is recorded in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
+
+Candidate posture:
+
+```text
+Deleted projects and stories are removed from active Aevryn-owned product storage.
+Encrypted production backups may retain deleted data for up to 30 days.
+Backups are used only for authorized disaster recovery and service restoration.
+Backups are not used for AI training, analytics, support browsing, or product exploration.
+```
+
+This candidate must be verified against final production backup provider behavior before public beta.
+
+---
+
 # Public Beta Blocker
 
-Public beta remains blocked until the deployment plan selects production backup retention behavior and can truthfully publish it.
+Public beta remains blocked until the deployment plan verifies production backup retention behavior and can truthfully publish it.
 
 The minimum acceptable public-beta posture is:
 

@@ -39,8 +39,10 @@ Gate 5 builds on:
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/BACKUP_AND_RECOVERY.md`
 * `docs/AEVRYN_AUDIT_LEDGER.md`
+* `docs/AEVRYN_DATABASE_PRIVILEGE_HARDENING.md`
 * `docs/DATA_RETENTION_POLICY.md`
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
+* `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
 
 These documents define the privacy and engineering boundaries.
 
@@ -84,6 +86,8 @@ Restore tests must not expose full manuscripts in logs, support artifacts, or sc
 
 The concrete restore drill is defined in `docs/AEVRYN_RESTORE_TEST_PLAN.md`.
 
+The required result template is defined in `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`.
+
 ---
 
 # Disaster Recovery
@@ -119,6 +123,15 @@ Audit records must remain append-only, tamper-evident, and metadata-only.
 
 Audit storage must not contain full source prose, full AI responses, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths.
 
+The public-beta audit storage candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+
+The selected candidate uses managed PostgreSQL audit tables owned by Aevryn's Project Database environment.
+
+`PostgresqlAuditLedger` implements the selected storage adapter.
+
+Core API and worker workflow events now append metadata-only audit records through
+the configured audit writer.
+
 ---
 
 # Audit Event Coverage
@@ -129,13 +142,12 @@ Public beta should capture security-relevant and workflow-relevant events, inclu
 * login success and failure
 * password reset request
 * project creation
+* project deletion
 * story creation
 * story deletion
 * import saved
 * run submitted
-* worker started
-* worker failed
-* worker succeeded
+* worker drain completion
 * snapshot created
 * export generated
 * settings changed
@@ -173,15 +185,47 @@ Public beta remains blocked until:
 * disaster recovery procedure is documented
 * production audit storage is selected
 * audit retention is selected
-* audit access controls are documented
-* audit integrity verification is part of the release gate
+* audit access controls are configured and reviewed through hosted audit access verification and reporting
+* hosted audit integrity verification is recorded in the release gate
 * deletion and backup language is aligned with production behavior
 
 Current implementation progress:
 
 ```text
 docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
-Production backup provider, retention window, restore execution, audit storage provider, and audit retention remain open.
+docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit drill record and stop conditions.
+Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
+Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
+`PostgresqlAuditLedger` implements the selected PostgreSQL adapter.
+Core API and worker workflow events are wired to the configured audit writer.
+Identity, password reset, project settings, and cross-user settings access-denial
+events are wired to the configured audit writer.
+Production configuration check failures are wired to the configured PostgreSQL
+audit writer when audit storage can be constructed from the supplied deployment
+settings.
+`aevryn audit-ledger-verify` verifies the configured PostgreSQL audit ledger hash
+chain without printing secrets.
+`aevryn audit-access-report` reports configured PostgreSQL audit table and
+privilege metadata without reading audit rows or printing secrets.
+`aevryn audit-access-verify` fails closed unless the configured PostgreSQL audit
+role can read and append audit records without update or delete privileges.
+The hosted audit command sequence is:
+
+```powershell
+python -m aevryn.cli production-config-check
+python -m aevryn.cli audit-ledger-verify
+python -m aevryn.cli audit-access-report
+python -m aevryn.cli audit-access-verify
+```
+
+The report command records metadata for review. The verify command owns the
+gate decision and must not be bypassed or weakened to pass a privileged role.
+Hosted `aevryn audit-ledger-verify` passed with metadata-only output on
+2026-07-14. Hosted `aevryn audit-access-report` passed with metadata-only
+output, but hosted `aevryn audit-access-verify` failed because the current
+database role has UPDATE and DELETE privileges on `audit_ledger_records`.
+
+Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, restricted audit database role provisioning, hosted audit access verification review, and dated restore/audit drill completion remain open.
 ```
 
 ---

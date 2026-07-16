@@ -40,6 +40,11 @@ OpenAI mode requires:
 
 The default worker path remains non-provider-backed unless provider mode is explicitly configured.
 
+The current public-beta disclosure candidate is recorded in
+`docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`.
+
+That disclosure candidate does not approve OpenAI for public beta. It records the user-facing boundary that must be verified against provider terms and final production configuration.
+
 ---
 
 # Provider Review Checklist

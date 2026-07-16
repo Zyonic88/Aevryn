@@ -25,6 +25,7 @@ PROMPT_METADATA_ATTRIBUTE_PARTS = frozenset(
 
 APPEARANCE_ATTRIBUTE_PARTS = frozenset(
     {
+        "age",
         "appearance",
         "build",
         "clothing",
@@ -32,11 +33,18 @@ APPEARANCE_ATTRIBUTE_PARTS = frozenset(
         "complexion",
         "ear",
         "eye",
+        "expression",
         "face",
+        "gender",
         "hair",
         "height",
+        "injury",
         "look",
         "marking",
+        "posture",
+        "race",
+        "scar",
+        "species",
         "texture",
         "uniform",
         "wing",
@@ -60,9 +68,11 @@ SCENE_VISUAL_ANCHOR_TERMS = frozenset(
         "clothing",
         "corridor",
         "courtyard",
+        "crossed",
         "desk",
         "door",
         "dress",
+        "entered",
         "field",
         "forest",
         "gate",
@@ -73,13 +83,17 @@ SCENE_VISUAL_ANCHOR_TERMS = frozenset(
         "house",
         "jacket",
         "light",
+        "looked",
         "market",
         "podium",
         "projection",
         "room",
         "screen",
+        "sat",
         "ship",
+        "smiled",
         "starship",
+        "stood",
         "street",
         "table",
         "teacher",
@@ -102,11 +116,18 @@ VISUAL_PRODUCTION_ATTRIBUTE_PARTS = frozenset(
         "design",
         "environment",
         "equipment",
+        "expression",
+        "gender",
         "item",
         "location",
         "object",
+        "posture",
+        "race",
+        "rank",
+        "species",
         "status",
         "territory",
+        "title",
         "vehicle",
         "visual",
         "weapon",
@@ -345,7 +366,7 @@ class CanonPromptBuilder:
         lines = ["Subjects and known appearance:"]
         scene_fact_keys = self._scene_fact_keys(context.active_facts)
         for card in context.character_cards:
-            lines.append(f"Character: {card.display_name} ({card.character_id})")
+            lines.append(f"Character: {card.display_name}")
             character_lines = self._character_fact_lines(
                 card=card,
                 scene_fact_keys=scene_fact_keys,
@@ -755,7 +776,7 @@ class CanonPromptBuilder:
         lines: list[str] = []
         scene_fact_keys = self._scene_fact_keys(context.active_facts)
         for card in context.character_cards:
-            lines.append(f"Character: {card.display_name} ({card.character_id})")
+            lines.append(f"Character: {card.display_name}")
             lines.extend(
                 self._character_fact_lines(
                     card=card,

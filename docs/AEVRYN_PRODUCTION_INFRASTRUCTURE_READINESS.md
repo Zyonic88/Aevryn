@@ -217,17 +217,12 @@ They must not contain full manuscripts, full chapters, full AI responses, creden
 
 Public beta remains blocked until:
 
-* remaining proposed infrastructure decisions are approved or revised by the project owner
-* production database is selected
-* production object storage is selected
-* production identity provider is selected
-* production secret manager is selected
-* environment separation is documented
-* HTTPS/HSTS edge policy is documented
-* domain and DNS strategy is documented
-* production worker runtime is documented
+* remaining infrastructure smoke evidence is captured
+* hosted worker execution and retry/reclaim behavior are verified
+* production log and monitoring review passes
 * local adapters are disabled or explicitly unavailable for production deployment
 * production-like deployment smoke test passes
+* release-candidate signoff is recorded
 
 Decision 1 result:
 
@@ -339,7 +334,8 @@ Production startup now requires AEVRYN_WORKER_API_KEY.
 Production startup now requires AEVRYN_WORKER_TIMEOUT_SECONDS.
 Production startup now requires AEVRYN_WORKER_MAX_RETRIES.
 Production startup now requires AEVRYN_WORKER_CONCURRENCY.
-Managed worker runtime, managed queue provider, retry behavior, and shutdown/resume implementation remain open.
+Production queue state now uses the PostgreSQL-backed durable `background_jobs` table.
+Hosted worker execution, retry behavior, and shutdown/resume smoke evidence remain open.
 ```
 
 Next Gate 3 target:
