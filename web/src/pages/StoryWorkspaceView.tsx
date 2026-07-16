@@ -138,6 +138,9 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
                 <button
                   type="button"
                   className="text-button story-select-button"
+                  aria-label={`${story.title} ${
+                    activeStoryId === story.story_id ? "Selected story" : "Select story"
+                  }`}
                   aria-pressed={activeStoryId === story.story_id}
                   onClick={() => selectStory(story.story_id)}
                 >

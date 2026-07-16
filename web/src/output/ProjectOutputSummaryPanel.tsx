@@ -762,6 +762,7 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
             <button
               type="button"
               className="prompt-scene-button"
+              aria-label={`${pack.scene.title} ${pack.scene.chapter_label} ${pack.scene.evidence_summary}`}
               aria-pressed={pack.scene.scene_id === selectedPack.scene.scene_id}
               key={pack.scene.scene_id}
               onClick={() => setSelectedSceneId(pack.scene.scene_id)}
