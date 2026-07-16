@@ -139,6 +139,7 @@ _EXPLICIT_RACE_TERMS = (
     ("Dragon", ("dragon",)),
     ("Vampire", ("vampire",)),
 )
+_MAX_PROMPT_PRESENTATION_LINES = 48
 
 
 class PresentationEngine:
@@ -734,12 +735,35 @@ class PresentationEngine:
     @staticmethod
     def _prompt_lines(prompt: str) -> tuple[str, ...]:
         """Return compact prompt lines for presentation."""
-        lines = (
+        unique_lines = PresentationEngine._unique_values(
             display_line
             for line in prompt.splitlines()
             if (display_line := PresentationEngine._prompt_display_line(line)) is not None
         )
-        return tuple(PresentationEngine._unique_values(lines)[:24])
+        if len(unique_lines) <= _MAX_PROMPT_PRESENTATION_LINES:
+            return tuple(unique_lines)
+
+        safeguard_lines = [
+            line
+            for line in unique_lines
+            if PresentationEngine._is_prompt_safeguard_line(line)
+        ]
+        selected: list[str] = []
+        leading_line_limit = max(
+            _MAX_PROMPT_PRESENTATION_LINES - len(safeguard_lines),
+            0,
+        )
+        selected.extend(unique_lines[:leading_line_limit])
+        for line in safeguard_lines:
+            if line not in selected and len(selected) < _MAX_PROMPT_PRESENTATION_LINES:
+                selected.append(line)
+        for line in unique_lines[leading_line_limit:]:
+            if len(selected) >= _MAX_PROMPT_PRESENTATION_LINES:
+                break
+            if line not in selected:
+                selected.append(line)
+
+        return tuple(selected)
 
     @staticmethod
     def _prompt_display_line(line: str) -> str | None:
@@ -749,6 +773,28 @@ class PresentationEngine:
             return None
 
         return PresentationEngine._shorten(stripped_line)
+
+    @staticmethod
+    def _is_prompt_safeguard_line(line: str) -> bool:
+        """Return whether a prompt line protects Canon or output fidelity."""
+        normalized_line = line.lower()
+        return any(
+            marker in normalized_line
+            for marker in (
+                "do not add",
+                "do not contradict",
+                "do not include",
+                "do not invent",
+                "do not render",
+                "do not turn",
+                "unless canon",
+                "unless exact text",
+                "unless listed",
+                "unless supported",
+                "without evidence",
+                "style must not override",
+            )
+        )
 
     @staticmethod
     def _strip_markdown_bullet(value: str) -> str:
