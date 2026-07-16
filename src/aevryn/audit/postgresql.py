@@ -264,7 +264,19 @@ def postgresql_audit_access_report(
                             'TRUNCATE'
                         ),
                         false
-                    ) AS can_truncate;
+                    ) AS can_truncate,
+                    COALESCE(
+                        (
+                            SELECT c.relowner = (
+                                SELECT role.oid
+                                FROM pg_roles role
+                                WHERE role.rolname = current_user
+                            )
+                            FROM pg_class c
+                            WHERE c.oid = to_regclass('audit_ledger_records')
+                        ),
+                        false
+                    ) AS is_table_owner;
                 """
             )
             row = cursor.fetchone()
@@ -277,6 +289,7 @@ def postgresql_audit_access_report(
         "can_update": _row_bool(row[3], "audit update privilege"),
         "can_delete": _row_bool(row[4], "audit delete privilege"),
         "can_truncate": _row_bool(row[5], "audit truncate privilege"),
+        "is_table_owner": _row_bool(row[6], "audit table ownership"),
     }
 
 

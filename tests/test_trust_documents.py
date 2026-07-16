@@ -829,6 +829,7 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "production audit storage",
         "audit retention",
         "audit access controls",
+        "is_table_owner=false",
         "metadata-only",
         "tamper-evident",
     )
@@ -1302,6 +1303,8 @@ def test_database_privilege_template_preserves_append_only_audit_contract() -> N
         "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
         "docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql",
         "audit_ledger_records TRUNCATE: false",
+        "audit_ledger_records TABLE OWNER: false",
+        "is_table_owner=false",
         "transaction-scoped PostgreSQL advisory lock",
     )
 
@@ -1309,9 +1312,11 @@ def test_database_privilege_template_preserves_append_only_audit_contract() -> N
         assert term in document
 
     required_template_terms = (
-        "Replace <runtime_role> only in the reviewed execution copy.",
+        "Replace <runtime_role> and <migration_owner> only in the reviewed execution copy.",
         "Cloud Run must use AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false.",
         'GRANT USAGE ON SCHEMA public TO "<runtime_role>";',
+        'ALTER TABLE public.audit_ledger_records OWNER TO "<migration_owner>";',
+        "REVOKE ALL ON TABLE public.audit_ledger_records FROM PUBLIC;",
         "public.background_jobs",
         "public.project_settings",
         'GRANT SELECT, INSERT ON TABLE public.audit_ledger_records TO "<runtime_role>";',

@@ -57,6 +57,7 @@ audit_ledger_records INSERT: true
 audit_ledger_records UPDATE: false
 audit_ledger_records DELETE: false
 audit_ledger_records TRUNCATE: false
+audit_ledger_records TABLE OWNER: false
 ```
 
 The hosted release gate is:
@@ -108,17 +109,21 @@ docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql
 3. Grant the runtime role only the privileges required for normal application behavior.
 4. Grant `SELECT` and `INSERT` on `audit_ledger_records`.
 5. Revoke `UPDATE`, `DELETE`, and `TRUNCATE` on `audit_ledger_records`.
-6. Grant sequence privileges only if the runtime role requires them for tables with sequences.
-7. Update the production database URL secret to use the restricted runtime role.
-8. Set `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` in Cloud Run.
-9. Redeploy Cloud Run.
-10. Run the verification gates in this document.
+6. Ensure the runtime role does not own `audit_ledger_records`.
+7. Revoke public table privileges on `audit_ledger_records`.
+8. Grant sequence privileges only if the runtime role requires them for tables with sequences.
+9. Update the production database URL secret to use the restricted runtime role.
+10. Set `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` in Cloud Run.
+11. Redeploy Cloud Run.
+12. Run the verification gates in this document.
 
 The runtime role may read, insert, update, and delete normal product records where required by project workflows, project deletion, import processing, background jobs, snapshots, exports, and settings.
 
 The runtime role must not update or delete audit history.
 
 The runtime role must not truncate audit history.
+
+The runtime role must not own the audit table.
 
 Audit append serialization uses a transaction-scoped PostgreSQL advisory lock so audit writes do not require table-level update/delete privileges.
 
@@ -134,6 +139,7 @@ Required verification after remediation:
 * `aevryn audit-ledger-verify` passes without printing secrets
 * `aevryn audit-access-report` reports SELECT and INSERT as true
 * `aevryn audit-access-report` reports UPDATE, DELETE, and TRUNCATE as false
+* `aevryn audit-access-report` reports `is_table_owner=false`
 * `aevryn audit-access-verify` passes
 * `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` is present in the hosted runtime configuration
 * hosted API startup still succeeds

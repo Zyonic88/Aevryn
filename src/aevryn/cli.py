@@ -1475,6 +1475,7 @@ def _audit_access_summary(
         "can_update": _bool_text(cast(bool, report["can_update"])),
         "can_delete": _bool_text(cast(bool, report["can_delete"])),
         "can_truncate": _bool_text(cast(bool, report["can_truncate"])),
+        "is_table_owner": _bool_text(cast(bool, report["is_table_owner"])),
         "secrets_printed": 0,
         "ok": ok,
     }
@@ -1497,6 +1498,10 @@ def _require_audit_access_contract(report: dict[str, object]) -> None:
         "can_truncate": (
             "PostgreSQL audit append-only contract failed: "
             "TRUNCATE privilege is present."
+        ),
+        "is_table_owner": (
+            "PostgreSQL audit append-only contract failed: "
+            "runtime role owns the audit table."
         ),
     }
     for key, message in forbidden_true.items():

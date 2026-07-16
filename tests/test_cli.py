@@ -1122,6 +1122,7 @@ def test_audit_access_report_prints_privileges_without_secrets(
             "can_update": False,
             "can_delete": False,
             "can_truncate": False,
+            "is_table_owner": False,
         }
 
     monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
@@ -1139,6 +1140,7 @@ def test_audit_access_report_prints_privileges_without_secrets(
     assert "can_update=false" in captured.out
     assert "can_delete=false" in captured.out
     assert "can_truncate=false" in captured.out
+    assert "is_table_owner=false" in captured.out
     assert "secrets_printed=0" in captured.out
     assert "ok=audit_access_metadata_reported" in captured.out
     assert "secret-db-password" not in captured.out
@@ -1161,6 +1163,7 @@ def test_audit_access_report_helper_returns_stable_boolean_text(
             "can_update": False,
             "can_delete": False,
             "can_truncate": False,
+            "is_table_owner": False,
         }
 
     monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
@@ -1176,6 +1179,7 @@ def test_audit_access_report_helper_returns_stable_boolean_text(
         "can_update": "false",
         "can_delete": "false",
         "can_truncate": "false",
+        "is_table_owner": "false",
         "secrets_printed": 0,
         "ok": "audit_access_metadata_reported",
     }
@@ -1210,6 +1214,7 @@ def test_audit_access_verify_reports_success_without_secrets(
             "can_update": False,
             "can_delete": False,
             "can_truncate": False,
+            "is_table_owner": False,
         }
 
     monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
@@ -1223,6 +1228,7 @@ def test_audit_access_verify_reports_success_without_secrets(
     assert "can_update=false" in captured.out
     assert "can_delete=false" in captured.out
     assert "can_truncate=false" in captured.out
+    assert "is_table_owner=false" in captured.out
     assert "secret-db-password" not in captured.out
     assert "postgresql://" not in captured.out
     assert "localhost" not in captured.out
@@ -1240,6 +1246,7 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_update": False,
                 "can_delete": False,
                 "can_truncate": False,
+                "is_table_owner": False,
             },
             "audit table is missing",
         ),
@@ -1251,6 +1258,7 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_update": False,
                 "can_delete": False,
                 "can_truncate": False,
+                "is_table_owner": False,
             },
             "lacks SELECT privilege",
         ),
@@ -1262,6 +1270,7 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_update": False,
                 "can_delete": False,
                 "can_truncate": False,
+                "is_table_owner": False,
             },
             "lacks INSERT privilege",
         ),
@@ -1273,6 +1282,7 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_update": True,
                 "can_delete": False,
                 "can_truncate": False,
+                "is_table_owner": False,
             },
             "UPDATE privilege is present",
         ),
@@ -1284,6 +1294,7 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_update": False,
                 "can_delete": True,
                 "can_truncate": False,
+                "is_table_owner": False,
             },
             "DELETE privilege is present",
         ),
@@ -1295,8 +1306,21 @@ def test_audit_access_verify_reports_success_without_secrets(
                 "can_update": False,
                 "can_delete": False,
                 "can_truncate": True,
+                "is_table_owner": False,
             },
             "TRUNCATE privilege is present",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": True,
+                "can_insert": True,
+                "can_update": False,
+                "can_delete": False,
+                "can_truncate": False,
+                "is_table_owner": True,
+            },
+            "runtime role owns the audit table",
         ),
     ),
 )
