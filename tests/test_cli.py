@@ -600,7 +600,7 @@ def test_production_config_check_help_describes_metadata_only_contract(
 
     assert error.value.code == 0
     assert "Check production startup configuration without printing secrets" in output
-    assert "managed-identity blocker" in output
+    assert "public-beta approval boundary" in output
 
 
 def test_production_config_check_requires_production_env(

@@ -209,6 +209,17 @@ chain without printing secrets.
 privilege metadata without reading audit rows or printing secrets.
 `aevryn audit-access-verify` fails closed unless the configured PostgreSQL audit
 role can read and append audit records without update or delete privileges.
+The hosted audit command sequence is:
+
+```powershell
+python -m aevryn.cli production-config-check
+python -m aevryn.cli audit-ledger-verify
+python -m aevryn.cli audit-access-report
+python -m aevryn.cli audit-access-verify
+```
+
+The report command records metadata for review. The verify command owns the
+gate decision and must not be bypassed or weakened to pass a privileged role.
 Hosted `aevryn audit-ledger-verify` passed with metadata-only output on
 2026-07-14. Hosted `aevryn audit-access-report` passed with metadata-only
 output, but hosted `aevryn audit-access-verify` failed because the current
