@@ -158,6 +158,7 @@ AEVRYN_DEPLOYMENT_ENV=production
 AEVRYN_ENVIRONMENT_NAME=production
 AEVRYN_SECRET_MANAGER=deployment
 AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql
+AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false
 AEVRYN_STORAGE_PROVIDER=r2
 AEVRYN_R2_BUCKET=aevryn-dev
 AEVRYN_R2_ACCOUNT_ID=<account-id>
@@ -180,6 +181,10 @@ AEVRYN_WORKER_QUEUE_PROVIDER=managed
 AEVRYN_WORKER_TIMEOUT_SECONDS=120
 AEVRYN_WORKER_MAX_RETRIES=3
 AEVRYN_WORKER_CONCURRENCY=1
+AEVRYN_EXTRACTION_MODE=openai
+AEVRYN_OPENAI_MODEL=<approved-model>
+AEVRYN_OPENAI_TIMEOUT_SECONDS=90
+AEVRYN_OPENAI_MAX_RESPONSE_BYTES=1048576
 AEVRYN_LOG_DESTINATION=hosted
 AEVRYN_MONITORING_DESTINATION=hosted
 AEVRYN_LOG_RETENTION_DAYS=30
@@ -187,6 +192,59 @@ AEVRYN_MONITORING_RETENTION_DAYS=30
 AEVRYN_SECURITY_ALERTS_ENABLED=true
 AEVRYN_METADATA_ONLY_LOGGING=true
 ```
+
+`AEVRYN_WORKER_QUEUE_PROVIDER=managed` currently means the API wires the
+durable PostgreSQL background queue backed by the Project Database
+`background_jobs` table. Do not use the local in-memory queue in production.
+Managed worker runners should call `POST /v2/workers/process` with
+`AEVRYN_WORKER_API_KEY`; the worker key is route-scoped and does not authorize
+general workflow routes.
+
+The container also exposes a production-safe worker runner command:
+
+```powershell
+python -m aevryn.cli worker-drain --max-jobs 1
+```
+
+The command reads `AEVRYN_PUBLIC_API_BASE_URL` and `AEVRYN_WORKER_API_KEY` from
+the runtime environment, calls the hosted worker route, and prints only worker
+counts. It must be run by managed infrastructure with deployment secrets
+injected, not by placing worker credentials in scheduler payloads, docs, logs,
+or frontend code.
+
+Recommended public-beta runner shape:
+
+* Cloud Run service owns the public API.
+* Cloud Run Job runs `python -m aevryn.cli worker-drain --max-jobs 1`.
+* Secret Manager injects `AEVRYN_WORKER_API_KEY` into the job.
+* Cloud Scheduler triggers the Cloud Run Job on a short interval.
+* The browser never calls `/v2/workers/process` and never receives worker
+  credentials.
+
+Current alpha wiring:
+
+* Cloud Run service: `aevryn-api`
+* Cloud Run Job: `aevryn-worker-drain`
+* Cloud Scheduler job: `aevryn-worker-drain-every-2-min`
+* Schedule: every two minutes, `America/Denver`
+* Job command: `python -m aevryn.cli worker-drain --max-jobs 1 --timeout-seconds 180`
+* Job environment: `AEVRYN_PUBLIC_API_BASE_URL=https://api.aevryn.ai`
+* Job secret: `AEVRYN_WORKER_API_KEY=AEVRYN_WORKER_API_KEY:latest`
+* Scheduler authentication: project compute service account with
+  `roles/run.invoker` scoped to the `aevryn-worker-drain` job.
+
+Verified alpha smoke result:
+
+```text
+status=200
+claimed_jobs=0
+succeeded_jobs=0
+failed_jobs=0
+ok=hosted_worker_drain_completed
+```
+
+This smoke output is metadata-only. It must not include worker credentials,
+source prose, AI payloads, or user manuscript content.
 
 Secret-backed Cloud Run variables:
 
@@ -200,6 +258,7 @@ AEVRYN_SUPABASE_SERVICE_ROLE_KEY
 AEVRYN_SUPABASE_JWT_SECRET
 AEVRYN_SESSION_SECRET
 AEVRYN_WORKER_API_KEY
+AEVRYN_OPENAI_API_KEY
 ```
 
 `AEVRYN_SUPABASE_JWT_ALGORITHM=es256` is preferred for public beta and requires
@@ -232,8 +291,8 @@ gcloud run deploy aevryn-api `
   --platform managed `
   --port 8080 `
   --allow-unauthenticated `
-  --set-env-vars AEVRYN_DEPLOYMENT_ENV=production,AEVRYN_ENVIRONMENT_NAME=production,AEVRYN_SECRET_MANAGER=deployment,AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql,AEVRYN_STORAGE_PROVIDER=r2,AEVRYN_R2_BUCKET=aevryn-dev,AEVRYN_R2_ACCOUNT_ID=YOUR_R2_ACCOUNT_ID,AEVRYN_R2_ENDPOINT_URL=https://YOUR_R2_ACCOUNT_ID.r2.cloudflarestorage.com,AEVRYN_PUBLIC_FRONTEND_BASE_URL=https://app.aevryn.ai,AEVRYN_PUBLIC_API_BASE_URL=https://api.aevryn.ai,AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai,AEVRYN_HTTPS_ONLY=true,AEVRYN_HSTS_ENABLED=true,AEVRYN_IDENTITY_PROVIDER=managed,AEVRYN_IDENTITY_PROVIDER_NAME=supabase,AEVRYN_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co,AEVRYN_SUPABASE_JWT_ALGORITHM=es256,AEVRYN_SUPABASE_JWKS_URL=https://YOUR_PROJECT_REF.supabase.co/auth/v1/.well-known/jwks.json,AEVRYN_SESSION_AUTHORITY=bearer,AEVRYN_PASSWORD_RESET_ENABLED=true,AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true,AEVRYN_WORKER_RUNTIME=managed,AEVRYN_WORKER_QUEUE_PROVIDER=managed,AEVRYN_WORKER_TIMEOUT_SECONDS=120,AEVRYN_WORKER_MAX_RETRIES=3,AEVRYN_WORKER_CONCURRENCY=1,AEVRYN_LOG_DESTINATION=hosted,AEVRYN_MONITORING_DESTINATION=hosted,AEVRYN_LOG_RETENTION_DAYS=30,AEVRYN_MONITORING_RETENTION_DAYS=30,AEVRYN_SECURITY_ALERTS_ENABLED=true,AEVRYN_METADATA_ONLY_LOGGING=true `
-  --set-secrets AEVRYN_PROJECT_DATABASE_URL=AEVRYN_PROJECT_DATABASE_URL:latest,AEVRYN_API_KEYS=AEVRYN_API_KEYS:latest,AEVRYN_R2_ACCESS_KEY_ID=AEVRYN_R2_ACCESS_KEY_ID:latest,AEVRYN_R2_SECRET_ACCESS_KEY=AEVRYN_R2_SECRET_ACCESS_KEY:latest,AEVRYN_SUPABASE_ANON_KEY=AEVRYN_SUPABASE_ANON_KEY:latest,AEVRYN_SUPABASE_SERVICE_ROLE_KEY=AEVRYN_SUPABASE_SERVICE_ROLE_KEY:latest,AEVRYN_SESSION_SECRET=AEVRYN_SESSION_SECRET:latest,AEVRYN_WORKER_API_KEY=AEVRYN_WORKER_API_KEY:latest
+  --set-env-vars AEVRYN_DEPLOYMENT_ENV=production,AEVRYN_ENVIRONMENT_NAME=production,AEVRYN_SECRET_MANAGER=deployment,AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql,AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false,AEVRYN_STORAGE_PROVIDER=r2,AEVRYN_R2_BUCKET=aevryn-dev,AEVRYN_R2_ACCOUNT_ID=YOUR_R2_ACCOUNT_ID,AEVRYN_R2_ENDPOINT_URL=https://YOUR_R2_ACCOUNT_ID.r2.cloudflarestorage.com,AEVRYN_PUBLIC_FRONTEND_BASE_URL=https://app.aevryn.ai,AEVRYN_PUBLIC_API_BASE_URL=https://api.aevryn.ai,AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai,AEVRYN_HTTPS_ONLY=true,AEVRYN_HSTS_ENABLED=true,AEVRYN_IDENTITY_PROVIDER=managed,AEVRYN_IDENTITY_PROVIDER_NAME=supabase,AEVRYN_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co,AEVRYN_SUPABASE_JWT_ALGORITHM=es256,AEVRYN_SUPABASE_JWKS_URL=https://YOUR_PROJECT_REF.supabase.co/auth/v1/.well-known/jwks.json,AEVRYN_SESSION_AUTHORITY=bearer,AEVRYN_PASSWORD_RESET_ENABLED=true,AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true,AEVRYN_WORKER_RUNTIME=managed,AEVRYN_WORKER_QUEUE_PROVIDER=managed,AEVRYN_WORKER_TIMEOUT_SECONDS=120,AEVRYN_WORKER_MAX_RETRIES=3,AEVRYN_WORKER_CONCURRENCY=1,AEVRYN_EXTRACTION_MODE=openai,AEVRYN_OPENAI_MODEL=YOUR_APPROVED_MODEL,AEVRYN_OPENAI_TIMEOUT_SECONDS=90,AEVRYN_OPENAI_MAX_RESPONSE_BYTES=1048576,AEVRYN_LOG_DESTINATION=hosted,AEVRYN_MONITORING_DESTINATION=hosted,AEVRYN_LOG_RETENTION_DAYS=30,AEVRYN_MONITORING_RETENTION_DAYS=30,AEVRYN_SECURITY_ALERTS_ENABLED=true,AEVRYN_METADATA_ONLY_LOGGING=true `
+  --set-secrets AEVRYN_PROJECT_DATABASE_URL=AEVRYN_PROJECT_DATABASE_URL:latest,AEVRYN_API_KEYS=AEVRYN_API_KEYS:latest,AEVRYN_R2_ACCESS_KEY_ID=AEVRYN_R2_ACCESS_KEY_ID:latest,AEVRYN_R2_SECRET_ACCESS_KEY=AEVRYN_R2_SECRET_ACCESS_KEY:latest,AEVRYN_SUPABASE_ANON_KEY=AEVRYN_SUPABASE_ANON_KEY:latest,AEVRYN_SUPABASE_SERVICE_ROLE_KEY=AEVRYN_SUPABASE_SERVICE_ROLE_KEY:latest,AEVRYN_SESSION_SECRET=AEVRYN_SESSION_SECRET:latest,AEVRYN_WORKER_API_KEY=AEVRYN_WORKER_API_KEY:latest,AEVRYN_OPENAI_API_KEY=AEVRYN_OPENAI_API_KEY:latest
 ```
 
 `--allow-unauthenticated` allows browsers to reach the API.

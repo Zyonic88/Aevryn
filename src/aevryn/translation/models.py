@@ -2,10 +2,23 @@
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from typing import Literal
 
 TranslationMode = Literal["literal", "clean_english", "localized", "subtitle_narration"]
+TranslationTermKind = Literal[
+    "term",
+    "name",
+    "alias",
+    "title",
+    "honorific",
+    "faction",
+    "location",
+    "item",
+    "skill",
+    "power_system",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,7 +28,9 @@ class GlossaryTerm:
     source_term: str
     preferred_term: str
     evidence_anchor_id: str
+    possible_meanings: tuple[str, ...] = ()
     entity_id: str | None = None
+    term_kind: TranslationTermKind = "term"
     review_required: bool = False
 
     def __post_init__(self) -> None:
@@ -25,9 +40,18 @@ class GlossaryTerm:
             "preferred_term",
             _normalized_text(self.preferred_term, "Preferred term"),
         )
+        object.__setattr__(
+            self,
+            "possible_meanings",
+            _normalized_text_values(
+                self.possible_meanings,
+                "Glossary term possible meanings",
+            ),
+        )
         _require_machine_token(self.evidence_anchor_id, "Glossary term evidence anchor ID")
         if self.entity_id is not None:
             _require_machine_token(self.entity_id, "Glossary term entity ID")
+        _require_term_kind(self.term_kind)
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,9 +96,16 @@ class TranslationIssue:
     source_term: str
     message: str
     evidence_anchor_ids: tuple[str, ...]
+    term_kind: TranslationTermKind = "term"
+    possible_meaning_count: int = 0
 
     def __post_init__(self) -> None:
         _require_machine_token(self.issue_code, "Translation issue code")
+        _require_term_kind(self.term_kind)
+        _require_non_negative_count(
+            self.possible_meaning_count,
+            "Translation issue possible meaning count",
+        )
         object.__setattr__(
             self,
             "source_term",
@@ -133,7 +164,19 @@ def _normalized_text(value: str, field_name: str) -> str:
     """Normalize required human-readable text."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required.")
-    return " ".join(value.split())
+    return unicodedata.normalize("NFC", " ".join(value.split()))
+
+
+def _normalized_text_values(values: tuple[str, ...], field_name: str) -> tuple[str, ...]:
+    """Normalize optional human-readable text choices."""
+    if not isinstance(values, tuple):
+        raise ValueError(f"{field_name} must be a tuple.")
+    normalized_values = tuple(_normalized_text(value, field_name) for value in values)
+    if len(normalized_values) == 1:
+        raise ValueError(f"{field_name} must include at least two values when provided.")
+    if len(normalized_values) != len({value.casefold() for value in normalized_values}):
+        raise ValueError(f"{field_name} must be unique.")
+    return normalized_values
 
 
 def _require_machine_token(value: str, field_name: str) -> None:
@@ -145,6 +188,8 @@ def _require_machine_token(value: str, field_name: str) -> None:
 
 def _require_unique_machine_tokens(values: tuple[str, ...], field_name: str) -> None:
     """Validate unique machine-token values."""
+    if not isinstance(values, tuple):
+        raise ValueError(f"{field_name} must be a tuple.")
     if not values:
         raise ValueError(f"{field_name} are required.")
     for value in values:
@@ -158,3 +203,28 @@ def _require_language_token(value: str, field_name: str) -> None:
     _require_machine_token(value, field_name)
     if not all(character.isalnum() or character in {"-", "_"} for character in value):
         raise ValueError(f"{field_name} is invalid.")
+
+
+def _require_term_kind(value: str) -> None:
+    """Validate supported glossary term categories."""
+    if value not in {
+        "term",
+        "name",
+        "alias",
+        "title",
+        "honorific",
+        "faction",
+        "location",
+        "item",
+        "skill",
+        "power_system",
+    }:
+        raise ValueError("Translation term kind is invalid.")
+
+
+def _require_non_negative_count(value: int, field_name: str) -> None:
+    """Validate safe metadata counts."""
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValueError(f"{field_name} must be a non-negative integer.")
+    if value == 1:
+        raise ValueError(f"{field_name} cannot be exactly one.")

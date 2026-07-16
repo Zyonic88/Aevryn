@@ -42,6 +42,8 @@ Before public beta, Aetherra Labs must define:
 * recovery time objective
 * backup retention window
 
+The selected public-beta backup retention wording candidate is recorded in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
+
 ---
 
 # Encryption
@@ -65,6 +67,8 @@ Restore tests should verify:
 * project/story ownership boundaries
 * deleted story behavior
 * no unexpected source-prose exposure in restore logs
+
+The repeatable drill result must be recorded using `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`.
 
 ---
 

@@ -38,6 +38,7 @@ Translation Foundation is accepted when:
 * translated or normalized text remains linked to original source evidence anchors
 * names, titles, aliases, honorifics, factions, locations, items, skills, and power-system terms are preserved or glossary-controlled
 * uncertain translations preserve the original term and mark it for review
+* terms with multiple plausible meanings preserve the original term and expose metadata-only review context
 * translation does not create canon facts
 * translation does not remove source evidence
 * extraction can consume normalized text while citing original anchors
@@ -99,5 +100,36 @@ Phase 12 does not include:
 
 Phase 12 is complete only when backend gates, frontend gates, deterministic translation tests, deterministic entity-resolution tests, and a browser alpha pass all succeed.
 
-V2 release-candidate readiness remains blocked until Phase 12 is accepted.
+V2 release-candidate readiness was blocked until Phase 12 acceptance and is now governed by the release-candidate readiness gates.
 
+---
+
+# Current Status
+
+Status: **Accepted**
+
+Verified on July 13, 2026:
+
+* Backend deterministic gates passed: `948 passed`
+* Translation Foundation tests passed: `24 passed`
+* Entity Resolution Foundation tests passed: `22 passed`
+* Frontend lint passed
+* Frontend tests passed: `160 passed`
+* Frontend production build passed
+* Hosted browser alpha sweep completed across Dashboard, Overview, Story, Import, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, Exports, and Settings
+* Browser sweep found two creator-facing presentation issues:
+  * internal source-backed placeholder text leaked into character output
+  * timeline and continuity summary labels lacked readable separators
+* Branch fixes were implemented and verified locally with frontend lint, tests, and production build
+
+Verified on July 14, 2026:
+
+* Alpha-noise fixes were merged through PR #69
+* GitHub checks passed for PR #69: backend gates, frontend gates, CodeQL, dependency audit, repository secret scan, static security scan, and Cloudflare Pages
+* Hosted Aevryn recheck passed on `https://app.aevryn.ai`
+* Dashboard, Overview, Story, Import, Characters, World, Timeline, Scenes, Continuity, Prompt Packs, Exports, and Settings loaded without API unreachable or stuck-loading states
+* Creator-facing views no longer exposed the internal `Source-backed detail available through evidence controls.` placeholder
+* Hosted sweep found no visible `aevryn_import_bundle_`, `source_alpha_`, or `anchor_` machine artifacts
+* Browser console reported no warnings or errors during the hosted recheck
+
+Phase 12 is accepted for V2 release-candidate readiness.

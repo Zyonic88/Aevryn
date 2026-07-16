@@ -7,6 +7,9 @@ import base64
 import json
 import os
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,17 +19,59 @@ from uuid import uuid4
 from fastapi import FastAPI
 
 from aevryn.api import (
+    ACCOUNT_DELETION_HANDOFF_ENV,
     ALLOWED_ORIGINS_ENV,
+    API_KEYS_ENV,
     DEPLOYMENT_ENV,
+    ENVIRONMENT_NAME_ENV,
+    EXTRACTION_MODE_ENV,
+    HSTS_ENABLED_ENV,
+    HTTPS_ONLY_ENV,
+    IDENTITY_PROVIDER_ENV,
+    IDENTITY_PROVIDER_NAME_ENV,
+    IMPORT_STORAGE_PATH_ENV,
+    LOG_DESTINATION_ENV,
+    LOG_RETENTION_DAYS_ENV,
+    METADATA_ONLY_LOGGING_ENV,
+    MONITORING_DESTINATION_ENV,
+    MONITORING_RETENTION_DAYS_ENV,
+    OPENAI_API_KEY_ENV,
+    OPENAI_MAX_RESPONSE_BYTES_ENV,
+    OPENAI_MODEL_ENV,
+    OPENAI_TIMEOUT_SECONDS_ENV,
+    PASSWORD_RESET_ENABLED_ENV,
+    PROJECT_DATABASE_ADAPTER_ENV,
+    PROJECT_DATABASE_PATH_ENV,
+    PROJECT_DATABASE_URL_ENV,
+    PUBLIC_API_BASE_URL_ENV,
+    PUBLIC_FRONTEND_BASE_URL_ENV,
     R2_ACCESS_KEY_ID_ENV,
+    R2_ACCOUNT_ID_ENV,
     R2_BUCKET_ENV,
     R2_ENDPOINT_URL_ENV,
     R2_REGION_ENV,
     R2_SECRET_ACCESS_KEY_ENV,
+    SECRET_MANAGER_ENV,
+    SECURITY_ALERTS_ENABLED_ENV,
+    SESSION_AUTHORITY_ENV,
+    SESSION_SECRET_ENV,
     STORAGE_PROVIDER_ENV,
+    SUPABASE_ANON_KEY_ENV,
+    SUPABASE_JWKS_URL_ENV,
+    SUPABASE_JWT_ALGORITHM_ENV,
+    SUPABASE_JWT_SECRET_ENV,
+    SUPABASE_SERVICE_ROLE_KEY_ENV,
+    SUPABASE_URL_ENV,
+    WORKER_API_KEY_ENV,
+    WORKER_CONCURRENCY_ENV,
+    WORKER_MAX_RETRIES_ENV,
+    WORKER_QUEUE_PROVIDER_ENV,
+    WORKER_RUNTIME_ENV,
+    WORKER_TIMEOUT_SECONDS_ENV,
     create_app,
     create_app_from_env,
 )
+from aevryn.audit import PostgresqlAuditLedger, postgresql_audit_access_report
 from aevryn.auth import (
     AuthenticationConfig,
     AuthenticationService,
@@ -124,14 +169,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "provider-smoke":
             _handle_provider_smoke(args)
             return 0
+        if command == "provider-config-check":
+            _handle_provider_config_check()
+            return 0
         if command == "project-db-smoke":
             _handle_project_db_smoke(args)
             return 0
         if command == "storage-smoke":
             _handle_storage_smoke()
             return 0
+        if command == "worker-drain":
+            _handle_worker_drain(args)
+            return 0
         if command == "production-config-check":
             _handle_production_config_check()
+            return 0
+        if command == "observability-config-check":
+            _handle_observability_config_check()
+            return 0
+        if command == "audit-ledger-verify":
+            _handle_audit_ledger_verify(args)
+            return 0
+        if command == "audit-access-report":
+            _handle_audit_access_report(args)
+            return 0
+        if command == "audit-access-verify":
+            _handle_audit_access_verify(args)
             return 0
     except FileNotFoundError as error:
         missing_path = error.filename or error.args[0]
@@ -212,8 +275,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "V2 Backend API:\n"
             "  aevryn api --host 127.0.0.1 --port 8000 "
             "--allowed-origin http://localhost:5173\n"
+            "  aevryn provider-config-check\n"
             "  aevryn project-db-smoke\n"
-            "  aevryn storage-smoke"
+            "  aevryn storage-smoke\n"
+            "  aevryn worker-drain\n"
+            "  aevryn observability-config-check"
         ),
         formatter_class=_RawDefaultsHelpFormatter,
     )
@@ -531,6 +597,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Provider request timeout for each synthetic extraction call.",
     )
 
+    subcommands.add_parser(
+        "provider-config-check",
+        help="Check provider extraction configuration without printing secrets.",
+        description=(
+            "Check provider extraction configuration without printing secrets. "
+            "This verifies the explicit provider mode, OpenAI key presence, model, "
+            "timeout, and response-size boundary. It does not approve provider "
+            "use for public beta or replace owner/legal/provider review."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+
     project_db_smoke_parser = subcommands.add_parser(
         "project-db-smoke",
         help="Run a metadata-only PostgreSQL Project Database smoke test.",
@@ -545,6 +623,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default="AEVRYN_PROJECT_DATABASE_URL",
         help="Process environment variable containing the PostgreSQL database URL.",
     )
+    project_db_smoke_parser.add_argument(
+        "--no-bootstrap",
+        action="store_true",
+        help="Validate an existing schema without attempting DDL.",
+    )
 
     subcommands.add_parser(
         "storage-smoke",
@@ -558,15 +641,108 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=_RawDefaultsHelpFormatter,
     )
 
+    worker_drain_parser = subcommands.add_parser(
+        "worker-drain",
+        help="Drain queued worker jobs through the hosted API boundary.",
+        description=(
+            "Drain queued worker jobs through the hosted API boundary. "
+            "Reads AEVRYN_PUBLIC_API_BASE_URL and AEVRYN_WORKER_API_KEY from "
+            "process environment variables and never prints the worker key."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    worker_drain_parser.add_argument(
+        "--api-url-env",
+        default=PUBLIC_API_BASE_URL_ENV,
+        help="Process environment variable containing the public API base URL.",
+    )
+    worker_drain_parser.add_argument(
+        "--worker-key-env",
+        default=WORKER_API_KEY_ENV,
+        help="Process environment variable containing the worker API key.",
+    )
+    worker_drain_parser.add_argument(
+        "--max-jobs",
+        type=int,
+        default=1,
+        help="Maximum number of queued jobs to drain in this run.",
+    )
+    worker_drain_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=180.0,
+        help="HTTP timeout for the worker drain request.",
+    )
+
     subcommands.add_parser(
         "production-config-check",
         help="Check production startup configuration without printing secrets.",
         description=(
             "Check production startup configuration without printing secrets. "
             "This verifies the fail-closed production contract and reports the "
-            "current managed-identity blocker as metadata."
+            "public-beta approval boundary as metadata."
         ),
         formatter_class=_RawDefaultsHelpFormatter,
+    )
+
+    subcommands.add_parser(
+        "observability-config-check",
+        help="Check hosted observability configuration without printing secrets.",
+        description=(
+            "Check hosted observability configuration without printing secrets. "
+            "This verifies metadata-only logging, hosted log and monitoring "
+            "destinations, bounded retention, and security alert routing flags. "
+            "It does not replace the required bounded hosted log review."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+
+    audit_verify_parser = subcommands.add_parser(
+        "audit-ledger-verify",
+        help="Verify the PostgreSQL audit ledger hash chain without printing secrets.",
+        description=(
+            "Verify the PostgreSQL audit ledger hash chain without printing secrets. "
+            "Reads the database URL from an environment variable and reports "
+            "metadata-only release-gate status."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    audit_verify_parser.add_argument(
+        "--database-url-env",
+        default="AEVRYN_PROJECT_DATABASE_URL",
+        help="Process environment variable containing the PostgreSQL database URL.",
+    )
+
+    audit_access_parser = subcommands.add_parser(
+        "audit-access-report",
+        help="Report PostgreSQL audit table access metadata without printing secrets.",
+        description=(
+            "Report PostgreSQL audit table access metadata without printing secrets. "
+            "This checks table presence and current database privileges without "
+            "dumping audit rows, database URLs, roles, usernames, or hostnames."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    audit_access_parser.add_argument(
+        "--database-url-env",
+        default="AEVRYN_PROJECT_DATABASE_URL",
+        help="Process environment variable containing the PostgreSQL database URL.",
+    )
+
+    audit_access_verify_parser = subcommands.add_parser(
+        "audit-access-verify",
+        help="Verify PostgreSQL audit table access is append-only and secret-safe.",
+        description=(
+            "Verify PostgreSQL audit table access is append-only and secret-safe. "
+            "The configured database role must be able to read and append audit "
+            "records, but must not be able to update, delete, or truncate them."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    audit_access_verify_parser.add_argument(
+        "--database-url-env",
+        default="AEVRYN_PROJECT_DATABASE_URL",
+        help="Process environment variable containing the PostgreSQL database URL.",
     )
 
     return parser
@@ -1029,13 +1205,23 @@ def _handle_provider_smoke(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_provider_config_check() -> None:
+    """Handle the provider-config-check command."""
+    summary = _run_provider_config_check(dict(os.environ))
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_project_db_smoke(args: argparse.Namespace) -> None:
     """Handle the project-db-smoke command."""
     database_url_env = cast(str, args.database_url_env).strip()
     if not database_url_env:
         raise ValueError("--database-url-env cannot be blank.")
     database_url = _required_process_env_value(database_url_env)
-    summary = _run_project_database_smoke(database_url=database_url)
+    summary = _run_project_database_smoke(
+        database_url=database_url,
+        bootstrap_schema=not cast(bool, args.no_bootstrap),
+    )
     for key, value in summary.items():
         print(f"{key}={value}")
 
@@ -1056,9 +1242,71 @@ def _handle_storage_smoke() -> None:
         print(f"{key}={value}")
 
 
+def _handle_worker_drain(args: argparse.Namespace) -> None:
+    """Handle the worker-drain command."""
+    api_url_env = cast(str, args.api_url_env).strip()
+    worker_key_env = cast(str, args.worker_key_env).strip()
+    max_jobs = cast(int, args.max_jobs)
+    timeout_seconds = cast(float, args.timeout_seconds)
+    if not api_url_env:
+        raise ValueError("--api-url-env cannot be blank.")
+    if not worker_key_env:
+        raise ValueError("--worker-key-env cannot be blank.")
+    if max_jobs < 1:
+        raise ValueError("--max-jobs must be a positive integer.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+
+    summary = _run_hosted_worker_drain(
+        api_url=_required_process_env_value(api_url_env),
+        worker_api_key=_required_process_env_value(worker_key_env),
+        max_jobs=max_jobs,
+        timeout_seconds=timeout_seconds,
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_production_config_check() -> None:
     """Handle the production-config-check command."""
     summary = _run_production_config_check(dict(os.environ))
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
+def _handle_observability_config_check() -> None:
+    """Handle the observability-config-check command."""
+    summary = _run_observability_config_check(dict(os.environ))
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
+def _handle_audit_ledger_verify(args: argparse.Namespace) -> None:
+    """Handle the audit-ledger-verify command."""
+    database_url_env = cast(str, args.database_url_env)
+    summary = _run_audit_ledger_verify(
+        database_url=_required_process_env_value(database_url_env)
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
+def _handle_audit_access_report(args: argparse.Namespace) -> None:
+    """Handle the audit-access-report command."""
+    database_url_env = cast(str, args.database_url_env)
+    summary = _run_audit_access_report(
+        database_url=_required_process_env_value(database_url_env)
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
+def _handle_audit_access_verify(args: argparse.Namespace) -> None:
+    """Handle the audit-access-verify command."""
+    database_url_env = cast(str, args.database_url_env)
+    summary = _run_audit_access_verify(
+        database_url=_required_process_env_value(database_url_env)
+    )
     for key, value in summary.items():
         print(f"{key}={value}")
 
@@ -1095,9 +1343,16 @@ def _required_process_env_value(key: str) -> str:
     return value
 
 
-def _run_project_database_smoke(*, database_url: str) -> dict[str, object]:
+def _run_project_database_smoke(
+    *,
+    database_url: str,
+    bootstrap_schema: bool = True,
+) -> dict[str, object]:
     """Run a PostgreSQL Project Database smoke test and return metadata only."""
-    repository = PostgresqlProjectRepository(database_url)
+    repository = PostgresqlProjectRepository(
+        database_url,
+        bootstrap_schema=bootstrap_schema,
+    )
     smoke_suffix = uuid4().hex
     user_id = f"user_pg_smoke_{smoke_suffix}"
     email = f"pg-smoke-{smoke_suffix}@example.invalid"
@@ -1125,7 +1380,7 @@ def _run_project_database_smoke(*, database_url: str) -> dict[str, object]:
 
     return {
         "adapter": "postgresql",
-        "schema": "bootstrapped",
+        "schema": "bootstrapped" if bootstrap_schema else "existing",
         "records_created": 1,
         "records_deleted": 1,
         "ok": "project_database_postgresql_smoke_completed",
@@ -1179,11 +1434,93 @@ def _run_r2_storage_smoke(
     }
 
 
+def _run_audit_ledger_verify(*, database_url: str) -> dict[str, object]:
+    """Verify the PostgreSQL audit ledger and return metadata only."""
+    ledger = PostgresqlAuditLedger(database_url, bootstrap_schema=False)
+    ledger.verify()
+    return {
+        "adapter": "postgresql",
+        "ledger": "audit",
+        "records_verified": len(ledger.records()),
+        "secrets_printed": 0,
+        "ok": "audit_ledger_postgresql_integrity_verified",
+    }
+
+
+def _run_audit_access_report(*, database_url: str) -> dict[str, object]:
+    """Report PostgreSQL audit table access metadata without exposing identities."""
+    report = postgresql_audit_access_report(database_url)
+    return _audit_access_summary(report, ok="audit_access_metadata_reported")
+
+
+def _run_audit_access_verify(*, database_url: str) -> dict[str, object]:
+    """Verify PostgreSQL audit table access is safe for append-only writes."""
+    report = postgresql_audit_access_report(database_url)
+    _require_audit_access_contract(report)
+    return _audit_access_summary(report, ok="audit_access_append_only_verified")
+
+
+def _audit_access_summary(
+    report: dict[str, object],
+    *,
+    ok: str,
+) -> dict[str, object]:
+    """Return stable metadata-only audit access output."""
+    return {
+        "adapter": "postgresql",
+        "ledger": "audit",
+        "table_exists": _bool_text(cast(bool, report["table_exists"])),
+        "can_select": _bool_text(cast(bool, report["can_select"])),
+        "can_insert": _bool_text(cast(bool, report["can_insert"])),
+        "can_update": _bool_text(cast(bool, report["can_update"])),
+        "can_delete": _bool_text(cast(bool, report["can_delete"])),
+        "can_truncate": _bool_text(cast(bool, report["can_truncate"])),
+        "secrets_printed": 0,
+        "ok": ok,
+    }
+
+
+def _require_audit_access_contract(report: dict[str, object]) -> None:
+    """Require least-privilege append-only audit table access."""
+    required_true = {
+        "table_exists": "PostgreSQL audit table is missing.",
+        "can_select": "PostgreSQL audit writer lacks SELECT privilege.",
+        "can_insert": "PostgreSQL audit writer lacks INSERT privilege.",
+    }
+    for key, message in required_true.items():
+        if report.get(key) is not True:
+            raise ValueError(message)
+
+    forbidden_true = {
+        "can_update": "PostgreSQL audit append-only contract failed: UPDATE privilege is present.",
+        "can_delete": "PostgreSQL audit append-only contract failed: DELETE privilege is present.",
+        "can_truncate": (
+            "PostgreSQL audit append-only contract failed: "
+            "TRUNCATE privilege is present."
+        ),
+    }
+    for key, message in forbidden_true.items():
+        if report.get(key) is True:
+            raise ValueError(message)
+
+
+def _bool_text(value: bool) -> str:
+    """Return a stable lowercase boolean string."""
+    return "true" if value else "false"
+
+
 def _run_production_config_check(environ: dict[str, str]) -> dict[str, object]:
     """Check the production startup contract and return metadata only."""
     if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
         raise ValueError(f"{DEPLOYMENT_ENV}=production is required.")
-    create_app_from_env(environ)
+    try:
+        create_app_from_env(environ)
+    except ValueError as error:
+        if not _record_production_config_failure_if_possible(environ, error):
+            raise ValueError(
+                f"{error} Production config failure audit was not recorded."
+            ) from error
+        raise
     return {
         "deployment_env": "production",
         "startup_contract": "ready",
@@ -1191,6 +1528,222 @@ def _run_production_config_check(environ: dict[str, str]) -> dict[str, object]:
         "secrets_printed": 0,
         "ok": "production_config_contract_checked",
     }
+
+
+def _run_observability_config_check(environ: dict[str, str]) -> dict[str, object]:
+    """Check hosted observability release configuration and return metadata only."""
+    if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
+        raise ValueError(f"{DEPLOYMENT_ENV}=production is required.")
+
+    log_destination = _required_lower_env(environ, LOG_DESTINATION_ENV)
+    if log_destination != "hosted":
+        raise ValueError(
+            f"{LOG_DESTINATION_ENV}=hosted is required for public-beta observability."
+        )
+    monitoring_destination = _required_lower_env(environ, MONITORING_DESTINATION_ENV)
+    if monitoring_destination != "hosted":
+        raise ValueError(
+            f"{MONITORING_DESTINATION_ENV}=hosted is required for public-beta observability."
+        )
+
+    log_retention_days = _required_positive_int(environ, LOG_RETENTION_DAYS_ENV)
+    monitoring_retention_days = _required_positive_int(
+        environ,
+        MONITORING_RETENTION_DAYS_ENV,
+    )
+    maximum_operational_retention_days = 30
+    if log_retention_days > maximum_operational_retention_days:
+        raise ValueError(
+            f"{LOG_RETENTION_DAYS_ENV} must be no more than "
+            f"{maximum_operational_retention_days} days for public-beta observability."
+        )
+    if monitoring_retention_days > maximum_operational_retention_days:
+        raise ValueError(
+            f"{MONITORING_RETENTION_DAYS_ENV} must be no more than "
+            f"{maximum_operational_retention_days} days for public-beta observability."
+        )
+
+    _require_true_process_flag(environ, SECURITY_ALERTS_ENABLED_ENV)
+    _require_true_process_flag(environ, METADATA_ONLY_LOGGING_ENV)
+
+    return {
+        "deployment_env": "production",
+        "log_destination": log_destination,
+        "monitoring_destination": monitoring_destination,
+        "log_retention_days": log_retention_days,
+        "monitoring_retention_days": monitoring_retention_days,
+        "security_alerts_enabled": "true",
+        "metadata_only_logging": "true",
+        "bounded_hosted_log_review": "required",
+        "public_beta": "blocked_until_bounded_hosted_log_review",
+        "secrets_printed": 0,
+        "ok": "observability_config_contract_checked",
+    }
+
+
+def _run_provider_config_check(environ: dict[str, str]) -> dict[str, object]:
+    """Check provider extraction configuration and return metadata only."""
+    if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
+        raise ValueError(f"{DEPLOYMENT_ENV}=production is required.")
+
+    mode = _required_lower_env(environ, EXTRACTION_MODE_ENV)
+    if mode != "openai":
+        raise ValueError(
+            f"{EXTRACTION_MODE_ENV}=openai is required for provider-backed extraction."
+        )
+    if not environ.get(OPENAI_API_KEY_ENV, "").strip():
+        raise ValueError(f"{OPENAI_API_KEY_ENV} is required for provider-backed extraction.")
+    model = environ.get(OPENAI_MODEL_ENV, "").strip()
+    if not model:
+        raise ValueError(f"{OPENAI_MODEL_ENV} is required for provider-backed extraction.")
+    timeout_seconds = _required_positive_float(environ, OPENAI_TIMEOUT_SECONDS_ENV)
+    max_response_bytes = _required_positive_int(environ, OPENAI_MAX_RESPONSE_BYTES_ENV)
+
+    return {
+        "deployment_env": "production",
+        "provider": "openai",
+        "extraction_mode": mode,
+        "model": model,
+        "timeout_seconds": timeout_seconds,
+        "max_response_bytes": max_response_bytes,
+        "provider_review": "required",
+        "public_beta": "blocked_until_provider_review",
+        "secrets_printed": 0,
+        "ok": "provider_config_contract_checked",
+    }
+
+
+def _required_lower_env(environ: dict[str, str], key: str) -> str:
+    """Return a required environment value normalized for configuration checks."""
+    value = environ.get(key, "").strip().lower()
+    if not value:
+        raise ValueError(f"{key} is required.")
+    return value
+
+
+def _required_positive_int(environ: dict[str, str], key: str) -> int:
+    """Return a required positive integer environment value."""
+    value = environ.get(key, "").strip()
+    if not value:
+        raise ValueError(f"{key} is required.")
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise ValueError(f"{key} must be a positive integer.") from error
+    if parsed < 1:
+        raise ValueError(f"{key} must be a positive integer.")
+    return parsed
+
+
+def _required_positive_float(environ: dict[str, str], key: str) -> float:
+    """Return a required positive float environment value."""
+    value = environ.get(key, "").strip()
+    if not value:
+        raise ValueError(f"{key} is required.")
+    try:
+        parsed = float(value)
+    except ValueError as error:
+        raise ValueError(f"{key} must be a positive number.") from error
+    if parsed <= 0:
+        raise ValueError(f"{key} must be a positive number.")
+    return parsed
+
+
+def _require_true_process_flag(environ: dict[str, str], key: str) -> None:
+    """Require an explicit true flag for a production readiness check."""
+    if environ.get(key, "").strip().lower() != "true":
+        raise ValueError(f"{key}=true is required.")
+
+
+def _record_production_config_failure_if_possible(
+    environ: dict[str, str],
+    error: ValueError,
+) -> bool:
+    """Record a metadata-only production config failure when audit storage exists."""
+    if environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower() != "postgresql":
+        return False
+    database_url = environ.get(PROJECT_DATABASE_URL_ENV, "").strip()
+    if not database_url:
+        return False
+
+    try:
+        ledger = PostgresqlAuditLedger(database_url)
+        ledger.append(
+            event_type="security_configuration_failed",
+            occurred_at=datetime.now(UTC).isoformat(timespec="milliseconds").replace(
+                "+00:00",
+                "Z",
+            ),
+            summary="Production config check failed.",
+            metadata={"failure_code": _production_config_failure_code(str(error))},
+        )
+    except Exception:
+        return False
+
+    return True
+
+
+def _production_config_failure_code(message: str) -> str:
+    """Return a stable machine code for a production config failure message."""
+    normalized = message.lower()
+    known_fields = (
+        DEPLOYMENT_ENV,
+        PROJECT_DATABASE_ADAPTER_ENV,
+        PROJECT_DATABASE_PATH_ENV,
+        PROJECT_DATABASE_URL_ENV,
+        ALLOWED_ORIGINS_ENV,
+        PUBLIC_FRONTEND_BASE_URL_ENV,
+        PUBLIC_API_BASE_URL_ENV,
+        HTTPS_ONLY_ENV,
+        HSTS_ENABLED_ENV,
+        API_KEYS_ENV,
+        STORAGE_PROVIDER_ENV,
+        IMPORT_STORAGE_PATH_ENV,
+        R2_BUCKET_ENV,
+        R2_ACCOUNT_ID_ENV,
+        R2_ENDPOINT_URL_ENV,
+        R2_ACCESS_KEY_ID_ENV,
+        R2_SECRET_ACCESS_KEY_ENV,
+        SECRET_MANAGER_ENV,
+        ENVIRONMENT_NAME_ENV,
+        EXTRACTION_MODE_ENV,
+        OPENAI_API_KEY_ENV,
+        OPENAI_MODEL_ENV,
+        WORKER_RUNTIME_ENV,
+        WORKER_QUEUE_PROVIDER_ENV,
+        WORKER_API_KEY_ENV,
+        WORKER_TIMEOUT_SECONDS_ENV,
+        WORKER_MAX_RETRIES_ENV,
+        WORKER_CONCURRENCY_ENV,
+        LOG_DESTINATION_ENV,
+        MONITORING_DESTINATION_ENV,
+        LOG_RETENTION_DAYS_ENV,
+        MONITORING_RETENTION_DAYS_ENV,
+        SECURITY_ALERTS_ENABLED_ENV,
+        METADATA_ONLY_LOGGING_ENV,
+        IDENTITY_PROVIDER_ENV,
+        IDENTITY_PROVIDER_NAME_ENV,
+        SUPABASE_URL_ENV,
+        SUPABASE_JWKS_URL_ENV,
+        SUPABASE_JWT_ALGORITHM_ENV,
+        SUPABASE_JWT_SECRET_ENV,
+        SUPABASE_ANON_KEY_ENV,
+        SUPABASE_SERVICE_ROLE_KEY_ENV,
+        SESSION_AUTHORITY_ENV,
+        SESSION_SECRET_ENV,
+        PASSWORD_RESET_ENABLED_ENV,
+        ACCOUNT_DELETION_HANDOFF_ENV,
+    )
+    field_positions = {
+        field: normalized.find(field.lower())
+        for field in known_fields
+        if field.lower() in normalized
+    }
+    if field_positions:
+        first_field = min(field_positions, key=field_positions.__getitem__)
+        return f"missing_or_invalid_{first_field.lower()}"
+
+    return "invalid_production_configuration"
 
 
 def _run_provider_api_workflow_smoke(
@@ -1342,6 +1895,80 @@ def _run_provider_api_workflow_smoke(
         "outputs_contains_source_sentence": "Mira opened the brass gate" in outputs.text,
         "ok": "provider_api_workflow_synthetic_completed",
     }
+
+
+def _run_hosted_worker_drain(
+    *,
+    api_url: str,
+    worker_api_key: str,
+    max_jobs: int,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Drain hosted worker jobs through the production API route."""
+    normalized_api_url = api_url.rstrip("/")
+    parsed_api_url = urllib.parse.urlsplit(normalized_api_url)
+    if parsed_api_url.scheme != "https" or not parsed_api_url.netloc:
+        raise ValueError("AEVRYN_PUBLIC_API_BASE_URL must use https:// for worker-drain.")
+    if not worker_api_key.strip():
+        raise ValueError("AEVRYN_WORKER_API_KEY is required for worker-drain.")
+    if max_jobs < 1:
+        raise ValueError("--max-jobs must be a positive integer.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    payload = json.dumps(
+        {
+            "started_at": now,
+            "finished_at": now,
+            "max_jobs": max_jobs,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        f"{normalized_api_url}/v2/workers/process",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "X-Aevryn-API-Key": worker_api_key,
+        },
+        method="POST",
+    )
+    try:
+        # Bandit B310: URL scheme and host are validated above; this CLI is only for the
+        # configured hosted API boundary and never accepts arbitrary URL schemes.
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:  # nosec B310
+            response_payload = json.loads(response.read().decode("utf-8"))
+            status_code = response.status
+    except urllib.error.HTTPError as error:
+        detail = _hosted_worker_error_detail(error)
+        raise ValueError(f"worker-drain request failed with HTTP {error.code}: {detail}") from error
+    except urllib.error.URLError as error:
+        raise ValueError("worker-drain request failed before receiving a response.") from error
+
+    return {
+        "status": status_code,
+        "claimed_jobs": int(response_payload["claimed_jobs"]),
+        "succeeded_jobs": int(response_payload["succeeded_jobs"]),
+        "failed_jobs": int(response_payload["failed_jobs"]),
+        "ok": "hosted_worker_drain_completed",
+    }
+
+
+def _hosted_worker_error_detail(error: urllib.error.HTTPError) -> str:
+    """Return a bounded worker-drain error detail without exposing credentials."""
+    try:
+        payload = json.loads(error.read().decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return "request_failed"
+    detail = str(payload.get("error") or payload.get("detail") or "request_failed")
+    safe_detail = "".join(
+        character
+        for character in detail
+        if character.isalnum() or character in {"_", "-", ":", " "}
+    ).strip()
+    return (safe_detail or "request_failed")[:160]
+
 
 def _require_response_ok(status_code: int, text: str, label: str) -> None:
     """Raise a compact smoke-test error for failed API calls."""

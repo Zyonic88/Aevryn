@@ -432,6 +432,10 @@ def _canon_snapshot_payload(result: ProjectRunResult) -> str:
         "rejected_candidate_count": sum(
             len(summary.rejected_candidates) for summary in result.update_summaries
         ),
+        "ungrounded_extraction_candidate_count": sum(
+            extraction_result.rejected_candidate_count
+            for extraction_result in result.extraction_results
+        ),
         "translation": _translation_snapshot_payload(result),
         "entity_resolution": _entity_resolution_snapshot_payload(result),
         "timeline_changes": _timeline_changes_payload(result, source_quotes=_source_quotes(result)),
@@ -473,8 +477,13 @@ def _translation_snapshot_payload(result: ProjectRunResult) -> dict[str, object]
                 "issues": tuple(
                     {
                         "issue_code": _translation_issue_code(issue.issue_code),
-                        "issue_label": _translation_issue_label(issue.issue_code),
+                        "issue_label": _translation_issue_label(
+                            issue.issue_code,
+                            possible_meaning_count=issue.possible_meaning_count,
+                        ),
+                        "term_kind": issue.term_kind,
                         "evidence_anchor_count": len(issue.evidence_anchor_ids),
+                        "possible_meaning_count": issue.possible_meaning_count,
                     }
                     for issue in unit.issues
                 ),
@@ -491,8 +500,17 @@ def _translation_issue_code(value: str) -> str:
     return "translation_review_required"
 
 
-def _translation_issue_label(value: str) -> str:
+def _translation_issue_label(
+    value: str,
+    *,
+    possible_meaning_count: int = 0,
+) -> str:
     """Return metadata-only translation review label."""
+    if (
+        _translation_issue_code(value) == "translation_review_required"
+        and possible_meaning_count > 1
+    ):
+        return "Multiple meanings need review"
     if _translation_issue_code(value) == "translation_review_required":
         return "Glossary term needs review"
     return "Translation needs review"
@@ -531,16 +549,34 @@ def _entity_resolution_snapshot_payload(result: ProjectRunResult) -> dict[str, o
 def _identity_reference_kind(value: str) -> str:
     """Classify an identity surface reference without storing source prose."""
     normalized = value.strip().lower()
-    if normalized in {"he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs"}:
+    words = tuple(
+        part
+        for part in "".join(
+            character.lower() if character.isalnum() else " "
+            for character in normalized.replace("-", " ")
+        ).split()
+        if part
+    )
+    if words in {
+        ("he",),
+        ("him",),
+        ("his",),
+        ("she",),
+        ("her",),
+        ("hers",),
+        ("they",),
+        ("them",),
+        ("their",),
+        ("theirs",),
+    }:
         return "pronoun"
-    words = tuple(part for part in normalized.replace("-", " ").split() if part)
     if not words:
         return "unknown"
     if len(words) == 1:
         return "name"
     if words[0] in {"the", "a", "an"}:
         words = words[1:]
-    if words and words[-1] in {
+    title_words = {
         "captain",
         "commander",
         "engineer",
@@ -549,7 +585,8 @@ def _identity_reference_kind(value: str) -> str:
         "officer",
         "student",
         "teacher",
-    }:
+    }
+    if words and (words[0] in title_words or words[-1] in title_words):
         return "title"
     return "description"
 

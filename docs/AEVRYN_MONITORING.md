@@ -84,6 +84,8 @@ Preview and extraction workflows emit metadata-only API logs for success and fai
 
 API health reports storage adapter availability as configured or unconfigured. It must not read stored project records, import bytes, source prose, generated exports, or engine state.
 
+Production hosted observability retention, access, alert routing, and bounded log-review requirements are defined in `docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md`.
+
 ---
 
 # Acceptance Standard

@@ -142,26 +142,32 @@ function ProjectOverview({
           />
         </dl>
         {outputs.language_identity.identity_review_items.length > 0 ? (
-          <div className="compact-list" aria-label="Identity review items">
-            {compactIdentityReviewItems(outputs.language_identity.identity_review_items, 6).map((item) => (
-              <div className="compact-row" key={identityReviewKey(item)}>
-                <strong>{identityReviewTitle(item)}</strong>
-                <span>{identityReviewDetails(item)}</span>
-              </div>
-            ))}
-          </div>
+          <details className="identity-review-panel">
+            <summary>Identity Review</summary>
+            <div className="compact-list" aria-label="Identity review items">
+              {compactIdentityReviewItems(outputs.language_identity.identity_review_items, 6).map((item) => (
+                <div className="compact-row" key={identityReviewKey(item)}>
+                  <strong>{identityReviewTitle(item)}</strong>
+                  <span>{identityReviewDetails(item)}</span>
+                </div>
+              ))}
+            </div>
+          </details>
         ) : (
           <p className="result-summary">No identity review items in the latest snapshot.</p>
         )}
         {outputs.language_identity.translation_review_items.length > 0 ? (
-          <div className="compact-list" aria-label="Translation review items">
-            {outputs.language_identity.translation_review_items.slice(0, 6).map((item) => (
-              <div className="compact-row" key={translationReviewKey(item)}>
-                <strong>{item.issue_label}</strong>
-                <span>{translationReviewDetails(item, "held for review")}</span>
-              </div>
-            ))}
-          </div>
+          <details className="identity-review-panel">
+            <summary>Translation Review</summary>
+            <div className="compact-list" aria-label="Translation review items">
+              {outputs.language_identity.translation_review_items.slice(0, 6).map((item) => (
+                <div className="compact-row" key={translationReviewKey(item)}>
+                  <strong>{item.issue_label}</strong>
+                  <span>{translationReviewDetails(item, "held for review")}</span>
+                </div>
+              ))}
+            </div>
+          </details>
         ) : null}
       </section>
     </>

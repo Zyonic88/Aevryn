@@ -315,8 +315,8 @@ Latest result:
 
 Known residual risk:
 
-* production audit storage adapter is not selected yet.
-* audit retention and access-control policy still need deployment decisions.
+* production audit storage candidate is selected and `PostgresqlAuditLedger` implements the PostgreSQL adapter.
+* production audit adapter configuration, API/worker event wiring, retention enforcement, access-control verification, and restore/audit drill results remain public-beta blockers.
 * API and worker events are not fully wired into a persisted production ledger yet.
 
 Public beta blocked:
