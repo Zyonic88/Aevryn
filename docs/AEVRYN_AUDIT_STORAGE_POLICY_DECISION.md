@@ -133,7 +133,9 @@ The release gate must include audit integrity verification before public beta.
 Required verification:
 
 * append-only application write path exists
-* hash-chain verification passes
+* `aevryn audit-ledger-verify` passes without printing secrets
+* `aevryn audit-access-verify` confirms append-only table privileges without printing secrets
+* `aevryn audit-access-report` reports table and privilege metadata without printing secrets
 * tamper detection fails closed
 * deletion events remain metadata-only
 * restore/audit drill confirms ledger integrity after restore
@@ -149,21 +151,22 @@ This document selects the candidate policy.
 
 The PostgreSQL audit storage adapter is implemented as `PostgresqlAuditLedger` in `src/aevryn/audit/postgresql.py`.
 
-The adapter creates the `audit_ledger_records` table, appends records in a locked transaction, reloads records in sequence order, and verifies the persisted hash chain.
+The adapter creates the `audit_ledger_records` table, appends records inside a transaction-scoped advisory lock, reloads records in sequence order, and verifies the persisted hash chain.
 
 Core API and worker workflow events are wired to the configured audit writer.
 
 The covered event set includes registration, login success/failure, password
 reset request/completion, project creation/deletion, settings changes, cross-user
 settings access denials, story creation/deletion, import save, run submission,
-worker drain completion, snapshot creation, and export generation.
+worker drain completion, snapshot creation, export generation, and production
+configuration check failures when the PostgreSQL audit ledger is available.
 
 Public beta remains blocked until:
 
 * PostgreSQL audit adapter configuration is verified in hosted production
 * audit retention behavior is enforced or operationally documented
-* audit access controls are configured and reviewed
-* hash-chain verification is included in the release gate
+* audit access controls are configured and reviewed through hosted audit access verification and reporting
+* hosted hash-chain verification result is recorded in the release gate
 * deletion events are verified as metadata-only
 * restore/audit drill is completed with dated results
 

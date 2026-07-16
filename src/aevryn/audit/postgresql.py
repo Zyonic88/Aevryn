@@ -17,6 +17,8 @@ from aevryn.persistence.repository import PersistenceError
 
 ConnectFactory = Callable[[str], Any]
 
+_AUDIT_APPEND_LOCK_ID = 4_287_629_133_911_001
+
 
 class PostgresqlAuditLedger:
     """Durable append-only audit ledger backed by PostgreSQL."""
@@ -103,11 +105,15 @@ class PostgresqlAuditLedger:
         story_id: str = "",
         metadata: Mapping[str, str] | None = None,
     ) -> AuditLedgerRecord:
-        """Append one metadata-only record in a locked transaction."""
+        """Append one metadata-only record in a serialized transaction."""
+        canonical_occurred_at = _canonical_occurrence_time(occurred_at)
         with self._connect() as connection:
             try:
                 with connection.cursor() as cursor:
-                    cursor.execute("LOCK TABLE audit_ledger_records IN EXCLUSIVE MODE;")
+                    cursor.execute(
+                        "SELECT pg_advisory_xact_lock(%s);",
+                        (_AUDIT_APPEND_LOCK_ID,),
+                    )
                     cursor.execute(
                         """
                         SELECT
@@ -136,7 +142,7 @@ class PostgresqlAuditLedger:
                     record = AuditLedgerRecord(
                         sequence=sequence,
                         event_type=event_type,
-                        occurred_at=occurred_at,
+                        occurred_at=canonical_occurred_at,
                         summary=summary,
                         actor_id=actor_id,
                         project_id=project_id,
@@ -206,6 +212,74 @@ class PostgresqlAuditLedger:
         return self._connect_factory(self._database_url)
 
 
+def postgresql_audit_access_report(
+    database_url: str,
+    *,
+    connect_factory: ConnectFactory | None = None,
+) -> dict[str, object]:
+    """Return metadata-only audit table access facts for release gates."""
+    connect = connect_factory or _default_connect_factory()
+    with connect(_required_database_url(database_url)) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    to_regclass('audit_ledger_records') IS NOT NULL AS table_exists,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'SELECT'
+                        ),
+                        false
+                    ) AS can_select,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'INSERT'
+                        ),
+                        false
+                    ) AS can_insert,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'UPDATE'
+                        ),
+                        false
+                    ) AS can_update,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'DELETE'
+                        ),
+                        false
+                    ) AS can_delete,
+                    COALESCE(
+                        has_table_privilege(
+                            current_user,
+                            to_regclass('audit_ledger_records'),
+                            'TRUNCATE'
+                        ),
+                        false
+                    ) AS can_truncate;
+                """
+            )
+            row = cursor.fetchone()
+    if row is None:
+        raise PersistenceError("PostgreSQL audit access report returned no rows.")
+    return {
+        "table_exists": _row_bool(row[0], "audit table existence"),
+        "can_select": _row_bool(row[1], "audit select privilege"),
+        "can_insert": _row_bool(row[2], "audit insert privilege"),
+        "can_update": _row_bool(row[3], "audit update privilege"),
+        "can_delete": _row_bool(row[4], "audit delete privilege"),
+        "can_truncate": _row_bool(row[5], "audit truncate privilege"),
+    }
+
+
 def _required_database_url(database_url: str) -> str:
     """Return a nonblank PostgreSQL database URL."""
     if not isinstance(database_url, str) or not database_url.strip():
@@ -271,14 +345,41 @@ def _record_from_row(row: tuple[object, ...]) -> AuditLedgerRecord:
 def _timestamp_to_utc_string(value: object) -> str:
     """Return persisted timestamp values as canonical UTC strings."""
     if isinstance(value, datetime):
-        return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+        return _datetime_to_canonical_utc_string(value)
     return str(value)
+
+
+def _canonical_occurrence_time(value: str) -> str:
+    """Return occurrence time in the same form PostgreSQL reloads for hashing."""
+    clean_value = value.strip()
+    try:
+        parsed = datetime.fromisoformat(clean_value.replace("Z", "+00:00"))
+    except ValueError:
+        return clean_value
+    if parsed.tzinfo is None:
+        return clean_value
+    return _datetime_to_canonical_utc_string(parsed)
+
+
+def _datetime_to_canonical_utc_string(value: datetime) -> str:
+    """Return a stable UTC timestamp string with database-safe precision."""
+    return value.astimezone(UTC).isoformat(timespec="milliseconds").replace(
+        "+00:00",
+        "Z",
+    )
 
 
 def _row_sequence(value: object) -> int:
     """Return a PostgreSQL sequence value as a strict integer."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise PersistenceError("PostgreSQL audit sequence must be an integer.")
+    return value
+
+
+def _row_bool(value: object, label: str) -> bool:
+    """Return a PostgreSQL boolean value as a strict bool."""
+    if not isinstance(value, bool):
+        raise PersistenceError(f"PostgreSQL {label} must be a boolean.")
     return value
 
 

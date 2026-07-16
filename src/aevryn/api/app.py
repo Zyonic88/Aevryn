@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import json
 import logging
 import os
@@ -204,6 +205,7 @@ ALLOWED_ORIGINS_ENV = "AEVRYN_API_ALLOWED_ORIGINS"
 API_KEYS_ENV = "AEVRYN_API_KEYS"
 DEPLOYMENT_ENV = "AEVRYN_DEPLOYMENT_ENV"
 PROJECT_DATABASE_ADAPTER_ENV = "AEVRYN_PROJECT_DATABASE_ADAPTER"
+PROJECT_DATABASE_BOOTSTRAP_ENV = "AEVRYN_PROJECT_DATABASE_BOOTSTRAP"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 PROJECT_DATABASE_URL_ENV = "AEVRYN_PROJECT_DATABASE_URL"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
@@ -253,6 +255,8 @@ OPENAI_ENDPOINT_ENV = "AEVRYN_OPENAI_ENDPOINT"
 OPENAI_TIMEOUT_SECONDS_ENV = "AEVRYN_OPENAI_TIMEOUT_SECONDS"
 OPENAI_MAX_RESPONSE_BYTES_ENV = "AEVRYN_OPENAI_MAX_RESPONSE_BYTES"
 PLATFORM_ENGINE_VERSION = "aevryn_v1"
+AUDIT_METADATA_MAX_VALUE_LENGTH = 120
+AUDIT_REFERENCE_PREFIX_LENGTH = 96
 ALPHA_ACTIVE_RUN_TIMEOUT = timedelta(minutes=30)
 MAX_IMPORT_CONTENT_BYTES = 10 * 1024 * 1024
 MAX_IMPORT_CONTENT_BASE64_CHARS = ((MAX_IMPORT_CONTENT_BYTES + 2) // 3) * 4
@@ -294,6 +298,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
     return create_app(
         allowed_origins=_allowed_origins_from_env(active_environ),
         api_keys=_api_keys_from_env(active_environ),
+        worker_api_keys=_worker_api_keys_from_env(active_environ),
         authentication_service=authentication_service,
         project_repository=project_repository,
         background_job_queue=background_job_queue,
@@ -311,6 +316,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
 def create_app(
     allowed_origins: Sequence[str] = (),
     api_keys: Sequence[str] = (),
+    worker_api_keys: Sequence[str] = (),
     authentication_service: (
         AuthenticationService | ManagedIdentityAuthenticationAdapter | None
     ) = None,
@@ -327,6 +333,7 @@ def create_app(
     Parameters:
         allowed_origins: Optional browser origins allowed by CORS middleware.
         api_keys: Optional deployment API keys that protect workflow routes.
+        worker_api_keys: Optional keys that may drain internal worker routes.
         authentication_service: Optional Phase 4 authentication service.
         project_repository: Optional Phase 6 project storage repository.
         background_job_queue: Optional Phase 3 queue for engine run submission.
@@ -342,6 +349,7 @@ def create_app(
         Configured FastAPI application.
     """
     normalized_api_keys = _normalize_api_keys(api_keys)
+    normalized_worker_api_keys = _normalize_api_keys(worker_api_keys)
     app = FastAPI(
         title="Aevryn Backend API",
         version="2.0.0",
@@ -371,7 +379,11 @@ def create_app(
     ) -> Response:
         """Attach identity headers and enforce optional workflow authentication."""
         request_id = _request_id(request)
-        auth_error = _authentication_error(request, normalized_api_keys)
+        auth_error = _authentication_error(
+            request,
+            normalized_api_keys,
+            normalized_worker_api_keys,
+        )
         response = auth_error if auth_error is not None else await call_next(request)
         response.headers["X-Aevryn-API-Version"] = API_VERSION
         response.headers["X-Aevryn-Engine"] = "Aevryn"
@@ -626,7 +638,7 @@ def create_app(
                 occurred_at=request.now,
                 summary="Reset requested.",
                 actor_id=reset.user_id,
-                metadata={"reset_id": request.reset_id},
+                metadata={"reset_id": _audit_reference(request.reset_id)},
             )
         except AuthenticationError as error:
             raise HTTPException(
@@ -1057,8 +1069,8 @@ def create_app(
                 project_id=project_id,
                 story_id=snapshot.story_id,
                 metadata={
-                    "export_id": export.export_id,
-                    "snapshot_id": snapshot.snapshot_id,
+                    "export_id": _audit_reference(export.export_id),
+                    "snapshot_id": _audit_reference(snapshot.snapshot_id),
                     "export_kind": export.export_kind,
                     "export_format": export.export_format,
                 },
@@ -1402,7 +1414,7 @@ def create_app(
                 project_id=project_id,
                 story_id=story_id,
                 metadata={
-                    "import_id": import_record.import_id,
+                    "import_id": _audit_reference(import_record.import_id),
                     "source_format": import_record.source_format,
                     "chapter_count": str(import_record.chapter_count),
                     "scene_count": str(import_record.scene_count),
@@ -1617,23 +1629,35 @@ def create_app(
                     queue,
                     handler,
                     request_body.now,
-                )
-            run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
-            _append_audit_event(
-                audit_ledger,
-                event_type="run_submitted",
-                occurred_at=request_body.now,
-                summary="Import processing run submitted.",
-                actor_id=user.user_id,
-                project_id=project_id,
-                story_id=story_id,
-                metadata={
-                    "import_id": import_id,
-                    "run_id": run.run_id,
-                    "job_id": request_body.job_id,
-                    "run_status": run.status,
-                },
             )
+            run = repository.get_engine_run(user_id=user.user_id, run_id=request_body.run_id)
+            try:
+                _append_audit_event(
+                    audit_ledger,
+                    event_type="run_submitted",
+                    occurred_at=request_body.now,
+                    summary="Import processing run submitted.",
+                    actor_id=user.user_id,
+                    project_id=project_id,
+                    story_id=story_id,
+                    metadata={
+                        "import_id": _audit_reference(import_id),
+                        "run_id": _audit_reference(run.run_id),
+                        "job_id": _audit_reference(request_body.job_id),
+                        "run_status": run.status,
+                    },
+                )
+            except HTTPException:
+                repository.update_engine_run(
+                    replace(
+                        run,
+                        status="failed",
+                        status_updated_at=request_body.now,
+                        finished_at=request_body.now,
+                        error_summary="Audit ledger write failed.",
+                    )
+                )
+                raise
         except HTTPException:
             raise
         except (DuplicateRecordError, DuplicateJobError) as error:
@@ -1725,8 +1749,8 @@ def create_app(
                 project_id=run.project_id,
                 story_id=run.story_id,
                 metadata={
-                    "run_id": run.run_id,
-                    "snapshot_id": snapshot.snapshot_id,
+                    "run_id": _audit_reference(run.run_id),
+                    "snapshot_id": _audit_reference(snapshot.snapshot_id),
                     "snapshot_kind": snapshot.snapshot_kind,
                     "media_type": snapshot.content_type,
                 },
@@ -2229,6 +2253,11 @@ def _api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
     return _normalize_api_keys(environ.get(API_KEYS_ENV, "").split(","))
 
 
+def _worker_api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
+    """Return internal worker API keys from deployment environment settings."""
+    return _normalize_api_keys((environ.get(WORKER_API_KEY_ENV, ""),))
+
+
 def _require_https_origins(environ: Mapping[str, str]) -> None:
     """Require production CORS origins to use HTTPS."""
     for origin in _allowed_origins_from_env(environ):
@@ -2343,6 +2372,12 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_ENVIRONMENT_NAME=production is required when "
             "AEVRYN_DEPLOYMENT_ENV=production. Production must be separated from "
             "local, test, and staging environments."
+        )
+    if environ.get(PROJECT_DATABASE_BOOTSTRAP_ENV, "").strip().lower() != "false":
+        raise ValueError(
+            "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false is required when "
+            "AEVRYN_DEPLOYMENT_ENV=production. Schema changes must be applied by "
+            "reviewed migrations, not by the runtime application role."
         )
     _require_production_extraction_config(environ)
     _require_production_worker_config(environ)
@@ -2518,7 +2553,8 @@ def _platform_services_from_env(
     database_adapter = environ.get(PROJECT_DATABASE_ADAPTER_ENV, "").strip().lower()
     if database_adapter == "postgresql":
         repository: ProjectRepository = PostgresqlProjectRepository(
-            environ.get(PROJECT_DATABASE_URL_ENV, "")
+            environ.get(PROJECT_DATABASE_URL_ENV, ""),
+            bootstrap_schema=_should_bootstrap_project_database(environ),
         )
         if _is_production_environment(environ):
             return _production_postgresql_platform_services(
@@ -2582,8 +2618,18 @@ def _production_postgresql_platform_services(
         ),
         import_content_store,
         storage_service,
-        PostgresqlAuditLedger(environ.get(PROJECT_DATABASE_URL_ENV, "")),
+        PostgresqlAuditLedger(
+            environ.get(PROJECT_DATABASE_URL_ENV, ""),
+            bootstrap_schema=_should_bootstrap_project_database(environ),
+        ),
     )
+
+
+def _should_bootstrap_project_database(environ: Mapping[str, str]) -> bool:
+    """Return whether PostgreSQL adapters may apply schema bootstrap on startup."""
+    if not _is_production_environment(environ):
+        return True
+    return environ.get(PROJECT_DATABASE_BOOTSTRAP_ENV, "").strip().lower() != "false"
 
 
 def _production_authentication_service(
@@ -2802,9 +2848,15 @@ def _normalize_api_keys(api_keys: Sequence[str]) -> tuple[str, ...]:
 def _authentication_error(
     request: Request,
     api_keys: Sequence[str],
+    worker_api_keys: Sequence[str] = (),
 ) -> JSONResponse | None:
     """Return an authentication error for protected routes when configured."""
-    if not api_keys or not _is_auth_protected_route(request):
+    allowed_keys = _allowed_api_keys_for_request(
+        request=request,
+        api_keys=api_keys,
+        worker_api_keys=worker_api_keys,
+    )
+    if not allowed_keys:
         return None
 
     provided_key = _extract_api_key(request)
@@ -2816,7 +2868,7 @@ def _authentication_error(
                 detail="A valid API key is required for this workflow route.",
             ).model_dump(),
         )
-    if provided_key not in api_keys:
+    if provided_key not in allowed_keys:
         return JSONResponse(
             status_code=403,
             content=ErrorResponse(
@@ -2826,6 +2878,28 @@ def _authentication_error(
         )
 
     return None
+
+
+def _allowed_api_keys_for_request(
+    *,
+    request: Request,
+    api_keys: Sequence[str],
+    worker_api_keys: Sequence[str],
+) -> tuple[str, ...]:
+    """Return route-scoped deployment keys accepted for one request."""
+    if not _is_auth_protected_route(request):
+        return ()
+    if _is_worker_process_route(request):
+        return tuple(dict.fromkeys((*api_keys, *worker_api_keys)))
+    return tuple(api_keys)
+
+
+def _is_worker_process_route(request: Request) -> bool:
+    """Return whether a request drains the internal worker boundary."""
+    return (
+        request.method.upper() == "POST"
+        and request.url.path == "/v2/workers/process"
+    )
 
 
 def _is_auth_protected_route(request: Request) -> bool:
@@ -3056,7 +3130,11 @@ def _project_status_output(
         run_count=len(runs),
         latest_import=_project_status_import(latest_import) if latest_import else None,
         latest_engine_run=_project_status_run(latest_run) if latest_run else None,
-        worker=_project_status_worker(background_job_queue),
+        worker=_project_status_worker(
+            background_job_queue,
+            project_id=project_id,
+            latest_run=latest_run,
+        ),
         snapshots=ProjectStatusSnapshots(
             available=bool(snapshots),
             count=len(snapshots),
@@ -4307,27 +4385,40 @@ def _project_status_run(run: EngineRunRecord) -> ProjectStatusRun:
 
 def _project_status_worker(
     background_job_queue: BackgroundJobQueue | None,
+    *,
+    project_id: str,
+    latest_run: EngineRunRecord | None,
 ) -> ProjectStatusWorker:
     """Return metadata-only worker and job queue state."""
     if background_job_queue is None:
         return ProjectStatusWorker(state="unconfigured")
-    snapshot = background_job_queue.snapshot()
-    if snapshot.running_jobs > 0:
+    jobs = tuple(
+        job for job in background_job_queue.list_jobs() if job.project_id == project_id
+    )
+    queued_jobs = sum(1 for job in jobs if job.status == "queued")
+    running_jobs = sum(1 for job in jobs if job.status == "running")
+    succeeded_jobs = sum(1 for job in jobs if job.status == "succeeded")
+    failed_jobs = sum(1 for job in jobs if job.status == "failed")
+    next_job_id = next(
+        (job.job_id for job in jobs if job.status == "queued"),
+        "",
+    )
+    if running_jobs > 0:
         state = "running"
-    elif snapshot.queued_jobs > 0:
+    elif queued_jobs > 0:
         state = "queued"
-    elif snapshot.failed_jobs > 0:
+    elif latest_run is not None and latest_run.status == "failed":
         state = "failed"
     else:
         state = "idle"
     return ProjectStatusWorker(
         state=state,
-        total_jobs=snapshot.total_jobs,
-        queued_jobs=snapshot.queued_jobs,
-        running_jobs=snapshot.running_jobs,
-        succeeded_jobs=snapshot.succeeded_jobs,
-        failed_jobs=snapshot.failed_jobs,
-        next_job_id=snapshot.next_job_id,
+        total_jobs=len(jobs),
+        queued_jobs=queued_jobs,
+        running_jobs=running_jobs,
+        succeeded_jobs=succeeded_jobs,
+        failed_jobs=failed_jobs,
+        next_job_id=next_job_id,
     )
 
 
@@ -4834,6 +4925,15 @@ def _append_audit_event(
 def _audit_timestamp() -> str:
     """Return a UTC timestamp for audited routes without client body time."""
     return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _audit_reference(value: str) -> str:
+    """Return a concise deterministic reference safe for audit metadata."""
+    clean_value = value.strip()
+    if len(clean_value) <= AUDIT_METADATA_MAX_VALUE_LENGTH:
+        return clean_value
+    digest = hashlib.sha256(clean_value.encode("utf-8")).hexdigest()[:16]
+    return f"{clean_value[:AUDIT_REFERENCE_PREFIX_LENGTH]}:sha256:{digest}"
 
 
 def _auth_session_response(session: Any) -> AuthSessionResponse:

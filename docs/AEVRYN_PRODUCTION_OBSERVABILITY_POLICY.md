@@ -183,6 +183,17 @@ The review must include at least:
 
 Sampling does not prove every future log line is safe, so application-level metadata-only tests remain required.
 
+Before the bounded hosted log review, run:
+
+```powershell
+python -m aevryn.cli observability-config-check
+```
+
+This command verifies the hosted log and monitoring destinations, operational
+retention window, security alert flag, and metadata-only logging flag without
+printing secrets. It does not inspect hosted log contents and does not replace
+the bounded hosted log review.
+
 ---
 
 # Public-Beta Blockers

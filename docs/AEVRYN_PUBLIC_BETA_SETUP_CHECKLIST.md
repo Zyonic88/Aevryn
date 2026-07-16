@@ -116,6 +116,7 @@ Required decisions:
 Verification:
 
 * provider review is completed
+* `aevryn provider-config-check` passes without printing secrets
 * no-training-by-default posture is preserved
 * public disclosure matches provider terms
 * provider failure logging remains metadata-only
@@ -163,11 +164,12 @@ Tracking docs:
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
 * `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`
+* `docs/AEVRYN_DATABASE_PRIVILEGE_HARDENING.md`
 
 Status:
 
 ```text
-Restore plan and restore/audit drill record template exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Production backup provider verification, dated restore drill execution, production audit adapter configuration, audit event wiring, retention enforcement, access-control verification, and release-gate integrity verification are not complete.
+Restore plan and restore/audit drill record template exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Audit integrity, access verification, and access-report commands exist. Hosted audit integrity verification passed with metadata-only output. Hosted audit access report passed, but append-only access verification failed because the current database role has UPDATE and DELETE privileges on `audit_ledger_records`. Production now requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` so schema bootstrap and migrations are separated from the runtime app role. Production backup provider verification, dated restore drill execution, hosted production audit adapter verification, retention enforcement, restricted audit database role provisioning, hosted access-control verification review, and restore/audit drill completion are not complete.
 ```
 
 ---
@@ -190,6 +192,7 @@ Verification:
 * smoke run completes outside the purely local private-alpha path
 * workflow state is observable through Monitoring
 * export preview works through production storage boundaries
+* `aevryn observability-config-check` passes without printing secrets
 * logs do not expose manuscripts, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths
 
 Tracking docs:

@@ -4,12 +4,22 @@ import json
 import os
 import re
 import shutil
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
-from aevryn.cli import main
+from aevryn.cli import (
+    _run_audit_access_report,
+    _run_audit_access_verify,
+    _run_audit_ledger_verify,
+    _run_observability_config_check,
+    _run_production_config_check,
+    _run_provider_config_check,
+    main,
+)
 from aevryn.importing import StoryImporter
 from aevryn.validation.runner import (
     _extraction_input_digest,
@@ -307,6 +317,110 @@ def test_provider_smoke_reads_env_file_without_printing_key(
     assert "secret-provider-key" not in captured.err
 
 
+def test_provider_config_check_help_describes_provider_review_boundary(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Provider config check help should not imply public-beta approval."""
+    with pytest.raises(SystemExit) as error:
+        main(["provider-config-check", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "provider extraction configuration" in output
+    assert "does not approve provider use for public beta" in output
+
+
+def test_provider_config_check_reports_metadata_only_contract(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Provider config check should print provider metadata and no keys."""
+    env_values = {
+        "AEVRYN_DEPLOYMENT_ENV": "production",
+        "AEVRYN_EXTRACTION_MODE": "openai",
+        "AEVRYN_OPENAI_API_KEY": "secret-openai-key",
+        "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+        "AEVRYN_OPENAI_TIMEOUT_SECONDS": "90",
+        "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "1048576",
+    }
+    for key, value in env_values.items():
+        monkeypatch.setenv(key, value)
+
+    exit_code = main(["provider-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "deployment_env=production" in captured.out
+    assert "provider=openai" in captured.out
+    assert "extraction_mode=openai" in captured.out
+    assert "model=gpt-5.4-mini" in captured.out
+    assert "timeout_seconds=90.0" in captured.out
+    assert "max_response_bytes=1048576" in captured.out
+    assert "provider_review=required" in captured.out
+    assert "public_beta=blocked_until_provider_review" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=provider_config_contract_checked" in captured.out
+    assert "secret-openai-key" not in captured.out
+    assert "secret-openai-key" not in captured.err
+
+
+def test_provider_config_check_rejects_demo_mode() -> None:
+    """Production provider config should reject demo extraction mode."""
+    with pytest.raises(ValueError, match="AEVRYN_EXTRACTION_MODE=openai"):
+        _run_provider_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_EXTRACTION_MODE": "demo",
+                "AEVRYN_OPENAI_API_KEY": "secret-openai-key",
+                "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+                "AEVRYN_OPENAI_TIMEOUT_SECONDS": "90",
+                "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "1048576",
+            }
+        )
+
+
+def test_provider_config_check_requires_provider_key_without_printing_it() -> None:
+    """Provider config should fail before use when the key is absent."""
+    with pytest.raises(ValueError, match="AEVRYN_OPENAI_API_KEY") as error:
+        _run_provider_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_EXTRACTION_MODE": "openai",
+                "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+                "AEVRYN_OPENAI_TIMEOUT_SECONDS": "90",
+                "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "1048576",
+            }
+        )
+    assert "secret" not in str(error.value).lower()
+
+
+def test_provider_config_check_rejects_invalid_provider_bounds() -> None:
+    """Provider timeout and response-size limits should fail closed."""
+    with pytest.raises(ValueError, match="AEVRYN_OPENAI_TIMEOUT_SECONDS"):
+        _run_provider_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_EXTRACTION_MODE": "openai",
+                "AEVRYN_OPENAI_API_KEY": "secret-openai-key",
+                "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+                "AEVRYN_OPENAI_TIMEOUT_SECONDS": "0",
+                "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "1048576",
+            }
+        )
+
+    with pytest.raises(ValueError, match="AEVRYN_OPENAI_MAX_RESPONSE_BYTES"):
+        _run_provider_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_EXTRACTION_MODE": "openai",
+                "AEVRYN_OPENAI_API_KEY": "secret-openai-key",
+                "AEVRYN_OPENAI_MODEL": "gpt-5.4-mini",
+                "AEVRYN_OPENAI_TIMEOUT_SECONDS": "90",
+                "AEVRYN_OPENAI_MAX_RESPONSE_BYTES": "-1",
+            }
+        )
+
+
 def test_project_db_smoke_help_describes_postgresql_smoke(
     capsys: CaptureFixture[str],
 ) -> None:
@@ -318,6 +432,7 @@ def test_project_db_smoke_help_describes_postgresql_smoke(
     assert error.value.code == 0
     assert "metadata-only PostgreSQL Project Database smoke test" in output
     assert "--database-url-env" in output
+    assert "--no-bootstrap" in output
 
 
 def test_project_db_smoke_requires_process_env(
@@ -342,12 +457,18 @@ def test_project_db_smoke_reads_env_without_printing_url(
     database_url = "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
     monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", database_url)
 
-    def fake_smoke(*, database_url: str) -> dict[str, object]:
+    def fake_smoke(
+        *,
+        database_url: str,
+        bootstrap_schema: bool = True,
+    ) -> dict[str, object]:
         assert database_url == (
             "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
         )
+        assert bootstrap_schema is True
         return {
             "adapter": "postgresql",
+            "schema": "bootstrapped",
             "ok": "project_database_postgresql_smoke_completed",
         }
 
@@ -358,11 +479,45 @@ def test_project_db_smoke_reads_env_without_printing_url(
 
     assert exit_code == 0
     assert "adapter=postgresql" in captured.out
+    assert "schema=bootstrapped" in captured.out
     assert "ok=project_database_postgresql_smoke_completed" in captured.out
     assert "secret-db-password" not in captured.out
     assert "secret-db-password" not in captured.err
     assert database_url not in captured.out
     assert database_url not in captured.err
+
+
+def test_project_db_smoke_can_validate_existing_schema_without_bootstrap(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Production runtime smoke checks should be able to avoid DDL."""
+    database_url = "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
+    monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", database_url)
+
+    def fake_smoke(
+        *,
+        database_url: str,
+        bootstrap_schema: bool = True,
+    ) -> dict[str, object]:
+        assert database_url.endswith("/aevryn_dev")
+        assert bootstrap_schema is False
+        return {
+            "adapter": "postgresql",
+            "schema": "existing",
+            "ok": "project_database_postgresql_smoke_completed",
+        }
+
+    monkeypatch.setattr("aevryn.cli._run_project_database_smoke", fake_smoke)
+
+    exit_code = main(["project-db-smoke", "--no-bootstrap"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "schema=existing" in captured.out
+    assert "ok=project_database_postgresql_smoke_completed" in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "secret-db-password" not in captured.err
 
 
 def test_storage_smoke_help_describes_r2_storage_check(
@@ -444,6 +599,103 @@ def test_storage_smoke_reads_env_without_printing_credentials(
     assert "secret-r2-secret-key" not in captured.err
 
 
+def test_worker_drain_help_describes_managed_runner(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Worker drain help should describe the hosted worker runner contract."""
+    with pytest.raises(SystemExit) as error:
+        main(["worker-drain", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Drain queued worker jobs through the hosted API boundary" in output
+    assert "--api-url-env" in output
+    assert "--worker-key-env" in output
+    assert "--max-jobs" in output
+
+
+def test_worker_drain_requires_process_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Worker drain should fail before network access when env is missing."""
+    monkeypatch.delenv("AEVRYN_PUBLIC_API_BASE_URL", raising=False)
+    monkeypatch.delenv("AEVRYN_WORKER_API_KEY", raising=False)
+
+    exit_code = main(["worker-drain"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_PUBLIC_API_BASE_URL is required" in captured.err
+
+
+def test_worker_drain_calls_hosted_api_without_printing_key(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Worker drain should use the worker key without echoing it."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.setenv("AEVRYN_WORKER_API_KEY", "secret-worker-key")
+    captured_requests: list[urllib.request.Request] = []
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return json.dumps(
+                {
+                    "claimed_jobs": 1,
+                    "succeeded_jobs": 1,
+                    "failed_jobs": 0,
+                }
+            ).encode("utf-8")
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        *,
+        timeout: float,
+    ) -> FakeResponse:
+        captured_requests.append(request)
+        assert timeout == 12.5
+        return FakeResponse()
+
+    monkeypatch.setattr("aevryn.cli.urllib.request.urlopen", fake_urlopen)
+
+    exit_code = main(
+        [
+            "worker-drain",
+            "--max-jobs",
+            "3",
+            "--timeout-seconds",
+            "12.5",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "claimed_jobs=1" in captured.out
+    assert "succeeded_jobs=1" in captured.out
+    assert "ok=hosted_worker_drain_completed" in captured.out
+    assert "secret-worker-key" not in captured.out
+    assert "secret-worker-key" not in captured.err
+    request = captured_requests[0]
+    assert request.full_url == "https://api.aevryn.ai/v2/workers/process"
+    assert request.get_method() == "POST"
+    assert request.get_header("X-aevryn-api-key") == "secret-worker-key"
+    request_data = request.data
+    assert isinstance(request_data, bytes)
+    payload = json.loads(request_data.decode("utf-8"))
+    assert payload["max_jobs"] == 3
+    assert payload["started_at"].endswith("Z")
+    assert payload["finished_at"].endswith("Z")
+
+
 def test_production_config_check_help_describes_metadata_only_contract(
     capsys: CaptureFixture[str],
 ) -> None:
@@ -454,7 +706,7 @@ def test_production_config_check_help_describes_metadata_only_contract(
 
     assert error.value.code == 0
     assert "Check production startup configuration without printing secrets" in output
-    assert "managed-identity blocker" in output
+    assert "public-beta approval boundary" in output
 
 
 def test_production_config_check_requires_production_env(
@@ -489,6 +741,7 @@ def test_production_config_check_reports_ready_contract_without_secrets(
     env_values = {
         "AEVRYN_DEPLOYMENT_ENV": "production",
         "AEVRYN_PROJECT_DATABASE_ADAPTER": "postgresql",
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP": "false",
         "AEVRYN_PROJECT_DATABASE_URL": (
             "postgresql://aevryn_app:secret-db-password@localhost:5432/aevryn_dev"
         ),
@@ -553,6 +806,513 @@ def test_production_config_check_reports_ready_contract_without_secrets(
     for secret_value in secret_values:
         assert secret_value not in captured.out
         assert secret_value not in captured.err
+
+
+def test_production_config_check_audits_failures_when_ledger_is_available(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Production config failures should append stable metadata-only audit records."""
+    appended_records: list[dict[str, object]] = []
+
+    class FakePostgresqlAuditLedger:
+        """Capture audit writes without connecting to PostgreSQL."""
+
+        def __init__(self, database_url: str) -> None:
+            self.database_url = database_url
+
+        def append(self, **kwargs: object) -> object:
+            appended_records.append(kwargs)
+            return object()
+
+    monkeypatch.setattr("aevryn.cli.PostgresqlAuditLedger", FakePostgresqlAuditLedger)
+
+    with pytest.raises(ValueError, match="AEVRYN_API_ALLOWED_ORIGINS") as error:
+        _run_production_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_PROJECT_DATABASE_ADAPTER": "postgresql",
+                "AEVRYN_PROJECT_DATABASE_URL": (
+                    "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+                ),
+            }
+        )
+    assert "AEVRYN_API_ALLOWED_ORIGINS" in str(error.value)
+    assert "secret-db-password" not in str(error.value)
+    assert "audit was not recorded" not in str(error.value)
+
+    assert appended_records == [
+        {
+            "event_type": "security_configuration_failed",
+            "occurred_at": appended_records[0]["occurred_at"],
+            "summary": "Production config check failed.",
+            "metadata": {
+                "failure_code": "missing_or_invalid_aevryn_api_allowed_origins",
+            },
+        }
+    ]
+    serialized_record = json.dumps(appended_records[0], sort_keys=True)
+    assert "secret-db-password" not in serialized_record
+    assert "postgresql://" not in serialized_record
+
+
+def test_production_config_check_preserves_failure_when_audit_unavailable(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit unavailability should not hide the original config failure."""
+
+    class UnavailablePostgresqlAuditLedger:
+        """Fail construction to simulate an unreachable audit database."""
+
+        def __init__(self, _database_url: str) -> None:
+            raise RuntimeError("audit storage unavailable")
+
+    monkeypatch.setattr(
+        "aevryn.cli.PostgresqlAuditLedger",
+        UnavailablePostgresqlAuditLedger,
+    )
+
+    with pytest.raises(ValueError, match="audit was not recorded") as error:
+        _run_production_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_PROJECT_DATABASE_ADAPTER": "postgresql",
+                "AEVRYN_PROJECT_DATABASE_URL": (
+                    "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+                ),
+            }
+        )
+    assert "AEVRYN_API_ALLOWED_ORIGINS" in str(error.value)
+    assert "secret-db-password" not in str(error.value)
+
+
+def test_observability_config_check_help_describes_bounded_log_review(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Observability check help should distinguish config from log review."""
+    with pytest.raises(SystemExit) as error:
+        main(["observability-config-check", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "hosted observability configuration" in output
+    assert "does not replace the required bounded hosted log review" in output
+
+
+def test_observability_config_check_reports_metadata_only_contract(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Observability config check should print metadata and no secret values."""
+    env_values = {
+        "AEVRYN_DEPLOYMENT_ENV": "production",
+        "AEVRYN_LOG_DESTINATION": "hosted",
+        "AEVRYN_MONITORING_DESTINATION": "hosted",
+        "AEVRYN_LOG_RETENTION_DAYS": "30",
+        "AEVRYN_MONITORING_RETENTION_DAYS": "14",
+        "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+        "AEVRYN_METADATA_ONLY_LOGGING": "true",
+        "AEVRYN_API_KEYS": "secret-api-key",
+        "AEVRYN_PROJECT_DATABASE_URL": (
+            "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+        ),
+    }
+    for key, value in env_values.items():
+        monkeypatch.setenv(key, value)
+
+    exit_code = main(["observability-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "deployment_env=production" in captured.out
+    assert "log_destination=hosted" in captured.out
+    assert "monitoring_destination=hosted" in captured.out
+    assert "log_retention_days=30" in captured.out
+    assert "monitoring_retention_days=14" in captured.out
+    assert "security_alerts_enabled=true" in captured.out
+    assert "metadata_only_logging=true" in captured.out
+    assert "bounded_hosted_log_review=required" in captured.out
+    assert "public_beta=blocked_until_bounded_hosted_log_review" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=observability_config_contract_checked" in captured.out
+    assert "secret-api-key" not in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "postgresql://" not in captured.out
+    assert "secret-api-key" not in captured.err
+    assert "secret-db-password" not in captured.err
+    assert "postgresql://" not in captured.err
+
+
+def test_observability_config_check_rejects_local_log_destination() -> None:
+    """Public-beta observability should fail closed for local-only logs."""
+    with pytest.raises(ValueError, match="AEVRYN_LOG_DESTINATION=hosted"):
+        _run_observability_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_LOG_DESTINATION": "local",
+                "AEVRYN_MONITORING_DESTINATION": "hosted",
+                "AEVRYN_LOG_RETENTION_DAYS": "30",
+                "AEVRYN_MONITORING_RETENTION_DAYS": "30",
+                "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+                "AEVRYN_METADATA_ONLY_LOGGING": "true",
+            }
+        )
+
+
+def test_observability_config_check_rejects_unbounded_retention() -> None:
+    """Operational observability retention should stay within the policy maximum."""
+    with pytest.raises(ValueError, match="AEVRYN_LOG_RETENTION_DAYS"):
+        _run_observability_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_LOG_DESTINATION": "hosted",
+                "AEVRYN_MONITORING_DESTINATION": "hosted",
+                "AEVRYN_LOG_RETENTION_DAYS": "90",
+                "AEVRYN_MONITORING_RETENTION_DAYS": "30",
+                "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+                "AEVRYN_METADATA_ONLY_LOGGING": "true",
+            }
+        )
+
+
+def test_observability_config_check_requires_metadata_only_logging() -> None:
+    """Observability readiness should require explicit metadata-only logging."""
+    with pytest.raises(ValueError, match="AEVRYN_METADATA_ONLY_LOGGING=true"):
+        _run_observability_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_LOG_DESTINATION": "hosted",
+                "AEVRYN_MONITORING_DESTINATION": "hosted",
+                "AEVRYN_LOG_RETENTION_DAYS": "30",
+                "AEVRYN_MONITORING_RETENTION_DAYS": "30",
+                "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+                "AEVRYN_METADATA_ONLY_LOGGING": "false",
+            }
+        )
+
+
+def test_audit_ledger_verify_help_describes_metadata_only_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Audit verify help should describe the metadata-only release gate."""
+    with pytest.raises(SystemExit) as error:
+        main(["audit-ledger-verify", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Verify the PostgreSQL audit ledger hash chain" in output
+    assert "without printing secrets" in output
+
+
+def test_audit_ledger_verify_requires_database_url_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit verify should fail closed when the database URL is absent."""
+    monkeypatch.delenv("AEVRYN_PROJECT_DATABASE_URL", raising=False)
+
+    exit_code = main(["audit-ledger-verify"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_PROJECT_DATABASE_URL is required" in captured.err
+
+
+def test_audit_ledger_verify_reports_metadata_without_secrets(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit verify should report counts and never print the database URL."""
+    secret_database_url = "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+
+    class FakePostgresqlAuditLedger:
+        """Fake ledger for deterministic CLI verification tests."""
+
+        def __init__(self, database_url: str, *, bootstrap_schema: bool = True) -> None:
+            assert database_url == secret_database_url
+            assert bootstrap_schema is False
+
+        def verify(self) -> None:
+            return None
+
+        def records(self) -> tuple[object, ...]:
+            return (object(), object(), object())
+
+    monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
+    monkeypatch.setattr("aevryn.cli.PostgresqlAuditLedger", FakePostgresqlAuditLedger)
+
+    exit_code = main(["audit-ledger-verify"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "adapter=postgresql" in captured.out
+    assert "ledger=audit" in captured.out
+    assert "records_verified=3" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=audit_ledger_postgresql_integrity_verified" in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "postgresql://" not in captured.out
+    assert "secret-db-password" not in captured.err
+    assert "postgresql://" not in captured.err
+
+
+def test_audit_ledger_verify_propagates_integrity_failure_without_database_url(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit verify should fail visibly without printing database credentials."""
+    secret_database_url = "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+
+    class TamperedPostgresqlAuditLedger:
+        """Fake ledger that fails hash-chain verification."""
+
+        def __init__(self, database_url: str, *, bootstrap_schema: bool = True) -> None:
+            assert database_url == secret_database_url
+            assert bootstrap_schema is False
+
+        def verify(self) -> None:
+            raise ValueError("Audit ledger record hash is invalid.")
+
+    monkeypatch.setattr("aevryn.cli.PostgresqlAuditLedger", TamperedPostgresqlAuditLedger)
+
+    with pytest.raises(ValueError, match="record hash"):
+        _run_audit_ledger_verify(database_url=secret_database_url)
+
+
+def test_audit_access_report_help_describes_metadata_only_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Audit access help should describe the secret-safe report contract."""
+    with pytest.raises(SystemExit) as error:
+        main(["audit-access-report", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Report PostgreSQL audit table access metadata" in output
+    assert "without printing secrets" in output
+
+
+def test_audit_access_report_requires_database_url_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit access reporting should fail closed when config is absent."""
+    monkeypatch.delenv("AEVRYN_PROJECT_DATABASE_URL", raising=False)
+
+    exit_code = main(["audit-access-report"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_PROJECT_DATABASE_URL is required" in captured.err
+
+
+def test_audit_access_report_prints_privileges_without_secrets(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit access reporting should print only metadata privilege booleans."""
+    secret_database_url = "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+
+    def fake_access_report(database_url: str) -> dict[str, object]:
+        assert database_url == secret_database_url
+        return {
+            "table_exists": True,
+            "can_select": True,
+            "can_insert": True,
+            "can_update": False,
+            "can_delete": False,
+            "can_truncate": False,
+        }
+
+    monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
+    monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
+
+    exit_code = main(["audit-access-report"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "adapter=postgresql" in captured.out
+    assert "ledger=audit" in captured.out
+    assert "table_exists=true" in captured.out
+    assert "can_select=true" in captured.out
+    assert "can_insert=true" in captured.out
+    assert "can_update=false" in captured.out
+    assert "can_delete=false" in captured.out
+    assert "can_truncate=false" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=audit_access_metadata_reported" in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "postgresql://" not in captured.out
+    assert "localhost" not in captured.out
+    assert "aevryn_app" not in captured.out
+
+
+def test_audit_access_report_helper_returns_stable_boolean_text(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit access helper should normalize booleans for release records."""
+
+    def fake_access_report(database_url: str) -> dict[str, object]:
+        assert database_url == "postgresql://example.invalid/aevryn"
+        return {
+            "table_exists": True,
+            "can_select": True,
+            "can_insert": False,
+            "can_update": False,
+            "can_delete": False,
+            "can_truncate": False,
+        }
+
+    monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
+
+    assert _run_audit_access_report(
+        database_url="postgresql://example.invalid/aevryn"
+    ) == {
+        "adapter": "postgresql",
+        "ledger": "audit",
+        "table_exists": "true",
+        "can_select": "true",
+        "can_insert": "false",
+        "can_update": "false",
+        "can_delete": "false",
+        "can_truncate": "false",
+        "secrets_printed": 0,
+        "ok": "audit_access_metadata_reported",
+    }
+
+
+def test_audit_access_verify_help_describes_append_only_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Audit access verify help should describe append-only privilege checks."""
+    with pytest.raises(SystemExit) as error:
+        main(["audit-access-verify", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "append-only" in output
+    assert "must not be able to update, delete, or truncate" in output
+
+
+def test_audit_access_verify_reports_success_without_secrets(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Audit access verify should pass with read/insert and no update/delete."""
+    secret_database_url = "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+
+    def fake_access_report(database_url: str) -> dict[str, object]:
+        assert database_url == secret_database_url
+        return {
+            "table_exists": True,
+            "can_select": True,
+            "can_insert": True,
+            "can_update": False,
+            "can_delete": False,
+            "can_truncate": False,
+        }
+
+    monkeypatch.setenv("AEVRYN_PROJECT_DATABASE_URL", secret_database_url)
+    monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
+
+    exit_code = main(["audit-access-verify"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "ok=audit_access_append_only_verified" in captured.out
+    assert "can_update=false" in captured.out
+    assert "can_delete=false" in captured.out
+    assert "can_truncate=false" in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "postgresql://" not in captured.out
+    assert "localhost" not in captured.out
+    assert "aevryn_app" not in captured.out
+
+
+@pytest.mark.parametrize(
+    ("report", "expected_error"),
+    (
+        (
+            {
+                "table_exists": False,
+                "can_select": False,
+                "can_insert": False,
+                "can_update": False,
+                "can_delete": False,
+                "can_truncate": False,
+            },
+            "audit table is missing",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": False,
+                "can_insert": True,
+                "can_update": False,
+                "can_delete": False,
+                "can_truncate": False,
+            },
+            "lacks SELECT privilege",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": True,
+                "can_insert": False,
+                "can_update": False,
+                "can_delete": False,
+                "can_truncate": False,
+            },
+            "lacks INSERT privilege",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": True,
+                "can_insert": True,
+                "can_update": True,
+                "can_delete": False,
+                "can_truncate": False,
+            },
+            "UPDATE privilege is present",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": True,
+                "can_insert": True,
+                "can_update": False,
+                "can_delete": True,
+                "can_truncate": False,
+            },
+            "DELETE privilege is present",
+        ),
+        (
+            {
+                "table_exists": True,
+                "can_select": True,
+                "can_insert": True,
+                "can_update": False,
+                "can_delete": False,
+                "can_truncate": True,
+            },
+            "TRUNCATE privilege is present",
+        ),
+    ),
+)
+def test_audit_access_verify_fails_closed_for_unsafe_privileges(
+    monkeypatch: MonkeyPatch,
+    report: dict[str, object],
+    expected_error: str,
+) -> None:
+    """Audit access verify should reject missing or unsafe table privileges."""
+
+    def fake_access_report(database_url: str) -> dict[str, object]:
+        assert database_url == "postgresql://example.invalid/aevryn"
+        return report
+
+    monkeypatch.setattr("aevryn.cli.postgresql_audit_access_report", fake_access_report)
+
+    with pytest.raises(ValueError, match=expected_error):
+        _run_audit_access_verify(database_url="postgresql://example.invalid/aevryn")
 
 
 def test_performance_baseline_help_describes_local_artifact(

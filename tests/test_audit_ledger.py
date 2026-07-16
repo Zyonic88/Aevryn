@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import UTC, datetime
 
 import pytest
 
-from aevryn.audit import AuditLedger, AuditLedgerIntegrityError, PostgresqlAuditLedger
+from aevryn.audit import (
+    AuditLedger,
+    AuditLedgerIntegrityError,
+    PostgresqlAuditLedger,
+    postgresql_audit_access_report,
+)
 from aevryn.audit import postgresql as audit_postgresql
 from aevryn.persistence.repository import PersistenceError
 
@@ -221,12 +227,43 @@ def test_postgresql_audit_ledger_appends_and_reloads_hash_chained_records() -> N
     )
 
     assert connection.commits == 3
+    assert connection.advisory_lock_count == 2
     assert tuple(record.event_type for record in reloaded.records()) == (
         "project_created",
         "story_deleted",
     )
     assert deleted.sequence == 2
     assert deleted.previous_hash == created.record_hash
+    reloaded.verify()
+
+
+def test_postgresql_audit_ledger_verifies_datetime_timestamp_roundtrip() -> None:
+    """PostgreSQL timestamp objects should preserve audit hash verification."""
+    connection = FakeAuditConnection()
+    ledger = PostgresqlAuditLedger(
+        "postgresql://example.invalid/aevryn",
+        connect_factory=lambda _: connection,
+    )
+
+    appended = ledger.append(
+        event_type="project_created",
+        occurred_at="2026-06-29T00:00:00Z",
+        actor_id="user_alpha",
+        project_id="project_alpha",
+        summary="Project created.",
+    )
+    stored = connection.records[0]
+
+    assert appended.occurred_at == "2026-06-29T00:00:00.000Z"
+    assert stored[2] == datetime(2026, 6, 29, tzinfo=UTC)
+
+    reloaded = PostgresqlAuditLedger(
+        "postgresql://example.invalid/aevryn",
+        connect_factory=lambda _: connection,
+        bootstrap_schema=False,
+    )
+
+    assert reloaded.records()[0].occurred_at == "2026-06-29T00:00:00.000Z"
     reloaded.verify()
 
 
@@ -279,14 +316,56 @@ def test_postgresql_audit_ledger_detects_tampered_persisted_rows() -> None:
         )
 
 
+def test_postgresql_audit_access_report_returns_metadata_only_privileges() -> None:
+    """Audit access reporting should inspect privileges without reading audit rows."""
+    connection = FakeAuditConnection()
+    connection.access_report_row = (True, True, True, False, False, False)
+
+    report = postgresql_audit_access_report(
+        "postgresql://example.invalid/aevryn",
+        connect_factory=lambda _: connection,
+    )
+
+    assert report == {
+        "table_exists": True,
+        "can_select": True,
+        "can_insert": True,
+        "can_update": False,
+        "can_delete": False,
+        "can_truncate": False,
+    }
+    assert connection.audit_rows_selected == 0
+
+
+def test_postgresql_audit_access_report_rejects_non_boolean_values() -> None:
+    """Audit access reports should fail if PostgreSQL returns unexpected shapes."""
+    connection = FakeAuditConnection()
+    connection.access_report_row = (True, "yes", True, False, False, False)
+
+    with pytest.raises(PersistenceError, match="select privilege"):
+        postgresql_audit_access_report(
+            "postgresql://example.invalid/aevryn",
+            connect_factory=lambda _: connection,
+        )
+
+
 class FakeAuditConnection:
     """Minimal connection test double for audit ledger SQL."""
 
     def __init__(self) -> None:
         self.records: list[tuple[object, ...]] = []
+        self.access_report_row: tuple[object, ...] = (
+            True,
+            True,
+            True,
+            False,
+            False,
+            False,
+        )
         self.commits = 0
         self.rollbacks = 0
-        self.lock_count = 0
+        self.advisory_lock_count = 0
+        self.audit_rows_selected = 0
 
     def __enter__(self) -> FakeAuditConnection:
         return self
@@ -322,18 +401,23 @@ class FakeAuditCursor:
         normalized = " ".join(statement.lower().split())
         if normalized.startswith("create table") or normalized.startswith("create index"):
             return
-        if normalized.startswith("lock table audit_ledger_records"):
-            self.connection.lock_count += 1
+        if normalized.startswith("select pg_advisory_xact_lock"):
+            self.connection.advisory_lock_count += 1
             return
         if "from audit_ledger_records order by sequence desc" in normalized:
             self._fetchone = self.connection.records[-1] if self.connection.records else None
             return
         if normalized.startswith("insert into audit_ledger_records"):
             stored = list(params)
+            stored[2] = _stored_timestamp(stored[2])
             stored[7] = _jsonb_value(stored[7])
             self.connection.records.append(tuple(stored))
             return
+        if "has_table_privilege" in normalized:
+            self._fetchone = self.connection.access_report_row
+            return
         if "from audit_ledger_records order by sequence" in normalized:
+            self.connection.audit_rows_selected += 1
             self._fetchall = list(self.connection.records)
             return
         raise AssertionError(f"Unexpected SQL: {statement}")
@@ -351,3 +435,11 @@ def _jsonb_value(value: object) -> object:
         if hasattr(value, attribute_name):
             return getattr(value, attribute_name)
     return value
+
+
+def _stored_timestamp(value: object) -> object:
+    """Return timestamp values as psycopg would read them from timestamptz."""
+    if not isinstance(value, str):
+        return value
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return parsed.astimezone(UTC)

@@ -5,11 +5,12 @@ from aevryn.audit.ledger import (
     AuditLedgerIntegrityError,
     AuditLedgerRecord,
 )
-from aevryn.audit.postgresql import PostgresqlAuditLedger
+from aevryn.audit.postgresql import PostgresqlAuditLedger, postgresql_audit_access_report
 
 __all__ = [
     "AuditLedger",
     "AuditLedgerIntegrityError",
     "AuditLedgerRecord",
     "PostgresqlAuditLedger",
+    "postgresql_audit_access_report",
 ]

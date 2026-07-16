@@ -14,7 +14,7 @@ It is separate from the final release-candidate run record because smoke attempt
 Record type: Production-Like Smoke Attempt Log
 Status: Started
 Public beta: Blocked
-Latest attempt: 2026-07-14 hosted creator workflow retry passed
+Latest attempt: 2026-07-14 hosted creator workflow retry passed; later hosted audit gates partially passed
 ```
 
 Production-like smoke is partially complete.
@@ -46,6 +46,59 @@ Production-like smoke proves configuration and workflow safety. It does not bypa
 Smoke commands must remain metadata-only.
 
 They must not print database URLs, API keys, storage keys, worker keys, Supabase keys, session secrets, credentials, source prose, full AI payloads, private URLs, hostnames, usernames, or machine-local paths.
+
+---
+
+# Attempt 2026-07-14 - Hosted Audit Gates
+
+Environment:
+
+```text
+Execution surface: local PowerShell using Google Secret Manager for the hosted database URL
+Hosted deployment: production-like Cloud Run database target
+Output boundary: metadata-only CLI output
+Result: audit integrity passed; append-only access verification failed
+```
+
+Commands run:
+
+```powershell
+python -m aevryn.cli audit-ledger-verify
+python -m aevryn.cli audit-access-report
+python -m aevryn.cli audit-access-verify
+```
+
+Observed metadata-only results:
+
+```text
+adapter=postgresql
+ledger=audit
+records_verified=0
+secrets_printed=0
+ok=audit_ledger_postgresql_integrity_verified
+adapter=postgresql
+ledger=audit
+table_exists=true
+can_select=true
+can_insert=true
+can_update=true
+can_delete=true
+secrets_printed=0
+ok=audit_access_metadata_reported
+audit-access-verify: Error: PostgreSQL audit append-only contract failed: UPDATE privilege is present.
+```
+
+Interpretation:
+
+```text
+PASSED for hosted audit table existence.
+PASSED for hosted audit hash-chain integrity verification.
+PASSED for metadata-only audit-gate output.
+FAILED for least-privilege append-only audit access because UPDATE and DELETE privileges are present.
+BLOCKED for public beta until Cloud Run uses a restricted PostgreSQL application role or equivalent database policy that preserves SELECT/INSERT while removing UPDATE/DELETE on audit_ledger_records.
+```
+
+No database URL, database credential, storage key, API key, Supabase key, role name, username, hostname, source prose, full AI payload, or audit row payload was printed.
 
 ---
 
@@ -705,6 +758,8 @@ A successful production-like smoke must record:
 | Check | Expected Result | Status |
 | --- | --- | --- |
 | Production config check | `startup_contract=ready`, `secrets_printed=0` | Passed locally |
+| Provider config check | explicit provider mode, key presence, model, timeout, response-size boundary, no provider keys printed | Required before final public-beta smoke signoff |
+| Observability config check | hosted logs/monitoring, bounded retention, metadata-only logging, security alerts | Required before final public-beta smoke signoff |
 | PostgreSQL smoke | create/read/delete synthetic metadata record succeeds | Passed locally |
 | R2 storage smoke | write/read/delete tiny synthetic private object succeeds | Passed locally |
 | API startup | production app starts with local-only adapters rejected | Passed on Cloud Run |
@@ -715,6 +770,9 @@ A successful production-like smoke must record:
 | Export preview | export preview works through storage-reference boundaries | Passed for hosted JSON snapshot export creation |
 | Authenticated project workflow | create/read/list project metadata through hosted API | Passed for RC Smoke Test Project |
 | Logs | no manuscripts, credentials, tokens, private URLs, usernames, machine-local paths, or full AI payloads | Passed for bounded hosted Cloud Run log review; route-level metadata remains expected access-log data |
+| Audit ledger integrity | `audit-ledger-verify` passes without printing secrets | Passed against hosted database target |
+| Audit access report | `audit-access-report` reports metadata-only table and privilege state | Passed; table exists and current role can select/insert/update/delete |
+| Audit append-only access | `audit-access-verify` rejects update/delete audit privileges | Failed; hosted database role currently has UPDATE and DELETE privileges |
 
 ---
 
@@ -724,6 +782,9 @@ Complete the remaining release-candidate readiness checks that are outside the b
 
 ```text
 Verify hosted retention and bounded-log behavior against the production observability policy before public beta.
+Run `provider-config-check` against the hosted production-like environment before provider smoke or final signoff.
+Run `observability-config-check` against the hosted production-like environment before the final bounded hosted log review.
+Provision or switch Cloud Run to a restricted PostgreSQL application role that preserves audit SELECT/INSERT but removes audit UPDATE/DELETE privileges.
 Complete public-facing legal, trust, and support publication before public beta.
 Complete backup/restore/audit readiness before public beta.
 Continue prompt-pack and output UX polish before public beta positioning.
@@ -734,8 +795,13 @@ If local production-style smoke must be repeated before final signoff, use metad
 ```powershell
 $env:PYTHONPATH="src"
 python -m aevryn.cli production-config-check
+python -m aevryn.cli provider-config-check
+python -m aevryn.cli observability-config-check
 python -m aevryn.cli project-db-smoke
 python -m aevryn.cli storage-smoke
+python -m aevryn.cli audit-ledger-verify
+python -m aevryn.cli audit-access-report
+python -m aevryn.cli audit-access-verify
 ```
 
 Then record the final result in a dated release-candidate run record.
@@ -746,5 +812,7 @@ Then record the final result in a dated release-candidate run record.
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, hosted observability verification, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, hosted audit integrity verification, and internal release-candidate signoff have passed. Public beta remains blocked by hosted audit append-only access verification, public-facing legal/trust/support publication, hosted observability verification, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Previously recorded smoke success remains: hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, and internal release-candidate signoff have passed.
+Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support publication, hosted observability verification, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
 ```

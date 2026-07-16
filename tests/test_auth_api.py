@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,7 @@ from fastapi.testclient import TestClient
 
 from aevryn.api import create_app
 from aevryn.api.app import MAX_IMPORT_CONTENT_BASE64_CHARS
-from aevryn.audit import AuditLedger
+from aevryn.audit import AuditLedger, AuditLedgerRecord
 from aevryn.auth import (
     AuthenticationConfig,
     AuthenticationService,
@@ -865,6 +866,94 @@ def test_import_runs_api_rejects_duplicate_and_cross_user_submissions() -> None:
     )
     assert cross_user.status_code == 404
     assert cross_user.json()["error"] == "import_not_found"
+
+
+def test_import_runs_api_marks_run_failed_when_audit_submission_fails() -> None:
+    """Audit failures after run creation should not strand imports as active."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            audit_ledger=FailingAuditLedger(fail_on="run_submitted"),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json=import_create_payload(),
+    )
+    assert created_import.status_code == 200
+
+    submitted = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+
+    assert submitted.status_code == 503
+    assert submitted.json() == {
+        "error": "audit_record_failed",
+        "detail": "Audit ledger write failed.",
+    }
+    run = repository.get_engine_run(user_id="user_demo", run_id="run_alpha")
+    assert run.status == "failed"
+    assert run.finished_at == NOW
+    assert run.error_summary == "Audit ledger write failed."
+
+    retry = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_retry", "job_id": "job_retry", "now": SOON},
+    )
+    assert retry.status_code == 503
+    retry_run = repository.get_engine_run(user_id="user_demo", run_id="run_retry")
+    assert retry_run.status == "failed"
+
+
+def test_import_runs_api_compacts_long_generated_ids_for_audit_metadata() -> None:
+    """Hosted generated IDs should remain auditable without exceeding metadata caps."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    audit_ledger = AuditLedger()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            audit_ledger=audit_ledger,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    import_id = f"import_source_project_alpha_{'a' * 140}"
+    run_id = f"run_project_alpha_{'b' * 140}"
+    job_id = f"job_project_alpha_{'c' * 140}"
+    created_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json={**import_create_payload(), "import_id": import_id},
+    )
+    assert created_import.status_code == 200
+
+    submitted = client.post(
+        f"/v2/projects/project_alpha/stories/story_alpha/imports/{import_id}/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": run_id, "job_id": job_id, "now": NOW},
+    )
+
+    assert submitted.status_code == 200
+    audit_ledger.verify()
+    run_submitted = audit_ledger.records()[-1]
+    assert run_submitted.event_type == "run_submitted"
+    assert run_submitted.metadata["import_id"] == _expected_audit_reference(import_id)
+    assert run_submitted.metadata["run_id"] == _expected_audit_reference(run_id)
+    assert run_submitted.metadata["job_id"] == _expected_audit_reference(job_id)
+    assert all(len(value) <= 120 for value in run_submitted.metadata.values())
 
 
 def test_delete_story_api_hard_deletes_metadata_and_import_content() -> None:
@@ -1804,6 +1893,94 @@ def test_project_status_reports_metadata_only_monitoring_summary(
     assert "storage://exports/canon.md" not in caplog_record_text(caplog)
 
 
+def test_project_status_worker_state_ignores_other_project_terminal_failures() -> None:
+    """Project monitoring should not inherit stale failures from other projects."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    import_content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=import_content_store,
+            ),
+            import_content_store=import_content_store,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    saved_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json={
+            "import_id": "import_alpha",
+            "source_id": "source_alpha",
+            "filename": "chapter_001.txt",
+            "content_base64": base64.b64encode(b"Chapter 1\nAlpha.").decode("ascii"),
+            "title": "Alpha Source",
+            "now": NOW,
+        },
+    )
+    assert saved_import.status_code == 200
+    queue.enqueue(
+        BackgroundJob(
+            job_id="job_old_failure",
+            kind="process_import",
+            run_id="run_old_failure",
+            project_id="project_other",
+            story_id="story_other",
+            import_id="import_other",
+            status="queued",
+            queued_at=NOW,
+            status_updated_at=NOW,
+        )
+    )
+    assert queue.claim_next(claimed_at=SOON) is not None
+    queue.fail(
+        job_id="job_old_failure",
+        failed_at="2026-06-27T00:45:00Z",
+        error_summary="Old unrelated failure.",
+    )
+    submitted_run = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted_run.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={
+            "started_at": SOON,
+            "finished_at": "2026-06-27T00:45:00Z",
+            "max_jobs": 1,
+        },
+    )
+    assert processed.status_code == 200
+
+    response = client.get(
+        "/v2/projects/project_alpha/status",
+        headers=auth_headers("token_001"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    assert payload["latest_engine_run"]["status"] == "succeeded"
+    assert payload["worker"] == {
+        "state": "idle",
+        "total_jobs": 1,
+        "queued_jobs": 0,
+        "running_jobs": 0,
+        "succeeded_jobs": 1,
+        "failed_jobs": 0,
+        "next_job_id": "",
+    }
+    assert payload["latest_failure_summary"] == ""
+
+
 def test_project_status_responses_include_request_ids() -> None:
     """Project status should carry request IDs on success and error responses."""
     repository = InMemoryProjectRepository()
@@ -2341,6 +2518,37 @@ def test_worker_process_api_uses_deployment_api_key_when_configured() -> None:
     assert unauthorized.json()["error"] == "authentication_required"
     assert authorized.status_code == 200
     assert authorized.json()["claimed_jobs"] == 0
+
+
+def test_worker_process_api_accepts_dedicated_worker_api_key() -> None:
+    """Internal worker routes should accept the required worker API key."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            api_keys=("deployment-key",),
+            worker_api_keys=("worker-key",),
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=InMemoryJobQueue(),
+            background_job_handler=RecordingWorkerHandler(),
+        )
+    )
+
+    worker_authorized = client.post(
+        "/v2/workers/process",
+        headers={"X-Aevryn-API-Key": "worker-key"},
+        json={"started_at": NOW, "finished_at": NOW, "max_jobs": 1},
+    )
+    workflow_rejected = client.post(
+        "/v2/extraction-prompts",
+        headers={"X-Aevryn-API-Key": "worker-key"},
+        json={},
+    )
+
+    assert worker_authorized.status_code == 200
+    assert worker_authorized.json()["claimed_jobs"] == 0
+    assert workflow_rejected.status_code == 403
+    assert workflow_rejected.json()["error"] == "invalid_api_key"
 
 
 def test_worker_snapshot_api_stores_and_lists_completed_run_outputs() -> None:
@@ -3034,9 +3242,51 @@ def auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}", "X-Aevryn-Now": SOON}
 
 
+class FailingAuditLedger(AuditLedger):
+    """Audit ledger test double that fails selected writes visibly."""
+
+    def __init__(self, *, fail_on: str | None = None) -> None:
+        """Create a ledger that fails all writes or one event type."""
+        super().__init__()
+        self._fail_on = fail_on
+
+    def append(
+        self,
+        *,
+        event_type: str,
+        occurred_at: str,
+        summary: str,
+        actor_id: str = "",
+        project_id: str = "",
+        story_id: str = "",
+        metadata: Mapping[str, str] | None = None,
+    ) -> AuditLedgerRecord:
+        """Raise an audit failure instead of appending selected events."""
+        if self._fail_on is None or event_type == self._fail_on:
+            raise RuntimeError("audit unavailable")
+        return super().append(
+            event_type=event_type,
+            occurred_at=occurred_at,
+            summary=summary,
+            actor_id=actor_id,
+            project_id=project_id,
+            story_id=story_id,
+            metadata=metadata,
+        )
+
+
 def import_content_base64(text: str) -> str:
     """Return base64-encoded import source for API tests."""
     return base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+
+def _expected_audit_reference(value: str) -> str:
+    """Return the expected compact audit reference for long test IDs."""
+    clean_value = value.strip()
+    if len(clean_value) <= 120:
+        return clean_value
+    digest = hashlib.sha256(clean_value.encode("utf-8")).hexdigest()[:16]
+    return f"{clean_value[:96]}:sha256:{digest}"
 
 
 
