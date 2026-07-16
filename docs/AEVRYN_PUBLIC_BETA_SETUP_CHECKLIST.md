@@ -116,6 +116,7 @@ Required decisions:
 Verification:
 
 * provider review is completed
+* `aevryn provider-config-check` passes without printing secrets
 * no-training-by-default posture is preserved
 * public disclosure matches provider terms
 * provider failure logging remains metadata-only

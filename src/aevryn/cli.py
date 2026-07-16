@@ -36,7 +36,9 @@ from aevryn.api import (
     MONITORING_DESTINATION_ENV,
     MONITORING_RETENTION_DAYS_ENV,
     OPENAI_API_KEY_ENV,
+    OPENAI_MAX_RESPONSE_BYTES_ENV,
     OPENAI_MODEL_ENV,
+    OPENAI_TIMEOUT_SECONDS_ENV,
     PASSWORD_RESET_ENABLED_ENV,
     PROJECT_DATABASE_ADAPTER_ENV,
     PROJECT_DATABASE_PATH_ENV,
@@ -167,6 +169,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "provider-smoke":
             _handle_provider_smoke(args)
             return 0
+        if command == "provider-config-check":
+            _handle_provider_config_check()
+            return 0
         if command == "project-db-smoke":
             _handle_project_db_smoke(args)
             return 0
@@ -270,6 +275,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "V2 Backend API:\n"
             "  aevryn api --host 127.0.0.1 --port 8000 "
             "--allowed-origin http://localhost:5173\n"
+            "  aevryn provider-config-check\n"
             "  aevryn project-db-smoke\n"
             "  aevryn storage-smoke\n"
             "  aevryn worker-drain\n"
@@ -589,6 +595,18 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=60.0,
         help="Provider request timeout for each synthetic extraction call.",
+    )
+
+    subcommands.add_parser(
+        "provider-config-check",
+        help="Check provider extraction configuration without printing secrets.",
+        description=(
+            "Check provider extraction configuration without printing secrets. "
+            "This verifies the explicit provider mode, OpenAI key presence, model, "
+            "timeout, and response-size boundary. It does not approve provider "
+            "use for public beta or replace owner/legal/provider review."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
     )
 
     project_db_smoke_parser = subcommands.add_parser(
@@ -1187,6 +1205,13 @@ def _handle_provider_smoke(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_provider_config_check() -> None:
+    """Handle the provider-config-check command."""
+    summary = _run_provider_config_check(dict(os.environ))
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_project_db_smoke(args: argparse.Namespace) -> None:
     """Handle the project-db-smoke command."""
     database_url_env = cast(str, args.database_url_env).strip()
@@ -1556,6 +1581,38 @@ def _run_observability_config_check(environ: dict[str, str]) -> dict[str, object
     }
 
 
+def _run_provider_config_check(environ: dict[str, str]) -> dict[str, object]:
+    """Check provider extraction configuration and return metadata only."""
+    if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
+        raise ValueError(f"{DEPLOYMENT_ENV}=production is required.")
+
+    mode = _required_lower_env(environ, EXTRACTION_MODE_ENV)
+    if mode != "openai":
+        raise ValueError(
+            f"{EXTRACTION_MODE_ENV}=openai is required for provider-backed extraction."
+        )
+    if not environ.get(OPENAI_API_KEY_ENV, "").strip():
+        raise ValueError(f"{OPENAI_API_KEY_ENV} is required for provider-backed extraction.")
+    model = environ.get(OPENAI_MODEL_ENV, "").strip()
+    if not model:
+        raise ValueError(f"{OPENAI_MODEL_ENV} is required for provider-backed extraction.")
+    timeout_seconds = _required_positive_float(environ, OPENAI_TIMEOUT_SECONDS_ENV)
+    max_response_bytes = _required_positive_int(environ, OPENAI_MAX_RESPONSE_BYTES_ENV)
+
+    return {
+        "deployment_env": "production",
+        "provider": "openai",
+        "extraction_mode": mode,
+        "model": model,
+        "timeout_seconds": timeout_seconds,
+        "max_response_bytes": max_response_bytes,
+        "provider_review": "required",
+        "public_beta": "blocked_until_provider_review",
+        "secrets_printed": 0,
+        "ok": "provider_config_contract_checked",
+    }
+
+
 def _required_lower_env(environ: dict[str, str], key: str) -> str:
     """Return a required environment value normalized for configuration checks."""
     value = environ.get(key, "").strip().lower()
@@ -1575,6 +1632,20 @@ def _required_positive_int(environ: dict[str, str], key: str) -> int:
         raise ValueError(f"{key} must be a positive integer.") from error
     if parsed < 1:
         raise ValueError(f"{key} must be a positive integer.")
+    return parsed
+
+
+def _required_positive_float(environ: dict[str, str], key: str) -> float:
+    """Return a required positive float environment value."""
+    value = environ.get(key, "").strip()
+    if not value:
+        raise ValueError(f"{key} is required.")
+    try:
+        parsed = float(value)
+    except ValueError as error:
+        raise ValueError(f"{key} must be a positive number.") from error
+    if parsed <= 0:
+        raise ValueError(f"{key} must be a positive number.")
     return parsed
 
 
