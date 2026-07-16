@@ -198,6 +198,7 @@ def test_openai_responses_client_returns_output_text_without_network() -> None:
     format_config = cast(dict[str, Any], text_config["format"])
     assert payload["model"] == "test-model"
     assert payload["input"] == "extract this scene"
+    assert payload["store"] is False
     assert format_config["type"] == "json_schema"
     assert format_config["name"] == "aevryn_scene_extraction"
     assert format_config["strict"] is True

@@ -140,6 +140,7 @@ class OpenAIResponsesAIExtractionClient:
                 payload={
                     "model": self._model,
                     "input": prompt_text,
+                    "store": False,
                     "text": {
                         "format": {
                             "type": "json_schema",

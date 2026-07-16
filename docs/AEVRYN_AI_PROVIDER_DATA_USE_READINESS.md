@@ -55,7 +55,31 @@ Current posture:
 
 This does not approve provider-backed extraction for public beta.
 
-OpenAI is currently supported as an internal-alpha candidate provider only. Public beta approval remains blocked until provider terms, model configuration, retention, training behavior, disclosure, and release-gate coverage are reviewed and recorded.
+OpenAI is currently supported as an internal-alpha candidate provider only.
+
+The 2026-07-16 provider review checked official OpenAI data-use and API
+data-controls material and recorded the current review boundary in
+`docs/AEVRYN_AI_PROVIDER_REVIEW.md`.
+
+Current verified posture:
+
+* OpenAI API inputs and outputs are not used for model training by default
+  unless an organization explicitly opts in.
+* The configured Aevryn provider path uses the OpenAI Responses API for
+  extraction.
+* Aevryn sends Responses API extraction requests with `store=false`.
+* Provider configuration checks remain metadata-only and do not print provider
+  keys.
+
+Remaining public-beta blockers:
+
+* final model configuration must be recorded
+* production OpenAI organization/project data-control settings must be reviewed
+* provider retention behavior must be disclosed accurately
+* user-facing privacy/trust copy must be owner/legal reviewed
+* release-candidate provider failure logging must remain metadata-only
+* public-beta signoff must explicitly approve or disable provider-backed
+  extraction
 
 The disclosure candidate names OpenAI as the current provider candidate, explains the data boundary, and requires provider-backed extraction to remain disabled for public beta unless no-training posture and retention behavior can be verified and disclosed accurately.
 
@@ -203,7 +227,9 @@ Current implementation progress:
 docs/AEVRYN_AI_PROVIDER_REVIEW.md defines the provider review checklist, OpenAI alpha-candidate status, data-sent boundary, logging boundary, training/retention decision, disclosure requirements, and approval states.
 docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md records the selected public-beta disclosure candidate.
 `aevryn provider-config-check` verifies provider configuration metadata without printing provider keys.
-Provider terms review, production model selection, provider verification, and public-beta approval remain open.
+OpenAI official data-use and API data-controls review was recorded on 2026-07-16.
+Aevryn's Responses API extraction adapter now sends store=false.
+Production model selection, OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.
 ```
 
 ---
