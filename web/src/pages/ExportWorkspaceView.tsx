@@ -16,10 +16,6 @@ import {
 } from "../previewing/previewPayload";
 import type { ProjectSummary } from "../projects/projectStore";
 
-const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
-const DEFAULT_AI_RESPONSE =
-  '{\n  "entities": [],\n  "facts": [],\n  "relationships": [],\n  "state_changes": []\n}';
-
 const exportOptions = [
   { kind: "character_profile", format: "markdown", label: "Character Profile / Markdown" },
   { kind: "scene_sheet", format: "markdown", label: "Scene Sheet / Markdown" },
@@ -38,8 +34,8 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [sourceId, setSourceId] = useState(project.id.replace(/^project_/, "source_"));
   const [filename, setFilename] = useState("chapter_001.txt");
   const [title, setTitle] = useState(project.name);
-  const [sourceText, setSourceText] = useState(DEFAULT_SOURCE_TEXT);
-  const [aiResponseText, setAiResponseText] = useState(DEFAULT_AI_RESPONSE);
+  const [sourceText, setSourceText] = useState("");
+  const [aiResponseText, setAiResponseText] = useState("");
   const [characterIdsText, setCharacterIdsText] = useState("");
   const [worldEntityIdsText, setWorldEntityIdsText] = useState("");
   const [sceneId, setSceneId] = useState("");
@@ -173,6 +169,10 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
       <DeveloperPreviewToggle>
         <section>
           <h2>Export Preview</h2>
+          <p className="field-note">
+            Developer preview requires real source text and extraction JSON. It does not run with
+            simulated source, placeholder AI output, or empty success paths.
+          </p>
           <form className="import-form" onSubmit={submit}>
           <div className="form-row-grid">
             <label>
@@ -206,6 +206,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
             <textarea
               value={sourceText}
               onChange={(event) => setSourceText(event.target.value)}
+              required
               rows={8}
             />
           </label>
@@ -214,6 +215,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
             <textarea
               value={aiResponseText}
               onChange={(event) => setAiResponseText(event.target.value)}
+              required
               rows={8}
             />
           </label>
