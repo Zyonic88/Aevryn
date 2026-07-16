@@ -179,6 +179,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "production-config-check":
             _handle_production_config_check()
             return 0
+        if command == "observability-config-check":
+            _handle_observability_config_check()
+            return 0
         if command == "audit-ledger-verify":
             _handle_audit_ledger_verify(args)
             return 0
@@ -269,7 +272,8 @@ def _build_parser() -> argparse.ArgumentParser:
             "--allowed-origin http://localhost:5173\n"
             "  aevryn project-db-smoke\n"
             "  aevryn storage-smoke\n"
-            "  aevryn worker-drain"
+            "  aevryn worker-drain\n"
+            "  aevryn observability-config-check"
         ),
         formatter_class=_RawDefaultsHelpFormatter,
     )
@@ -659,6 +663,18 @@ def _build_parser() -> argparse.ArgumentParser:
             "Check production startup configuration without printing secrets. "
             "This verifies the fail-closed production contract and reports the "
             "public-beta approval boundary as metadata."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+
+    subcommands.add_parser(
+        "observability-config-check",
+        help="Check hosted observability configuration without printing secrets.",
+        description=(
+            "Check hosted observability configuration without printing secrets. "
+            "This verifies metadata-only logging, hosted log and monitoring "
+            "destinations, bounded retention, and security alert routing flags. "
+            "It does not replace the required bounded hosted log review."
         ),
         formatter_class=_RawDefaultsHelpFormatter,
     )
@@ -1233,6 +1249,13 @@ def _handle_production_config_check() -> None:
         print(f"{key}={value}")
 
 
+def _handle_observability_config_check() -> None:
+    """Handle the observability-config-check command."""
+    summary = _run_observability_config_check(dict(os.environ))
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_audit_ledger_verify(args: argparse.Namespace) -> None:
     """Handle the audit-ledger-verify command."""
     database_url_env = cast(str, args.database_url_env)
@@ -1480,6 +1503,85 @@ def _run_production_config_check(environ: dict[str, str]) -> dict[str, object]:
         "secrets_printed": 0,
         "ok": "production_config_contract_checked",
     }
+
+
+def _run_observability_config_check(environ: dict[str, str]) -> dict[str, object]:
+    """Check hosted observability release configuration and return metadata only."""
+    if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
+        raise ValueError(f"{DEPLOYMENT_ENV}=production is required.")
+
+    log_destination = _required_lower_env(environ, LOG_DESTINATION_ENV)
+    if log_destination != "hosted":
+        raise ValueError(
+            f"{LOG_DESTINATION_ENV}=hosted is required for public-beta observability."
+        )
+    monitoring_destination = _required_lower_env(environ, MONITORING_DESTINATION_ENV)
+    if monitoring_destination != "hosted":
+        raise ValueError(
+            f"{MONITORING_DESTINATION_ENV}=hosted is required for public-beta observability."
+        )
+
+    log_retention_days = _required_positive_int(environ, LOG_RETENTION_DAYS_ENV)
+    monitoring_retention_days = _required_positive_int(
+        environ,
+        MONITORING_RETENTION_DAYS_ENV,
+    )
+    maximum_operational_retention_days = 30
+    if log_retention_days > maximum_operational_retention_days:
+        raise ValueError(
+            f"{LOG_RETENTION_DAYS_ENV} must be no more than "
+            f"{maximum_operational_retention_days} days for public-beta observability."
+        )
+    if monitoring_retention_days > maximum_operational_retention_days:
+        raise ValueError(
+            f"{MONITORING_RETENTION_DAYS_ENV} must be no more than "
+            f"{maximum_operational_retention_days} days for public-beta observability."
+        )
+
+    _require_true_process_flag(environ, SECURITY_ALERTS_ENABLED_ENV)
+    _require_true_process_flag(environ, METADATA_ONLY_LOGGING_ENV)
+
+    return {
+        "deployment_env": "production",
+        "log_destination": log_destination,
+        "monitoring_destination": monitoring_destination,
+        "log_retention_days": log_retention_days,
+        "monitoring_retention_days": monitoring_retention_days,
+        "security_alerts_enabled": "true",
+        "metadata_only_logging": "true",
+        "bounded_hosted_log_review": "required",
+        "public_beta": "blocked_until_bounded_hosted_log_review",
+        "secrets_printed": 0,
+        "ok": "observability_config_contract_checked",
+    }
+
+
+def _required_lower_env(environ: dict[str, str], key: str) -> str:
+    """Return a required environment value normalized for configuration checks."""
+    value = environ.get(key, "").strip().lower()
+    if not value:
+        raise ValueError(f"{key} is required.")
+    return value
+
+
+def _required_positive_int(environ: dict[str, str], key: str) -> int:
+    """Return a required positive integer environment value."""
+    value = environ.get(key, "").strip()
+    if not value:
+        raise ValueError(f"{key} is required.")
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise ValueError(f"{key} must be a positive integer.") from error
+    if parsed < 1:
+        raise ValueError(f"{key} must be a positive integer.")
+    return parsed
+
+
+def _require_true_process_flag(environ: dict[str, str], key: str) -> None:
+    """Require an explicit true flag for a production readiness check."""
+    if environ.get(key, "").strip().lower() != "true":
+        raise ValueError(f"{key}=true is required.")
 
 
 def _record_production_config_failure_if_possible(

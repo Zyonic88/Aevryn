@@ -15,6 +15,7 @@ from aevryn.cli import (
     _run_audit_access_report,
     _run_audit_access_verify,
     _run_audit_ledger_verify,
+    _run_observability_config_check,
     _run_production_config_check,
     main,
 )
@@ -777,6 +778,111 @@ def test_production_config_check_preserves_failure_when_audit_unavailable(
         )
     assert "AEVRYN_API_ALLOWED_ORIGINS" in str(error.value)
     assert "secret-db-password" not in str(error.value)
+
+
+def test_observability_config_check_help_describes_bounded_log_review(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Observability check help should distinguish config from log review."""
+    with pytest.raises(SystemExit) as error:
+        main(["observability-config-check", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "hosted observability configuration" in output
+    assert "does not replace the required bounded hosted log review" in output
+
+
+def test_observability_config_check_reports_metadata_only_contract(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Observability config check should print metadata and no secret values."""
+    env_values = {
+        "AEVRYN_DEPLOYMENT_ENV": "production",
+        "AEVRYN_LOG_DESTINATION": "hosted",
+        "AEVRYN_MONITORING_DESTINATION": "hosted",
+        "AEVRYN_LOG_RETENTION_DAYS": "30",
+        "AEVRYN_MONITORING_RETENTION_DAYS": "14",
+        "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+        "AEVRYN_METADATA_ONLY_LOGGING": "true",
+        "AEVRYN_API_KEYS": "secret-api-key",
+        "AEVRYN_PROJECT_DATABASE_URL": (
+            "postgresql://aevryn_app:secret-db-password@localhost/aevryn"
+        ),
+    }
+    for key, value in env_values.items():
+        monkeypatch.setenv(key, value)
+
+    exit_code = main(["observability-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "deployment_env=production" in captured.out
+    assert "log_destination=hosted" in captured.out
+    assert "monitoring_destination=hosted" in captured.out
+    assert "log_retention_days=30" in captured.out
+    assert "monitoring_retention_days=14" in captured.out
+    assert "security_alerts_enabled=true" in captured.out
+    assert "metadata_only_logging=true" in captured.out
+    assert "bounded_hosted_log_review=required" in captured.out
+    assert "public_beta=blocked_until_bounded_hosted_log_review" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=observability_config_contract_checked" in captured.out
+    assert "secret-api-key" not in captured.out
+    assert "secret-db-password" not in captured.out
+    assert "postgresql://" not in captured.out
+    assert "secret-api-key" not in captured.err
+    assert "secret-db-password" not in captured.err
+    assert "postgresql://" not in captured.err
+
+
+def test_observability_config_check_rejects_local_log_destination() -> None:
+    """Public-beta observability should fail closed for local-only logs."""
+    with pytest.raises(ValueError, match="AEVRYN_LOG_DESTINATION=hosted"):
+        _run_observability_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_LOG_DESTINATION": "local",
+                "AEVRYN_MONITORING_DESTINATION": "hosted",
+                "AEVRYN_LOG_RETENTION_DAYS": "30",
+                "AEVRYN_MONITORING_RETENTION_DAYS": "30",
+                "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+                "AEVRYN_METADATA_ONLY_LOGGING": "true",
+            }
+        )
+
+
+def test_observability_config_check_rejects_unbounded_retention() -> None:
+    """Operational observability retention should stay within the policy maximum."""
+    with pytest.raises(ValueError, match="AEVRYN_LOG_RETENTION_DAYS"):
+        _run_observability_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_LOG_DESTINATION": "hosted",
+                "AEVRYN_MONITORING_DESTINATION": "hosted",
+                "AEVRYN_LOG_RETENTION_DAYS": "90",
+                "AEVRYN_MONITORING_RETENTION_DAYS": "30",
+                "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+                "AEVRYN_METADATA_ONLY_LOGGING": "true",
+            }
+        )
+
+
+def test_observability_config_check_requires_metadata_only_logging() -> None:
+    """Observability readiness should require explicit metadata-only logging."""
+    with pytest.raises(ValueError, match="AEVRYN_METADATA_ONLY_LOGGING=true"):
+        _run_observability_config_check(
+            {
+                "AEVRYN_DEPLOYMENT_ENV": "production",
+                "AEVRYN_LOG_DESTINATION": "hosted",
+                "AEVRYN_MONITORING_DESTINATION": "hosted",
+                "AEVRYN_LOG_RETENTION_DAYS": "30",
+                "AEVRYN_MONITORING_RETENTION_DAYS": "30",
+                "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+                "AEVRYN_METADATA_ONLY_LOGGING": "false",
+            }
+        )
 
 
 def test_audit_ledger_verify_help_describes_metadata_only_contract(

@@ -191,6 +191,7 @@ Verification:
 * smoke run completes outside the purely local private-alpha path
 * workflow state is observable through Monitoring
 * export preview works through production storage boundaries
+* `aevryn observability-config-check` passes without printing secrets
 * logs do not expose manuscripts, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths
 
 Tracking docs:
