@@ -954,6 +954,8 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "metadata-only",
         "OpenAI official data-use and API data-controls review was recorded on 2026-07-16.",
         "Responses API extraction adapter now sends store=false",
+        "request_storage=disabled",
+        "responses_store=false",
         "provider data-use disclosure",
     )
 

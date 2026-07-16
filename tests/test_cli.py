@@ -356,6 +356,8 @@ def test_provider_config_check_reports_metadata_only_contract(
     assert "model=gpt-5.4-mini" in captured.out
     assert "timeout_seconds=90.0" in captured.out
     assert "max_response_bytes=1048576" in captured.out
+    assert "request_storage=disabled" in captured.out
+    assert "responses_store=false" in captured.out
     assert "provider_review=required" in captured.out
     assert "public_beta=blocked_until_provider_review" in captured.out
     assert "secrets_printed=0" in captured.out

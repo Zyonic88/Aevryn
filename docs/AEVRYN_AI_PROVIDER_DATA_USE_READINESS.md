@@ -89,8 +89,9 @@ Run this metadata-only configuration check before provider smoke or public-beta 
 python -m aevryn.cli provider-config-check
 ```
 
-The command verifies explicit provider mode, OpenAI key presence, model, timeout,
-and response-size boundary without printing secrets. It does not approve
+The command verifies explicit provider mode, OpenAI key presence, model,
+timeout, response-size boundary, and the metadata-only `request_storage=disabled`
+/ `responses_store=false` posture without printing secrets. It does not approve
 provider-backed extraction for public beta and does not replace owner, legal, or
 provider review.
 
@@ -226,7 +227,7 @@ Current implementation progress:
 ```text
 docs/AEVRYN_AI_PROVIDER_REVIEW.md defines the provider review checklist, OpenAI alpha-candidate status, data-sent boundary, logging boundary, training/retention decision, disclosure requirements, and approval states.
 docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md records the selected public-beta disclosure candidate.
-`aevryn provider-config-check` verifies provider configuration metadata without printing provider keys.
+`aevryn provider-config-check` verifies provider configuration metadata, including `request_storage=disabled` and `responses_store=false`, without printing provider keys.
 OpenAI official data-use and API data-controls review was recorded on 2026-07-16.
 Aevryn's Responses API extraction adapter now sends store=false.
 Production model selection, OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.

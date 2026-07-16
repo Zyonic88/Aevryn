@@ -1606,6 +1606,8 @@ def _run_provider_config_check(environ: dict[str, str]) -> dict[str, object]:
         "model": model,
         "timeout_seconds": timeout_seconds,
         "max_response_bytes": max_response_bytes,
+        "request_storage": "disabled",
+        "responses_store": "false",
         "provider_review": "required",
         "public_beta": "blocked_until_provider_review",
         "secrets_printed": 0,
