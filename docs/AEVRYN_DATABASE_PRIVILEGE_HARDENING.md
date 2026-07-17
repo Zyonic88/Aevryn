@@ -10,15 +10,19 @@ This document tracks the production database least-privilege posture required be
 
 ```text
 Area: Database privilege hardening
-Status: Started
-Public beta: Blocked
+Status: Accepted
+Public beta: Audit database role gate passed; broader public beta remains blocked
 ```
 
 The 2026-07-14 hosted audit gate verified that the audit table exists and the audit hash chain is valid.
 
 The same gate also found that the currently configured database role can update and delete `audit_ledger_records`.
 
-That is not acceptable for public beta.
+That was not acceptable for public beta.
+
+The 2026-07-17 hosted audit role rotation moved Cloud Run to a restricted
+runtime PostgreSQL role and verified append-only audit access with metadata-only
+output.
 
 ---
 
@@ -169,6 +173,22 @@ audit-ledger-verify: passed
 audit-access-report: passed
 audit-access-verify: failed
 reason: UPDATE privilege is present; DELETE privilege is also present in the report
+```
+
+2026-07-17 hosted restricted runtime role verification:
+
+```text
+audit-ledger-verify: passed
+records_verified=1338
+audit-access-report: passed
+can_select=true
+can_insert=true
+can_update=false
+can_delete=false
+can_truncate=false
+is_table_owner=false
+audit-access-verify: passed
+secrets_printed=0
 ```
 
 No secrets or source content were printed.

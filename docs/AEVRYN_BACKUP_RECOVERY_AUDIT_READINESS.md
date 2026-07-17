@@ -229,8 +229,13 @@ output, but hosted `aevryn audit-access-verify` failed because the current
 database role has UPDATE and DELETE privileges on `audit_ledger_records`.
 The restricted runtime role remediation runbook is
 `docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md`.
+On 2026-07-17, Cloud Run was moved to a restricted runtime PostgreSQL role.
+Hosted `aevryn audit-ledger-verify`, `aevryn audit-access-report`, and
+`aevryn audit-access-verify` passed with metadata-only output. The report showed
+`can_update=false`, `can_delete=false`, `can_truncate=false`, and
+`is_table_owner=false`.
 
-Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, restricted audit database role provisioning, hosted audit access verification review, and dated restore/audit drill completion remain open.
+Production backup provider verification, restore execution, audit retention enforcement, and dated restore/audit drill completion remain open.
 ```
 
 ---
