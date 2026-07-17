@@ -824,6 +824,7 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "restore test",
         "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
         "docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md",
+        "docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md",
         "repeatable restore/audit drill record and stop conditions",
         "selected Supabase PostgreSQL and Cloudflare R2 restore procedure",
         "custom role password reset caveat",
@@ -835,6 +836,8 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "is_table_owner=false",
         "metadata-only",
         "tamper-evident",
+        "source-environment restore preflight passed",
+        "isolated restore target has not been",
     )
 
     for term in required_terms:
@@ -934,6 +937,37 @@ def test_restore_audit_drill_record_tracks_public_beta_drill_template() -> None:
         "Any exposed secret must be rotated.",
         "Any exposed private story content must be treated as a privacy incident.",
         "Public beta remains blocked unless the final result is `passed`.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate() -> None:
+    """Dated restore drill record should distinguish source preflight from restore pass."""
+    document = read_doc("docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md")
+
+    required_terms = (
+        "Drill ID: restore-audit-2026-07-17-001",
+        "Status: Source preflight passed; restore target not run",
+        "Final result: blocked",
+        "production_config_check=passed",
+        "audit_ledger_verify=passed",
+        "records_verified=1375",
+        "can_update=false",
+        "can_delete=false",
+        "can_truncate=false",
+        "is_table_owner=false",
+        "observability_config_check=passed",
+        "storage_smoke=passed",
+        "objects_created=1",
+        "objects_deleted=1",
+        "BLOCKED - restore target not created",
+        "deleted_story_absent_from_product_surfaces=not_run",
+        "operator_broad_manuscript_access_required=not_run",
+        "production_traffic_attached=false",
+        "This dated record is accepted only as source-environment preflight evidence.",
+        "It is not accepted as a completed restore/audit drill.",
     )
 
     for term in required_terms:

@@ -925,6 +925,9 @@ Complete provider owner/legal review before provider-backed extraction is public
 Complete public-facing legal, trust, and support publication before public beta.
 Complete backup/restore/audit readiness before public beta.
 Run `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md` in an isolated restore target and complete a dated restore/audit drill record.
+The 2026-07-17 restore source preflight is recorded in
+`docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`; it does not close the restore
+gate because no isolated restore target has been verified.
 Continue prompt-pack and output UX polish before public beta positioning.
 ```
 

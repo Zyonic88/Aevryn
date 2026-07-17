@@ -161,6 +161,7 @@ Tracking docs:
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
 * `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
 * `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`
+* `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
 * `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
@@ -170,7 +171,7 @@ Tracking docs:
 Status:
 
 ```text
-Restore plan, restore/audit drill record template, and provider-specific backup/restore runbook exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Audit integrity, access verification, and access-report commands exist. Hosted audit integrity verification passed with metadata-only output. Hosted audit access report and append-only access verification passed with a restricted runtime PostgreSQL role; the report showed `can_update=false`, `can_delete=false`, `can_truncate=false`, and `is_table_owner=false`. Production now requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` so schema bootstrap and migrations are separated from the runtime app role. Production backup provider verification runbook is selected; dated restore drill execution, audit retention enforcement, and restore/audit drill completion are not complete.
+Restore plan, restore/audit drill record template, and provider-specific backup/restore runbook exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Audit integrity, access verification, and access-report commands exist. Hosted audit integrity verification passed with metadata-only output. Hosted audit access report and append-only access verification passed with a restricted runtime PostgreSQL role; the report showed `can_update=false`, `can_delete=false`, `can_truncate=false`, and `is_table_owner=false`. Production now requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` so schema bootstrap and migrations are separated from the runtime app role. Production backup provider verification runbook is selected. The 2026-07-17 source-environment restore preflight passed metadata-only production config, audit, observability, and R2 storage checks, but isolated restore target creation, dated restore drill execution, audit retention enforcement, and restore/audit drill completion are not complete.
 ```
 
 ---

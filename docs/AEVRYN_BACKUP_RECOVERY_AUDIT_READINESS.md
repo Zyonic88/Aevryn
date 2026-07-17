@@ -44,6 +44,7 @@ Gate 5 builds on:
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
 * `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
 * `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`
+* `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
 
 These documents define the privacy and engineering boundaries.
 
@@ -241,6 +242,10 @@ Hosted `aevryn audit-ledger-verify`, `aevryn audit-access-report`, and
 `is_table_owner=false`.
 
 Production backup provider verification runbook is selected. Restore execution, audit retention enforcement, and dated restore/audit drill completion remain open.
+The 2026-07-17 source-environment restore preflight passed production config,
+audit integrity, restricted audit access, observability config, and R2 storage
+smoke with metadata-only output. The isolated restore target has not been
+created, restored, or verified.
 ```
 
 ---
