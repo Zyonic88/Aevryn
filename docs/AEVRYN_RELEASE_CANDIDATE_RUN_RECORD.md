@@ -220,7 +220,9 @@ Identity review summaries appear across several output tabs and should be conden
 Some Unknown/No-data states remain where accepted canon evidence is incomplete.
 Settings and broader user profile preferences remain intentionally minimal.
 Initial public trust/legal/support pages are published; owner/legal review and final public-beta approval remain incomplete.
-Production observability policy candidate is selected, but hosted retention configuration and final bounded log review remain incomplete before public beta.
+Production observability policy candidate is selected, and hosted
+`observability-config-check` passed with metadata-only output on 2026-07-17.
+Final bounded hosted log review remains incomplete before public beta.
 AI provider disclosure candidate is selected, but provider terms, final model configuration, and public-beta provider verification remain incomplete.
 ```
 
@@ -235,7 +237,7 @@ Public beta may proceed only if each residual risk is explicit and accepted by t
 | Prompt richness is still below final product ambition | Generated image/video prompts may need user editing | Continue prompt-pack hardening before beta marketing claims | Accepted for internal RC only; blocks public-beta positioning if not improved |
 | Output UX polish remains alpha-grade in some tabs | Users may find repeated summaries or dense cards tiring | Continue UX hardening before broad public beta | Accepted for internal RC only |
 | Public legal/trust/support pages need owner and legal review | Public users may see draft wording that is not public-beta approved | Review public-facing site/legal docs before public beta | Blocks public beta |
-| Production observability policy needs hosted verification | Hosted logging and monitoring retention need final public-beta verification | Verify hosted retention, alert routing, and bounded log review against the selected production observability policy | Blocks public beta |
+| Production observability policy needs final bounded log review | Hosted logging and monitoring configuration passed, but final log review still needs public-beta verification | Complete final bounded hosted log review against the selected production observability policy | Blocks public beta |
 | Backup retention wording needs production verification | Users need accurate deletion and backup expectations | Verify the selected public-beta backup wording against final production backup behavior | Blocks public beta |
 | AI provider disclosure needs provider verification | Users need accurate expectations for when story excerpts leave Aevryn-owned systems | Verify provider terms, retention, training behavior, abuse monitoring, and final model configuration against the selected disclosure candidate | Blocks public beta |
 | Restore/audit drill has not run | Recovery confidence is incomplete for public users | Complete a dated restore/audit drill record proving ownership, deletion, audit integrity, and metadata-only restore logs | Blocks public beta |
@@ -265,8 +267,8 @@ If one person holds multiple responsibilities, each responsibility must still be
 ```text
 Internal V2 release candidate: Signed off
 Public beta: Blocked
-Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, hosted audit integrity verification, hosted audit append-only access verification, and initial public page publication passed. Public beta remains blocked by public-facing legal/trust/support review, hosted observability verification, backup retention verification, AI provider verification, restore/audit readiness, prompt-pack polish, and final public-beta approval.
-Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support review, hosted observability verification, backup retention verification, AI provider verification, restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, and initial public page publication passed. Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention verification, AI provider review, restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention verification, AI provider review, restore/audit readiness, prompt-pack polish, and final public-beta approval.
 ```
 
 ---

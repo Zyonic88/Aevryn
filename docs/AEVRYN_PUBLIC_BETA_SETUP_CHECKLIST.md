@@ -131,7 +131,7 @@ Tracking docs:
 Status:
 
 ```text
-OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Provider terms review, production model selection, provider verification, and public-beta approval remain open.
+OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17, including `request_storage=disabled` and `responses_store=false`. Provider terms review, OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.
 ```
 
 ---
@@ -207,7 +207,7 @@ Tracking docs:
 Status:
 
 ```text
-Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. api.aevryn.ai custom-domain health smoke returned OK. Frontend, managed-identity, hosted creator workflow, export creation, log review, and smoke project cleanup passed in the hosted production-like environment. Production observability policy candidate selected for owner/security review. Public beta remains blocked by non-smoke readiness items.
+Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. api.aevryn.ai custom-domain health smoke returned OK. Frontend, managed-identity, hosted creator workflow, export creation, log review, and smoke project cleanup passed in the hosted production-like environment. Hosted production-like `aevryn observability-config-check` passed with metadata-only output on 2026-07-17. Production observability policy candidate selected for owner/security review. Final bounded hosted log review remains required. Public beta remains blocked by non-smoke readiness items.
 ```
 
 ---

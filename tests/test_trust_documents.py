@@ -954,9 +954,11 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "selected public-beta disclosure candidate",
         "metadata-only",
         "OpenAI official data-use and API data-controls review was recorded on 2026-07-16.",
+        "provider configuration gate passed on 2026-07-17",
         "Responses API extraction adapter now sends store=false",
         "request_storage=disabled",
         "responses_store=false",
+        "ok=provider_config_contract_checked",
         "provider data-use disclosure",
     )
 
@@ -1113,15 +1115,20 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-17 hosted restricted audit role verification passed",
+        "Latest attempt: 2026-07-17 provider and observability config gates passed",
         "Production-like smoke proves configuration and workflow safety.",
         "Hosted Restricted Audit Role Verification",
+        "Provider And Observability Config Gates",
         "records_verified=1338",
         "can_update=false",
         "can_delete=false",
         "can_truncate=false",
         "is_table_owner=false",
         "ok=audit_access_append_only_verified",
+        "ok=provider_config_contract_checked",
+        "ok=observability_config_contract_checked",
+        "PASSED for provider request storage disabled posture.",
+        "PASSED for hosted observability configuration metadata.",
         "PASSED for least-privilege append-only audit access.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -1216,7 +1223,8 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         ),
         (
             "Public beta remains blocked by public-facing legal/trust/support "
-            "publication, hosted observability verification, backup/restore/audit readiness, "
+            "publication, final provider review, final bounded hosted observability "
+            "review, backup/restore/audit readiness, "
             "prompt-pack polish, and final public-beta approval."
         ),
     )

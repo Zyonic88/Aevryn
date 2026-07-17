@@ -345,7 +345,7 @@ Current Gate 3 progress:
 
 ```text
 The local production startup contract check passes without printing secrets.
-Hosted production-like deployment smoke has passed for API health, authenticated workflow, and restricted audit access. Provider and observability config checks remain before Gate 3 can close.
+Hosted production-like deployment smoke has passed for API health, authenticated workflow, restricted audit access, provider config, and observability config. Final bounded hosted log review remains before Gate 3 can close.
 ```
 
 Current external setup progress:

@@ -71,6 +71,27 @@ Current verified posture:
 * Provider configuration checks remain metadata-only and do not print provider
   keys.
 
+The hosted production-like provider configuration gate passed on 2026-07-17
+with metadata-only output:
+
+```text
+deployment_env=production
+provider=openai
+extraction_mode=openai
+model=gpt-5.4-mini
+timeout_seconds=90.0
+max_response_bytes=1048576
+request_storage=disabled
+responses_store=false
+provider_review=required
+public_beta=blocked_until_provider_review
+secrets_printed=0
+ok=provider_config_contract_checked
+```
+
+This verifies configuration posture only. It does not replace owner, legal, or
+provider review.
+
 Remaining public-beta blockers:
 
 * final model configuration must be recorded
@@ -230,7 +251,8 @@ docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md records the selected public-beta 
 `aevryn provider-config-check` verifies provider configuration metadata, including `request_storage=disabled` and `responses_store=false`, without printing provider keys.
 OpenAI official data-use and API data-controls review was recorded on 2026-07-16.
 Aevryn's Responses API extraction adapter now sends store=false.
-Production model selection, OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.
+Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17.
+OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.
 ```
 
 ---
