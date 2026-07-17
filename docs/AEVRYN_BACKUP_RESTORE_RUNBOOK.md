@@ -182,6 +182,30 @@ Do not use unpublished third-party manuscripts as restore-drill evidence.
 
 ---
 
+# Source Fixture Command
+
+The source-side fixture can be prepared through the hosted API boundary with:
+
+```powershell
+python -m aevryn.cli restore-drill-fixture --drain-worker --create-export --require-succeeded-run
+```
+
+Required local environment values:
+
+* `AEVRYN_PUBLIC_API_BASE_URL`
+* `AEVRYN_RESTORE_DRILL_BEARER_TOKEN`
+* `AEVRYN_WORKER_API_KEY` when `--drain-worker` is used
+
+The command creates only synthetic restore-drill content. It prints metadata
+counts and status flags only. It must not print bearer tokens, source prose,
+storage references, private URLs, provider prompts, provider responses, or
+generated export bodies.
+
+This command does not run the restore drill and does not approve public beta. It
+only prepares source-side evidence before the restore point is selected.
+
+---
+
 # Required Commands
 
 Run in an environment configured for the isolated restore target:

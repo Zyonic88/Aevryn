@@ -7,6 +7,7 @@ import shutil
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import cast
 
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
@@ -696,6 +697,282 @@ def test_worker_drain_calls_hosted_api_without_printing_key(
     assert payload["max_jobs"] == 3
     assert payload["started_at"].endswith("Z")
     assert payload["finished_at"].endswith("Z")
+
+
+def test_restore_drill_fixture_help_describes_metadata_only_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Restore drill fixture help should describe the hosted API boundary."""
+    with pytest.raises(SystemExit) as error:
+        main(["restore-drill-fixture", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "metadata-only restore drill fixture data" in output
+    assert "--bearer-token-env" in output
+    assert "--drain-worker" in output
+    assert "--create-export" in output
+    assert "never prints bearer tokens" in output
+
+
+def test_restore_drill_fixture_requires_process_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill fixture should fail before network access without env."""
+    monkeypatch.delenv("AEVRYN_PUBLIC_API_BASE_URL", raising=False)
+    monkeypatch.delenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", raising=False)
+
+    exit_code = main(["restore-drill-fixture"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_PUBLIC_API_BASE_URL is required" in captured.err
+
+
+def test_restore_drill_fixture_prepares_source_data_without_printing_secrets(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill fixture should use hosted API routes and print metadata only."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", "secret-bearer-token")
+    monkeypatch.setenv("AEVRYN_WORKER_API_KEY", "secret-worker-key")
+    captured_requests: list[urllib.request.Request] = []
+
+    responses: list[tuple[int, dict[str, object]]] = [
+        (200, {"project_id": "created"}),
+        (200, {"story_id": "active"}),
+        (200, {"story_id": "disposable"}),
+        (204, {}),
+        (200, {"chapters": 1, "scenes": 2, "evidence_anchors": 6}),
+        (200, {"chapter_count": 1, "scene_count": 2}),
+        (200, {"run_id": "run", "status": "pending"}),
+        (200, {"claimed_jobs": 1, "succeeded_jobs": 1, "failed_jobs": 0}),
+        (
+            200,
+            {
+                "latest_engine_run": {"status": "succeeded"},
+                "snapshots": {
+                    "available": True,
+                    "latest_snapshot_id": "snapshot_alpha",
+                },
+            },
+        ),
+        (200, {"export_id": "export_alpha"}),
+    ]
+
+    class FakeResponse:
+        def __init__(self, status: int, payload: dict[str, object]) -> None:
+            self.status = status
+            self._payload = payload
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            if self.status == 204:
+                return b""
+            return json.dumps(self._payload).encode("utf-8")
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        *,
+        timeout: float,
+    ) -> FakeResponse:
+        captured_requests.append(request)
+        assert timeout == 4.5
+        status, payload = responses.pop(0)
+        return FakeResponse(status, payload)
+
+    monkeypatch.setattr("aevryn.cli.urllib.request.urlopen", fake_urlopen)
+
+    exit_code = main(
+        [
+            "restore-drill-fixture",
+            "--drain-worker",
+            "--create-export",
+            "--require-succeeded-run",
+            "--timeout-seconds",
+            "4.5",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert not responses
+    assert "drill_fixture=source" in captured.out
+    assert "project_created=True" in captured.out
+    assert "disposable_story_deleted=True" in captured.out
+    assert "worker_drained=True" in captured.out
+    assert "run_status=succeeded" in captured.out
+    assert "snapshots_available=True" in captured.out
+    assert "export_created=True" in captured.out
+    assert "source_bytes_printed=0" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "restore_target_created=False" in captured.out
+    assert "public_beta=blocked_until_isolated_restore_drill_passes" in captured.out
+    assert "ok=restore_drill_fixture_prepared" in captured.out
+    assert "secret-bearer-token" not in captured.out
+    assert "secret-worker-key" not in captured.out
+    assert "Mira cataloged" not in captured.out
+    assert "secret-bearer-token" not in captured.err
+    assert "secret-worker-key" not in captured.err
+
+    assert [request.get_method() for request in captured_requests] == [
+        "POST",
+        "POST",
+        "POST",
+        "DELETE",
+        "POST",
+        "POST",
+        "POST",
+        "POST",
+        "GET",
+        "POST",
+    ]
+    assert captured_requests[0].full_url == "https://api.aevryn.ai/v2/projects"
+    assert captured_requests[7].full_url == "https://api.aevryn.ai/v2/workers/process"
+    assert captured_requests[0].get_header("Authorization") == (
+        "Bearer secret-bearer-token"
+    )
+    assert captured_requests[7].get_header("X-aevryn-api-key") == "secret-worker-key"
+    import_payload = json.loads(cast(bytes, captured_requests[5].data).decode("utf-8"))
+    assert import_payload["filename"] == "restore-drill-synthetic.txt"
+    assert "content_base64" in import_payload
+
+
+def test_restore_drill_fixture_can_report_incomplete_without_false_success(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill fixture should not claim prepared when the run is still pending."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", "secret-bearer-token")
+
+    responses: list[tuple[int, dict[str, object]]] = [
+        (200, {"project_id": "created"}),
+        (200, {"story_id": "active"}),
+        (200, {"story_id": "disposable"}),
+        (204, {}),
+        (200, {"chapters": 1, "scenes": 2, "evidence_anchors": 6}),
+        (200, {"chapter_count": 1, "scene_count": 2}),
+        (200, {"run_id": "run", "status": "pending"}),
+        (
+            200,
+            {
+                "latest_engine_run": {"status": "pending"},
+                "snapshots": {"available": False},
+            },
+        ),
+    ]
+
+    class FakeResponse:
+        def __init__(self, status: int, payload: dict[str, object]) -> None:
+            self.status = status
+            self._payload = payload
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            if self.status == 204:
+                return b""
+            return json.dumps(self._payload).encode("utf-8")
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        *,
+        timeout: float,
+    ) -> FakeResponse:
+        status, payload = responses.pop(0)
+        return FakeResponse(status, payload)
+
+    monkeypatch.setattr("aevryn.cli.urllib.request.urlopen", fake_urlopen)
+
+    exit_code = main(["restore-drill-fixture", "--poll-interval-seconds", "0"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "run_status=pending" in captured.out
+    assert "snapshots_available=False" in captured.out
+    assert "export_created=False" in captured.out
+    assert "ok=restore_drill_fixture_incomplete" in captured.out
+    assert "restore_drill_fixture_prepared" not in captured.out
+    assert "secret-bearer-token" not in captured.out
+    assert "secret-bearer-token" not in captured.err
+
+
+def test_restore_drill_fixture_can_require_succeeded_run(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill fixture should fail loudly when success is required."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", "secret-bearer-token")
+    responses: list[tuple[int, dict[str, object]]] = [
+        (200, {"project_id": "created"}),
+        (200, {"story_id": "active"}),
+        (200, {"story_id": "disposable"}),
+        (204, {}),
+        (200, {"chapters": 1, "scenes": 2, "evidence_anchors": 6}),
+        (200, {"chapter_count": 1, "scene_count": 2}),
+        (200, {"run_id": "run", "status": "pending"}),
+        (
+            200,
+            {
+                "latest_engine_run": {"status": "failed"},
+                "snapshots": {"available": False},
+            },
+        ),
+    ]
+
+    class FakeResponse:
+        def __init__(self, status: int, payload: dict[str, object]) -> None:
+            self.status = status
+            self._payload = payload
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            if self.status == 204:
+                return b""
+            return json.dumps(self._payload).encode("utf-8")
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        *,
+        timeout: float,
+    ) -> FakeResponse:
+        status, payload = responses.pop(0)
+        return FakeResponse(status, payload)
+
+    monkeypatch.setattr("aevryn.cli.urllib.request.urlopen", fake_urlopen)
+
+    exit_code = main(
+        [
+            "restore-drill-fixture",
+            "--require-succeeded-run",
+            "--poll-interval-seconds",
+            "0",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "did not reach succeeded state" in captured.err
+    assert "secret-bearer-token" not in captured.out
+    assert "secret-bearer-token" not in captured.err
 
 
 def test_production_config_check_help_describes_metadata_only_contract(

@@ -7,6 +7,7 @@ import base64
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -181,6 +182,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "worker-drain":
             _handle_worker_drain(args)
             return 0
+        if command == "restore-drill-fixture":
+            _handle_restore_drill_fixture(args)
+            return 0
         if command == "production-config-check":
             _handle_production_config_check()
             return 0
@@ -279,6 +283,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "  aevryn project-db-smoke\n"
             "  aevryn storage-smoke\n"
             "  aevryn worker-drain\n"
+            "  aevryn restore-drill-fixture\n"
             "  aevryn observability-config-check"
         ),
         formatter_class=_RawDefaultsHelpFormatter,
@@ -672,6 +677,67 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=180.0,
         help="HTTP timeout for the worker drain request.",
+    )
+
+    restore_drill_fixture_parser = subcommands.add_parser(
+        "restore-drill-fixture",
+        help="Prepare metadata-only restore drill fixture data through the hosted API.",
+        description=(
+            "Prepare metadata-only restore drill fixture data through the hosted API. "
+            "The command creates one test project, one active story, one saved import, "
+            "one processing run, and one disposable story that is deleted before backup "
+            "capture. It never prints bearer tokens, source prose, storage references, "
+            "private URLs, or provider payloads."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    restore_drill_fixture_parser.add_argument(
+        "--api-url-env",
+        default=PUBLIC_API_BASE_URL_ENV,
+        help="Process environment variable containing the public API base URL.",
+    )
+    restore_drill_fixture_parser.add_argument(
+        "--bearer-token-env",
+        default="AEVRYN_RESTORE_DRILL_BEARER_TOKEN",
+        help="Process environment variable containing the restore-test bearer token.",
+    )
+    restore_drill_fixture_parser.add_argument(
+        "--worker-key-env",
+        default=WORKER_API_KEY_ENV,
+        help="Process environment variable containing the worker API key.",
+    )
+    restore_drill_fixture_parser.add_argument(
+        "--drain-worker",
+        action="store_true",
+        help="Drain one worker job after submitting the import run.",
+    )
+    restore_drill_fixture_parser.add_argument(
+        "--create-export",
+        action="store_true",
+        help="Create one metadata-only export from the latest snapshot when available.",
+    )
+    restore_drill_fixture_parser.add_argument(
+        "--require-succeeded-run",
+        action="store_true",
+        help="Fail unless the submitted processing run reaches succeeded state.",
+    )
+    restore_drill_fixture_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=30.0,
+        help="HTTP timeout for each hosted API request.",
+    )
+    restore_drill_fixture_parser.add_argument(
+        "--poll-attempts",
+        type=int,
+        default=1,
+        help="Number of project-status polls after optional worker drain.",
+    )
+    restore_drill_fixture_parser.add_argument(
+        "--poll-interval-seconds",
+        type=float,
+        default=2.0,
+        help="Seconds to wait between project-status polls.",
     )
 
     subcommands.add_parser(
@@ -1267,6 +1333,40 @@ def _handle_worker_drain(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_restore_drill_fixture(args: argparse.Namespace) -> None:
+    """Handle the restore-drill-fixture command."""
+    api_url_env = cast(str, args.api_url_env).strip()
+    bearer_token_env = cast(str, args.bearer_token_env).strip()
+    worker_key_env = cast(str, args.worker_key_env).strip()
+    timeout_seconds = cast(float, args.timeout_seconds)
+    poll_attempts = cast(int, args.poll_attempts)
+    poll_interval_seconds = cast(float, args.poll_interval_seconds)
+    if not api_url_env:
+        raise ValueError("--api-url-env cannot be blank.")
+    if not bearer_token_env:
+        raise ValueError("--bearer-token-env cannot be blank.")
+    if not worker_key_env:
+        raise ValueError("--worker-key-env cannot be blank.")
+    worker_api_key = (
+        _required_process_env_value(worker_key_env)
+        if cast(bool, args.drain_worker)
+        else None
+    )
+    summary = _run_restore_drill_fixture(
+        api_url=_required_process_env_value(api_url_env),
+        bearer_token=_required_process_env_value(bearer_token_env),
+        worker_api_key=worker_api_key,
+        drain_worker=cast(bool, args.drain_worker),
+        create_export=cast(bool, args.create_export),
+        require_succeeded_run=cast(bool, args.require_succeeded_run),
+        timeout_seconds=timeout_seconds,
+        poll_attempts=poll_attempts,
+        poll_interval_seconds=poll_interval_seconds,
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_production_config_check() -> None:
     """Handle the production-config-check command."""
     summary = _run_production_config_check(dict(os.environ))
@@ -1845,7 +1945,7 @@ def _run_provider_api_workflow_smoke(
         "Mira opened the brass gate with a silver key while Jonah waited beside the tower.\n\n"
         "Jonah gave Mira the river map before the storm reached the tower."
     )
-    import_payload = {
+    import_payload: dict[str, object] = {
         "source_id": "source_provider_smoke",
         "filename": "provider-api-smoke.txt",
         "content_base64": base64.b64encode(source_text.encode("utf-8")).decode("ascii"),
@@ -1960,6 +2060,302 @@ def _run_hosted_worker_drain(
         "failed_jobs": int(response_payload["failed_jobs"]),
         "ok": "hosted_worker_drain_completed",
     }
+
+
+def _run_restore_drill_fixture(
+    *,
+    api_url: str,
+    bearer_token: str,
+    worker_api_key: str | None,
+    drain_worker: bool,
+    create_export: bool,
+    require_succeeded_run: bool,
+    timeout_seconds: float,
+    poll_attempts: int,
+    poll_interval_seconds: float,
+) -> dict[str, object]:
+    """Prepare source-side restore drill evidence through hosted API routes."""
+    normalized_api_url = _validated_https_api_url(
+        api_url,
+        purpose="restore-drill-fixture",
+    )
+    session_credential = bearer_token.strip()
+    if not session_credential:
+        raise ValueError("Restore drill bearer token is required.")
+    if drain_worker and not (worker_api_key or "").strip():
+        raise ValueError("AEVRYN_WORKER_API_KEY is required when --drain-worker is set.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+    if poll_attempts < 1:
+        raise ValueError("--poll-attempts must be a positive integer.")
+    if poll_interval_seconds < 0:
+        raise ValueError("--poll-interval-seconds cannot be negative.")
+
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    fixture_suffix = uuid4().hex
+    project_id = f"restore_drill_project_{fixture_suffix}"
+    active_story_id = f"restore_drill_story_{fixture_suffix}"
+    disposable_story_id = f"restore_drill_disposable_{fixture_suffix}"
+    import_id = f"restore_drill_import_{fixture_suffix}"
+    run_id = f"restore_drill_run_{fixture_suffix}"
+    job_id = f"restore_drill_job_{fixture_suffix}"
+
+    source_text = (
+        "Chapter 1\n"
+        "Mira cataloged the silver compass in the archive while Jonah checked "
+        "the locked recovery cabinet.\n\n"
+        "The archive alarm flashed once, and Mira recorded the compass as safe."
+    )
+    import_payload: dict[str, object] = {
+        "source_id": f"restore_drill_source_{fixture_suffix}",
+        "filename": "restore-drill-synthetic.txt",
+        "content_base64": base64.b64encode(source_text.encode("utf-8")).decode("ascii"),
+        "title": "Aevryn Restore Drill Synthetic Story",
+    }
+
+    headers = {"Authorization": f"Bearer {session_credential}"}
+    _hosted_json_request(
+        api_url=normalized_api_url,
+        path="/v2/projects",
+        method="POST",
+        payload={
+            "project_id": project_id,
+            "name": "Aevryn Restore Drill Fixture",
+            "now": now,
+        },
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+    )
+    _hosted_json_request(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}/stories",
+        method="POST",
+        payload={
+            "story_id": active_story_id,
+            "title": "Restore Drill Active Story",
+            "now": now,
+        },
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+    )
+    _hosted_json_request(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}/stories",
+        method="POST",
+        payload={
+            "story_id": disposable_story_id,
+            "title": "Restore Drill Disposable Story",
+            "now": now,
+        },
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+    )
+    _hosted_json_request(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}/stories/{disposable_story_id}",
+        method="DELETE",
+        payload=None,
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+    )
+    inspected = _hosted_json_request(
+        api_url=normalized_api_url,
+        path="/v2/imports/inspect",
+        method="POST",
+        payload=import_payload,
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+    )
+    saved_import = _hosted_json_request(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}/stories/{active_story_id}/imports",
+        method="POST",
+        payload={"import_id": import_id, **import_payload, "now": now},
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+    )
+    _hosted_json_request(
+        api_url=normalized_api_url,
+        path=(
+            f"/v2/projects/{project_id}/stories/{active_story_id}"
+            f"/imports/{import_id}/runs"
+        ),
+        method="POST",
+        payload={"run_id": run_id, "job_id": job_id, "now": now},
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+    )
+
+    worker_drained = False
+    worker_succeeded_jobs = 0
+    if drain_worker:
+        worker_response = _hosted_json_request(
+            api_url=normalized_api_url,
+            path="/v2/workers/process",
+            method="POST",
+            payload={
+                "started_at": now,
+                "finished_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "max_jobs": 1,
+            },
+            headers={"X-Aevryn-API-Key": cast(str, worker_api_key)},
+            timeout_seconds=timeout_seconds,
+        )
+        worker_drained = True
+        worker_succeeded_jobs = _metadata_int(worker_response, "succeeded_jobs")
+
+    status = _poll_project_status(
+        api_url=normalized_api_url,
+        project_id=project_id,
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+        poll_attempts=poll_attempts,
+        poll_interval_seconds=poll_interval_seconds,
+    )
+    latest_run = status.get("latest_engine_run")
+    latest_run_payload = latest_run if isinstance(latest_run, dict) else {}
+    run_status = str(latest_run_payload.get("status") or "unknown")
+    if require_succeeded_run and run_status != "succeeded":
+        raise ValueError("restore-drill-fixture run did not reach succeeded state.")
+
+    snapshots = status.get("snapshots")
+    snapshots_payload = snapshots if isinstance(snapshots, dict) else {}
+    snapshots_available = bool(snapshots_payload.get("available"))
+    latest_snapshot_id = str(snapshots_payload.get("latest_snapshot_id") or "")
+    export_created = False
+    if create_export and snapshots_available and latest_snapshot_id:
+        _hosted_json_request(
+            api_url=normalized_api_url,
+            path=f"/v2/projects/{project_id}/exports",
+            method="POST",
+            payload={
+                "export_id": f"restore_drill_export_{fixture_suffix}",
+                "snapshot_id": latest_snapshot_id,
+                "export_format": "json",
+                "filename": "restore-drill-canon.json",
+                "now": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            },
+            headers=headers,
+            timeout_seconds=timeout_seconds,
+        )
+        export_created = True
+
+    ok = (
+        "restore_drill_fixture_prepared"
+        if run_status == "succeeded" and (not create_export or export_created)
+        else "restore_drill_fixture_incomplete"
+    )
+    return {
+        "drill_fixture": "source",
+        "project_created": True,
+        "active_story_created": True,
+        "disposable_story_deleted": True,
+        "import_saved": True,
+        "run_submitted": True,
+        "worker_drained": worker_drained,
+        "worker_succeeded_jobs": worker_succeeded_jobs,
+        "run_status": run_status,
+        "snapshots_available": snapshots_available,
+        "export_created": export_created,
+        "inspect_chapters": _metadata_int(inspected, "chapters"),
+        "inspect_scenes": _metadata_int(inspected, "scenes"),
+        "inspect_evidence_anchors": _metadata_int(inspected, "evidence_anchors"),
+        "saved_import_chapters": _metadata_int(saved_import, "chapter_count"),
+        "saved_import_scenes": _metadata_int(saved_import, "scene_count"),
+        "source_bytes_printed": 0,
+        "secrets_printed": 0,
+        "restore_target_created": False,
+        "public_beta": "blocked_until_isolated_restore_drill_passes",
+        "ok": ok,
+    }
+
+
+def _poll_project_status(
+    *,
+    api_url: str,
+    project_id: str,
+    headers: dict[str, str],
+    timeout_seconds: float,
+    poll_attempts: int,
+    poll_interval_seconds: float,
+) -> dict[str, object]:
+    """Poll project status until the latest run reaches a terminal state or attempts end."""
+    status: dict[str, object] = {}
+    for attempt in range(poll_attempts):
+        status = _hosted_json_request(
+            api_url=api_url,
+            path=f"/v2/projects/{project_id}/status",
+            method="GET",
+            payload=None,
+            headers=headers,
+            timeout_seconds=timeout_seconds,
+        )
+        latest_run = status.get("latest_engine_run") or {}
+        if isinstance(latest_run, dict) and latest_run.get("status") in {
+            "succeeded",
+            "failed",
+        }:
+            return status
+        if attempt < poll_attempts - 1 and poll_interval_seconds:
+            time.sleep(poll_interval_seconds)
+    return status
+
+
+def _metadata_int(payload: dict[str, object], key: str) -> int:
+    """Return an integer metadata value from a hosted API JSON payload."""
+    value = payload.get(key, 0)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return 0
+
+
+def _hosted_json_request(
+    *,
+    api_url: str,
+    path: str,
+    method: str,
+    payload: dict[str, object] | None,
+    headers: dict[str, str],
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Send one hosted API request and return JSON metadata without echoing secrets."""
+    request_headers = {"Accept": "application/json", **headers}
+    request_data = None
+    if payload is not None:
+        request_headers["Content-Type"] = "application/json"
+        request_data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    request = urllib.request.Request(
+        f"{api_url}{path}",
+        data=request_data,
+        headers=request_headers,
+        method=method,
+    )
+    try:
+        # Bandit B310: URL scheme and host are validated by _validated_https_api_url.
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:  # nosec B310
+            raw_body = response.read()
+            if response.status == 204 or not raw_body:
+                return {}
+            return cast(dict[str, object], json.loads(raw_body.decode("utf-8")))
+    except urllib.error.HTTPError as error:
+        raise ValueError(
+            f"restore-drill-fixture request failed with HTTP {error.code}"
+        ) from error
+    except urllib.error.URLError as error:
+        raise ValueError(
+            "restore-drill-fixture request failed before receiving a response."
+        ) from error
+
+
+def _validated_https_api_url(api_url: str, *, purpose: str) -> str:
+    """Return a normalized hosted API URL after HTTPS validation."""
+    normalized_api_url = api_url.rstrip("/")
+    parsed_api_url = urllib.parse.urlsplit(normalized_api_url)
+    if parsed_api_url.scheme != "https" or not parsed_api_url.netloc:
+        raise ValueError(f"AEVRYN_PUBLIC_API_BASE_URL must use https:// for {purpose}.")
+    return normalized_api_url
 
 
 def _hosted_worker_error_detail(error: urllib.error.HTTPError) -> str:
