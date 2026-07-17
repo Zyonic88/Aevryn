@@ -839,6 +839,8 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "source-environment restore preflight passed",
         "hosted source fixture",
         "synthetic project/story/import/run/snapshot/export evidence",
+        "source restore-point candidate",
+        "Supabase backup/PITR point has not been selected",
         "isolated restore target has not been",
     )
 
@@ -972,6 +974,13 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "run_id=restore_drill_run_1acd3f86bd984a258fc04c976642131d",
         "Source fixture result: PASSED",
         "restore_drill_fixture_prepared",
+        "source_restore_point_candidate_utc=2026-07-17T02:27:13Z",
+        "records_verified=1413",
+        "source_r2_storage_smoke=passed",
+        "storage_smoke_objects_created=1",
+        "storage_smoke_objects_deleted=1",
+        "PARTIAL - source restore-point candidate recorded; "
+        "Supabase backup/PITR point not selected",
         "BLOCKED - restore target not created",
         "deleted_story_absent_from_product_surfaces=not_run",
         "operator_broad_manuscript_access_required=not_run",

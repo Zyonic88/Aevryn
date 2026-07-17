@@ -246,7 +246,9 @@ The 2026-07-17 source-environment restore preflight passed production config,
 audit integrity, restricted audit access, observability config, and R2 storage
 smoke with metadata-only output. The 2026-07-17 hosted source fixture also
 created synthetic project/story/import/run/snapshot/export evidence and deleted a
-disposable story before restore-point capture. The isolated restore target has not been created, restored, or verified.
+disposable story before restore-point capture. A source restore-point candidate
+timestamp was recorded after post-fixture audit and R2 checks passed. The
+Supabase backup/PITR point has not been selected, and the isolated restore target has not been created, restored, or verified.
 ```
 
 ---

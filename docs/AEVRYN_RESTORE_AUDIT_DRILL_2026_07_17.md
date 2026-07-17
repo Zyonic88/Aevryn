@@ -53,7 +53,7 @@ integrity, and metadata-only diagnostics.
 | Database provider | `Supabase managed PostgreSQL` |
 | Object storage provider | `Cloudflare R2 private bucket` |
 | Audit storage provider | `Managed PostgreSQL audit table through PostgresqlAuditLedger` |
-| Backup snapshot or restore point | `Not selected` |
+| Backup snapshot or restore point | `Source restore-point candidate recorded; Supabase backup/PITR point not selected` |
 | Production traffic attached | `No restore target exists` |
 
 ---
@@ -160,6 +160,44 @@ provider responses, or generated export bodies.
 
 ---
 
+# Restore-Point Capture Candidate
+
+After the source fixture passed, the following metadata-only source checks were
+run to mark the source environment as ready for restore-point selection:
+
+```text
+source_restore_point_candidate_utc=2026-07-17T02:27:13Z
+
+audit_ledger_verify=passed
+records_verified=1413
+audit_ledger_verify_secrets_printed=0
+
+audit_access_report=passed
+table_exists=true
+can_select=true
+can_insert=true
+can_update=false
+can_delete=false
+can_truncate=false
+is_table_owner=false
+audit_access_report_secrets_printed=0
+
+audit_access_verify=passed
+audit_access_verify_secrets_printed=0
+
+source_r2_storage_smoke=passed
+storage_provider=r2
+storage_bucket=aevryn-dev
+storage_smoke_objects_created=1
+storage_smoke_objects_deleted=1
+```
+
+This is not a completed database backup selection. The Supabase backup or PITR
+restore point must still be selected through the provider restore flow, and the
+restore must target an isolated project or environment before Gate 5 can pass.
+
+---
+
 # Drill Step Results
 
 | Step | Required Evidence | Result |
@@ -172,7 +210,7 @@ provider responses, or generated export bodies.
 | Generate export | Export metadata recorded and access is owner-scoped | `PASSED - export_created=True` |
 | Create disposable story | Disposable story ID recorded | `PASSED - disposable story ID recorded` |
 | Delete disposable story | Active product surfaces no longer show it | `PASSED - disposable story deleted before restore-point capture` |
-| Capture restore point | Backup or restore point ID recorded | `BLOCKED - restore point not selected` |
+| Capture restore point | Backup or restore point ID recorded | `PARTIAL - source restore-point candidate recorded; Supabase backup/PITR point not selected` |
 | Restore isolated target | Restored environment is separated from production traffic | `BLOCKED - restore target not created` |
 | Verify ownership boundaries | Cross-user project/story reads fail closed | `BLOCKED - restore target not created` |
 | Verify source references | Source bytes resolve only for the owner | `BLOCKED - restore target not created` |
