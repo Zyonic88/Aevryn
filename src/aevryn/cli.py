@@ -2113,7 +2113,10 @@ def _run_restore_drill_fixture(
         "title": "Aevryn Restore Drill Synthetic Story",
     }
 
-    headers = {"Authorization": f"Bearer {session_credential}"}
+    headers = {
+        "Authorization": f"Bearer {session_credential}",
+        "X-Aevryn-Now": now,
+    }
     _hosted_json_request(
         api_url=normalized_api_url,
         path="/v2/projects",
@@ -2198,7 +2201,10 @@ def _run_restore_drill_fixture(
                 "finished_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "max_jobs": 1,
             },
-            headers={"X-Aevryn-API-Key": cast(str, worker_api_key)},
+            headers={
+                "X-Aevryn-API-Key": cast(str, worker_api_key),
+                "X-Aevryn-Now": now,
+            },
             timeout_seconds=timeout_seconds,
         )
         worker_drained = True
@@ -2247,6 +2253,11 @@ def _run_restore_drill_fixture(
     )
     return {
         "drill_fixture": "source",
+        "project_id": project_id,
+        "active_story_id": active_story_id,
+        "disposable_story_id": disposable_story_id,
+        "import_id": import_id,
+        "run_id": run_id,
         "project_created": True,
         "active_story_created": True,
         "disposable_story_deleted": True,
@@ -2340,8 +2351,10 @@ def _hosted_json_request(
                 return {}
             return cast(dict[str, object], json.loads(raw_body.decode("utf-8")))
     except urllib.error.HTTPError as error:
+        detail = _hosted_api_error_detail(error)
         raise ValueError(
-            f"restore-drill-fixture request failed with HTTP {error.code}"
+            f"restore-drill-fixture {method} {path} failed with HTTP {error.code}: "
+            f"{detail}"
         ) from error
     except urllib.error.URLError as error:
         raise ValueError(
@@ -2356,6 +2369,25 @@ def _validated_https_api_url(api_url: str, *, purpose: str) -> str:
     if parsed_api_url.scheme != "https" or not parsed_api_url.netloc:
         raise ValueError(f"AEVRYN_PUBLIC_API_BASE_URL must use https:// for {purpose}.")
     return normalized_api_url
+
+
+def _hosted_api_error_detail(error: urllib.error.HTTPError) -> str:
+    """Return bounded hosted API error detail without leaking request credentials."""
+    try:
+        payload = json.loads(error.read().decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return "request_failed"
+    raw_detail = payload.get("detail") if isinstance(payload, dict) else None
+    if isinstance(raw_detail, dict):
+        detail = str(raw_detail.get("error") or raw_detail.get("detail") or "request_failed")
+    else:
+        detail = str(raw_detail or payload.get("error") or "request_failed")
+    safe_detail = "".join(
+        character
+        for character in detail
+        if character.isalnum() or character in {"_", "-", ":", " ", "."}
+    ).strip()
+    return (safe_detail or "request_failed")[:160]
 
 
 def _hosted_worker_error_detail(error: urllib.error.HTTPError) -> str:

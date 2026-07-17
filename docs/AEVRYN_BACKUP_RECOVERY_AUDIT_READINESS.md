@@ -244,8 +244,9 @@ Hosted `aevryn audit-ledger-verify`, `aevryn audit-access-report`, and
 Production backup provider verification runbook is selected. Restore execution, audit retention enforcement, and dated restore/audit drill completion remain open.
 The 2026-07-17 source-environment restore preflight passed production config,
 audit integrity, restricted audit access, observability config, and R2 storage
-smoke with metadata-only output. The isolated restore target has not been
-created, restored, or verified.
+smoke with metadata-only output. The 2026-07-17 hosted source fixture also
+created synthetic project/story/import/run/snapshot/export evidence and deleted a
+disposable story before restore-point capture. The isolated restore target has not been created, restored, or verified.
 ```
 
 ---

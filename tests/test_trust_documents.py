@@ -837,6 +837,8 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "metadata-only",
         "tamper-evident",
         "source-environment restore preflight passed",
+        "hosted source fixture",
+        "synthetic project/story/import/run/snapshot/export evidence",
         "isolated restore target has not been",
     )
 
@@ -950,6 +952,7 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
     required_terms = (
         "Drill ID: restore-audit-2026-07-17-001",
         "Status: Source preflight passed; restore target not run",
+        "Source fixture: Passed",
         "Final result: blocked",
         "production_config_check=passed",
         "audit_ledger_verify=passed",
@@ -962,6 +965,13 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "storage_smoke=passed",
         "objects_created=1",
         "objects_deleted=1",
+        "project_id=restore_drill_project_1acd3f86bd984a258fc04c976642131d",
+        "active_story_id=restore_drill_story_1acd3f86bd984a258fc04c976642131d",
+        "disposable_story_id=restore_drill_disposable_1acd3f86bd984a258fc04c976642131d",
+        "import_id=restore_drill_import_1acd3f86bd984a258fc04c976642131d",
+        "run_id=restore_drill_run_1acd3f86bd984a258fc04c976642131d",
+        "Source fixture result: PASSED",
+        "restore_drill_fixture_prepared",
         "BLOCKED - restore target not created",
         "deleted_story_absent_from_product_surfaces=not_run",
         "operator_broad_manuscript_access_required=not_run",

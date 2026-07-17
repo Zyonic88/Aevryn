@@ -8,7 +8,8 @@ This record does not approve public beta.
 
 This record does not claim a full restore drill passed.
 
-It records that source-environment restore preflight checks passed and that the
+It records that source-environment restore preflight checks passed, source-side
+synthetic fixture data was created through the hosted API boundary, and that the
 isolated restore target has not yet been created or verified.
 
 ---
@@ -19,6 +20,7 @@ isolated restore target has not yet been created or verified.
 Record type: Restore and audit drill record
 Drill ID: restore-audit-2026-07-17-001
 Status: Source preflight passed; restore target not run
+Source fixture: Passed
 Public beta: Blocked
 Final result: blocked
 ```
@@ -118,18 +120,58 @@ objects_deleted=1
 
 ---
 
+# Source Fixture Results
+
+The following metadata-only source fixture was created through the hosted API
+boundary after the source preflight passed:
+
+```text
+drill_fixture=source
+project_id=restore_drill_project_1acd3f86bd984a258fc04c976642131d
+active_story_id=restore_drill_story_1acd3f86bd984a258fc04c976642131d
+disposable_story_id=restore_drill_disposable_1acd3f86bd984a258fc04c976642131d
+import_id=restore_drill_import_1acd3f86bd984a258fc04c976642131d
+run_id=restore_drill_run_1acd3f86bd984a258fc04c976642131d
+project_created=True
+active_story_created=True
+disposable_story_deleted=True
+import_saved=True
+run_submitted=True
+worker_drained=True
+worker_succeeded_jobs=1
+run_status=succeeded
+snapshots_available=True
+export_created=True
+inspect_chapters=1
+inspect_scenes=1
+inspect_evidence_anchors=2
+saved_import_chapters=1
+saved_import_scenes=1
+source_bytes_printed=0
+secrets_printed=0
+restore_target_created=False
+public_beta=blocked_until_isolated_restore_drill_passes
+ok=restore_drill_fixture_prepared
+```
+
+The fixture used synthetic content only. The drill evidence did not print bearer
+tokens, source prose, storage references, private URLs, provider prompts,
+provider responses, or generated export bodies.
+
+---
+
 # Drill Step Results
 
 | Step | Required Evidence | Result |
 | --- | --- | --- |
-| Create restore-test account | Account exists in source environment | `BLOCKED - not run in this source preflight` |
-| Create project and active story | Project/story IDs recorded | `BLOCKED - not run in this source preflight` |
-| Upload synthetic source | Source storage reference exists without public access | `BLOCKED - not run in this source preflight` |
-| Process import | Run reaches succeeded state or recorded expected failure | `BLOCKED - not run in this source preflight` |
-| Confirm snapshot | Snapshot metadata and availability recorded | `BLOCKED - not run in this source preflight` |
-| Generate export | Export metadata recorded and access is owner-scoped | `BLOCKED - not run in this source preflight` |
-| Create disposable story | Disposable story ID recorded | `BLOCKED - not run in this source preflight` |
-| Delete disposable story | Active product surfaces no longer show it | `BLOCKED - not run in this source preflight` |
+| Create restore-test account | Account exists in source environment | `PASSED - dedicated restore-drill auth user created` |
+| Create project and active story | Project/story IDs recorded | `PASSED - synthetic project and active story IDs recorded` |
+| Upload synthetic source | Source storage reference exists without public access | `PASSED - synthetic import saved without printing source bytes or storage refs` |
+| Process import | Run reaches succeeded state or recorded expected failure | `PASSED - run_status=succeeded` |
+| Confirm snapshot | Snapshot metadata and availability recorded | `PASSED - snapshots_available=True` |
+| Generate export | Export metadata recorded and access is owner-scoped | `PASSED - export_created=True` |
+| Create disposable story | Disposable story ID recorded | `PASSED - disposable story ID recorded` |
+| Delete disposable story | Active product surfaces no longer show it | `PASSED - disposable story deleted before restore-point capture` |
 | Capture restore point | Backup or restore point ID recorded | `BLOCKED - restore point not selected` |
 | Restore isolated target | Restored environment is separated from production traffic | `BLOCKED - restore target not created` |
 | Verify ownership boundaries | Cross-user project/story reads fail closed | `BLOCKED - restore target not created` |
@@ -167,6 +209,7 @@ production_traffic_attached=false
 Restore drill result: BLOCKED
 Audit integrity result: SOURCE PREFLIGHT PASSED
 Metadata-only log review result: SOURCE PREFLIGHT PASSED FOR CLI OUTPUT
+Source fixture result: PASSED
 Deletion-after-restore result: NOT RUN
 Public beta: BLOCKED
 ```
@@ -180,8 +223,9 @@ blocked
 Reason:
 
 ```text
-The source environment preflight passed, but no isolated restore target has been
-created, restored, or verified. This record cannot close Gate 5.
+The source environment preflight and source fixture passed, but no isolated
+restore target has been created, restored, or verified. This record cannot close
+Gate 5.
 ```
 
 ---

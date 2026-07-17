@@ -6,8 +6,9 @@ import re
 import shutil
 import urllib.error
 import urllib.request
+from io import BytesIO
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
@@ -805,6 +806,11 @@ def test_restore_drill_fixture_prepares_source_data_without_printing_secrets(
     assert exit_code == 0
     assert not responses
     assert "drill_fixture=source" in captured.out
+    assert "project_id=restore_drill_project_" in captured.out
+    assert "active_story_id=restore_drill_story_" in captured.out
+    assert "disposable_story_id=restore_drill_disposable_" in captured.out
+    assert "import_id=restore_drill_import_" in captured.out
+    assert "run_id=restore_drill_run_" in captured.out
     assert "project_created=True" in captured.out
     assert "disposable_story_deleted=True" in captured.out
     assert "worker_drained=True" in captured.out
@@ -839,7 +845,9 @@ def test_restore_drill_fixture_prepares_source_data_without_printing_secrets(
     assert captured_requests[0].get_header("Authorization") == (
         "Bearer secret-bearer-token"
     )
+    assert str(captured_requests[0].get_header("X-aevryn-now")).endswith("Z")
     assert captured_requests[7].get_header("X-aevryn-api-key") == "secret-worker-key"
+    assert str(captured_requests[7].get_header("X-aevryn-now")).endswith("Z")
     import_payload = json.loads(cast(bytes, captured_requests[5].data).decode("utf-8"))
     assert import_payload["filename"] == "restore-drill-synthetic.txt"
     assert "content_base64" in import_payload
@@ -971,6 +979,48 @@ def test_restore_drill_fixture_can_require_succeeded_run(
 
     assert exit_code == 1
     assert "did not reach succeeded state" in captured.err
+    assert "secret-bearer-token" not in captured.out
+    assert "secret-bearer-token" not in captured.err
+
+
+def test_restore_drill_fixture_reports_safe_http_error_detail(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill fixture failures should identify the route without leaking secrets."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", "secret-bearer-token")
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        *,
+        timeout: float,
+    ) -> object:
+        raise urllib.error.HTTPError(
+            url=request.full_url,
+            code=400,
+            msg="Bad Request",
+            hdrs=cast(Any, {}),
+            fp=BytesIO(
+                json.dumps(
+                    {
+                        "detail": {
+                            "error": "project_create_failed",
+                            "detail": "bad request with secret-bearer-token",
+                        }
+                    }
+                ).encode("utf-8")
+            ),
+        )
+
+    monkeypatch.setattr("aevryn.cli.urllib.request.urlopen", fake_urlopen)
+
+    exit_code = main(["restore-drill-fixture"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "restore-drill-fixture POST /v2/projects failed with HTTP 400" in captured.err
+    assert "project_create_failed" in captured.err
     assert "secret-bearer-token" not in captured.out
     assert "secret-bearer-token" not in captured.err
 
