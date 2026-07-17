@@ -924,6 +924,7 @@ Verify hosted retention and bounded-log behavior against the production observab
 Complete provider owner/legal review before provider-backed extraction is public-beta approved.
 Complete public-facing legal, trust, and support publication before public beta.
 Complete backup/restore/audit readiness before public beta.
+Run `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md` in an isolated restore target and complete a dated restore/audit drill record.
 Continue prompt-pack and output UX polish before public beta positioning.
 ```
 

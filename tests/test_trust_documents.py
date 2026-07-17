@@ -823,7 +823,10 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "backup retention window",
         "restore test",
         "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
+        "docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md",
         "repeatable restore/audit drill record and stop conditions",
+        "selected Supabase PostgreSQL and Cloudflare R2 restore procedure",
+        "custom role password reset caveat",
         "docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md",
         "managed PostgreSQL audit tables",
         "production audit storage",
@@ -890,6 +893,7 @@ def test_restore_test_plan_document_tracks_recovery_privacy_drill() -> None:
         "Cloudflare R2 object references",
         "staging or release-candidate environment",
         "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
+        "docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md",
         "full manuscripts",
         "machine-local paths",
         "dedicated test account",
@@ -915,6 +919,7 @@ def test_restore_audit_drill_record_tracks_public_beta_drill_template() -> None:
         "Record type: Restore and audit drill record",
         "Status: Template selected",
         "Public beta: Blocked",
+        "docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md",
         "Restore service without restoring private story exposure.",
         "Production traffic attached",
         "one disposable story that is deleted before backup capture",
@@ -929,6 +934,41 @@ def test_restore_audit_drill_record_tracks_public_beta_drill_template() -> None:
         "Any exposed secret must be rotated.",
         "Any exposed private story content must be treated as a privacy incident.",
         "Public beta remains blocked unless the final result is `passed`.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_backup_restore_runbook_tracks_provider_specific_restore_drill() -> None:
+    """Backup/restore runbook should define provider-specific public-beta drill steps."""
+    document = read_doc("docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md")
+
+    required_terms = (
+        "Runbook: Backup and restore",
+        "Status: Selected for restore/audit drill execution",
+        "Public beta: Blocked",
+        "Supabase managed PostgreSQL",
+        "Cloudflare R2 private bucket",
+        "Managed PostgreSQL audit table through PostgresqlAuditLedger",
+        "Supabase database backups do not include Storage API objects.",
+        "custom database roles",
+        "passwords may need to be reset after restore",
+        "R2 lifecycle rules can expire objects by bucket or prefix.",
+        "Objects are typically removed within 24 hours of the expiration value.",
+        "Encrypted production backups may retain deleted data for up to 30 days.",
+        "separate database target",
+        "separate R2 bucket or prefix",
+        "one disposable story deleted before the restore point is captured",
+        "docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md",
+        "python -m aevryn.cli audit-ledger-verify",
+        "python -m aevryn.cli audit-access-verify",
+        "python -m aevryn.cli observability-config-check",
+        "deleted_story_absent_from_product_surfaces=passed",
+        "operator_broad_manuscript_access_required=false",
+        "production_traffic_attached=false",
+        "Stop Conditions",
+        "Any exposed private story content must be treated as a privacy incident.",
     )
 
     for term in required_terms:

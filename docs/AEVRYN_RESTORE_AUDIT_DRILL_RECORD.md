@@ -20,6 +20,9 @@ Public beta: Blocked
 
 No public-beta restore drill has passed until this record is copied into a dated run record and completed with passing results.
 
+Provider-specific execution details live in
+`docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`.
+
 ---
 
 # Core Rule

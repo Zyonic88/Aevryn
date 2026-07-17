@@ -43,6 +43,7 @@ Gate 5 builds on:
 * `docs/DATA_RETENTION_POLICY.md`
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
 * `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
+* `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`
 
 These documents define the privacy and engineering boundaries.
 
@@ -87,6 +88,9 @@ Restore tests must not expose full manuscripts in logs, support artifacts, or sc
 The concrete restore drill is defined in `docs/AEVRYN_RESTORE_TEST_PLAN.md`.
 
 The required result template is defined in `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`.
+
+The provider-specific execution runbook is defined in
+`docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`.
 
 ---
 
@@ -194,6 +198,7 @@ Current implementation progress:
 ```text
 docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
 docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit drill record and stop conditions.
+docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md defines the selected Supabase PostgreSQL and Cloudflare R2 restore procedure, custom role password reset caveat, metadata-only commands, and stop conditions.
 Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
 Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
 `PostgresqlAuditLedger` implements the selected PostgreSQL adapter.
@@ -235,7 +240,7 @@ Hosted `aevryn audit-ledger-verify`, `aevryn audit-access-report`, and
 `can_update=false`, `can_delete=false`, `can_truncate=false`, and
 `is_table_owner=false`.
 
-Production backup provider verification, restore execution, audit retention enforcement, and dated restore/audit drill completion remain open.
+Production backup provider verification runbook is selected. Restore execution, audit retention enforcement, and dated restore/audit drill completion remain open.
 ```
 
 ---
