@@ -47,6 +47,7 @@ from aevryn.api import (
     R2_BUCKET_ENV,
     R2_ENDPOINT_URL_ENV,
     R2_SECRET_ACCESS_KEY_ENV,
+    RESTORE_DRILL_TARGET_ENV,
     SECRET_MANAGER_ENV,
     SECURITY_ALERTS_ENABLED_ENV,
     SESSION_AUTHORITY_ENV,
@@ -866,6 +867,52 @@ def test_create_app_from_env_requires_production_secret_and_environment_config()
                 ENVIRONMENT_NAME_ENV: "production",
             }
         )
+
+
+def test_create_app_from_env_allows_explicit_restore_drill_target_boundary() -> None:
+    """Production-like restore targets may use a non-production environment name."""
+    complete_until_bootstrap = {
+        DEPLOYMENT_ENV: "production",
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+        **production_edge_env(),
+        API_KEYS_ENV: "production-api-key",
+        STORAGE_PROVIDER_ENV: "r2",
+        R2_BUCKET_ENV: "aevryn-dev",
+        R2_ACCOUNT_ID_ENV: "account-id",
+        R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
+        R2_ACCESS_KEY_ID_ENV: "access-key",
+        R2_SECRET_ACCESS_KEY_ENV: "secret-key",
+        SECRET_MANAGER_ENV: "deployment",
+        ENVIRONMENT_NAME_ENV: "restore-drill",
+        RESTORE_DRILL_TARGET_ENV: "true",
+    }
+
+    with pytest.raises(ValueError, match=PROJECT_DATABASE_BOOTSTRAP_ENV):
+        create_app_from_env(complete_until_bootstrap)
+
+
+def test_create_app_from_env_rejects_restore_flag_on_production_environment() -> None:
+    """The restore-drill target flag must not be set on the real production service."""
+    complete_until_environment_name = {
+        DEPLOYMENT_ENV: "production",
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+        **production_edge_env(),
+        API_KEYS_ENV: "production-api-key",
+        STORAGE_PROVIDER_ENV: "r2",
+        R2_BUCKET_ENV: "aevryn-prod",
+        R2_ACCOUNT_ID_ENV: "account-id",
+        R2_ENDPOINT_URL_ENV: "https://account-id.r2.cloudflarestorage.com",
+        R2_ACCESS_KEY_ID_ENV: "access-key",
+        R2_SECRET_ACCESS_KEY_ENV: "secret-key",
+        SECRET_MANAGER_ENV: "deployment",
+        ENVIRONMENT_NAME_ENV: "production",
+        RESTORE_DRILL_TARGET_ENV: "true",
+    }
+
+    with pytest.raises(ValueError, match=RESTORE_DRILL_TARGET_ENV):
+        create_app_from_env(complete_until_environment_name)
 
 
 def test_create_app_from_env_requires_production_extraction_provider() -> None:

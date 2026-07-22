@@ -53,6 +53,7 @@ from aevryn.api import (
     R2_ENDPOINT_URL_ENV,
     R2_REGION_ENV,
     R2_SECRET_ACCESS_KEY_ENV,
+    RESTORE_DRILL_TARGET_ENV,
     SECRET_MANAGER_ENV,
     SECURITY_ALERTS_ENABLED_ENV,
     SESSION_AUTHORITY_ENV,
@@ -1759,7 +1760,7 @@ def _run_restore_api_config_check(environ: dict[str, str]) -> dict[str, object]:
     if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
         raise ValueError(f"{DEPLOYMENT_ENV}=production is required for restore API drills.")
 
-    _require_true_process_flag(environ, "AEVRYN_RESTORE_DRILL_TARGET")
+    _require_true_process_flag(environ, RESTORE_DRILL_TARGET_ENV)
 
     environment_name = _required_lower_env(environ, ENVIRONMENT_NAME_ENV)
     if environment_name == "production":

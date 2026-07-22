@@ -208,6 +208,7 @@ PROJECT_DATABASE_ADAPTER_ENV = "AEVRYN_PROJECT_DATABASE_ADAPTER"
 PROJECT_DATABASE_BOOTSTRAP_ENV = "AEVRYN_PROJECT_DATABASE_BOOTSTRAP"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 PROJECT_DATABASE_URL_ENV = "AEVRYN_PROJECT_DATABASE_URL"
+RESTORE_DRILL_TARGET_ENV = "AEVRYN_RESTORE_DRILL_TARGET"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
 IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
 STORAGE_PROVIDER_ENV = "AEVRYN_STORAGE_PROVIDER"
@@ -2367,11 +2368,19 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "for production."
         )
     environment_name = environ.get(ENVIRONMENT_NAME_ENV, "").strip().lower()
-    if environment_name != "production":
+    restore_drill_target = environ.get(RESTORE_DRILL_TARGET_ENV, "").strip().lower()
+    if environment_name == "production":
+        if restore_drill_target == "true":
+            raise ValueError(
+                "AEVRYN_ENVIRONMENT_NAME must not be production when "
+                "AEVRYN_RESTORE_DRILL_TARGET=true."
+            )
+    elif restore_drill_target != "true":
         raise ValueError(
             "AEVRYN_ENVIRONMENT_NAME=production is required when "
             "AEVRYN_DEPLOYMENT_ENV=production. Production must be separated from "
-            "local, test, and staging environments."
+            "local, test, and staging environments. Isolated restore targets must "
+            "set AEVRYN_RESTORE_DRILL_TARGET=true."
         )
     if environ.get(PROJECT_DATABASE_BOOTSTRAP_ENV, "").strip().lower() != "false":
         raise ValueError(
