@@ -1039,6 +1039,8 @@ def test_backup_restore_runbook_tracks_provider_specific_restore_drill() -> None
         "restore_api_config_check=passed",
         "AEVRYN_RESTORE_DRILL_BEARER_TOKEN",
         "AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN",
+        "AEVRYN_RESTORE_DRILL_CLOUD_RUN_IDENTITY_TOKEN",
+        "X-Serverless-Authorization",
         "This command does not run the restore drill and does not approve public beta.",
         "The command fails closed when pointed at `https://api.aevryn.ai`",
         "Supabase database backups do not include Storage API objects.",

@@ -240,10 +240,17 @@ Required local environment values:
 * `AEVRYN_PUBLIC_API_BASE_URL` pointing at the isolated restore API target
 * `AEVRYN_RESTORE_DRILL_BEARER_TOKEN` for the restore-test owner
 * `AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN` for a non-owner user
+* `AEVRYN_RESTORE_DRILL_CLOUD_RUN_IDENTITY_TOKEN` when the isolated restore API
+  is a private Cloud Run service
 
 The command fails closed when pointed at `https://api.aevryn.ai` unless
 `--allow-public-api-domain` is explicitly supplied. Do not use that override for
 public-beta restore signoff.
+
+Private Cloud Run restore services must stay private. When
+`AEVRYN_RESTORE_DRILL_CLOUD_RUN_IDENTITY_TOKEN` is set, the verifier sends it in
+`X-Serverless-Authorization` and continues to use `Authorization` for the
+restore-test Aevryn bearer token. The verifier must not print either token.
 
 Optional storage smoke for the isolated R2 target:
 

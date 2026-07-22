@@ -776,6 +776,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Process environment variable containing a non-owner bearer token.",
     )
     restore_drill_verify_parser.add_argument(
+        "--cloud-run-identity-token-env",
+        default="AEVRYN_RESTORE_DRILL_CLOUD_RUN_IDENTITY_TOKEN",
+        help=(
+            "Optional process environment variable containing a Google identity "
+            "token for private Cloud Run restore services."
+        ),
+    )
+    restore_drill_verify_parser.add_argument(
         "--project-id",
         required=True,
         help="Restore drill project ID created before the restore point.",
@@ -1456,6 +1464,7 @@ def _handle_restore_drill_verify(args: argparse.Namespace) -> None:
     api_url_env = cast(str, args.api_url_env).strip()
     owner_bearer_token_env = cast(str, args.owner_bearer_token_env).strip()
     other_bearer_token_env = cast(str, args.other_bearer_token_env).strip()
+    cloud_run_identity_token_env = cast(str, args.cloud_run_identity_token_env).strip()
     timeout_seconds = cast(float, args.timeout_seconds)
     if not api_url_env:
         raise ValueError("--api-url-env cannot be blank.")
@@ -1463,11 +1472,14 @@ def _handle_restore_drill_verify(args: argparse.Namespace) -> None:
         raise ValueError("--owner-bearer-token-env cannot be blank.")
     if not other_bearer_token_env:
         raise ValueError("--other-bearer-token-env cannot be blank.")
+    if not cloud_run_identity_token_env:
+        raise ValueError("--cloud-run-identity-token-env cannot be blank.")
 
     summary = _run_restore_drill_verify(
         api_url=_required_process_env_value(api_url_env),
         owner_bearer_token=_required_process_env_value(owner_bearer_token_env),
         other_bearer_token=_required_process_env_value(other_bearer_token_env),
+        cloud_run_identity_token=os.environ.get(cloud_run_identity_token_env, ""),
         project_id=cast(str, args.project_id),
         active_story_id=cast(str, args.active_story_id),
         disposable_story_id=cast(str, args.disposable_story_id),
@@ -2489,6 +2501,7 @@ def _run_restore_drill_verify(
     api_url: str,
     owner_bearer_token: str,
     other_bearer_token: str,
+    cloud_run_identity_token: str,
     project_id: str,
     active_story_id: str,
     disposable_story_id: str,
@@ -2521,8 +2534,20 @@ def _run_restore_drill_verify(
     expected_import_id = import_id.strip()
     expected_export_id = export_id.strip()
 
-    owner_headers = {"Authorization": f"Bearer {owner_session_credential}"}
-    other_headers = {"Authorization": f"Bearer {other_session_credential}"}
+    cloud_run_session_credential = cloud_run_identity_token.strip()
+    cloud_run_headers = (
+        {"X-Serverless-Authorization": f"Bearer {cloud_run_session_credential}"}
+        if cloud_run_session_credential
+        else {}
+    )
+    owner_headers = {
+        "Authorization": f"Bearer {owner_session_credential}",
+        **cloud_run_headers,
+    }
+    other_headers = {
+        "Authorization": f"Bearer {other_session_credential}",
+        **cloud_run_headers,
+    }
     owner_project = _hosted_json_request(
         api_url=normalized_api_url,
         path=f"/v2/projects/{project_id}",
@@ -2684,6 +2709,9 @@ def _run_restore_drill_verify(
         "cross_user_exports": "denied",
         "cross_user_export_download": "denied",
         "deleted_story_imports": "denied",
+        "private_cloud_run_auth": (
+            "present" if cloud_run_session_credential else "not_configured"
+        ),
         "source_bytes_printed": 0,
         "export_bytes_printed": 0,
         "storage_refs_printed": 0,

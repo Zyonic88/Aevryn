@@ -1075,6 +1075,7 @@ def test_restore_drill_verify_checks_api_boundaries_without_printing_private_dat
     monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://restore-api.aevryn.test")
     monkeypatch.setenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", "owner-token")
     monkeypatch.setenv("AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN", "other-token")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_CLOUD_RUN_IDENTITY_TOKEN", "cloud-run-token")
     captured_requests: list[urllib.request.Request] = []
 
     responses: list[tuple[int, dict[str, object] | bytes]] = [
@@ -1193,13 +1194,16 @@ def test_restore_drill_verify_checks_api_boundaries_without_printing_private_dat
     assert "export_bytes_printed=0" in captured.out
     assert "storage_refs_printed=0" in captured.out
     assert "secrets_printed=0" in captured.out
+    assert "private_cloud_run_auth=present" in captured.out
     assert "ok=restore_drill_api_boundaries_verified" in captured.out
     assert "owner-token" not in captured.out
     assert "other-token" not in captured.out
+    assert "cloud-run-token" not in captured.out
     assert "storage://private/source" not in captured.out
     assert "export body" not in captured.out
     assert "owner-token" not in captured.err
     assert "other-token" not in captured.err
+    assert "cloud-run-token" not in captured.err
 
     assert [request.get_method() for request in captured_requests] == [
         "GET",
@@ -1222,7 +1226,15 @@ def test_restore_drill_verify_checks_api_boundaries_without_printing_private_dat
         "/exports/export_restore/download"
     )
     assert captured_requests[0].get_header("Authorization") == "Bearer owner-token"
+    assert (
+        captured_requests[0].get_header("X-serverless-authorization")
+        == "Bearer cloud-run-token"
+    )
     assert captured_requests[6].get_header("Authorization") == "Bearer other-token"
+    assert (
+        captured_requests[6].get_header("X-serverless-authorization")
+        == "Bearer cloud-run-token"
+    )
 
 
 def test_restore_api_config_check_help_describes_isolated_contract(
