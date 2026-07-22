@@ -841,7 +841,11 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "synthetic project/story/import/run/snapshot/export evidence",
         "source restore-point candidate",
         "Supabase backup/PITR point has not been selected",
-        "isolated restore target has not been",
+        "aevryn-restore-drill-2026-07-22",
+        "zemkfcbijtauvvencxyy",
+        "not attached to the production Cloud Run API",
+        "isolated Aevryn",
+        "restore runtime has not been created",
     )
 
     for term in required_terms:
@@ -979,6 +983,12 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "source_r2_storage_smoke=passed",
         "storage_smoke_objects_created=1",
         "storage_smoke_objects_deleted=1",
+        "restore_project_name=aevryn-restore-drill-2026-07-22",
+        "restore_project_ref=zemkfcbijtauvvencxyy",
+        "restore_project_ref_differs_from_production=true",
+        "production_cloud_run_points_to_restore_project=false",
+        "cloud_run_restore_service_exists=false",
+        "PARTIAL - restored Supabase project exists and is not attached to production Cloud Run",
         "PARTIAL - source restore-point candidate recorded; "
         "Supabase backup/PITR point not selected",
         "BLOCKED - restore target not created",

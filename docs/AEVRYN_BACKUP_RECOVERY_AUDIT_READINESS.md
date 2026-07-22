@@ -248,7 +248,13 @@ smoke with metadata-only output. The 2026-07-17 hosted source fixture also
 created synthetic project/story/import/run/snapshot/export evidence and deleted a
 disposable story before restore-point capture. A source restore-point candidate
 timestamp was recorded after post-fixture audit and R2 checks passed. The
-Supabase backup/PITR point has not been selected, and the isolated restore target has not been created, restored, or verified.
+Supabase backup/PITR point has not been selected, and the isolated Aevryn
+restore runtime has not been created, pointed at the restored database, or
+verified.
+The restored Supabase project `aevryn-restore-drill-2026-07-22` exists with
+project ref `zemkfcbijtauvvencxyy`, differs from production ref
+`xmttttbygokqbmwtucgi`, and is not attached to the production Cloud Run API.
+Restored database verification has not run yet.
 ```
 
 ---

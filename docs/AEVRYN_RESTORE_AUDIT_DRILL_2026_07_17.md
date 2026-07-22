@@ -49,12 +49,12 @@ integrity, and metadata-only diagnostics.
 | Date | `2026-07-17` |
 | Operator | `Aetherra Labs project owner with Codex assistance` |
 | Source environment | `Hosted production-like Aevryn environment` |
-| Restore target environment | `Not created` |
+| Restore target environment | `Supabase project aevryn-restore-drill-2026-07-22` |
 | Database provider | `Supabase managed PostgreSQL` |
 | Object storage provider | `Cloudflare R2 private bucket` |
 | Audit storage provider | `Managed PostgreSQL audit table through PostgresqlAuditLedger` |
 | Backup snapshot or restore point | `Source restore-point candidate recorded; Supabase backup/PITR point not selected` |
-| Production traffic attached | `No restore target exists` |
+| Production traffic attached | `No` |
 
 ---
 
@@ -198,6 +198,38 @@ restore must target an isolated project or environment before Gate 5 can pass.
 
 ---
 
+# Restore Target Isolation Check
+
+The restored Supabase project was created and reported healthy by the project
+owner:
+
+```text
+restore_project_name=aevryn-restore-drill-2026-07-22
+restore_supabase_url=https://zemkfcbijtauvvencxyy.supabase.co
+restore_project_ref=zemkfcbijtauvvencxyy
+restore_region=us-west-2
+restore_status=healthy
+production_project_ref=xmttttbygokqbmwtucgi
+```
+
+Initial isolation checks:
+
+```text
+restore_project_ref_differs_from_production=true
+production_cloud_run_supabase_url=https://xmttttbygokqbmwtucgi.supabase.co
+production_cloud_run_points_to_restore_project=false
+cloud_run_services_in_us_central1=1
+cloud_run_restore_service_exists=false
+production_traffic_attached=false
+```
+
+This confirms the restore Supabase project is a distinct project and is not
+currently attached to the production Cloud Run API. The restored database has
+not yet been verified by Aevryn CLI checks, and no isolated API has been pointed
+at the restored target.
+
+---
+
 # Drill Step Results
 
 | Step | Required Evidence | Result |
@@ -211,7 +243,7 @@ restore must target an isolated project or environment before Gate 5 can pass.
 | Create disposable story | Disposable story ID recorded | `PASSED - disposable story ID recorded` |
 | Delete disposable story | Active product surfaces no longer show it | `PASSED - disposable story deleted before restore-point capture` |
 | Capture restore point | Backup or restore point ID recorded | `PARTIAL - source restore-point candidate recorded; Supabase backup/PITR point not selected` |
-| Restore isolated target | Restored environment is separated from production traffic | `BLOCKED - restore target not created` |
+| Restore isolated target | Restored environment is separated from production traffic | `PARTIAL - restored Supabase project exists and is not attached to production Cloud Run` |
 | Verify ownership boundaries | Cross-user project/story reads fail closed | `BLOCKED - restore target not created` |
 | Verify source references | Source bytes resolve only for the owner | `BLOCKED - restore target not created` |
 | Verify export references | Export access resolves only for the owner | `BLOCKED - restore target not created` |
