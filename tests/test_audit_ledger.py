@@ -147,6 +147,13 @@ def test_postgresql_audit_ledger_rejects_non_postgresql_database_url() -> None:
         PostgresqlAuditLedger("sqlite:///aevryn.db", connect_factory=lambda _: None)
 
 
+def test_postgresql_audit_ledger_normalizes_pasted_database_url() -> None:
+    """Restore drills should tolerate whitespace and quoted pasted PostgreSQL URLs."""
+    assert audit_postgresql._required_database_url(
+        '  "postgresql://example.invalid/aevryn"  '
+    ) == "postgresql://example.invalid/aevryn"
+
+
 def test_postgresql_audit_ledger_requires_psycopg_when_no_factory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
