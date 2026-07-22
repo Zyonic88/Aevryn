@@ -185,6 +185,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "restore-drill-fixture":
             _handle_restore_drill_fixture(args)
             return 0
+        if command == "restore-drill-verify":
+            _handle_restore_drill_verify(args)
+            return 0
         if command == "production-config-check":
             _handle_production_config_check()
             return 0
@@ -738,6 +741,70 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=2.0,
         help="Seconds to wait between project-status polls.",
+    )
+
+    restore_drill_verify_parser = subcommands.add_parser(
+        "restore-drill-verify",
+        help="Verify restored API ownership and deletion boundaries with metadata only.",
+        description=(
+            "Verify restored API ownership and deletion boundaries with metadata only. "
+            "The command requires an isolated API URL plus owner and non-owner bearer "
+            "tokens. It checks owner visibility, cross-user denial, deleted-story "
+            "absence, import metadata scoping, and export scoping without printing "
+            "tokens, source bytes, storage references, or export bodies."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    restore_drill_verify_parser.add_argument(
+        "--api-url-env",
+        default=PUBLIC_API_BASE_URL_ENV,
+        help="Process environment variable containing the isolated restore API base URL.",
+    )
+    restore_drill_verify_parser.add_argument(
+        "--owner-bearer-token-env",
+        default="AEVRYN_RESTORE_DRILL_BEARER_TOKEN",
+        help="Process environment variable containing the restore owner bearer token.",
+    )
+    restore_drill_verify_parser.add_argument(
+        "--other-bearer-token-env",
+        default="AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN",
+        help="Process environment variable containing a non-owner bearer token.",
+    )
+    restore_drill_verify_parser.add_argument(
+        "--project-id",
+        required=True,
+        help="Restore drill project ID created before the restore point.",
+    )
+    restore_drill_verify_parser.add_argument(
+        "--active-story-id",
+        required=True,
+        help="Restore drill active story ID created before the restore point.",
+    )
+    restore_drill_verify_parser.add_argument(
+        "--disposable-story-id",
+        required=True,
+        help="Restore drill disposable story ID deleted before the restore point.",
+    )
+    restore_drill_verify_parser.add_argument(
+        "--import-id",
+        default="",
+        help="Expected restore drill import ID, when known.",
+    )
+    restore_drill_verify_parser.add_argument(
+        "--export-id",
+        default="",
+        help="Expected restore drill export ID, when known.",
+    )
+    restore_drill_verify_parser.add_argument(
+        "--allow-public-api-domain",
+        action="store_true",
+        help="Allow api.aevryn.ai. Use only for source preflight, not restore signoff.",
+    )
+    restore_drill_verify_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=30.0,
+        help="HTTP timeout for each isolated API request.",
     )
 
     subcommands.add_parser(
@@ -1362,6 +1429,35 @@ def _handle_restore_drill_fixture(args: argparse.Namespace) -> None:
         timeout_seconds=timeout_seconds,
         poll_attempts=poll_attempts,
         poll_interval_seconds=poll_interval_seconds,
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
+def _handle_restore_drill_verify(args: argparse.Namespace) -> None:
+    """Handle the restore-drill-verify command."""
+    api_url_env = cast(str, args.api_url_env).strip()
+    owner_bearer_token_env = cast(str, args.owner_bearer_token_env).strip()
+    other_bearer_token_env = cast(str, args.other_bearer_token_env).strip()
+    timeout_seconds = cast(float, args.timeout_seconds)
+    if not api_url_env:
+        raise ValueError("--api-url-env cannot be blank.")
+    if not owner_bearer_token_env:
+        raise ValueError("--owner-bearer-token-env cannot be blank.")
+    if not other_bearer_token_env:
+        raise ValueError("--other-bearer-token-env cannot be blank.")
+
+    summary = _run_restore_drill_verify(
+        api_url=_required_process_env_value(api_url_env),
+        owner_bearer_token=_required_process_env_value(owner_bearer_token_env),
+        other_bearer_token=_required_process_env_value(other_bearer_token_env),
+        project_id=cast(str, args.project_id),
+        active_story_id=cast(str, args.active_story_id),
+        disposable_story_id=cast(str, args.disposable_story_id),
+        import_id=cast(str, args.import_id),
+        export_id=cast(str, args.export_id),
+        allow_public_api_domain=cast(bool, args.allow_public_api_domain),
+        timeout_seconds=timeout_seconds,
     )
     for key, value in summary.items():
         print(f"{key}={value}")
@@ -2281,6 +2377,217 @@ def _run_restore_drill_fixture(
     }
 
 
+def _run_restore_drill_verify(
+    *,
+    api_url: str,
+    owner_bearer_token: str,
+    other_bearer_token: str,
+    project_id: str,
+    active_story_id: str,
+    disposable_story_id: str,
+    import_id: str,
+    export_id: str,
+    allow_public_api_domain: bool,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Verify restored API ownership boundaries without printing private data."""
+    normalized_api_url = _validated_https_api_url(
+        api_url,
+        purpose="restore-drill-verify",
+    )
+    _require_isolated_restore_api_url(
+        normalized_api_url,
+        allow_public_api_domain=allow_public_api_domain,
+    )
+    owner_session_credential = owner_bearer_token.strip()
+    other_session_credential = other_bearer_token.strip()
+    if not owner_session_credential or not other_session_credential:
+        raise ValueError("Restore drill owner and non-owner bearer tokens are required.")
+    if owner_session_credential == other_session_credential:
+        raise ValueError("Restore drill owner and non-owner bearer tokens must differ.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+
+    project_id = _required_cli_id(project_id, "--project-id")
+    active_story_id = _required_cli_id(active_story_id, "--active-story-id")
+    disposable_story_id = _required_cli_id(disposable_story_id, "--disposable-story-id")
+    expected_import_id = import_id.strip()
+    expected_export_id = export_id.strip()
+
+    owner_headers = {"Authorization": f"Bearer {owner_session_credential}"}
+    other_headers = {"Authorization": f"Bearer {other_session_credential}"}
+    owner_project = _hosted_json_request(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}",
+        method="GET",
+        payload=None,
+        headers=owner_headers,
+        timeout_seconds=timeout_seconds,
+        purpose="restore-drill-verify",
+    )
+    if str(owner_project.get("project_id") or "") != project_id:
+        raise ValueError("restore-drill-verify owner project readback mismatch.")
+
+    stories_payload = _hosted_json_request(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}/stories",
+        method="GET",
+        payload=None,
+        headers=owner_headers,
+        timeout_seconds=timeout_seconds,
+        purpose="restore-drill-verify",
+    )
+    story_ids = _payload_ids(stories_payload, "stories", "story_id")
+    if active_story_id not in story_ids:
+        raise ValueError("restore-drill-verify active story is missing.")
+    if disposable_story_id in story_ids:
+        raise ValueError("restore-drill-verify disposable story reappeared.")
+
+    imports_payload = _hosted_json_request(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}/stories/{active_story_id}/imports",
+        method="GET",
+        payload=None,
+        headers=owner_headers,
+        timeout_seconds=timeout_seconds,
+        purpose="restore-drill-verify",
+    )
+    import_ids = _payload_ids(imports_payload, "imports", "import_id")
+    import_metadata_visible = bool(import_ids)
+    if expected_import_id and expected_import_id not in import_ids:
+        raise ValueError("restore-drill-verify expected import is missing.")
+    if not import_metadata_visible:
+        raise ValueError("restore-drill-verify owner import metadata is missing.")
+
+    status_payload = _hosted_json_request(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}/status",
+        method="GET",
+        payload=None,
+        headers=owner_headers,
+        timeout_seconds=timeout_seconds,
+        purpose="restore-drill-verify",
+    )
+    status = str(status_payload.get("status") or "unknown")
+    snapshot_payload = status_payload.get("snapshots")
+    snapshots_available = (
+        bool(snapshot_payload.get("available"))
+        if isinstance(snapshot_payload, dict)
+        else False
+    )
+
+    exports_payload = _hosted_json_request(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}/exports",
+        method="GET",
+        payload=None,
+        headers=owner_headers,
+        timeout_seconds=timeout_seconds,
+        purpose="restore-drill-verify",
+    )
+    export_ids = _payload_ids(exports_payload, "exports", "export_id")
+    selected_export_id = expected_export_id or (export_ids[0] if export_ids else "")
+    if expected_export_id and expected_export_id not in export_ids:
+        raise ValueError("restore-drill-verify expected export is missing.")
+    if not selected_export_id:
+        raise ValueError("restore-drill-verify owner export metadata is missing.")
+
+    export_download_status, export_download_size = _hosted_request_status(
+        api_url=normalized_api_url,
+        path=f"/v2/projects/{project_id}/exports/{selected_export_id}/download",
+        method="GET",
+        payload=None,
+        headers=owner_headers,
+        timeout_seconds=timeout_seconds,
+    )
+    if export_download_status != 200 or export_download_size <= 0:
+        raise ValueError("restore-drill-verify owner export download is unavailable.")
+
+    _require_denied(
+        _hosted_request_status(
+            api_url=normalized_api_url,
+            path=f"/v2/projects/{project_id}",
+            method="GET",
+            payload=None,
+            headers=other_headers,
+            timeout_seconds=timeout_seconds,
+        )[0],
+        "cross-user project read",
+    )
+    _require_denied(
+        _hosted_request_status(
+            api_url=normalized_api_url,
+            path=f"/v2/projects/{project_id}/stories/{active_story_id}/imports",
+            method="GET",
+            payload=None,
+            headers=other_headers,
+            timeout_seconds=timeout_seconds,
+        )[0],
+        "cross-user story imports",
+    )
+    _require_denied(
+        _hosted_request_status(
+            api_url=normalized_api_url,
+            path=f"/v2/projects/{project_id}/exports",
+            method="GET",
+            payload=None,
+            headers=other_headers,
+            timeout_seconds=timeout_seconds,
+        )[0],
+        "cross-user exports",
+    )
+    _require_denied(
+        _hosted_request_status(
+            api_url=normalized_api_url,
+            path=f"/v2/projects/{project_id}/exports/{selected_export_id}/download",
+            method="GET",
+            payload=None,
+            headers=other_headers,
+            timeout_seconds=timeout_seconds,
+        )[0],
+        "cross-user export download",
+    )
+    _require_denied(
+        _hosted_request_status(
+            api_url=normalized_api_url,
+            path=f"/v2/projects/{project_id}/stories/{disposable_story_id}/imports",
+            method="GET",
+            payload=None,
+            headers=owner_headers,
+            timeout_seconds=timeout_seconds,
+        )[0],
+        "deleted story imports",
+    )
+
+    return {
+        "drill_verification": "isolated_api",
+        "project_id": project_id,
+        "owner_project_read": "passed",
+        "owner_active_story_present": "passed",
+        "deleted_story_absent_from_product_surfaces": "passed",
+        "owner_import_metadata_visible": "passed",
+        "source_storage_owner_scoped": "passed",
+        "project_status": status,
+        "snapshots_available": _bool_text(snapshots_available),
+        "owner_export_metadata_visible": "passed",
+        "owner_export_download_available": "passed",
+        "export_storage_owner_scoped": "passed",
+        "cross_user_project_read": "denied",
+        "cross_user_story_imports": "denied",
+        "cross_user_exports": "denied",
+        "cross_user_export_download": "denied",
+        "deleted_story_imports": "denied",
+        "source_bytes_printed": 0,
+        "export_bytes_printed": 0,
+        "storage_refs_printed": 0,
+        "secrets_printed": 0,
+        "restore_logs_metadata_only": "not_run_requires_hosted_log_review",
+        "production_traffic_attached": "false",
+        "public_beta": "blocked_until_restore_logs_review_passes",
+        "ok": "restore_drill_api_boundaries_verified",
+    }
+
+
 def _poll_project_status(
     *,
     api_url: str,
@@ -2322,6 +2629,86 @@ def _metadata_int(payload: dict[str, object], key: str) -> int:
     return 0
 
 
+def _payload_ids(
+    payload: dict[str, object],
+    collection_key: str,
+    id_key: str,
+) -> tuple[str, ...]:
+    """Return stable IDs from a metadata collection payload."""
+    collection = payload.get(collection_key)
+    if not isinstance(collection, list):
+        if not isinstance(collection, tuple):
+            return ()
+    ids: list[str] = []
+    for item in collection:
+        if isinstance(item, dict):
+            item_id = str(item.get(id_key) or "").strip()
+            if item_id:
+                ids.append(item_id)
+    return tuple(ids)
+
+
+def _required_cli_id(value: str, option_name: str) -> str:
+    """Return a required CLI identifier."""
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"{option_name} cannot be blank.")
+    return normalized
+
+
+def _require_isolated_restore_api_url(
+    api_url: str,
+    *,
+    allow_public_api_domain: bool,
+) -> None:
+    """Fail closed if restore verification points at the public production API."""
+    parsed_api_url = urllib.parse.urlsplit(api_url)
+    if parsed_api_url.netloc.lower() == "api.aevryn.ai" and not allow_public_api_domain:
+        raise ValueError(
+            "restore-drill-verify requires an isolated API URL. "
+            "Use --allow-public-api-domain only for source preflight."
+        )
+
+
+def _require_denied(status_code: int, label: str) -> None:
+    """Require an API boundary check to fail closed."""
+    if status_code not in {401, 403, 404}:
+        raise ValueError(f"restore-drill-verify expected denial for {label}.")
+
+
+def _hosted_request_status(
+    *,
+    api_url: str,
+    path: str,
+    method: str,
+    payload: dict[str, object] | None,
+    headers: dict[str, str],
+    timeout_seconds: float,
+) -> tuple[int, int]:
+    """Return HTTP status and byte count without returning private response bodies."""
+    request_headers = {"Accept": "application/json", **headers}
+    request_data = None
+    if payload is not None:
+        request_headers["Content-Type"] = "application/json"
+        request_data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    request = urllib.request.Request(
+        f"{api_url}{path}",
+        data=request_data,
+        headers=request_headers,
+        method=method,
+    )
+    try:
+        # Bandit B310: URL scheme and host are validated by _validated_https_api_url.
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:  # nosec B310
+            return response.status, len(response.read())
+    except urllib.error.HTTPError as error:
+        return error.code, 0
+    except urllib.error.URLError as error:
+        raise ValueError(
+            "restore-drill-verify request failed before receiving a response."
+        ) from error
+
+
 def _hosted_json_request(
     *,
     api_url: str,
@@ -2330,6 +2717,7 @@ def _hosted_json_request(
     payload: dict[str, object] | None,
     headers: dict[str, str],
     timeout_seconds: float,
+    purpose: str = "restore-drill-fixture",
 ) -> dict[str, object]:
     """Send one hosted API request and return JSON metadata without echoing secrets."""
     request_headers = {"Accept": "application/json", **headers}
@@ -2353,8 +2741,7 @@ def _hosted_json_request(
     except urllib.error.HTTPError as error:
         detail = _hosted_api_error_detail(error)
         raise ValueError(
-            f"restore-drill-fixture {method} {path} failed with HTTP {error.code}: "
-            f"{detail}"
+            f"{purpose} {method} {path} failed with HTTP {error.code}: {detail}"
         ) from error
     except urllib.error.URLError as error:
         raise ValueError(

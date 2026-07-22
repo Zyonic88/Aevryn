@@ -1025,6 +1025,206 @@ def test_restore_drill_fixture_reports_safe_http_error_detail(
     assert "secret-bearer-token" not in captured.err
 
 
+def test_restore_drill_verify_help_describes_metadata_only_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Restore drill verifier help should describe the isolated API boundary."""
+    with pytest.raises(SystemExit) as error:
+        main(["restore-drill-verify", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Verify restored API ownership and deletion boundaries" in output
+    assert "--other-bearer-token-env" in output
+    assert "without printing tokens" in output
+
+
+def test_restore_drill_verify_rejects_public_api_domain_by_default(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill verifier should fail closed when pointed at production."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", "owner-token")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN", "other-token")
+
+    exit_code = main(
+        [
+            "restore-drill-verify",
+            "--project-id",
+            "project_restore",
+            "--active-story-id",
+            "story_active",
+            "--disposable-story-id",
+            "story_deleted",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "requires an isolated API URL" in captured.err
+    assert "owner-token" not in captured.out
+    assert "owner-token" not in captured.err
+
+
+def test_restore_drill_verify_checks_api_boundaries_without_printing_private_data(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill verifier should prove ownership boundaries with metadata only."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://restore-api.aevryn.test")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", "owner-token")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN", "other-token")
+    captured_requests: list[urllib.request.Request] = []
+
+    responses: list[tuple[int, dict[str, object] | bytes]] = [
+        (200, {"project_id": "project_restore"}),
+        (
+            200,
+            {
+                "stories": (
+                    {"story_id": "story_active"},
+                    {"story_id": "story_other"},
+                )
+            },
+        ),
+        (
+            200,
+            {
+                "imports": (
+                    {
+                        "import_id": "import_restore",
+                        "storage_ref": "storage://private/source",
+                    },
+                )
+            },
+        ),
+        (
+            200,
+            {
+                "status": "succeeded",
+                "snapshots": {"available": True},
+            },
+        ),
+        (
+            200,
+            {
+                "exports": (
+                    {
+                        "export_id": "export_restore",
+                        "checksum": "abc123",
+                    },
+                )
+            },
+        ),
+        (200, b'{"private":"export body"}'),
+        (404, {}),
+        (404, {}),
+        (404, {}),
+        (404, {}),
+        (404, {}),
+    ]
+
+    class FakeResponse:
+        def __init__(self, status: int, payload: dict[str, object] | bytes) -> None:
+            self.status = status
+            self._payload = payload
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            if isinstance(self._payload, bytes):
+                return self._payload
+            return json.dumps(self._payload).encode("utf-8")
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        *,
+        timeout: float,
+    ) -> FakeResponse:
+        captured_requests.append(request)
+        assert timeout == 4.5
+        status, payload = responses.pop(0)
+        if status >= 400:
+            raise urllib.error.HTTPError(
+                url=request.full_url,
+                code=status,
+                msg="Denied",
+                hdrs=cast(Any, {}),
+                fp=BytesIO(b'{"detail":{"error":"not_found"}}'),
+            )
+        return FakeResponse(status, payload)
+
+    monkeypatch.setattr("aevryn.cli.urllib.request.urlopen", fake_urlopen)
+
+    exit_code = main(
+        [
+            "restore-drill-verify",
+            "--project-id",
+            "project_restore",
+            "--active-story-id",
+            "story_active",
+            "--disposable-story-id",
+            "story_deleted",
+            "--import-id",
+            "import_restore",
+            "--export-id",
+            "export_restore",
+            "--timeout-seconds",
+            "4.5",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert not responses
+    assert "drill_verification=isolated_api" in captured.out
+    assert "owner_project_read=passed" in captured.out
+    assert "deleted_story_absent_from_product_surfaces=passed" in captured.out
+    assert "source_storage_owner_scoped=passed" in captured.out
+    assert "export_storage_owner_scoped=passed" in captured.out
+    assert "cross_user_project_read=denied" in captured.out
+    assert "cross_user_export_download=denied" in captured.out
+    assert "source_bytes_printed=0" in captured.out
+    assert "export_bytes_printed=0" in captured.out
+    assert "storage_refs_printed=0" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=restore_drill_api_boundaries_verified" in captured.out
+    assert "owner-token" not in captured.out
+    assert "other-token" not in captured.out
+    assert "storage://private/source" not in captured.out
+    assert "export body" not in captured.out
+    assert "owner-token" not in captured.err
+    assert "other-token" not in captured.err
+
+    assert [request.get_method() for request in captured_requests] == [
+        "GET",
+        "GET",
+        "GET",
+        "GET",
+        "GET",
+        "GET",
+        "GET",
+        "GET",
+        "GET",
+        "GET",
+        "GET",
+    ]
+    assert captured_requests[0].full_url == (
+        "https://restore-api.aevryn.test/v2/projects/project_restore"
+    )
+    assert captured_requests[5].full_url == (
+        "https://restore-api.aevryn.test/v2/projects/project_restore"
+        "/exports/export_restore/download"
+    )
+    assert captured_requests[0].get_header("Authorization") == "Bearer owner-token"
+    assert captured_requests[6].get_header("Authorization") == "Bearer other-token"
+
+
 def test_production_config_check_help_describes_metadata_only_contract(
     capsys: CaptureFixture[str],
 ) -> None:

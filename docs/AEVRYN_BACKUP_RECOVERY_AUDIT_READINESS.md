@@ -200,6 +200,7 @@ Current implementation progress:
 docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
 docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit drill record and stop conditions.
 docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md defines the selected Supabase PostgreSQL and Cloudflare R2 restore procedure, custom role password reset caveat, metadata-only commands, and stop conditions.
+`aevryn restore-drill-verify` verifies restored API ownership, deletion, import, and export boundaries with metadata-only output against an isolated API target.
 Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
 Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
 `PostgresqlAuditLedger` implements the selected PostgreSQL adapter.

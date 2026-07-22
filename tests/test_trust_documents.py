@@ -828,6 +828,7 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "repeatable restore/audit drill record and stop conditions",
         "selected Supabase PostgreSQL and Cloudflare R2 restore procedure",
         "custom role password reset caveat",
+        "restore-drill-verify",
         "docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md",
         "managed PostgreSQL audit tables",
         "production audit storage",
@@ -1005,6 +1006,7 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "production_traffic_attached=false",
         "This dated record is accepted only as source-environment preflight evidence.",
         "This record cannot close Gate 5.",
+        "python -m aevryn.cli restore-drill-verify",
     )
 
     for term in required_terms:
@@ -1023,8 +1025,11 @@ def test_backup_restore_runbook_tracks_provider_specific_restore_drill() -> None
         "Cloudflare R2 private bucket",
         "Managed PostgreSQL audit table through PostgresqlAuditLedger",
         "restore-drill-fixture",
+        "restore-drill-verify",
         "AEVRYN_RESTORE_DRILL_BEARER_TOKEN",
+        "AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN",
         "This command does not run the restore drill and does not approve public beta.",
+        "The command fails closed when pointed at `https://api.aevryn.ai`",
         "Supabase database backups do not include Storage API objects.",
         "custom database roles",
         "passwords may need to be reset after restore",
@@ -1038,6 +1043,7 @@ def test_backup_restore_runbook_tracks_provider_specific_restore_drill() -> None
         "python -m aevryn.cli audit-ledger-verify",
         "python -m aevryn.cli audit-access-verify",
         "python -m aevryn.cli observability-config-check",
+        "restore_drill_api_boundaries_verified=passed",
         "deleted_story_absent_from_product_surfaces=passed",
         "operator_broad_manuscript_access_required=false",
         "production_traffic_attached=false",

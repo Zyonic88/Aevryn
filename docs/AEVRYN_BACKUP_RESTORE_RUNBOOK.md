@@ -218,6 +218,23 @@ python -m aevryn.cli audit-access-verify
 python -m aevryn.cli observability-config-check
 ```
 
+Run the restored API ownership and deletion boundary verification against an
+isolated API target:
+
+```powershell
+python -m aevryn.cli restore-drill-verify --project-id <project_id> --active-story-id <active_story_id> --disposable-story-id <disposable_story_id> --import-id <import_id> --export-id <export_id>
+```
+
+Required local environment values:
+
+* `AEVRYN_PUBLIC_API_BASE_URL` pointing at the isolated restore API target
+* `AEVRYN_RESTORE_DRILL_BEARER_TOKEN` for the restore-test owner
+* `AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN` for a non-owner user
+
+The command fails closed when pointed at `https://api.aevryn.ai` unless
+`--allow-public-api-domain` is explicitly supplied. Do not use that override for
+public-beta restore signoff.
+
 Optional storage smoke for the isolated R2 target:
 
 ```powershell
@@ -238,6 +255,7 @@ production_config_check=passed
 audit_ledger_verify=passed
 audit_access_verify=passed
 observability_config_check=passed
+restore_drill_api_boundaries_verified=passed
 source_storage_owner_scoped=passed
 export_storage_owner_scoped=passed
 deleted_story_absent_from_product_surfaces=passed
