@@ -219,14 +219,26 @@ restore_project_ref_differs_from_production=true
 production_cloud_run_supabase_url=https://xmttttbygokqbmwtucgi.supabase.co
 production_cloud_run_points_to_restore_project=false
 cloud_run_services_in_us_central1=1
-cloud_run_restore_service_exists=false
+cloud_run_restore_service_exists=true
+cloud_run_restore_service_name=aevryn-api-restore
+cloud_run_restore_public_access=false
+restore_api_authenticated_health=passed
+restore_api_unauthenticated_health_denied=passed
+restore_api_config_check=passed
+restore_api_config_execution=aevryn-restore-config-check-pgz2r
+restore_api_config_ok=restore_api_config_contract_checked
+restore_api_config_secrets_printed=0
 production_traffic_attached=false
 ```
 
 This confirms the restore Supabase project is a distinct project and is not
-currently attached to the production Cloud Run API. The restored database was
-then verified through Aevryn CLI audit checks using a restricted runtime role.
-No isolated API has been pointed at the restored target.
+currently attached to the production Cloud Run API. A private Cloud Run restore
+API target was deployed as `aevryn-api-restore`; authenticated `/v2/health`
+returned `ok`, unauthenticated `/v2/health` returned 403, and the Cloud Run job
+`aevryn-restore-config-check-pgz2r` reported
+`ok=restore_api_config_contract_checked` with `secrets_printed=0`. The restored
+database was also verified through Aevryn CLI audit checks using a restricted
+runtime role.
 
 ---
 
@@ -275,14 +287,14 @@ payload was recorded in this document.
 | Create disposable story | Disposable story ID recorded | `PASSED - disposable story ID recorded` |
 | Delete disposable story | Active product surfaces no longer show it | `PASSED - disposable story deleted before restore-point capture` |
 | Capture restore point | Backup or restore point ID recorded | `PARTIAL - source restore-point candidate recorded; Supabase backup/PITR point not selected` |
-| Restore isolated target | Restored environment is separated from production traffic | `PARTIAL - restored Supabase project exists, restored database audit checks passed, and no production Cloud Run traffic is attached` |
-| Verify ownership boundaries | Cross-user project/story reads fail closed | `BLOCKED - restore target not created` |
-| Verify source references | Source bytes resolve only for the owner | `BLOCKED - restore target not created` |
-| Verify export references | Export access resolves only for the owner | `BLOCKED - restore target not created` |
-| Verify deleted story behavior | Deleted story does not reappear in active product surfaces | `BLOCKED - restore target not created` |
+| Restore isolated target | Restored environment is separated from production traffic | `PARTIAL - restored Supabase project exists, private restore API exists, config preflight passed, and no production Cloud Run traffic is attached` |
+| Verify ownership boundaries | Cross-user project/story reads fail closed | `BLOCKED - restore API boundary verifier not run` |
+| Verify source references | Source bytes resolve only for the owner | `BLOCKED - restore API boundary verifier not run` |
+| Verify export references | Export access resolves only for the owner | `BLOCKED - restore API boundary verifier not run` |
+| Verify deleted story behavior | Deleted story does not reappear in active product surfaces | `BLOCKED - restore API boundary verifier not run` |
 | Verify audit chain | Audit integrity check passes after restore | `PASSED - restored database audit ledger verified 5195 records` |
-| Verify restore logs | Logs remain metadata-only | `BLOCKED - restore target not created` |
-| Verify operator access | Restore did not require broad manuscript browsing | `BLOCKED - restore target not created` |
+| Verify restore logs | Logs remain metadata-only | `BLOCKED - restore API boundary verifier not run` |
+| Verify operator access | Restore did not require broad manuscript browsing | `PARTIAL - private service deployed and checked without broad manuscript browsing` |
 
 ---
 
@@ -296,6 +308,9 @@ export_downloads_owner_scoped=not_run
 deleted_story_absent_from_product_surfaces=not_run
 audit_ledger_integrity_after_restore=passed
 restored_audit_records_verified=5195
+restore_api_config_check=passed
+restore_api_authenticated_health=passed
+restore_api_unauthenticated_health_denied=passed
 audit_records_metadata_only=passed_for_source_preflight_and_restored_database_cli_output
 restore_logs_no_source_prose=not_run
 restore_logs_no_full_provider_payloads=not_run
@@ -326,17 +341,18 @@ blocked
 Reason:
 
 ```text
-The source environment preflight, source fixture, restored target isolation, and
-restored database audit verification passed. The drill still has not verified
-ownership boundaries, source/export owner scoping, deleted-story behavior, or
-restore logs through an isolated Aevryn API. This record cannot close Gate 5.
+The source environment preflight, source fixture, restored target isolation,
+restored database audit verification, private restore API deployment, and restore
+API config preflight passed. The drill still has not verified ownership
+boundaries, source/export owner scoping, deleted-story behavior, or restore logs
+through the isolated Aevryn API. This record cannot close Gate 5.
 ```
 
 ---
 
 # Next Required Action
 
-Create an isolated Aevryn API target and continue the drill using
+Use the isolated Aevryn API target and continue the drill using
 `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`.
 
 The next run must verify:

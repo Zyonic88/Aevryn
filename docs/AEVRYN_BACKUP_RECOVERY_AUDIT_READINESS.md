@@ -260,10 +260,14 @@ On 2026-07-22, restored database audit verification passed through a restricted
 runtime PostgreSQL role. The restored audit access report and verify commands
 reported `can_update=false`, `can_delete=false`, `can_truncate=false`, and
 `is_table_owner=false`; restored audit ledger verification reported
-`records_verified=5195`. Restore drill completion remains blocked until an
-isolated Aevryn API target passes `restore-api-config-check` and verifies
-ownership boundaries, source/export owner-scoped access, deleted-story behavior,
-and metadata-only restore logs.
+`records_verified=5195`. A private Cloud Run restore API service named
+`aevryn-api-restore` was deployed with no unauthenticated public access; an
+authenticated health check passed, an unauthenticated health request returned
+403, and the Cloud Run job `aevryn-restore-config-check-pgz2r` reported
+`ok=restore_api_config_contract_checked`, `production_traffic_attached=false`,
+and `secrets_printed=0`. Restore drill completion remains blocked until the
+isolated API verifies ownership boundaries, source/export owner-scoped access,
+deleted-story behavior, and metadata-only restore logs.
 ```
 
 ---

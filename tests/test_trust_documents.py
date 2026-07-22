@@ -851,7 +851,8 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "not attached to the production Cloud Run API",
         "restored database audit verification passed through a restricted",
         "records_verified=5195",
-        "isolated Aevryn API target passes `restore-api-config-check`",
+        "private Cloud Run restore API service named",
+        "aevryn-restore-config-check-pgz2r",
     )
 
     for term in required_terms:
@@ -993,7 +994,15 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "restore_project_ref=zemkfcbijtauvvencxyy",
         "restore_project_ref_differs_from_production=true",
         "production_cloud_run_points_to_restore_project=false",
-        "cloud_run_restore_service_exists=false",
+        "cloud_run_restore_service_exists=true",
+        "cloud_run_restore_service_name=aevryn-api-restore",
+        "cloud_run_restore_public_access=false",
+        "restore_api_authenticated_health=passed",
+        "restore_api_unauthenticated_health_denied=passed",
+        "restore_api_config_check=passed",
+        "restore_api_config_execution=aevryn-restore-config-check-pgz2r",
+        "restore_api_config_ok=restore_api_config_contract_checked",
+        "restore_api_config_secrets_printed=0",
         "restore_database_audit_access_report=passed",
         "restore_database_audit_access_verify=passed",
         "restore_database_audit_ledger_verify=passed",
@@ -1001,12 +1010,12 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "restore-api-config-check",
         "ok=restore_api_config_contract_checked",
         "production_traffic_attached=false",
-        "PARTIAL - restored Supabase project exists, restored database audit checks passed, "
-        "and no production Cloud Run traffic is attached",
+        "PARTIAL - restored Supabase project exists, private restore API exists, "
+        "config preflight passed, and no production Cloud Run traffic is attached",
         "PARTIAL - source restore-point candidate recorded; "
         "Supabase backup/PITR point not selected",
         "PASSED - restored database audit ledger verified 5195 records",
-        "BLOCKED - restore target not created",
+        "BLOCKED - restore API boundary verifier not run",
         "deleted_story_absent_from_product_surfaces=not_run",
         "audit_ledger_integrity_after_restore=passed",
         "operator_broad_manuscript_access_required=not_run",
