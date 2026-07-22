@@ -828,6 +828,10 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "repeatable restore/audit drill record and stop conditions",
         "selected Supabase PostgreSQL and Cloudflare R2 restore procedure",
         "custom role password reset caveat",
+        "restore-api-config-check",
+        "AEVRYN_RESTORE_DRILL_TARGET=true",
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
+        "production_traffic_attached=false",
         "restore-drill-verify",
         "docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md",
         "managed PostgreSQL audit tables",
@@ -847,7 +851,7 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "not attached to the production Cloud Run API",
         "restored database audit verification passed through a restricted",
         "records_verified=5195",
-        "isolated Aevryn API target verifies ownership boundaries",
+        "isolated Aevryn API target passes `restore-api-config-check`",
     )
 
     for term in required_terms:
@@ -994,6 +998,9 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "restore_database_audit_access_verify=passed",
         "restore_database_audit_ledger_verify=passed",
         "records_verified=5195",
+        "restore-api-config-check",
+        "ok=restore_api_config_contract_checked",
+        "production_traffic_attached=false",
         "PARTIAL - restored Supabase project exists, restored database audit checks passed, "
         "and no production Cloud Run traffic is attached",
         "PARTIAL - source restore-point candidate recorded; "
@@ -1025,7 +1032,11 @@ def test_backup_restore_runbook_tracks_provider_specific_restore_drill() -> None
         "Cloudflare R2 private bucket",
         "Managed PostgreSQL audit table through PostgresqlAuditLedger",
         "restore-drill-fixture",
+        "restore-api-config-check",
         "restore-drill-verify",
+        "AEVRYN_RESTORE_DRILL_TARGET=true",
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
+        "restore_api_config_check=passed",
         "AEVRYN_RESTORE_DRILL_BEARER_TOKEN",
         "AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN",
         "This command does not run the restore drill and does not approve public beta.",

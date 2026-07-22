@@ -200,6 +200,7 @@ Current implementation progress:
 docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
 docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit drill record and stop conditions.
 docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md defines the selected Supabase PostgreSQL and Cloudflare R2 restore procedure, custom role password reset caveat, metadata-only commands, and stop conditions.
+`aevryn restore-api-config-check` verifies that the restored API target is an isolated, production-like restore drill service before API boundary verification begins. It requires `AEVRYN_RESTORE_DRILL_TARGET=true`, rejects `https://api.aevryn.ai`, requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false`, requires hosted metadata-only logging and monitoring, and reports `production_traffic_attached=false` without printing secrets.
 `aevryn restore-drill-verify` verifies restored API ownership, deletion, import, and export boundaries with metadata-only output against an isolated API target.
 Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
 Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
@@ -260,8 +261,9 @@ runtime PostgreSQL role. The restored audit access report and verify commands
 reported `can_update=false`, `can_delete=false`, `can_truncate=false`, and
 `is_table_owner=false`; restored audit ledger verification reported
 `records_verified=5195`. Restore drill completion remains blocked until an
-isolated Aevryn API target verifies ownership boundaries, source/export
-owner-scoped access, deleted-story behavior, and metadata-only restore logs.
+isolated Aevryn API target passes `restore-api-config-check` and verifies
+ownership boundaries, source/export owner-scoped access, deleted-story behavior,
+and metadata-only restore logs.
 ```
 
 ---

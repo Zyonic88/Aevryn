@@ -211,12 +211,22 @@ only prepares source-side evidence before the restore point is selected.
 Run in an environment configured for the isolated restore target:
 
 ```powershell
+python -m aevryn.cli restore-api-config-check
 python -m aevryn.cli production-config-check
 python -m aevryn.cli audit-ledger-verify
 python -m aevryn.cli audit-access-report
 python -m aevryn.cli audit-access-verify
 python -m aevryn.cli observability-config-check
 ```
+
+The restore API config check must pass before the restored API boundary
+verification is trusted. It requires `AEVRYN_RESTORE_DRILL_TARGET=true`, rejects
+`https://api.aevryn.ai`, requires `AEVRYN_ENVIRONMENT_NAME` to be a non-production
+restore environment name, requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false`,
+requires private R2 storage that is not `aevryn-prod`, and requires hosted
+metadata-only logging and monitoring. It prints metadata only and must not print
+database URLs, private bucket names, tokens, source bytes, export bodies, or
+storage references.
 
 Run the restored API ownership and deletion boundary verification against an
 isolated API target:
@@ -251,6 +261,7 @@ copied into a document.
 The dated drill record must include:
 
 ```text
+restore_api_config_check=passed
 production_config_check=passed
 audit_ledger_verify=passed
 audit_access_verify=passed

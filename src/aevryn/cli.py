@@ -42,6 +42,7 @@ from aevryn.api import (
     OPENAI_TIMEOUT_SECONDS_ENV,
     PASSWORD_RESET_ENABLED_ENV,
     PROJECT_DATABASE_ADAPTER_ENV,
+    PROJECT_DATABASE_BOOTSTRAP_ENV,
     PROJECT_DATABASE_PATH_ENV,
     PROJECT_DATABASE_URL_ENV,
     PUBLIC_API_BASE_URL_ENV,
@@ -187,6 +188,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if command == "restore-drill-verify":
             _handle_restore_drill_verify(args)
+            return 0
+        if command == "restore-api-config-check":
+            _handle_restore_api_config_check()
             return 0
         if command == "production-config-check":
             _handle_production_config_check()
@@ -805,6 +809,18 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=30.0,
         help="HTTP timeout for each isolated API request.",
+    )
+
+    subcommands.add_parser(
+        "restore-api-config-check",
+        help="Check isolated restore API configuration without printing secrets.",
+        description=(
+            "Check isolated restore API configuration without printing secrets. "
+            "This verifies that the restore target is production-like, metadata-only, "
+            "uses hosted services, has schema bootstrap disabled, and is not pointed "
+            "at the public production API domain."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
     )
 
     subcommands.add_parser(
@@ -1470,6 +1486,13 @@ def _handle_production_config_check() -> None:
         print(f"{key}={value}")
 
 
+def _handle_restore_api_config_check() -> None:
+    """Handle the restore-api-config-check command."""
+    summary = _run_restore_api_config_check(dict(os.environ))
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_observability_config_check() -> None:
     """Handle the observability-config-check command."""
     summary = _run_observability_config_check(dict(os.environ))
@@ -1728,6 +1751,89 @@ def _run_production_config_check(environ: dict[str, str]) -> dict[str, object]:
         "public_beta": "not_approved_until_gate_signoff",
         "secrets_printed": 0,
         "ok": "production_config_contract_checked",
+    }
+
+
+def _run_restore_api_config_check(environ: dict[str, str]) -> dict[str, object]:
+    """Check the isolated restore API contract and return metadata only."""
+    if environ.get(DEPLOYMENT_ENV, "").strip().lower() != "production":
+        raise ValueError(f"{DEPLOYMENT_ENV}=production is required for restore API drills.")
+
+    _require_true_process_flag(environ, "AEVRYN_RESTORE_DRILL_TARGET")
+
+    environment_name = _required_lower_env(environ, ENVIRONMENT_NAME_ENV)
+    if environment_name == "production":
+        raise ValueError(
+            f"{ENVIRONMENT_NAME_ENV} must not be production for restore API drills."
+        )
+
+    public_api_url = _validated_https_api_url(
+        environ.get(PUBLIC_API_BASE_URL_ENV, ""),
+        purpose="restore-api-config-check",
+    )
+    parsed_public_api_url = urllib.parse.urlsplit(public_api_url)
+    if parsed_public_api_url.netloc.lower() == "api.aevryn.ai":
+        raise ValueError(
+            "restore-api-config-check requires an isolated API URL. "
+            "Do not use https://api.aevryn.ai for restore signoff."
+        )
+
+    database_adapter = _required_lower_env(environ, PROJECT_DATABASE_ADAPTER_ENV)
+    if database_adapter != "postgresql":
+        raise ValueError(
+            f"{PROJECT_DATABASE_ADAPTER_ENV}=postgresql is required for restore API drills."
+        )
+    if not environ.get(PROJECT_DATABASE_URL_ENV, "").strip():
+        raise ValueError(f"{PROJECT_DATABASE_URL_ENV} is required for restore API drills.")
+
+    if environ.get(PROJECT_DATABASE_BOOTSTRAP_ENV, "").strip().lower() != "false":
+        raise ValueError(
+            f"{PROJECT_DATABASE_BOOTSTRAP_ENV}=false is required for restore API drills."
+        )
+
+    storage_provider = _required_lower_env(environ, STORAGE_PROVIDER_ENV)
+    if storage_provider != "r2":
+        raise ValueError(f"{STORAGE_PROVIDER_ENV}=r2 is required for restore API drills.")
+
+    r2_bucket = environ.get(R2_BUCKET_ENV, "").strip()
+    if not r2_bucket:
+        raise ValueError(f"{R2_BUCKET_ENV} is required for restore API drills.")
+    if r2_bucket == "aevryn-prod":
+        raise ValueError(
+            f"{R2_BUCKET_ENV} must not be aevryn-prod for restore API drills."
+        )
+
+    secret_manager = _required_lower_env(environ, SECRET_MANAGER_ENV)
+    if secret_manager != "deployment":
+        raise ValueError(
+            f"{SECRET_MANAGER_ENV}=deployment is required for restore API drills."
+        )
+
+    log_destination = _required_lower_env(environ, LOG_DESTINATION_ENV)
+    if log_destination != "hosted":
+        raise ValueError(f"{LOG_DESTINATION_ENV}=hosted is required for restore API drills.")
+
+    monitoring_destination = _required_lower_env(environ, MONITORING_DESTINATION_ENV)
+    if monitoring_destination != "hosted":
+        raise ValueError(
+            f"{MONITORING_DESTINATION_ENV}=hosted is required for restore API drills."
+        )
+
+    _require_true_process_flag(environ, SECURITY_ALERTS_ENABLED_ENV)
+    _require_true_process_flag(environ, METADATA_ONLY_LOGGING_ENV)
+
+    return {
+        "restore_target": "isolated_api",
+        "deployment_env": "production",
+        "environment_name": environment_name,
+        "public_api_is_production_domain": "false",
+        "project_database_adapter": database_adapter,
+        "project_database_bootstrap": "false",
+        "storage_provider": storage_provider,
+        "metadata_only_logging": "true",
+        "production_traffic_attached": "false",
+        "secrets_printed": 0,
+        "ok": "restore_api_config_contract_checked",
     }
 
 

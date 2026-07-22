@@ -1225,6 +1225,95 @@ def test_restore_drill_verify_checks_api_boundaries_without_printing_private_dat
     assert captured_requests[6].get_header("Authorization") == "Bearer other-token"
 
 
+def test_restore_api_config_check_help_describes_isolated_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Restore API config check help should describe the isolated target contract."""
+    with pytest.raises(SystemExit) as error:
+        main(["restore-api-config-check", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Check isolated restore API configuration without printing secrets" in output
+    assert "not pointed at the public production API domain" in output
+
+
+def test_restore_api_config_check_requires_explicit_restore_target(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore API config check should require an explicit restore-drill target flag."""
+    monkeypatch.setenv("AEVRYN_DEPLOYMENT_ENV", "production")
+    monkeypatch.delenv("AEVRYN_RESTORE_DRILL_TARGET", raising=False)
+
+    exit_code = main(["restore-api-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_RESTORE_DRILL_TARGET=true is required" in captured.err
+
+
+def test_restore_api_config_check_rejects_public_api_domain(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore API config check should fail closed on the production API domain."""
+    monkeypatch.setenv("AEVRYN_DEPLOYMENT_ENV", "production")
+    monkeypatch.setenv("AEVRYN_RESTORE_DRILL_TARGET", "true")
+    monkeypatch.setenv("AEVRYN_ENVIRONMENT_NAME", "restore-drill")
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+
+    exit_code = main(["restore-api-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "requires an isolated API URL" in captured.err
+
+
+def test_restore_api_config_check_reports_metadata_without_private_values(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore API config check should report metadata without private values."""
+    private_values = (
+        "postgresql://runtime:private-value@restore.invalid/postgres",
+        "restore-bucket-private-value",
+    )
+    env_values = {
+        "AEVRYN_DEPLOYMENT_ENV": "production",
+        "AEVRYN_RESTORE_DRILL_TARGET": "true",
+        "AEVRYN_ENVIRONMENT_NAME": "restore-drill",
+        "AEVRYN_PUBLIC_API_BASE_URL": "https://restore-api.aevryn.test",
+        "AEVRYN_PROJECT_DATABASE_ADAPTER": "postgresql",
+        "AEVRYN_PROJECT_DATABASE_URL": private_values[0],
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP": "false",
+        "AEVRYN_STORAGE_PROVIDER": "r2",
+        "AEVRYN_R2_BUCKET": private_values[1],
+        "AEVRYN_SECRET_MANAGER": "deployment",
+        "AEVRYN_LOG_DESTINATION": "hosted",
+        "AEVRYN_MONITORING_DESTINATION": "hosted",
+        "AEVRYN_SECURITY_ALERTS_ENABLED": "true",
+        "AEVRYN_METADATA_ONLY_LOGGING": "true",
+    }
+    for key, value in env_values.items():
+        monkeypatch.setenv(key, value)
+
+    exit_code = main(["restore-api-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "restore_target=isolated_api" in captured.out
+    assert "environment_name=restore-drill" in captured.out
+    assert "public_api_is_production_domain=false" in captured.out
+    assert "project_database_bootstrap=false" in captured.out
+    assert "production_traffic_attached=false" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=restore_api_config_contract_checked" in captured.out
+    for private_value in private_values:
+        assert private_value not in captured.out
+        assert private_value not in captured.err
+
+
 def test_production_config_check_help_describes_metadata_only_contract(
     capsys: CaptureFixture[str],
 ) -> None:
