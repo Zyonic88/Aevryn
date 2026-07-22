@@ -10,7 +10,7 @@ This record does not claim a full restore drill passed.
 
 It records that source-environment restore preflight checks passed, source-side
 synthetic fixture data was created through the hosted API boundary, and that the
-isolated restore target has not yet been created or verified.
+isolated restore target database passed audit verification.
 
 ---
 
@@ -19,14 +19,14 @@ isolated restore target has not yet been created or verified.
 ```text
 Record type: Restore and audit drill record
 Drill ID: restore-audit-2026-07-17-001
-Status: Source preflight passed; restore target not run
+Status: Source preflight and restored database audit verification passed
 Source fixture: Passed
 Public beta: Blocked
 Final result: blocked
 ```
 
 Public beta remains blocked until this drill is rerun or continued against an
-isolated restore target and every required restore assertion passes.
+isolated API target and every required restore assertion passes.
 
 ---
 
@@ -224,9 +224,41 @@ production_traffic_attached=false
 ```
 
 This confirms the restore Supabase project is a distinct project and is not
-currently attached to the production Cloud Run API. The restored database has
-not yet been verified by Aevryn CLI checks, and no isolated API has been pointed
-at the restored target.
+currently attached to the production Cloud Run API. The restored database was
+then verified through Aevryn CLI audit checks using a restricted runtime role.
+No isolated API has been pointed at the restored target.
+
+---
+
+# Restored Database Audit Verification
+
+After the restored Supabase project was created and isolated from production
+traffic, the restored database runtime role was reset and constrained so the
+audit ledger remained append-only for the application runtime. The following
+metadata-only checks passed against the restored database:
+
+```text
+restore_database_audit_access_report=passed
+table_exists=true
+can_select=true
+can_insert=true
+can_update=false
+can_delete=false
+can_truncate=false
+is_table_owner=false
+audit_access_report_secrets_printed=0
+
+restore_database_audit_access_verify=passed
+audit_access_verify_secrets_printed=0
+
+restore_database_audit_ledger_verify=passed
+records_verified=5195
+audit_ledger_verify_secrets_printed=0
+```
+
+The commands used the restored database URL from process environment only. No
+database URL, password, source prose, full provider payload, or audit row
+payload was recorded in this document.
 
 ---
 
@@ -243,12 +275,12 @@ at the restored target.
 | Create disposable story | Disposable story ID recorded | `PASSED - disposable story ID recorded` |
 | Delete disposable story | Active product surfaces no longer show it | `PASSED - disposable story deleted before restore-point capture` |
 | Capture restore point | Backup or restore point ID recorded | `PARTIAL - source restore-point candidate recorded; Supabase backup/PITR point not selected` |
-| Restore isolated target | Restored environment is separated from production traffic | `PARTIAL - restored Supabase project exists and is not attached to production Cloud Run` |
+| Restore isolated target | Restored environment is separated from production traffic | `PARTIAL - restored Supabase project exists, restored database audit checks passed, and no production Cloud Run traffic is attached` |
 | Verify ownership boundaries | Cross-user project/story reads fail closed | `BLOCKED - restore target not created` |
 | Verify source references | Source bytes resolve only for the owner | `BLOCKED - restore target not created` |
 | Verify export references | Export access resolves only for the owner | `BLOCKED - restore target not created` |
 | Verify deleted story behavior | Deleted story does not reappear in active product surfaces | `BLOCKED - restore target not created` |
-| Verify audit chain | Audit integrity check passes after restore | `BLOCKED - restore target not created` |
+| Verify audit chain | Audit integrity check passes after restore | `PASSED - restored database audit ledger verified 5195 records` |
 | Verify restore logs | Logs remain metadata-only | `BLOCKED - restore target not created` |
 | Verify operator access | Restore did not require broad manuscript browsing | `BLOCKED - restore target not created` |
 
@@ -262,8 +294,9 @@ cross_user_reads_fail_closed=not_run
 source_storage_references_private=not_run
 export_downloads_owner_scoped=not_run
 deleted_story_absent_from_product_surfaces=not_run
-audit_ledger_integrity_after_restore=not_run
-audit_records_metadata_only=passed_for_source_preflight
+audit_ledger_integrity_after_restore=passed
+restored_audit_records_verified=5195
+audit_records_metadata_only=passed_for_source_preflight_and_restored_database_cli_output
 restore_logs_no_source_prose=not_run
 restore_logs_no_full_provider_payloads=not_run
 restore_logs_no_credentials_or_private_urls=not_run
@@ -277,8 +310,8 @@ production_traffic_attached=false
 
 ```text
 Restore drill result: BLOCKED
-Audit integrity result: SOURCE PREFLIGHT PASSED
-Metadata-only log review result: SOURCE PREFLIGHT PASSED FOR CLI OUTPUT
+Audit integrity result: SOURCE PREFLIGHT AND RESTORED DATABASE AUDIT VERIFY PASSED
+Metadata-only log review result: SOURCE PREFLIGHT AND RESTORED DATABASE CLI OUTPUT PASSED
 Source fixture result: PASSED
 Deletion-after-restore result: NOT RUN
 Public beta: BLOCKED
@@ -293,16 +326,17 @@ blocked
 Reason:
 
 ```text
-The source environment preflight and source fixture passed, but no isolated
-restore target has been created, restored, or verified. This record cannot close
-Gate 5.
+The source environment preflight, source fixture, restored target isolation, and
+restored database audit verification passed. The drill still has not verified
+ownership boundaries, source/export owner scoping, deleted-story behavior, or
+restore logs through an isolated Aevryn API. This record cannot close Gate 5.
 ```
 
 ---
 
 # Next Required Action
 
-Create an isolated restore target and continue the drill using
+Create an isolated Aevryn API target and continue the drill using
 `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`.
 
 The next run must verify:

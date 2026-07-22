@@ -844,8 +844,9 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "aevryn-restore-drill-2026-07-22",
         "zemkfcbijtauvvencxyy",
         "not attached to the production Cloud Run API",
-        "isolated Aevryn",
-        "restore runtime has not been created",
+        "restored database audit verification passed through a restricted",
+        "records_verified=5195",
+        "isolated Aevryn API target verifies ownership boundaries",
     )
 
     for term in required_terms:
@@ -957,7 +958,7 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
 
     required_terms = (
         "Drill ID: restore-audit-2026-07-17-001",
-        "Status: Source preflight passed; restore target not run",
+        "Status: Source preflight and restored database audit verification passed",
         "Source fixture: Passed",
         "Final result: blocked",
         "production_config_check=passed",
@@ -988,15 +989,22 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "restore_project_ref_differs_from_production=true",
         "production_cloud_run_points_to_restore_project=false",
         "cloud_run_restore_service_exists=false",
-        "PARTIAL - restored Supabase project exists and is not attached to production Cloud Run",
+        "restore_database_audit_access_report=passed",
+        "restore_database_audit_access_verify=passed",
+        "restore_database_audit_ledger_verify=passed",
+        "records_verified=5195",
+        "PARTIAL - restored Supabase project exists, restored database audit checks passed, "
+        "and no production Cloud Run traffic is attached",
         "PARTIAL - source restore-point candidate recorded; "
         "Supabase backup/PITR point not selected",
+        "PASSED - restored database audit ledger verified 5195 records",
         "BLOCKED - restore target not created",
         "deleted_story_absent_from_product_surfaces=not_run",
+        "audit_ledger_integrity_after_restore=passed",
         "operator_broad_manuscript_access_required=not_run",
         "production_traffic_attached=false",
         "This dated record is accepted only as source-environment preflight evidence.",
-        "It is not accepted as a completed restore/audit drill.",
+        "This record cannot close Gate 5.",
     )
 
     for term in required_terms:

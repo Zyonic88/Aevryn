@@ -254,7 +254,13 @@ verified.
 The restored Supabase project `aevryn-restore-drill-2026-07-22` exists with
 project ref `zemkfcbijtauvvencxyy`, differs from production ref
 `xmttttbygokqbmwtucgi`, and is not attached to the production Cloud Run API.
-Restored database verification has not run yet.
+On 2026-07-22, restored database audit verification passed through a restricted
+runtime PostgreSQL role. The restored audit access report and verify commands
+reported `can_update=false`, `can_delete=false`, `can_truncate=false`, and
+`is_table_owner=false`; restored audit ledger verification reported
+`records_verified=5195`. Restore drill completion remains blocked until an
+isolated Aevryn API target verifies ownership boundaries, source/export
+owner-scoped access, deleted-story behavior, and metadata-only restore logs.
 ```
 
 ---
