@@ -455,8 +455,8 @@ Remaining hardening:
 
 * hosted browser validation for password recovery
 * hosted browser validation for expired-session recovery
-* ensure recovery errors remain human-readable
-* ensure token/session details are never displayed
+* ~~ensure recovery errors remain human-readable~~
+* ~~ensure token/session details are never displayed~~
 * ~~verify login always lands on Dashboard~~
 
 Verified hardening:
