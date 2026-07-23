@@ -334,6 +334,10 @@ Verified hardening:
   professions, and similar non-capability story concepts when they are incorrectly
   proposed as skills without explicit ability language
 * verified with extraction, evidence-bounded extraction, world, and project-runner tests
+* frontend readable-output formatter strips every supported Canon entity-type prefix
+  from relationship and accepted-entity text, including system, weapon, armor,
+  creature, vehicle, and timeline-event IDs
+* verified with readable-output frontend unit test, lint, and production build
 
 Acceptance:
 

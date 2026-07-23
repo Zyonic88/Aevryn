@@ -104,7 +104,7 @@ function toSentence(value: string): string {
 
 function readableEntity(value: string): string {
   const kindMatch = value.match(
-    /^(character|entity|location|organization|building|item|skill|vehicle)_(.+)$/i,
+    /^(armor|building|character|creature|entity|item|location|organization|skill|system|timeline_event|vehicle|weapon)_(.+)$/i,
   );
   if (!kindMatch) {
     return readableValue(value);
@@ -153,7 +153,10 @@ function readableLabel(value: string): string {
 
 function readableValue(value: string): string {
   return value
-    .replace(/\b(entity|character|location|organization|building|item|skill|vehicle)_/gi, "")
+    .replace(
+      /\b(armor|building|character|creature|entity|item|location|organization|skill|system|timeline_event|vehicle|weapon)_/gi,
+      "",
+    )
     .replace(/_/g, " ")
     .replace(/\b\w/g, (character) => character.toUpperCase())
     .replace(/'([A-Z])/g, (_, character: string) => `'${character.toLowerCase()}`);
