@@ -4412,14 +4412,11 @@ def _project_status_worker(
         (job.job_id for job in jobs if job.status == "queued"),
         "",
     )
-    if running_jobs > 0:
-        state = "running"
-    elif queued_jobs > 0:
-        state = "queued"
-    elif latest_run is not None and latest_run.status == "failed":
-        state = "failed"
-    else:
-        state = "idle"
+    state = _project_status_worker_state(
+        latest_run=latest_run,
+        queued_jobs=queued_jobs,
+        running_jobs=running_jobs,
+    )
     return ProjectStatusWorker(
         state=state,
         total_jobs=len(jobs),
@@ -4429,6 +4426,22 @@ def _project_status_worker(
         failed_jobs=failed_jobs,
         next_job_id=next_job_id,
     )
+
+
+def _project_status_worker_state(
+    *,
+    latest_run: EngineRunRecord | None,
+    queued_jobs: int,
+    running_jobs: int,
+) -> str:
+    """Return the current worker state without inheriting stale terminal jobs."""
+    if running_jobs > 0:
+        return "running"
+    if queued_jobs > 0:
+        return "queued"
+    if latest_run is not None and latest_run.status == "failed":
+        return "failed"
+    return "idle"
 
 
 def _recent_workflow_events(

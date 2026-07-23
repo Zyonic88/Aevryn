@@ -1981,6 +1981,94 @@ def test_project_status_worker_state_ignores_other_project_terminal_failures() -
     assert payload["latest_failure_summary"] == ""
 
 
+def test_project_status_worker_state_ignores_same_project_stale_failed_jobs() -> None:
+    """Succeeded latest runs should keep old same-project worker failures historical."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    import_content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=import_content_store,
+            ),
+            import_content_store=import_content_store,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    saved_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json={
+            "import_id": "import_alpha",
+            "source_id": "source_alpha",
+            "filename": "chapter_001.txt",
+            "content_base64": base64.b64encode(b"Chapter 1\nAlpha.").decode("ascii"),
+            "title": "Alpha Source",
+            "now": NOW,
+        },
+    )
+    assert saved_import.status_code == 200
+    queue.enqueue(
+        BackgroundJob(
+            job_id="job_old_failure",
+            kind="process_import",
+            run_id="run_old_failure",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="queued",
+            queued_at=NOW,
+            status_updated_at=NOW,
+        )
+    )
+    assert queue.claim_next(claimed_at=SOON) is not None
+    queue.fail(
+        job_id="job_old_failure",
+        failed_at="2026-06-27T00:45:00Z",
+        error_summary="Old same-project failure.",
+    )
+    submitted_run = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted_run.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={
+            "started_at": SOON,
+            "finished_at": "2026-06-27T00:45:00Z",
+            "max_jobs": 1,
+        },
+    )
+    assert processed.status_code == 200
+
+    response = client.get(
+        "/v2/projects/project_alpha/status",
+        headers=auth_headers("token_001"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    assert payload["latest_engine_run"]["status"] == "succeeded"
+    assert payload["worker"] == {
+        "state": "idle",
+        "total_jobs": 2,
+        "queued_jobs": 0,
+        "running_jobs": 0,
+        "succeeded_jobs": 1,
+        "failed_jobs": 1,
+        "next_job_id": "",
+    }
+    assert payload["latest_failure_summary"] == ""
+
+
 def test_project_status_responses_include_request_ids() -> None:
     """Project status should carry request IDs on success and error responses."""
     repository = InMemoryProjectRepository()
