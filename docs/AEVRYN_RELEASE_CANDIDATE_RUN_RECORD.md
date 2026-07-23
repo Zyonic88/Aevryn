@@ -133,7 +133,7 @@ Failures block public beta unless an owner-approved residual risk is recorded be
 | Review Timeline | Chapter changes are understandable | Passed with limitation | Timeline output appears; polish remains future UX work |
 | Review Scenes | Scene sheets are understandable | Passed with limitation | Scene output appears; some incomplete evidence states remain |
 | Review Continuity | Continuity view is understandable | Passed with limitation | Continuity output appears; layout polish remains future UX work |
-| Review Prompt Packs | Prompt output is usable or limitation is documented | Passed with limitation | Prompt Packs load; prompt richness remains active product-hardening work |
+| Review Prompt Packs | Prompt output is usable or limitation is documented | Passed with limitation | Prompt Packs load; current-scene action beat hardening is implemented and locally tested; hosted browser validation remains before public-beta positioning |
 | Review Exports | Export options are visible | Passed | `Create snapshot export` action visible |
 | Create export preview | Preview is generated intentionally | Passed | JSON canon snapshot export created with download action |
 | Delete project | Project data is removed from active product surfaces | Passed | Smoke project deleted; dashboard showed 2 projects and direct project URL returned dashboard |
@@ -215,7 +215,7 @@ This does not require public launch, but it must run outside the purely local pr
 # Known Limitations
 
 ```text
-Prompt Packs load and are usable for alpha/RC verification, but prompt richness still needs product hardening before public beta positioning.
+Prompt Packs load and are usable for alpha/RC verification. Current-scene action beat hardening is implemented and locally tested, but prompt richness still needs hosted browser validation before public beta positioning.
 Identity review summaries appear across several output tabs and should be condensed in UX hardening.
 Some Unknown/No-data states remain where accepted canon evidence is incomplete.
 Settings and broader user profile preferences remain intentionally minimal.
@@ -234,7 +234,7 @@ Public beta may proceed only if each residual risk is explicit and accepted by t
 
 | Risk | Impact | Mitigation | Owner Decision |
 | --- | --- | --- | --- |
-| Prompt richness is still below final product ambition | Generated image/video prompts may need user editing | Continue prompt-pack hardening before beta marketing claims | Accepted for internal RC only; blocks public-beta positioning if not improved |
+| Prompt richness still needs hosted validation | Generated image/video prompts may need user editing if the browser output does not reflect the new current-scene action beat hardening clearly | Run hosted prompt-pack browser validation before beta marketing claims | Accepted for internal RC only; blocks public-beta positioning until validated |
 | Output UX polish remains alpha-grade in some tabs | Users may find repeated summaries or dense cards tiring | Continue UX hardening before broad public beta | Accepted for internal RC only |
 | Public legal/trust/support pages need owner and legal review | Public users may see draft wording that is not public-beta approved | Review public-facing site/legal docs before public beta | Blocks public beta |
 | Production observability policy needs final bounded log review | Hosted logging and monitoring configuration passed, but final log review still needs public-beta verification | Complete final bounded hosted log review against the selected production observability policy | Blocks public beta |

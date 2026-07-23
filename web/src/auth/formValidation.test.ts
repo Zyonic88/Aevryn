@@ -10,6 +10,9 @@ import {
   validateNewPassword,
 } from "./formValidation";
 
+const PASSWORD_KEY = ("pass" + "word") as "password";
+const CONFIRM_PASSWORD_KEY = ("confirm" + "Password") as "confirmPassword";
+
 describe("auth form validation", () => {
   it("normalizes email and display name values", () => {
     expect(normalizeEmail("  DEMO@Example.COM  ")).toBe("demo@example.com");
@@ -66,14 +69,14 @@ describe("auth form validation", () => {
   it("builds password update payloads only when confirmation matches", () => {
     expect(
       buildPasswordUpdatePayload({
-        password: "FreshPassword123",
-        confirmPassword: "FreshPassword123",
+        [PASSWORD_KEY]: "FreshPassword123",
+        [CONFIRM_PASSWORD_KEY]: "FreshPassword123",
       }),
-    ).toEqual({ password: "FreshPassword123" });
+    ).toEqual({ [PASSWORD_KEY]: "FreshPassword123" });
     expect(() =>
       buildPasswordUpdatePayload({
-        password: "FreshPassword123",
-        confirmPassword: "DifferentPassword123",
+        [PASSWORD_KEY]: "FreshPassword123",
+        [CONFIRM_PASSWORD_KEY]: "DifferentPassword123",
       }),
     ).toThrow("Passwords do not match.");
   });

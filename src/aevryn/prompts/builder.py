@@ -204,14 +204,14 @@ class CanonPromptBuilder:
             (
                 (
                     "Generate this image using only accepted Aevryn canon.\n"
-                    "Image generation task: Create one scene image using only "
-                    "accepted Aevryn canon. Show the confirmed subjects, setting, "
-                    "mood, and objects below. Do not invent character appearance, "
-                    "vehicle design, logos, colors, or scenery details that are not "
-                    "listed as known canon."
+                    "Image generation task: Create one scene image showing the "
+                    "confirmed subjects, setting, mood, and objects below. Do not "
+                    "invent character appearance, vehicle design, logos, colors, or "
+                    "scenery details that are not listed as known canon."
                 ),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_visual_anchor_section(context),
+                self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._image_subject_section(context),
                 self._world_context_section(context),
@@ -244,6 +244,7 @@ class CanonPromptBuilder:
                     "Narrate using only accepted canon facts."
                 ),
                 self._scene_production_brief_section(context, analysis),
+                self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._narration_direction_section(analysis),
                 self._character_section(context),
@@ -269,6 +270,7 @@ class CanonPromptBuilder:
                     "Describe camera framing without inventing new canon."
                 ),
                 self._scene_production_brief_section(context, analysis),
+                self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._composition_section(context, analysis),
                 self._camera_direction_section(analysis),
@@ -298,6 +300,7 @@ class CanonPromptBuilder:
                     "Describe motion using only accepted scene facts."
                 ),
                 self._scene_production_brief_section(context, analysis),
+                self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._animation_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
@@ -461,6 +464,51 @@ class CanonPromptBuilder:
                 break
 
         return tuple(CanonPromptBuilder._unique_values(anchors))
+
+    @staticmethod
+    def _scene_action_beats_section(
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return bounded canon-backed action beats for production prompts."""
+        return "\n".join(
+            [
+                "Current scene action beats:",
+                *CanonPromptBuilder._bullet_lines(
+                    CanonPromptBuilder._scene_action_beats(context, analysis)
+                ),
+            ]
+        )
+
+    @staticmethod
+    def _scene_action_beats(
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> tuple[str, ...]:
+        """Return short canon-backed beats without storing source prose."""
+        display_names = CanonPromptBuilder._entity_display_names(context)
+        beats: list[str] = []
+        for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id):
+            if CanonPromptBuilder._is_prompt_metadata_attribute(fact.attribute):
+                continue
+            beats.append(
+                CanonPromptBuilder._shorten(
+                    CanonPromptBuilder._world_fact_line(fact, display_names=display_names),
+                    width=96,
+                )
+            )
+            if len(beats) >= 3:
+                break
+        if len(beats) < 3:
+            beats.extend(
+                (
+                    f"Scene purpose: {CanonPromptBuilder._shorten(analysis.purpose)}",
+                    f"Scene pressure: {CanonPromptBuilder._shorten(analysis.conflict)}",
+                    f"Scene tone: {CanonPromptBuilder._shorten(analysis.mood)}",
+                )
+            )
+
+        return tuple(CanonPromptBuilder._unique_values(beats)[:3])
 
     @staticmethod
     def _scene_sentences(paragraphs: Iterable[str]) -> tuple[str, ...]:

@@ -169,6 +169,31 @@ def test_canon_prompt_builder_includes_current_scene_visual_anchors() -> None:
     )
 
 
+def test_canon_prompt_builder_includes_bounded_current_scene_action_beats() -> None:
+    """Prompts include compact canon-backed beats without storing source prose."""
+    context = build_context()
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+    action_section = prompt.split("Current scene action beats:", 1)[1].split("\n\n", 1)[0]
+
+    assert "Current scene action beats:" in prompt
+    assert "Mark Current Weapon: Iron Sword" in action_section
+    assert "Scene purpose:" in action_section
+    assert "Mark wakes in the forest" not in action_section
+    assert action_section.count("\n- ") == 3
+
+
+def test_canon_prompt_builder_adds_action_beats_to_all_prompt_types() -> None:
+    """Every production prompt carries the same bounded scene moment context."""
+    builder = CanonPromptBuilder()
+    context = build_context()
+
+    assert "Current scene action beats:" in builder.build_image_prompt(context)
+    assert "Current scene action beats:" in builder.build_narration_prompt(context)
+    assert "Current scene action beats:" in builder.build_camera_prompt(context)
+    assert "Current scene action beats:" in builder.build_animation_prompt(context)
+
+
 def test_canon_prompt_builder_includes_action_visual_anchors() -> None:
     """Image prompts include current-scene body language as visual anchors."""
     imported_source = StoryImporter().import_text(
@@ -450,7 +475,7 @@ def test_canon_prompt_builder_shortens_long_analysis_text() -> None:
     )
 
     assert "Sentence 020" not in prompt
-    assert len(prompt) < 4600
+    assert len(prompt) < 5000
 
 
 class DuplicateAnalysisAnalyzer(SceneAnalyzer):

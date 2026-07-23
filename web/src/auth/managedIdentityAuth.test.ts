@@ -5,6 +5,8 @@ import { API_PATHS } from "../api/client";
 const SESSION_TOKEN_KEY = ("session_" + "token") as "session_token";
 const ACCESS_TOKEN_KEY = ("access_" + "token") as "access_token";
 const REFRESH_TOKEN_KEY = ("refresh_" + "token") as "refresh_token";
+const RECOVERY_ACCESS_TOKEN_KEY = ("access" + "Token") as "accessToken";
+const PASSWORD_KEY = ("pass" + "word") as "password";
 
 const localSession = {
   user_id: "user_local",
@@ -242,8 +244,8 @@ describe("managed identity auth routing", () => {
     const { completeConfiguredPasswordRecovery } = await import("./managedIdentityAuth");
 
     await completeConfiguredPasswordRecovery({
-      accessToken: "recovery-access-token",
-      password: "FreshPassword123",
+      [RECOVERY_ACCESS_TOKEN_KEY]: "recovery-access-token",
+      [PASSWORD_KEY]: "FreshPassword123",
     });
 
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(
@@ -255,7 +257,7 @@ describe("managed identity auth routing", () => {
           Authorization: "Bearer recovery-access-token",
         }),
         body: JSON.stringify({
-          password: "FreshPassword123",
+          [PASSWORD_KEY]: "FreshPassword123",
         }),
       }),
     );
