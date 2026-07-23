@@ -7,6 +7,7 @@ import base64
 import getpass
 import json
 import os
+import subprocess  # nosec B404
 import sys
 import time
 import urllib.error
@@ -793,6 +794,15 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     restore_drill_verify_parser.add_argument(
+        "--clipboard-session-tokens",
+        action="store_true",
+        help=(
+            "Prompt the operator to copy owner and non-owner Aevryn session tokens "
+            "to the clipboard one at a time instead of reading those two tokens "
+            "from environment variables."
+        ),
+    )
+    restore_drill_verify_parser.add_argument(
         "--project-id",
         required=True,
         help="Restore drill project ID created before the restore point.",
@@ -1484,9 +1494,21 @@ def _handle_restore_drill_verify(args: argparse.Namespace) -> None:
     if not cloud_run_identity_token_env:
         raise ValueError("--cloud-run-identity-token-env cannot be blank.")
     prompt_session_tokens = cast(bool, args.prompt_session_tokens)
+    clipboard_session_tokens = cast(bool, args.clipboard_session_tokens)
+    if prompt_session_tokens and clipboard_session_tokens:
+        raise ValueError(
+            "--prompt-session-tokens and --clipboard-session-tokens cannot both be used."
+        )
     if prompt_session_tokens:
         owner_bearer_token = _prompt_hidden_value("Paste owner Aevryn session token")
         other_bearer_token = _prompt_hidden_value("Paste non-owner Aevryn session token")
+    elif clipboard_session_tokens:
+        owner_bearer_token = _prompt_clipboard_value(
+            "Copy the owner Aevryn session token to the clipboard"
+        )
+        other_bearer_token = _prompt_clipboard_value(
+            "Copy the non-owner Aevryn session token to the clipboard"
+        )
     else:
         owner_bearer_token = _required_process_env_value(owner_bearer_token_env)
         other_bearer_token = _required_process_env_value(other_bearer_token_env)
@@ -1597,6 +1619,31 @@ def _prompt_hidden_value(prompt: str) -> str:
     if not value:
         raise ValueError(f"{prompt} cannot be blank.")
     return value
+
+
+def _prompt_clipboard_value(prompt: str) -> str:
+    """Read a required value from the operator clipboard without logging it."""
+    input(f"{prompt}, then press Enter. Do not paste it here: ")
+    value = _read_clipboard_text().strip()
+    if not value:
+        raise ValueError("Clipboard token value cannot be blank.")
+    return value
+
+
+def _read_clipboard_text() -> str:
+    """Return text from the local clipboard without printing it."""
+    if os.name != "nt":
+        raise RuntimeError(
+            "--clipboard-session-tokens currently requires Windows PowerShell."
+        )
+    result = subprocess.run(  # nosec B603 B607
+        ["powershell.exe", "-NoProfile", "-Command", "Get-Clipboard -Raw"],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    return result.stdout
 
 
 def _run_project_database_smoke(

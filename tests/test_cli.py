@@ -1105,6 +1105,74 @@ def test_restore_drill_verify_can_prompt_for_session_tokens(
     assert "other-token" not in captured.err
 
 
+def test_restore_drill_verify_can_read_session_tokens_from_clipboard(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill verifier should support clipboard tokens for Windows drills."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.delenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", raising=False)
+    monkeypatch.delenv("AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN", raising=False)
+    clipboard_values = iter(("owner-token", "other-token"))
+
+    def fake_input(prompt: str) -> str:
+        assert "Do not paste it here" in prompt
+        return ""
+
+    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setattr(
+        "aevryn.cli._read_clipboard_text",
+        lambda: next(clipboard_values),
+    )
+
+    exit_code = main(
+        [
+            "restore-drill-verify",
+            "--clipboard-session-tokens",
+            "--project-id",
+            "project_restore",
+            "--active-story-id",
+            "story_active",
+            "--disposable-story-id",
+            "story_deleted",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "requires an isolated API URL" in captured.err
+    assert "owner-token" not in captured.out
+    assert "other-token" not in captured.out
+    assert "owner-token" not in captured.err
+    assert "other-token" not in captured.err
+
+
+def test_restore_drill_verify_rejects_combined_interactive_token_modes(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill verifier should fail closed when token input modes conflict."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+
+    exit_code = main(
+        [
+            "restore-drill-verify",
+            "--prompt-session-tokens",
+            "--clipboard-session-tokens",
+            "--project-id",
+            "project_restore",
+            "--active-story-id",
+            "story_active",
+            "--disposable-story-id",
+            "story_deleted",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "cannot both be used" in captured.err
+
+
 def test_restore_drill_verify_checks_api_boundaries_without_printing_private_data(
     capsys: CaptureFixture[str],
     monkeypatch: MonkeyPatch,
