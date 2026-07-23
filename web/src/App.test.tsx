@@ -1854,6 +1854,51 @@ describe("App shell routing", () => {
     expect(screen.queryByRole("link", { name: /Temporary Project/ })).not.toBeInTheDocument();
   });
 
+  it("shows a pending project row while project creation is in flight", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(API_PATHS.projects) && init?.method !== "POST") {
+          return Promise.resolve(new Response(JSON.stringify({ projects: [] })));
+        }
+        if (url.endsWith(API_PATHS.projects) && init?.method === "POST") {
+          return new Promise<Response>(() => {});
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    const input = await screen.findByLabelText("Project name");
+    await user.clear(input);
+    await user.type(input, "Fast Feedback Test");
+    await user.click(screen.getByRole("button", { name: "Create project" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Creating workspace for Fast Feedback Test.",
+    );
+    expect(screen.getByText("Fast Feedback Test")).toBeInTheDocument();
+    expect(screen.getByText("Creating workspace")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Creating..." })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+  });
+
   it("creates and opens a project", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
