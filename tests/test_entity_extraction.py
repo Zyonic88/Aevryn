@@ -238,6 +238,104 @@ class BadConfidenceExtractor:
         )
 
 
+class MisclassifiedSkillExtractor:
+    """Extractor that labels a concrete object as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious item/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_t3_blizzard_blueprint",
+                    entity_type="skill",
+                    display_name=(
+                        "T3 Blizzard-class Light Interstellar Battlecruiser "
+                        "technical blueprint"
+                    ),
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.95,
+                ),
+            ),
+        )
+
+
+class ValidSkillExtractor:
+    """Extractor that labels a named ability as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid skill candidate."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_eye_of_insight",
+                    entity_type="skill",
+                    display_name="Eye of Insight technique",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.93,
+                ),
+            ),
+        )
+
+
+class MisclassifiedSystemExtractor:
+    """Extractor that labels a concrete object as a system."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious item/system classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="system_starship_blueprint",
+                    entity_type="system",
+                    display_name="Starship blueprint",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.95,
+                ),
+            ),
+        )
+
+
+class ValidSystemExtractor:
+    """Extractor that labels a named interface/mechanic as a system."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid system candidate."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="system_super_starfleet",
+                    entity_type="system",
+                    display_name="Super Starfleet System interface",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
+class MismatchedEntityPrefixExtractor:
+    """Extractor that contradicts its entity ID prefix."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an entity whose ID prefix and type disagree."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_fireball",
+                    entity_type="skill",
+                    display_name="Fireball",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
 class WrongSceneIdExtractor:
     """Extractor that returns candidates under the wrong scene ID."""
 
@@ -426,6 +524,73 @@ def test_extraction_rejects_invalid_confidence() -> None:
     engine = EntityExtractionEngine(extractor=BadConfidenceExtractor())
 
     with pytest.raises(ValueError, match="confidence"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_obvious_physical_object_as_skill() -> None:
+    """Concrete objects must not be accepted as skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSkillExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_explicit_skill_terms() -> None:
+    """Named techniques remain valid skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidSkillExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_id == "skill_eye_of_insight"
+
+
+def test_extraction_rejects_obvious_physical_object_as_system() -> None:
+    """Concrete objects must not be accepted as system entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSystemExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be system"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_explicit_system_terms() -> None:
+    """Named interfaces remain valid system entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidSystemExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_id == "system_super_starfleet"
+
+
+def test_extraction_rejects_entity_type_prefix_mismatch() -> None:
+    """Entity IDs and entity types must not contradict each other."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MismatchedEntityPrefixExtractor())
+
+    with pytest.raises(ValueError, match="entity ID prefix"):
         engine.extract_imported_source(imported)
 
 

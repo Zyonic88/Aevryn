@@ -21,6 +21,72 @@ logger = logging.getLogger(__name__)
 
 UnknownAnchorPolicy = Literal["raise", "reject_candidate"]
 
+PHYSICAL_ENTITY_TERMS = frozenset(
+    {
+        "armor",
+        "artifact",
+        "battlecruiser",
+        "blade",
+        "blueprint",
+        "book",
+        "car",
+        "coin",
+        "credits",
+        "cruiser",
+        "dagger",
+        "equipment",
+        "facility",
+        "gun",
+        "hangar",
+        "jacket",
+        "manual",
+        "potion",
+        "rifle",
+        "room",
+        "ship",
+        "shuttle",
+        "spaceship",
+        "spear",
+        "starship",
+        "sword",
+        "token",
+        "uniform",
+        "vehicle",
+        "vessel",
+        "weapon",
+    }
+)
+SKILL_ENTITY_TERMS = frozenset(
+    {
+        "ability",
+        "art",
+        "cast",
+        "spell",
+        "skill",
+        "technique",
+    }
+)
+SYSTEM_ENTITY_TERMS = frozenset(
+    {
+        "interface",
+        "panel",
+        "system",
+    }
+)
+ENTITY_ID_TYPE_PREFIXES = {
+    "armor": "armor",
+    "building": "building",
+    "character": "character",
+    "creature": "creature",
+    "item": "item",
+    "location": "location",
+    "organization": "organization",
+    "skill": "skill",
+    "system": "system",
+    "vehicle": "vehicle",
+    "weapon": "weapon",
+}
+
 
 class SceneExtractor(Protocol):
     """Protocol for AI or test extractors."""
@@ -321,6 +387,68 @@ class EntityExtractionEngine:
         if entity.evidence_anchor_id not in allowed_anchor_ids:
             raise ValueError(f"Unknown evidence anchor: {entity.evidence_anchor_id}")
         EntityExtractionEngine._validate_confidence(entity.confidence)
+        classification_error = EntityExtractionEngine._entity_classification_error(entity)
+        if classification_error is not None:
+            raise ValueError(classification_error)
+
+    @staticmethod
+    def _entity_classification_error(entity: ExtractedEntity) -> str | None:
+        """Return a deterministic error for obvious entity classification conflicts."""
+        expected_type = EntityExtractionEngine._expected_type_from_entity_id(entity.entity_id)
+        if expected_type is not None and expected_type != entity.entity_type:
+            return (
+                "Entity classification conflicts with entity ID prefix: "
+                f"{entity.entity_id} is {entity.entity_type}, expected {expected_type}."
+            )
+
+        classification_terms = EntityExtractionEngine._classification_terms(entity)
+        physical_terms = classification_terms & PHYSICAL_ENTITY_TERMS
+        skill_terms = classification_terms & SKILL_ENTITY_TERMS
+        system_terms = classification_terms & SYSTEM_ENTITY_TERMS
+        if entity.entity_type == "skill" and physical_terms and not skill_terms:
+            return (
+                "Entity classification conflict: physical object cannot be skill: "
+                f"{entity.display_name}."
+            )
+        if entity.entity_type == "system" and physical_terms and not system_terms:
+            return (
+                "Entity classification conflict: physical object cannot be system: "
+                f"{entity.display_name}."
+            )
+        if (
+            entity.entity_type in {"item", "weapon", "armor", "vehicle"}
+            and skill_terms
+            and not physical_terms
+        ):
+            return (
+                "Entity classification conflict: usable ability cannot be physical item: "
+                f"{entity.display_name}."
+            )
+        return None
+
+    @staticmethod
+    def _expected_type_from_entity_id(entity_id: str) -> str | None:
+        """Return expected entity type from a conventional entity ID prefix."""
+        prefix = entity_id.split("_", maxsplit=1)[0]
+        return ENTITY_ID_TYPE_PREFIXES.get(prefix)
+
+    @staticmethod
+    def _classification_terms(entity: ExtractedEntity) -> set[str]:
+        """Return lowercase tokens used for deterministic classification checks."""
+        raw_text = entity.display_name
+        tokens = {
+            token
+            for token in "".join(
+                character.lower() if character.isalnum() else " "
+                for character in raw_text
+            ).split()
+            if token
+        }
+        if "battle" in tokens and "cruiser" in tokens:
+            tokens.add("battlecruiser")
+        if "star" in tokens and "ship" in tokens:
+            tokens.add("starship")
+        return tokens
 
     @staticmethod
     def _validate_relationship(
