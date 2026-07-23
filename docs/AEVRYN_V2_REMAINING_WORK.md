@@ -245,8 +245,8 @@ Remaining hardening:
 * confirm prompts include enough scene-specific action, setting, character, and object context
 * ensure prompts do not include raw manuscript prose
 * ensure prompts do not expose evidence anchors, import bundle IDs, source IDs, or internal placeholders
-* keep prompt bodies collapsed by default
-* make copy/export affordances obvious
+* ~~keep prompt bodies collapsed by default~~
+* ~~make copy/export affordances obvious~~
 * keep production-batching out of V2 unless explicitly re-scoped
 
 Verified hardening:
@@ -261,6 +261,9 @@ Verified hardening:
   prompt body without calling a backend export path
 * verified with prompt-download unit tests, focused prompt workspace test, full
   frontend test suite, lint, and production build
+* prompt bodies are collapsed by default and expose bounded previews before expansion
+* verified with focused prompt scene-picker test and prompt-download/readable-output
+  unit tests
 
 Acceptance:
 
@@ -415,15 +418,27 @@ Users can recover from expired sessions and forgotten passwords without CLI inte
 Status:
 
 ```text
-Minimal for V2
+Verified for V2; hosted browser validation remains
 ```
 
 Remaining hardening:
 
-* project settings remain the only editable V2 settings surface
-* workspace, account, privacy, and diagnostics sections are read-only/contextual in V2
-* broad profile personalization remains V3+ unless explicitly re-scoped
-* current Settings page must not imply nonexistent personalization or workflow controls
+* ~~project settings remain the only editable V2 settings surface~~
+* ~~workspace, account, privacy, and diagnostics sections are read-only/contextual in V2~~
+* ~~broad profile personalization remains V3+ unless explicitly re-scoped~~
+* ~~current Settings page must not imply nonexistent personalization or workflow controls~~
+* run hosted browser validation against the current Settings page
+
+Verified hardening:
+
+* Settings page separates editable project defaults from read-only workspace,
+  account, privacy, and diagnostics context
+* Account settings identify the managed identity provider and keep broad profile
+  editing on the finished website account surface
+* Privacy settings state that uploaded stories remain creator-owned and AI
+  training is off by default with no live training pipeline active
+* diagnostics remain collapsed and token/session details are not rendered
+* verified with focused Settings workspace test, lint, and production build
 
 Acceptance:
 
