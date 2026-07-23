@@ -1067,6 +1067,44 @@ def test_restore_drill_verify_rejects_public_api_domain_by_default(
     assert "owner-token" not in captured.err
 
 
+def test_restore_drill_verify_can_prompt_for_session_tokens(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Restore drill verifier should support hidden interactive session tokens."""
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.delenv("AEVRYN_RESTORE_DRILL_BEARER_TOKEN", raising=False)
+    monkeypatch.delenv("AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN", raising=False)
+    prompted_values = iter(("owner-token", "other-token"))
+
+    def fake_prompt(prompt: str) -> str:
+        assert "session token" in prompt
+        return next(prompted_values)
+
+    monkeypatch.setattr("aevryn.cli.getpass.getpass", fake_prompt)
+
+    exit_code = main(
+        [
+            "restore-drill-verify",
+            "--prompt-session-tokens",
+            "--project-id",
+            "project_restore",
+            "--active-story-id",
+            "story_active",
+            "--disposable-story-id",
+            "story_deleted",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "requires an isolated API URL" in captured.err
+    assert "owner-token" not in captured.out
+    assert "other-token" not in captured.out
+    assert "owner-token" not in captured.err
+    assert "other-token" not in captured.err
+
+
 def test_restore_drill_verify_checks_api_boundaries_without_printing_private_data(
     capsys: CaptureFixture[str],
     monkeypatch: MonkeyPatch,

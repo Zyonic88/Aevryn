@@ -232,16 +232,22 @@ Run the restored API ownership and deletion boundary verification against an
 isolated API target:
 
 ```powershell
-python -m aevryn.cli restore-drill-verify --project-id <project_id> --active-story-id <active_story_id> --disposable-story-id <disposable_story_id> --import-id <import_id> --export-id <export_id>
+python -m aevryn.cli restore-drill-verify --prompt-session-tokens --project-id <project_id> --active-story-id <active_story_id> --disposable-story-id <disposable_story_id> --import-id <import_id> --export-id <export_id>
 ```
 
 Required local environment values:
 
 * `AEVRYN_PUBLIC_API_BASE_URL` pointing at the isolated restore API target
-* `AEVRYN_RESTORE_DRILL_BEARER_TOKEN` for the restore-test owner
-* `AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN` for a non-owner user
+* `AEVRYN_RESTORE_DRILL_BEARER_TOKEN` for the restore-test owner, unless
+  `--prompt-session-tokens` is used
+* `AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN` for a non-owner user, unless
+  `--prompt-session-tokens` is used
 * `AEVRYN_RESTORE_DRILL_CLOUD_RUN_IDENTITY_TOKEN` when the isolated restore API
   is a private Cloud Run service
+
+Use `--prompt-session-tokens` for manual restore drills. It prompts for the
+owner and non-owner Aevryn session tokens without echoing them, avoids storing
+those tokens in PowerShell history, and keeps the verifier output metadata-only.
 
 The command fails closed when pointed at `https://api.aevryn.ai` unless
 `--allow-public-api-domain` is explicitly supplied. Do not use that override for

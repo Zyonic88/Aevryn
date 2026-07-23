@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import getpass
 import json
 import os
 import sys
@@ -784,6 +785,14 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     restore_drill_verify_parser.add_argument(
+        "--prompt-session-tokens",
+        action="store_true",
+        help=(
+            "Prompt for owner and non-owner Aevryn session tokens without echoing "
+            "them instead of reading those two tokens from environment variables."
+        ),
+    )
+    restore_drill_verify_parser.add_argument(
         "--project-id",
         required=True,
         help="Restore drill project ID created before the restore point.",
@@ -1474,11 +1483,18 @@ def _handle_restore_drill_verify(args: argparse.Namespace) -> None:
         raise ValueError("--other-bearer-token-env cannot be blank.")
     if not cloud_run_identity_token_env:
         raise ValueError("--cloud-run-identity-token-env cannot be blank.")
+    prompt_session_tokens = cast(bool, args.prompt_session_tokens)
+    if prompt_session_tokens:
+        owner_bearer_token = _prompt_hidden_value("Paste owner Aevryn session token")
+        other_bearer_token = _prompt_hidden_value("Paste non-owner Aevryn session token")
+    else:
+        owner_bearer_token = _required_process_env_value(owner_bearer_token_env)
+        other_bearer_token = _required_process_env_value(other_bearer_token_env)
 
     summary = _run_restore_drill_verify(
         api_url=_required_process_env_value(api_url_env),
-        owner_bearer_token=_required_process_env_value(owner_bearer_token_env),
-        other_bearer_token=_required_process_env_value(other_bearer_token_env),
+        owner_bearer_token=str(owner_bearer_token),
+        other_bearer_token=str(other_bearer_token),
         cloud_run_identity_token=os.environ.get(cloud_run_identity_token_env, ""),
         project_id=cast(str, args.project_id),
         active_story_id=cast(str, args.active_story_id),
@@ -1572,6 +1588,14 @@ def _required_process_env_value(key: str) -> str:
     value = os.environ.get(key, "").strip()
     if not value:
         raise ValueError(f"{key} is required in the process environment.")
+    return value
+
+
+def _prompt_hidden_value(prompt: str) -> str:
+    """Prompt for a required value without echoing or logging it."""
+    value = getpass.getpass(f"{prompt}: ").strip()
+    if not value:
+        raise ValueError(f"{prompt} cannot be blank.")
     return value
 
 

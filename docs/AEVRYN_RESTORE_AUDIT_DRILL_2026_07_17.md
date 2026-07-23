@@ -369,7 +369,7 @@ The restored API boundary verification command is:
 
 ```powershell
 python -m aevryn.cli restore-api-config-check
-python -m aevryn.cli restore-drill-verify --project-id <project_id> --active-story-id <active_story_id> --disposable-story-id <disposable_story_id> --import-id <import_id> --export-id <export_id>
+python -m aevryn.cli restore-drill-verify --prompt-session-tokens --project-id <project_id> --active-story-id <active_story_id> --disposable-story-id <disposable_story_id> --import-id <import_id> --export-id <export_id>
 ```
 
 The restore API config preflight must report
