@@ -851,7 +851,13 @@ class CanonPromptBuilder:
         card: CanonCharacterCard,
         scene_fact_keys: dict[str, set[tuple[str, str]]],
     ) -> list[str]:
-        """Return character fact lines."""
+        """Return character fact lines for prompt context.
+
+        Stable visual identity facts come from the character card even when they
+        were established in an earlier scene. Other facts remain scene-relevant
+        so production prompts preserve appearance without replaying the whole
+        character sheet.
+        """
         relevant_fact_keys = scene_fact_keys.get(card.character_id, set())
         lines = (
             (
@@ -860,7 +866,10 @@ class CanonPromptBuilder:
                 f"{CanonPromptBuilder._shorten(fact.value)}"
             )
             for fact in sorted(card.facts, key=lambda fact: fact.attribute)
-            if (fact.attribute, fact.value) in relevant_fact_keys
+            if (
+                (fact.attribute, fact.value) in relevant_fact_keys
+                or CanonPromptBuilder._is_appearance_attribute(fact.attribute)
+            )
             and not CanonPromptBuilder._is_prompt_metadata_attribute(fact.attribute)
         )
         return CanonPromptBuilder._unique_values(lines)
@@ -868,8 +877,16 @@ class CanonPromptBuilder:
     @staticmethod
     def _is_appearance_attribute(line: str) -> bool:
         """Return whether a prompt fact line describes visible appearance."""
-        normalized_line = line.lower()
-        return any(part in normalized_line for part in APPEARANCE_ATTRIBUTE_PARTS)
+        tokens = tuple(
+            token
+            for token in re.split(r"[^a-z0-9]+", line.lower())
+            if token
+        )
+        return any(
+            token == part or token.startswith(part)
+            for token in tokens
+            for part in APPEARANCE_ATTRIBUTE_PARTS
+        )
 
     @staticmethod
     def _is_prompt_metadata_attribute(attribute: str) -> bool:
