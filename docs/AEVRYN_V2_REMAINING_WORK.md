@@ -435,7 +435,7 @@ Mostly hardened
 
 Remaining hardening:
 
-* verify multi-file import remains stable with 10-chapter and larger imports
+* ~~verify multi-file import remains stable with 10-chapter and larger imports~~
 * ~~verify duplicate processing submissions are blocked~~
 * ~~verify stuck jobs do not block future imports forever~~
 * ~~keep progress stepper accurate and API-provided~~
@@ -455,6 +455,9 @@ Verified hardening:
 * deferred source formats, source-format API failures, oversized pasted imports,
   and failed re-inspection paths show user-facing explanations and avoid stale
   import-structure output
+* synthetic 10-chapter browser-style import bundles inspect and persist
+  metadata counts and stored source bytes without leaking source sentences in
+  the inspect response
 
 Acceptance:
 
