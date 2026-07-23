@@ -4076,9 +4076,20 @@ def _snapshot_section_or_unknown(
     if not section_payload:
         return OutputSection(title=title, items=("Unknown",))
     try:
-        return _section_from_payload(section_payload, display_names=display_names)
+        section = _section_from_payload(section_payload, display_names=display_names)
     except (ValueError, ValidationError):
         return OutputSection(title=title, items=("Unknown",))
+    if key == "gender":
+        return _resolved_snapshot_gender_section(section)
+    return section
+
+
+def _resolved_snapshot_gender_section(section: OutputSection) -> OutputSection:
+    """Hide contradictory persisted gender values from human profile output."""
+    normalized_items = {item.lower() for item in section.items}
+    if {"male", "female"}.issubset(normalized_items):
+        return OutputSection(title=section.title, items=("Unknown",))
+    return section
 
 
 def _section_from_payload(

@@ -2510,6 +2510,69 @@ def test_project_outputs_humanize_legacy_presentation_machine_ids() -> None:
     assert "Aevryn Import Bundle" not in response.text
 
 
+def test_project_outputs_hide_persisted_conflicting_gender_values() -> None:
+    """Stored profile payloads should never display contradictory gender values."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    snapshot_payload = _legacy_machine_id_snapshot_payload()
+    characters = snapshot_payload["presentation"]["characters"]  # type: ignore[index]
+    assert isinstance(characters, list)
+    characters[0]["gender"] = {"title": "Gender", "items": ["Male", "Female"]}
+    repository.record_import(
+        ImportRecord(
+            import_id="import_alpha",
+            story_id="story_alpha",
+            source_id="source_alpha",
+            filename="chapter_001.txt",
+            source_format="txt",
+            storage_ref="storage://projects/project_alpha/imports/import_alpha/source.txt",
+            chapter_count=1,
+            scene_count=1,
+            evidence_anchor_count=1,
+            created_at=NOW,
+        )
+    )
+    repository.record_engine_run(
+        EngineRunRecord(
+            run_id="run_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="succeeded",
+            engine_version="aevryn_v1",
+            started_at=NOW,
+            status_updated_at=SOON,
+            finished_at=SOON,
+        )
+    )
+    repository.store_snapshot(
+        SnapshotRecord(
+            snapshot_id="snapshot_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            run_id="run_alpha",
+            snapshot_kind="canon",
+            content_type="application/json",
+            serialized_output=json.dumps(snapshot_payload),
+            created_at=SOON,
+        )
+    )
+
+    response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["character_profiles"][0]["gender"]["items"] == ["Unknown"]
+    assert '"items":["Male","Female"]' not in response.text
+
+
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:
     """Worker processing should not fabricate snapshots without source bytes."""
     repository = InMemoryProjectRepository()
