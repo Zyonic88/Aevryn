@@ -137,6 +137,16 @@ When a sentence contains an ambiguity cue, Aevryn should preserve the source
 term or route it through glossary review instead of selecting a translation by
 default.
 
+For V2, Translation Foundation consumes sentence ambiguity as review metadata.
+If a sentence marks `dao`, `qi`, `core`, `system`, or another compact cue as
+ambiguous, the Translation Engine records a review issue tied to the original
+evidence anchor. If a glossary term already requires review for that source
+term, the glossary issue remains the single authority and duplicate sentence
+issues are suppressed.
+
+Sentence Understanding never sends a second copy of the source sentence into
+Translation. It sends only the compact metadata required for review routing.
+
 ## Extraction Support
 
 Sentence Understanding can help extraction focus on what each sentence is

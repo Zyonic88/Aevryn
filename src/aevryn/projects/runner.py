@@ -46,6 +46,7 @@ from aevryn.translation import (
     GlossaryTerm,
     TranslatedUnit,
     TranslationEngine,
+    TranslationSentenceUnderstanding,
     TranslationUnit,
 )
 from aevryn.world import WorldState, WorldStateBuilder
@@ -423,6 +424,9 @@ class AevrynProjectRunner:
         """Build Translation Foundation units without changing source structure."""
         requested_scene_ids = {scene_id} if scene_id is not None else None
         units: list[TranslationUnit] = []
+        sentence_understanding_by_scene = _translation_sentence_understanding_by_scene(
+            imported_source
+        )
         for chapter in imported_source.story.chapters:
             for scene in chapter.scenes:
                 if requested_scene_ids is not None and scene.scene_id not in requested_scene_ids:
@@ -437,6 +441,10 @@ class AevrynProjectRunner:
                         unit_id=f"translation_{scene.scene_id}",
                         source_text="\n\n".join(scene.paragraphs),
                         evidence_anchor_ids=tuple(anchor.anchor_id for anchor in anchors),
+                        sentence_understanding=sentence_understanding_by_scene.get(
+                            scene.scene_id,
+                            (),
+                        ),
                         source_chapter_id=chapter.chapter_id,
                         source_scene_id=scene.scene_id,
                     )
@@ -1183,6 +1191,35 @@ def _sentence_understanding_for_scene(
             imported_source
         )
         if understanding.source_scene_id == scene_id
+    )
+
+
+def _translation_sentence_understanding_by_scene(
+    imported_source: ImportedSource,
+) -> dict[str, tuple[TranslationSentenceUnderstanding, ...]]:
+    """Return translation-safe sentence-understanding metadata by scene."""
+    grouped: dict[str, list[TranslationSentenceUnderstanding]] = {}
+    for understanding in SentenceUnderstandingEngine().analyze_imported_source(
+        imported_source
+    ):
+        grouped.setdefault(understanding.source_scene_id, []).append(
+            _translation_sentence_understanding(understanding)
+        )
+    return {
+        scene_id: tuple(scene_understanding)
+        for scene_id, scene_understanding in grouped.items()
+    }
+
+
+def _translation_sentence_understanding(
+    understanding: SentenceUnderstanding,
+) -> TranslationSentenceUnderstanding:
+    """Convert sentence understanding to translation-facing metadata."""
+    return TranslationSentenceUnderstanding(
+        evidence_anchor_id=understanding.evidence_anchor_id,
+        signals=understanding.signals,
+        ambiguity_terms=understanding.ambiguity_terms,
+        review_required=understanding.review_required,
     )
 
 

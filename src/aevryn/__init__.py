@@ -152,6 +152,7 @@ from aevryn.translation import (
     TranslatedUnit,
     TranslationEngine,
     TranslationIssue,
+    TranslationSentenceUnderstanding,
     TranslationUnit,
 )
 from aevryn.world import WorldEntityFact, WorldEntityState, WorldState, WorldStateBuilder
@@ -287,6 +288,7 @@ __all__ = [
     "TranslatedUnit",
     "TranslationEngine",
     "TranslationIssue",
+    "TranslationSentenceUnderstanding",
     "TranslationUnit",
     "UnknownEntityError",
     "WorldEntityFact",

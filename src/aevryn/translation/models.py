@@ -19,6 +19,17 @@ TranslationTermKind = Literal[
     "skill",
     "power_system",
 ]
+TranslationSentenceSignal = Literal[
+    "dialogue",
+    "action",
+    "description",
+    "identity_reference",
+    "relationship_reference",
+    "item_reference",
+    "skill_reference",
+    "system_reference",
+    "translation_ambiguity",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +72,7 @@ class TranslationUnit:
     unit_id: str
     source_text: str
     evidence_anchor_ids: tuple[str, ...]
+    sentence_understanding: tuple[TranslationSentenceUnderstanding, ...] = ()
     source_language: str = "auto"
     target_language: str = "en"
     source_chapter_id: str = ""
@@ -77,6 +89,10 @@ class TranslationUnit:
             self.evidence_anchor_ids,
             "Translation unit evidence anchor IDs",
         )
+        _require_sentence_understanding_links(
+            self.sentence_understanding,
+            self.evidence_anchor_ids,
+        )
         _require_language_token(self.source_language, "Translation source language")
         _require_language_token(self.target_language, "Translation target language")
         if self.source_chapter_id:
@@ -86,6 +102,31 @@ class TranslationUnit:
             )
         if self.source_scene_id:
             _require_machine_token(self.source_scene_id, "Translation source scene ID")
+
+
+@dataclass(frozen=True, slots=True)
+class TranslationSentenceUnderstanding:
+    """Metadata-only sentence signals available to translation review."""
+
+    evidence_anchor_id: str
+    signals: tuple[TranslationSentenceSignal, ...]
+    ambiguity_terms: tuple[str, ...] = ()
+    review_required: bool = False
+
+    def __post_init__(self) -> None:
+        _require_machine_token(
+            self.evidence_anchor_id,
+            "Translation sentence understanding evidence anchor ID",
+        )
+        _require_unique_sentence_signals(self.signals)
+        object.__setattr__(
+            self,
+            "ambiguity_terms",
+            _normalized_unique_terms(
+                self.ambiguity_terms,
+                "Translation sentence understanding ambiguity terms",
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,6 +220,16 @@ def _normalized_text_values(values: tuple[str, ...], field_name: str) -> tuple[s
     return normalized_values
 
 
+def _normalized_unique_terms(values: tuple[str, ...], field_name: str) -> tuple[str, ...]:
+    """Normalize optional compact term metadata."""
+    if not isinstance(values, tuple):
+        raise ValueError(f"{field_name} must be a tuple.")
+    normalized_values = tuple(_normalized_text(value, field_name) for value in values)
+    if len(normalized_values) != len({value.casefold() for value in normalized_values}):
+        raise ValueError(f"{field_name} must be unique.")
+    return normalized_values
+
+
 def _require_machine_token(value: str, field_name: str) -> None:
     """Validate a required whitespace-free machine token."""
     _normalized_text(value, field_name)
@@ -196,6 +247,51 @@ def _require_unique_machine_tokens(values: tuple[str, ...], field_name: str) -> 
         _require_machine_token(value, field_name)
     if len(values) != len(set(values)):
         raise ValueError(f"{field_name} must be unique.")
+
+
+def _require_unique_sentence_signals(
+    values: tuple[TranslationSentenceSignal, ...],
+) -> None:
+    """Validate sentence signals available to translation."""
+    if not isinstance(values, tuple):
+        raise ValueError("Translation sentence understanding signals must be a tuple.")
+    if not values:
+        raise ValueError("Translation sentence understanding signals are required.")
+    valid_signals = {
+        "dialogue",
+        "action",
+        "description",
+        "identity_reference",
+        "relationship_reference",
+        "item_reference",
+        "skill_reference",
+        "system_reference",
+        "translation_ambiguity",
+    }
+    for value in values:
+        if value not in valid_signals:
+            raise ValueError("Translation sentence understanding signal is invalid.")
+    if len(values) != len(set(values)):
+        raise ValueError("Translation sentence understanding signals must be unique.")
+
+
+def _require_sentence_understanding_links(
+    values: tuple[TranslationSentenceUnderstanding, ...],
+    evidence_anchor_ids: tuple[str, ...],
+) -> None:
+    """Validate translation sentence metadata against unit evidence anchors."""
+    if not isinstance(values, tuple):
+        raise ValueError("Translation unit sentence understanding must be a tuple.")
+    seen_anchor_ids: set[str] = set()
+    allowed_anchor_ids = set(evidence_anchor_ids)
+    for understanding in values:
+        if understanding.evidence_anchor_id in seen_anchor_ids:
+            raise ValueError("Translation unit sentence understanding anchors must be unique.")
+        seen_anchor_ids.add(understanding.evidence_anchor_id)
+        if understanding.evidence_anchor_id not in allowed_anchor_ids:
+            raise ValueError(
+                "Translation unit sentence understanding anchors must match evidence anchors."
+            )
 
 
 def _require_language_token(value: str, field_name: str) -> None:

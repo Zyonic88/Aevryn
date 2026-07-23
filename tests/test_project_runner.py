@@ -61,6 +61,22 @@ def single_chapter_source_file() -> Path:
     return path
 
 
+def ambiguous_translation_source_file() -> Path:
+    """Create a one-chapter source file with translation ambiguity cues."""
+    path = Path("build") / "test_project_runner" / "ambiguous_translation.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(
+            [
+                "Chapter 1",
+                "Charlotte studied the dao core.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def two_scene_source_file() -> Path:
     """Create a one-chapter source file with two explicit scenes."""
     path = Path("build") / "test_project_runner" / "two_scene_chapter.txt"
@@ -230,6 +246,34 @@ def test_runner_feeds_translation_normalized_text_to_extraction() -> None:
     assert result.translation_units[0].normalized_text == "Mark bought an Iron Blade."
     assert result.translation_units[0].source_scene_id == "demo_chapter_001_scene_001"
     assert result.extraction_results[0].scene_id == "demo_chapter_001_scene_001"
+
+
+def test_runner_feeds_sentence_ambiguity_to_translation_review() -> None:
+    """Project translation units should receive sentence ambiguity metadata."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=ambiguous_translation_source_file(),
+        source_id="demo",
+    )
+
+    result = runner.run_imported_source(
+        imported_source=imported_source,
+        extractor=EmptyExtractor(),
+    )
+
+    assert result.translation_units[0].normalized_text == "Charlotte studied the dao core."
+    assert tuple(issue.source_term for issue in result.translation_units[0].issues) == (
+        "core",
+        "dao",
+    )
+    assert all(
+        issue.issue_code == "translation_sentence_ambiguity"
+        for issue in result.translation_units[0].issues
+    )
+    assert all(
+        issue.evidence_anchor_ids
+        for issue in result.translation_units[0].issues
+    )
 
 
 def test_runner_builds_phase12_translation_and_identity_metadata() -> None:
