@@ -94,6 +94,54 @@ ROLE_OR_TITLE_ENTITY_TERMS = frozenset(
         "teacher",
     }
 )
+ANONYMOUS_GROUP_CHARACTER_TERMS = frozenset(
+    {
+        "beastmen",
+        "boys",
+        "crew",
+        "girls",
+        "guards",
+        "men",
+        "people",
+        "recruits",
+        "servants",
+        "slaves",
+        "soldiers",
+        "students",
+        "troops",
+        "women",
+    }
+)
+SINGULAR_CHARACTER_REFERENCE_TERMS = frozenset(
+    {
+        "boy",
+        "brother",
+        "captain",
+        "commander",
+        "daughter",
+        "father",
+        "girl",
+        "guard",
+        "husband",
+        "man",
+        "member",
+        "mother",
+        "officer",
+        "person",
+        "prince",
+        "princess",
+        "queen",
+        "recruit",
+        "sister",
+        "slave",
+        "soldier",
+        "son",
+        "student",
+        "teacher",
+        "wife",
+        "woman",
+    }
+)
 ENTITY_ID_TYPE_PREFIXES = {
     "armor": "armor",
     "building": "building",
@@ -464,6 +512,19 @@ class EntityExtractionEngine:
         skill_terms = classification_terms & SKILL_ENTITY_TERMS
         system_terms = classification_terms & SYSTEM_ENTITY_TERMS
         role_or_title_terms = classification_terms & ROLE_OR_TITLE_ENTITY_TERMS
+        anonymous_group_terms = classification_terms & ANONYMOUS_GROUP_CHARACTER_TERMS
+        singular_reference_terms = (
+            classification_terms & SINGULAR_CHARACTER_REFERENCE_TERMS
+        )
+        if (
+            entity.entity_type == "character"
+            and anonymous_group_terms
+            and not singular_reference_terms
+        ):
+            return (
+                "Entity classification conflict: anonymous group phrase cannot be "
+                f"character: {entity.display_name}."
+            )
         if entity.entity_type == "skill" and physical_terms and not skill_terms:
             return (
                 "Entity classification conflict: physical object cannot be skill: "

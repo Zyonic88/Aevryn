@@ -361,6 +361,44 @@ class ValidSystemExtractor:
         )
 
 
+class AnonymousGroupCharacterExtractor:
+    """Extractor that labels an anonymous group phrase as a character."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious group/character classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_female_soldiers",
+                    entity_type="character",
+                    display_name="Female Soldiers",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
+class SingularUnnamedCharacterExtractor:
+    """Extractor that labels a singular unnamed person reference as a character."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid singular unnamed character candidate."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_unnamed_female_crew_member",
+                    entity_type="character",
+                    display_name="Unnamed female crew member",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.88,
+                ),
+            ),
+        )
+
+
 class MismatchedEntityPrefixExtractor:
     """Extractor that contradicts its entity ID prefix."""
 
@@ -655,6 +693,33 @@ def test_extraction_accepts_explicit_system_terms() -> None:
     result = engine.extract_imported_source(imported)[0]
 
     assert result.entities[0].entity_id == "system_super_starfleet"
+
+
+def test_extraction_rejects_anonymous_group_phrase_as_character() -> None:
+    """Anonymous plural groups must not become character cards."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=AnonymousGroupCharacterExtractor())
+
+    with pytest.raises(ValueError, match="anonymous group phrase cannot be character"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_singular_unnamed_character_reference() -> None:
+    """Singular unnamed people can remain character candidates when evidence supports them."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=SingularUnnamedCharacterExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_id == "character_unnamed_female_crew_member"
 
 
 def test_extraction_rejects_entity_type_prefix_mismatch() -> None:
