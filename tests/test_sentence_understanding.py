@@ -1,5 +1,7 @@
 """Tests for the Sentence Understanding boundary."""
 
+from dataclasses import replace
+
 import pytest
 
 from aevryn import SentenceUnderstandingEngine, StoryImporter
@@ -28,6 +30,22 @@ def test_sentence_understanding_analyzes_each_imported_sentence() -> None:
     assert "skill_reference" in understandings[1].signals
     assert "item_reference" in understandings[1].signals
     assert understandings[1].review_required is True
+
+
+def test_sentence_understanding_does_not_treat_ordinary_item_use_as_skill() -> None:
+    """Using an object is action plus item context, not automatically a skill."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_item_use",
+        title="Sentence Item Use",
+        text="Chapter 1\nCharlotte used the iron sword.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "action" in understanding.signals
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert understanding.review_required is False
 
 
 def test_sentence_understanding_keeps_full_source_text_out_of_metadata() -> None:
@@ -110,3 +128,42 @@ def test_sentence_understanding_requires_matching_anchor() -> None:
 
     with pytest.raises(ValueError, match="anchor must match sentence ID"):
         SentenceUnderstandingEngine().analyze_sentence(sentence=sentence, anchor=anchor)
+
+
+def test_sentence_understanding_rejects_import_without_sentence_anchor() -> None:
+    """Every analyzed sentence must have its own evidence anchor."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_missing_anchor",
+        title="Sentence Missing Anchor",
+        text="Chapter 1\nMark lifted the sword.",
+    )
+    imported_without_anchor = replace(imported, anchors=())
+
+    with pytest.raises(ValueError, match="without evidence anchor"):
+        SentenceUnderstandingEngine().analyze_imported_source(imported_without_anchor)
+
+
+def test_sentence_understanding_rejects_duplicate_sentence_anchors() -> None:
+    """Sentence analysis requires one stable anchor per sentence."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_duplicate_anchor",
+        title="Sentence Duplicate Anchor",
+        text="Chapter 1\nMark lifted the sword.",
+    )
+    first_anchor = imported.anchors[0]
+    duplicate_anchor = replace(
+        first_anchor,
+        anchor_id=(
+            "source_sentence_duplicate_anchor_chapter_001_scene_001_"
+            "paragraph_001_sentence_001_duplicate_anchor"
+        ),
+    )
+    imported_with_duplicate_anchor = replace(
+        imported,
+        anchors=(first_anchor, duplicate_anchor),
+    )
+
+    with pytest.raises(ValueError, match="one anchor per sentence"):
+        SentenceUnderstandingEngine().analyze_imported_source(
+            imported_with_duplicate_anchor
+        )

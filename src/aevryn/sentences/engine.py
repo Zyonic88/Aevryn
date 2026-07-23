@@ -97,7 +97,6 @@ SKILL_CUES = frozenset(
         "spell",
         "skill",
         "technique",
-        "used",
     }
 )
 SYSTEM_CUES = frozenset(
