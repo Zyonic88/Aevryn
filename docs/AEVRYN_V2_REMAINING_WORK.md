@@ -242,7 +242,7 @@ In progress
 Remaining hardening:
 
 * run hosted browser validation against the current prompt-pack output
-* confirm prompts include enough scene-specific action, setting, character, and object context
+* ~~confirm prompts include enough scene-specific action, setting, character, and object context~~
 * ~~ensure normal prompt-pack presentation does not include raw manuscript prose~~
 * ~~ensure normal prompt-pack presentation does not expose evidence anchors, import bundle IDs, source IDs, or internal placeholders~~
 * ~~keep prompt bodies collapsed by default~~
@@ -267,6 +267,9 @@ Verified hardening:
 * browser-facing snapshot prompt items exclude exact imported sentences, source IDs,
   chapter/scene ID fragments, evidence-anchor labels, and short provider entity IDs
 * verified with background-worker presentation payload tests and presentation-engine tests
+* prompt-builder regression coverage requires every prompt type to preserve scene
+  production brief, current action beats, character presence, setting, and
+  scene-relevant object/world context when Canon provides it
 
 Acceptance:
 

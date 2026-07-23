@@ -689,6 +689,63 @@ def test_canon_prompt_builder_omits_mechanical_metadata_from_character_details()
     assert "One contest point" not in prompt
 
 
+def test_canon_prompt_builder_keeps_generation_context_in_every_prompt_type() -> None:
+    """Production prompts preserve scene action, setting, character, and object context."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_fact(
+        Fact(
+            fact_id="fact_iron_sword_visual_material",
+            entity_id="item_iron_sword",
+            attribute="visual_material",
+            value="Dull iron blade with a worn leather grip",
+            evidence_id="evidence_relationship",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_iron_sword_visual_material",
+            fact_id="fact_iron_sword_visual_material",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    bundle = CanonPromptBuilder().build_bundle(context)
+    prompts = (
+        bundle.image_prompt,
+        bundle.narration_prompt,
+        bundle.camera_prompt,
+        bundle.animation_prompt,
+    )
+
+    for prompt in prompts:
+        assert "Scene production brief:" in prompt
+        assert "Current scene action beats:" in prompt
+        assert "Character: Mark" in prompt
+        assert "World and scene object context:" in prompt
+        assert "Iron Sword" in prompt
+        assert "Dull iron blade with a worn leather grip" in prompt
+        assert "Primary setting:" in prompt
+
+    for visual_prompt in (
+        bundle.image_prompt,
+        bundle.camera_prompt,
+        bundle.animation_prompt,
+    ):
+        assert "Visual reference requirements:" in visual_prompt
+        assert "Iron Sword Visual Material: Dull iron blade with a worn leather grip" in (
+            visual_prompt
+        )
+
+
 def test_canon_prompt_builder_rejects_duplicate_analysis_bullets() -> None:
     """Prompt sections require duplicate analysis rows to fail upstream."""
     with pytest.raises(ValueError, match="must be unique"):
