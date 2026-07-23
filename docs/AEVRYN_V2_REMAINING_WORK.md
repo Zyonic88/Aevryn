@@ -410,6 +410,9 @@ Verified hardening:
   as settled meaning
 * system-created physical objects such as technical blueprints remain item
   candidates when evidence supports a concrete object classification
+* physical skill-source phrases such as skill book, spell book, skill manual, and
+  technique manual route as item context instead of automatically becoming usable
+  skills, while separate skill cues in the same sentence remain reviewable
 * verified with sentence-understanding, extraction, and evidence-bounded AI
   extraction tests
 

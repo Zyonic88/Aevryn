@@ -152,8 +152,12 @@ ITEM_PHRASE_CUES = frozenset(
     {
         "battle cruiser",
         "source crystal",
+        "skill book",
+        "skill manual",
+        "spell book",
         "star ship",
         "starship blueprint",
+        "technique manual",
         "technical blueprint",
     }
 )
@@ -220,6 +224,7 @@ TRANSLATION_AMBIGUITY_PHRASE_CUES = frozenset(
     }
 )
 SKILL_PHRASE_ITEM_CONTEXT_TERMS = frozenset({"art", "blade", "sword"})
+ITEM_PHRASE_SKILL_CONTEXT_TERMS = frozenset({"skill", "spell", "technique"})
 DIALOGUE_PATTERN = re.compile(r'["\']|\b(said|asked|replied|shouted|whispered)\b', re.I)
 
 
@@ -268,6 +273,10 @@ class SentenceUnderstandingEngine:
         item_terms -= _item_terms_owned_by_skill_phrases(
             phrase_terms=phrase_terms,
             item_terms=item_terms,
+        )
+        skill_terms -= _skill_terms_owned_by_item_phrases(
+            phrase_terms=phrase_terms,
+            skill_terms=skill_terms,
         )
 
         _append_signal_if(signals, "dialogue", bool(DIALOGUE_PATTERN.search(sentence.text)))
@@ -375,6 +384,19 @@ def _item_terms_owned_by_skill_phrases(
     for phrase in skill_phrases:
         owned_terms.update(set(phrase.split()) & SKILL_PHRASE_ITEM_CONTEXT_TERMS)
     return owned_terms & item_terms
+
+
+def _skill_terms_owned_by_item_phrases(
+    *,
+    phrase_terms: set[str],
+    skill_terms: set[str],
+) -> set[str]:
+    """Return skill-like words that are part of known physical item phrases."""
+    item_phrases = phrase_terms & ITEM_PHRASE_CUES
+    owned_terms: set[str] = set()
+    for phrase in item_phrases:
+        owned_terms.update(set(phrase.split()) & ITEM_PHRASE_SKILL_CONTEXT_TERMS)
+    return owned_terms & skill_terms
 
 
 def _append_signal_if(

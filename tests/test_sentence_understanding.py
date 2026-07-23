@@ -113,6 +113,39 @@ def test_sentence_understanding_treats_skill_phrase_as_skill_context() -> None:
     assert understanding.review_required is False
 
 
+def test_sentence_understanding_treats_skill_book_as_item_context() -> None:
+    """A physical skill book is item context, not automatically a usable ability."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_book",
+        title="Sentence Skill Book",
+        text="Chapter 1\nCharlotte opened a skill book on the table.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "skill book" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_keeps_manual_and_separate_skill_reviewable() -> None:
+    """A technique manual can be an item while a separate skill cue still routes to review."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_manual_and_skill",
+        title="Sentence Manual And Skill",
+        text="Chapter 1\nThe technique manual recorded the Shadow Step skill.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "technique manual" in understanding.cue_terms
+    assert "skill" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_keeps_separate_item_and_skill_reviewable() -> None:
     """Separate item and skill cues should still route to review."""
     imported = StoryImporter().import_text(
