@@ -1227,6 +1227,25 @@ describe("App shell routing", () => {
     expect(screen.getByRole("button", { name: "Update password" })).toBeInTheDocument();
   });
 
+  it("shows a human-readable message for expired managed recovery links", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          "/password-recovery#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired",
+        ]}
+      >
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Recover password" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Password recovery link is invalid or expired. Request a new reset link."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Email link is invalid/u)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send reset link" })).toBeInTheDocument();
+  });
+
   it("redirects authenticated users away from auth screens", async () => {
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
 

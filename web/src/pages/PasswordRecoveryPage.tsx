@@ -21,6 +21,7 @@ export function PasswordRecoveryPage() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const recoveryToken = useMemo(() => recoveryTokenFromLocation(location), [location]);
+  const recoveryLinkError = useMemo(() => recoveryErrorFromLocation(location), [location]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -79,6 +80,9 @@ export function PasswordRecoveryPage() {
           <p className="eyebrow">Aevryn</p>
           <h1>{recoveryToken ? "Set new password" : "Recover password"}</h1>
         </div>
+        {!recoveryToken && recoveryLinkError ? (
+          <ErrorMessage>{recoveryLinkError}</ErrorMessage>
+        ) : null}
         {recoveryToken ? (
           <form onSubmit={submitNewPassword} className="form-stack" noValidate>
             <label>
@@ -149,6 +153,26 @@ export function PasswordRecoveryPage() {
       </section>
     </main>
   );
+}
+
+function recoveryErrorFromLocation(location: ReturnType<typeof useLocation>): string | null {
+  const hashError = recoveryErrorFromParams(location.hash.replace(/^#/, ""));
+  if (hashError) {
+    return hashError;
+  }
+  return recoveryErrorFromParams(location.search.replace(/^\?/, ""));
+}
+
+function recoveryErrorFromParams(paramsText: string): string | null {
+  const params = new URLSearchParams(paramsText);
+  if (!params.get("error") && !params.get("error_code")) {
+    return null;
+  }
+  const errorCode = params.get("error_code");
+  if (errorCode === "otp_expired") {
+    return "Password recovery link is invalid or expired. Request a new reset link.";
+  }
+  return "Password recovery could not be completed. Request a new reset link.";
 }
 
 function recoveryTokenFromLocation(location: ReturnType<typeof useLocation>): string | null {
