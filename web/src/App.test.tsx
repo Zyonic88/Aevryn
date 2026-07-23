@@ -179,6 +179,10 @@ const worldPreviewPayload = {
         title: "Hangar (location)",
         items: ["condition: Alarm active", "ownership: Academy", "owner: Zhao Chen's starship"],
       },
+      {
+        title: "Rusty Dagger (item)",
+        items: ["condition: Worn", "owner: Mark"],
+      },
     ],
     evidence_summary: "2 verified world facts",
   },
@@ -1533,6 +1537,10 @@ describe("App shell routing", () => {
       await screen.findByRole("region", { name: "Processed project output" }),
     ).toHaveTextContent("1 accepted world relationship");
     const worldOutput = screen.getByRole("region", { name: "Processed project output" });
+    await user.type(screen.getByLabelText("Search world"), "Academy");
+    expect(screen.getByRole("heading", { name: "Hangar (location)" })).toBeInTheDocument();
+    expect(screen.getByText("Showing 1 of 1 world sections.")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Search world"));
     const worldDetailPanels = worldOutput.querySelectorAll("details.profile-disclosure");
     expect(worldDetailPanels.length).toBeGreaterThanOrEqual(1);
     worldDetailPanels.forEach((panel) => expect(panel).not.toHaveAttribute("open"));

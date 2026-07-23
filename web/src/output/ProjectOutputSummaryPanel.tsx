@@ -550,29 +550,62 @@ function searchableCharacterText(profile: CharacterProfile): string {
 }
 
 function WorldPanel({ world }: { world: WorldSheet }) {
+  const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(WORLD_CARD_PAGE_SIZE);
-  const visibleSections = world.entity_sections.slice(0, visibleCount);
-  const hiddenCount = Math.max(world.entity_sections.length - visibleSections.length, 0);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredSections = normalizedQuery
+    ? world.entity_sections.filter((section) =>
+        searchableWorldSectionText(section).toLowerCase().includes(normalizedQuery),
+      )
+    : world.entity_sections;
+  const visibleSections = filteredSections.slice(0, visibleCount);
+  const hiddenCount = Math.max(filteredSections.length - visibleSections.length, 0);
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setVisibleCount(WORLD_CARD_PAGE_SIZE);
+  }
+
   return (
     <div className="large-output-stack">
+      <div className="large-output-controls">
+        <label>
+          Search world
+          <input
+            value={query}
+            onChange={(event) => updateQuery(event.target.value)}
+            placeholder="Name, type, ownership, condition"
+          />
+        </label>
+        <p>
+          Showing {visibleSections.length.toLocaleString()} of{" "}
+          {filteredSections.length.toLocaleString()} world sections.
+        </p>
+      </div>
       <LimitedResultsNote
         shown={visibleSections.length}
-        total={world.entity_sections.length}
+        total={filteredSections.length}
         label="world sections"
       />
-      <div className="profile-grid" aria-label="World sheets">
-        {visibleSections.map((section) => (
-          <article className="profile-card" key={section.title}>
-            <header>
-              <h3>{section.title}</h3>
-            </header>
-            <details className="profile-disclosure">
-              <summary>World details</summary>
-              <WorldSection section={section} />
-            </details>
-          </article>
-        ))}
-      </div>
+      {visibleSections.length > 0 ? (
+        <div className="profile-grid" aria-label="World sheets">
+          {visibleSections.map((section) => (
+            <article className="profile-card" key={section.title}>
+              <header>
+                <h3>{section.title}</h3>
+              </header>
+              <details className="profile-disclosure">
+                <summary>World details</summary>
+                <WorldSection section={section} />
+              </details>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState title="No matching world entries">
+          No world sections match the current search.
+        </EmptyState>
+      )}
       <LoadMoreButton
         hiddenCount={hiddenCount}
         pageSize={WORLD_CARD_PAGE_SIZE}
@@ -581,6 +614,10 @@ function WorldPanel({ world }: { world: WorldSheet }) {
       <p className="evidence-note">{world.evidence_summary}</p>
     </div>
   );
+}
+
+function searchableWorldSectionText(section: OutputSection): string {
+  return [section.title, ...readableOutputItems(section.items)].join(" ");
 }
 
 function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
