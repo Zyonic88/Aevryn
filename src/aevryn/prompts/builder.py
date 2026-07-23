@@ -226,6 +226,7 @@ class CanonPromptBuilder:
                 self._scene_directive_section(analysis),
                 self._image_subject_section(context),
                 self._visual_identity_known_unknown_section(context),
+                self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
                 self._image_setting_section(analysis),
                 self._visual_direction_section(analysis),
@@ -289,6 +290,7 @@ class CanonPromptBuilder:
                 self._scene_visual_anchor_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
+                self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
                 self._visual_direction_section(analysis),
                 self._lighting_section(analysis),
@@ -319,6 +321,7 @@ class CanonPromptBuilder:
                 self._scene_visual_anchor_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
+                self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
                 self._visual_direction_section(analysis),
                 self._do_not_include_section(context, analysis),
@@ -613,6 +616,48 @@ class CanonPromptBuilder:
             lines.append("- No scene-specific world details accepted yet.")
 
         return "\n".join(lines)
+
+    def _visual_reference_requirements_section(self, context: CanonSceneContext) -> str:
+        """Return mandatory visual references when Canon provides concrete details."""
+        display_names = self._entity_display_names(context)
+        scene_fact_keys = self._scene_fact_keys(context.active_facts)
+        lines: list[str] = []
+        scene_anchors = self._scene_visual_anchors(context)
+        if scene_anchors:
+            lines.append("Setting anchors: " + "; ".join(scene_anchors[:3]))
+        for card in context.character_cards:
+            appearance_lines = [
+                line.removeprefix("- ")
+                for line in self._character_fact_lines(
+                    card=card,
+                    scene_fact_keys=scene_fact_keys,
+                )
+                if self._is_appearance_attribute(line)
+            ][:4]
+            if appearance_lines:
+                lines.append(
+                    f"{card.display_name} appearance: " + "; ".join(appearance_lines)
+                )
+
+        character_ids = {card.character_id for card in context.character_cards}
+        world_visual_lines = [
+            self._world_fact_line(fact, display_names=display_names)
+            for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
+            if fact.entity_id not in character_ids
+            and self._is_visual_production_attribute(fact.attribute)
+        ][:4]
+        lines.extend(world_visual_lines)
+        unique_lines = self._unique_values(lines)
+        if not unique_lines:
+            return ""
+
+        return "\n".join(
+            [
+                "Visual reference requirements:",
+                *[f"- {self._shorten(line, width=150)}" for line in unique_lines],
+                "- Treat these as required references; keep unspecified traits neutral.",
+            ]
+        )
 
     @staticmethod
     def _composition_section(
