@@ -210,6 +210,60 @@ def test_ai_extractor_prompt_uses_metadata_only_sentence_guidance() -> None:
     assert "Charlotte used the iron sword" not in metadata_section
 
 
+def test_ai_extractor_prompt_includes_world_context_sentence_signals() -> None:
+    """World-routing sentence metadata should reach extraction without Canon claims."""
+    extractor = EvidenceBoundedAIExtractor(
+        JsonClient(
+            json.dumps(
+                {
+                    "entities": [],
+                    "facts": [],
+                    "relationships": [],
+                    "state_changes": [],
+                }
+            )
+        )
+    )
+
+    prompt = extractor.build_prompt(
+        scene=SceneExtractionInput(
+            scene_id="source_demo_chapter_001_scene_001",
+            text="Zhao Chen stood inside the North Star Academy classroom.",
+            evidence_anchor_ids=("anchor_001",),
+            evidence_anchors=(
+                SceneEvidenceAnchor(
+                    anchor_id="anchor_001",
+                    quote="Zhao Chen stood inside the North Star Academy classroom.",
+                ),
+            ),
+            sentence_understanding=(
+                SceneSentenceUnderstanding(
+                    evidence_anchor_id="anchor_001",
+                    signals=(
+                        "description",
+                        "identity_reference",
+                        "location_reference",
+                        "organization_reference",
+                    ),
+                    cue_terms=("classroom", "north star academy"),
+                    review_required=False,
+                ),
+            ),
+        )
+    )
+    metadata_section = prompt.split("Sentence Understanding Metadata:", 1)[1].split(
+        "Scene Text:",
+        1,
+    )[0]
+
+    assert (
+        "signals=description,identity_reference,location_reference,"
+        "organization_reference"
+    ) in metadata_section
+    assert "cue_terms=classroom,north star academy" in metadata_section
+    assert "Zhao Chen stood inside" not in metadata_section
+
+
 def test_openai_responses_client_returns_output_text_without_network() -> None:
     """OpenAI client should adapt Responses payloads into extraction JSON text."""
     transport = RecordingOpenAITransport(
