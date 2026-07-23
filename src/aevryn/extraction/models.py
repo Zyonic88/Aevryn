@@ -3,6 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
+
+SceneSignal = Literal[
+    "dialogue",
+    "action",
+    "description",
+    "identity_reference",
+    "relationship_reference",
+    "item_reference",
+    "skill_reference",
+    "system_reference",
+    "translation_ambiguity",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,6 +32,41 @@ class SceneEvidenceAnchor:
 
 
 @dataclass(frozen=True, slots=True)
+class SceneSentenceUnderstanding:
+    """Metadata-only sentence signal summary sent to an extractor."""
+
+    evidence_anchor_id: str
+    signals: tuple[SceneSignal, ...]
+    cue_terms: tuple[str, ...] = ()
+    ambiguity_terms: tuple[str, ...] = ()
+    review_required: bool = False
+
+    def __post_init__(self) -> None:
+        """Validate sentence-understanding extraction metadata."""
+        _require_machine_token(
+            self.evidence_anchor_id,
+            "Scene sentence understanding evidence anchor ID",
+        )
+        _require_unique_values(self.signals, "Scene sentence understanding signals")
+        object.__setattr__(
+            self,
+            "cue_terms",
+            _normalized_unique_terms(
+                self.cue_terms,
+                "Scene sentence understanding cue terms",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "ambiguity_terms",
+            _normalized_unique_terms(
+                self.ambiguity_terms,
+                "Scene sentence understanding ambiguity terms",
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class SceneExtractionInput:
     """Scene text and anchors sent to an extractor."""
 
@@ -26,6 +74,7 @@ class SceneExtractionInput:
     text: str
     evidence_anchor_ids: tuple[str, ...]
     evidence_anchors: tuple[SceneEvidenceAnchor, ...] = ()
+    sentence_understanding: tuple[SceneSentenceUnderstanding, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate scene extraction input fields."""
@@ -45,6 +94,20 @@ class SceneExtractionInput:
         if evidence_anchor_ids and set(evidence_anchor_ids) != set(self.evidence_anchor_ids):
             raise ValueError(
                 "Scene extraction evidence anchors must match evidence anchor IDs."
+            )
+        understanding_anchor_ids = tuple(
+            item.evidence_anchor_id for item in self.sentence_understanding
+        )
+        _require_unique_values(
+            understanding_anchor_ids,
+            "Scene extraction sentence-understanding anchors",
+        )
+        if (
+            understanding_anchor_ids
+            and not set(understanding_anchor_ids).issubset(set(self.evidence_anchor_ids))
+        ):
+            raise ValueError(
+                "Scene extraction sentence understanding must reference evidence anchor IDs."
             )
 
 
@@ -231,6 +294,16 @@ def _normalized_text(value: str, field_name: str) -> str:
     """Return normalized human-readable text or raise if it is blank."""
     _require_text(value, field_name)
     return " ".join(value.split())
+
+
+def _normalized_unique_terms(values: tuple[str, ...], field_name: str) -> tuple[str, ...]:
+    """Normalize compact extraction metadata terms."""
+    if not isinstance(values, tuple):
+        raise ValueError(f"{field_name} must be a tuple.")
+    normalized_values = tuple(_normalized_text(value, field_name) for value in values)
+    if len(normalized_values) != len({value.casefold() for value in normalized_values}):
+        raise ValueError(f"{field_name} must be unique.")
+    return normalized_values
 
 
 def _require_machine_token(value: str, field_name: str) -> None:

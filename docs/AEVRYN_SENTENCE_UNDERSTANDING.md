@@ -103,6 +103,17 @@ ambiguous.
 Entity Extraction may use sentence signals to decide whether to inspect for
 items, skills, systems, relationships, or identity references.
 
+The extraction prompt receives sentence-understanding summaries as metadata:
+
+* evidence anchor ID
+* signal names
+* compact cue terms
+* ambiguity terms
+* review-required flag
+
+It must not receive a second copy of the full source sentence through this
+metadata channel.
+
 Prompt Packs may eventually use accepted downstream meaning, not raw sentence
 understanding, because prompts must remain Canon-backed.
 

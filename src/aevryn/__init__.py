@@ -59,6 +59,8 @@ from aevryn.extraction import (
     SceneEvidenceAnchor,
     SceneExtractionInput,
     SceneExtractor,
+    SceneSentenceUnderstanding,
+    SceneSignal,
     StaticAIExtractionClient,
     UrllibOpenAIResponsesTransport,
 )
@@ -261,6 +263,8 @@ __all__ = [
     "SceneEngine",
     "SceneEvidenceAnchor",
     "SceneExtractionInput",
+    "SceneSentenceUnderstanding",
+    "SceneSignal",
     "SceneExtractor",
     "StaticAIExtractionClient",
     "SurfaceReference",

@@ -13,6 +13,7 @@ from aevryn import (
     ExtractionResult,
     SceneEvidenceAnchor,
     SceneExtractionInput,
+    SceneSentenceUnderstanding,
     StoryImporter,
 )
 
@@ -20,8 +21,13 @@ from aevryn import (
 class FakeExtractor:
     """Test extractor that behaves like an AI boundary without calling AI."""
 
+    def __init__(self) -> None:
+        """Create the extractor."""
+        self.scenes: list[SceneExtractionInput] = []
+
     def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
         """Return deterministic candidates for tests."""
+        self.scenes.append(scene)
         first_anchor = scene.evidence_anchor_ids[0]
         return ExtractionResult(
             scene_id=scene.scene_id,
@@ -414,7 +420,8 @@ def test_extract_imported_source_returns_candidates_with_evidence() -> None:
         title="Demo",
         text=imported_source_text(),
     )
-    engine = EntityExtractionEngine(extractor=FakeExtractor())
+    extractor = FakeExtractor()
+    engine = EntityExtractionEngine(extractor=extractor)
 
     results = engine.extract_imported_source(imported)
 
@@ -422,6 +429,11 @@ def test_extract_imported_source_returns_candidates_with_evidence() -> None:
     assert results[0].entities[0].entity_id == "character_mark"
     assert results[0].entities[0].evidence_anchor_id == imported.anchors[0].anchor_id
     assert results[0].relationships[0].relationship_type == "owns"
+    assert extractor.scenes[0].sentence_understanding
+    assert extractor.scenes[0].sentence_understanding[0].evidence_anchor_id == (
+        imported.anchors[0].anchor_id
+    )
+    assert "item_reference" in extractor.scenes[0].sentence_understanding[0].signals
 
 
 def test_extraction_result_does_not_update_canon() -> None:
@@ -835,6 +847,38 @@ def test_scene_extraction_input_rejects_anchor_object_mismatch() -> None:
                 SceneEvidenceAnchor(
                     anchor_id="anchor_002",
                     quote="Mark draws the sword.",
+                ),
+            ),
+        )
+
+
+def test_scene_extraction_input_rejects_duplicate_sentence_understanding() -> None:
+    """Sentence-understanding metadata must not duplicate evidence anchors."""
+    understanding = SceneSentenceUnderstanding(
+        evidence_anchor_id="anchor_001",
+        signals=("item_reference",),
+    )
+
+    with pytest.raises(ValueError, match="sentence-understanding anchors"):
+        SceneExtractionInput(
+            scene_id="source_chapter_001_scene_001",
+            text="Mark draws the sword.",
+            evidence_anchor_ids=("anchor_001",),
+            sentence_understanding=(understanding, understanding),
+        )
+
+
+def test_scene_extraction_input_rejects_sentence_understanding_anchor_mismatch() -> None:
+    """Sentence-understanding metadata must stay inside allowed scene anchors."""
+    with pytest.raises(ValueError, match="must reference evidence anchor IDs"):
+        SceneExtractionInput(
+            scene_id="source_chapter_001_scene_001",
+            text="Mark draws the sword.",
+            evidence_anchor_ids=("anchor_001",),
+            sentence_understanding=(
+                SceneSentenceUnderstanding(
+                    evidence_anchor_id="anchor_002",
+                    signals=("item_reference",),
                 ),
             ),
         )

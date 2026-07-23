@@ -14,8 +14,10 @@ from aevryn.extraction.models import (
     ExtractionResult,
     SceneEvidenceAnchor,
     SceneExtractionInput,
+    SceneSentenceUnderstanding,
 )
 from aevryn.importing import EvidenceAnchor, ImportedSource
+from aevryn.sentences import SentenceUnderstanding, SentenceUnderstandingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +134,7 @@ class EntityExtractionEngine:
             Extraction results in scene order.
         """
         anchors_by_scene = self._anchors_by_scene(imported_source.anchors)
+        understanding_by_scene = self._sentence_understanding_by_scene(imported_source)
         results = tuple(
             self.extract_scene(
                 scene_id=scene.scene_id,
@@ -142,6 +145,7 @@ class EntityExtractionEngine:
                 )
                 or "\n\n".join(scene.paragraphs),
                 anchors=anchors_by_scene.get(scene.scene_id, ()),
+                sentence_understanding=understanding_by_scene.get(scene.scene_id, ()),
             )
             for chapter in imported_source.story.chapters
             for scene in chapter.scenes
@@ -241,6 +245,7 @@ class EntityExtractionEngine:
         scene_id: str,
         text: str,
         anchors: tuple[EvidenceAnchor, ...],
+        sentence_understanding: tuple[SceneSentenceUnderstanding, ...] = (),
     ) -> ExtractionResult:
         """Extract candidates from one scene without changing Canon.
 
@@ -248,6 +253,8 @@ class EntityExtractionEngine:
             scene_id: Imported scene identifier.
             text: Scene source text.
             anchors: Evidence anchors belonging to the scene.
+            sentence_understanding: Optional sentence-level meaning metadata for
+                the scene's evidence anchors.
 
         Returns:
             Validated extraction result.
@@ -268,6 +275,7 @@ class EntityExtractionEngine:
                     )
                     for anchor in anchors
                 ),
+                sentence_understanding=sentence_understanding,
             )
         )
         result = self._validate_result(result=result, allowed_anchor_ids=anchor_ids)
@@ -287,6 +295,37 @@ class EntityExtractionEngine:
             },
         )
         return result
+
+    @staticmethod
+    def _sentence_understanding_by_scene(
+        imported_source: ImportedSource,
+    ) -> dict[str, tuple[SceneSentenceUnderstanding, ...]]:
+        """Return extraction-safe sentence-understanding metadata by scene."""
+        understandings = SentenceUnderstandingEngine().analyze_imported_source(
+            imported_source
+        )
+        grouped: dict[str, list[SceneSentenceUnderstanding]] = {}
+        for understanding in understandings:
+            grouped.setdefault(understanding.source_scene_id, []).append(
+                EntityExtractionEngine._scene_sentence_understanding(understanding)
+            )
+        return {
+            scene_id: tuple(scene_understandings)
+            for scene_id, scene_understandings in grouped.items()
+        }
+
+    @staticmethod
+    def _scene_sentence_understanding(
+        understanding: SentenceUnderstanding,
+    ) -> SceneSentenceUnderstanding:
+        """Convert full sentence understanding to extraction-facing metadata."""
+        return SceneSentenceUnderstanding(
+            evidence_anchor_id=understanding.evidence_anchor_id,
+            signals=understanding.signals,
+            cue_terms=understanding.cue_terms,
+            ambiguity_terms=understanding.ambiguity_terms,
+            review_required=understanding.review_required,
+        )
 
     def _validate_result(
         self,

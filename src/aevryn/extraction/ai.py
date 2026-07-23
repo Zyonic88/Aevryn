@@ -263,6 +263,7 @@ class EvidenceBoundedAIExtractor:
             f"- {anchor.anchor_id}: {anchor.quote}"
             for anchor in scene.evidence_anchors
         )
+        sentence_understanding = self._sentence_understanding_lines(scene)
         return "\n".join(
             [
                 "You extract candidates for aevryn.",
@@ -340,9 +341,28 @@ class EvidenceBoundedAIExtractor:
                 "Evidence Anchors:",
                 anchors,
                 "",
+                "Sentence Understanding Metadata:",
+                sentence_understanding,
+                "",
                 "Scene Text:",
                 scene.text,
             ]
+        )
+
+    @staticmethod
+    def _sentence_understanding_lines(scene: SceneExtractionInput) -> str:
+        """Return metadata-only sentence-understanding guidance for the prompt."""
+        if not scene.sentence_understanding:
+            return "- Not provided."
+        return "\n".join(
+            (
+                f"- {item.evidence_anchor_id}: "
+                f"signals={','.join(item.signals)}; "
+                f"cue_terms={','.join(item.cue_terms) or 'none'}; "
+                f"ambiguity_terms={','.join(item.ambiguity_terms) or 'none'}; "
+                f"review_required={str(item.review_required).lower()}"
+            )
+            for item in scene.sentence_understanding
         )
 
     @staticmethod

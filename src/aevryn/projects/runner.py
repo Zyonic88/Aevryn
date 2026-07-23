@@ -29,6 +29,7 @@ from aevryn.extraction import (
     ExtractionResult,
     SceneEvidenceAnchor,
     SceneExtractionInput,
+    SceneSentenceUnderstanding,
     StaticAIExtractionClient,
 )
 from aevryn.extraction.engine import SceneExtractor
@@ -40,6 +41,7 @@ from aevryn.importing import (
 )
 from aevryn.prompts import CanonPromptBuilder, PromptBundle
 from aevryn.scenes import CanonSceneContext, SceneContextBuilder
+from aevryn.sentences import SentenceUnderstanding, SentenceUnderstandingEngine
 from aevryn.translation import (
     GlossaryTerm,
     TranslatedUnit,
@@ -392,6 +394,10 @@ class AevrynProjectRunner:
                         for anchor in imported_source.anchors
                         if anchor.scene_id == requested_scene_id
                     )
+                    sentence_understanding = _sentence_understanding_for_scene(
+                        imported_source=imported_source,
+                        scene_id=requested_scene_id,
+                    )
                     return SceneExtractionInput(
                         scene_id=scene.scene_id,
                         text="\n\n".join(scene.paragraphs),
@@ -403,6 +409,7 @@ class AevrynProjectRunner:
                             )
                             for anchor in anchors
                         ),
+                        sentence_understanding=sentence_understanding,
                     )
 
         raise ValueError(f"Unknown scene: {requested_scene_id}")
@@ -1162,6 +1169,34 @@ def _translated_scene_text_by_id(
         for unit in translation_units
         if unit.source_scene_id
     }
+
+
+def _sentence_understanding_for_scene(
+    *,
+    imported_source: ImportedSource,
+    scene_id: str,
+) -> tuple[SceneSentenceUnderstanding, ...]:
+    """Return extraction-safe sentence-understanding metadata for a scene."""
+    return tuple(
+        _scene_sentence_understanding(understanding)
+        for understanding in SentenceUnderstandingEngine().analyze_imported_source(
+            imported_source
+        )
+        if understanding.source_scene_id == scene_id
+    )
+
+
+def _scene_sentence_understanding(
+    understanding: SentenceUnderstanding,
+) -> SceneSentenceUnderstanding:
+    """Convert sentence understanding to extraction-facing metadata."""
+    return SceneSentenceUnderstanding(
+        evidence_anchor_id=understanding.evidence_anchor_id,
+        signals=understanding.signals,
+        cue_terms=understanding.cue_terms,
+        ambiguity_terms=understanding.ambiguity_terms,
+        review_required=understanding.review_required,
+    )
 
 
 def _chapter_id_from_scene_id(scene_id: str) -> str:

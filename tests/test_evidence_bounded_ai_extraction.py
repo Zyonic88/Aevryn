@@ -12,6 +12,9 @@ from aevryn import (
     ExtractedFact,
     ExtractedStateChange,
     OpenAIResponsesAIExtractionClient,
+    SceneEvidenceAnchor,
+    SceneExtractionInput,
+    SceneSentenceUnderstanding,
     StoryImporter,
 )
 
@@ -156,7 +159,55 @@ def test_ai_extractor_returns_evidence_bounded_candidates() -> None:
     assert "Use entity_type=organization for factions" in client.prompt
     assert "anonymous group phrase" in client.prompt
     assert "choose the most concrete supported category" in client.prompt
+    assert "Sentence Understanding Metadata:" in client.prompt
+    assert "signals=item_reference" in client.prompt
+    assert "review_required=false" in client.prompt
     assert anchor_id in client.prompt
+
+
+def test_ai_extractor_prompt_uses_metadata_only_sentence_guidance() -> None:
+    """Sentence-understanding guidance should not duplicate source prose."""
+    client = JsonClient(
+        json.dumps(
+            {
+                "entities": [],
+                "facts": [],
+                "relationships": [],
+                "state_changes": [],
+            }
+        )
+    )
+    extractor = EvidenceBoundedAIExtractor(client)
+
+    prompt = extractor.build_prompt(
+        scene=SceneExtractionInput(
+            scene_id="source_demo_chapter_001_scene_001",
+            text="Charlotte used the iron sword.",
+            evidence_anchor_ids=("anchor_001",),
+            evidence_anchors=(
+                SceneEvidenceAnchor(
+                    anchor_id="anchor_001",
+                    quote="Charlotte used the iron sword.",
+                ),
+            ),
+            sentence_understanding=(
+                SceneSentenceUnderstanding(
+                    evidence_anchor_id="anchor_001",
+                    signals=("action", "item_reference"),
+                    cue_terms=("used", "sword"),
+                    review_required=False,
+                ),
+            ),
+        )
+    )
+    metadata_section = prompt.split("Sentence Understanding Metadata:", 1)[1].split(
+        "Scene Text:",
+        1,
+    )[0]
+
+    assert "signals=action,item_reference" in metadata_section
+    assert "cue_terms=used,sword" in metadata_section
+    assert "Charlotte used the iron sword" not in metadata_section
 
 
 def test_openai_responses_client_returns_output_text_without_network() -> None:
