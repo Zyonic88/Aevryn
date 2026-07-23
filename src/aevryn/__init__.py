@@ -23,6 +23,7 @@ from aevryn.canon import (
     EntityType,
     Evidence,
     MissingEvidenceError,
+    RejectedCanonCandidate,
     StoryPosition,
     UnknownEntityError,
 )
@@ -186,6 +187,7 @@ __all__ = [
     "postgresql_schema_statements",
     "project_database_schema_digest",
     "RecordNotFoundError",
+    "RejectedCanonCandidate",
     "SnapshotRecord",
     "StoryRecord",
     "UserRecord",
