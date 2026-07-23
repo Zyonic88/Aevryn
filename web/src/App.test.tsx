@@ -5066,18 +5066,25 @@ describe("App shell routing", () => {
       "href",
       "#project-settings",
     );
+    expect(screen.getByRole("link", { name: /Workspace Read-only/u })).toHaveAttribute(
+      "href",
+      "#workspace-preferences",
+    );
     expect(screen.getByRole("link", { name: /Account Managed/u })).toHaveAttribute(
       "href",
       "#account-settings",
     );
-    expect(screen.getByRole("link", { name: /Privacy & Data Protected/u })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Privacy & Data Policy/u })).toHaveAttribute(
       "href",
       "#privacy-data-settings",
     );
-    expect(screen.getByRole("link", { name: /Diagnostics Hidden/u })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Diagnostics Collapsed/u })).toHaveAttribute(
       "href",
       "#diagnostics-settings",
     );
+    expect(
+      screen.getByText(/V2 settings separate editable project defaults/u),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Workspace Preferences" })).toBeInTheDocument();
     const accountPanel = screen.getByRole("heading", { name: "Account" }).closest("section");
     expect(accountPanel).not.toBeNull();

@@ -377,10 +377,10 @@ Minimal for V2
 
 Remaining hardening:
 
-* keep project settings separate from personal profile settings conceptually
-* do not build broad profile personalization unless re-scoped
-* ensure current Settings page does not imply nonexistent controls
-* document which settings are V2 and which are V3+
+* project settings remain the only editable V2 settings surface
+* workspace, account, privacy, and diagnostics sections are read-only/contextual in V2
+* broad profile personalization remains V3+ unless explicitly re-scoped
+* current Settings page must not imply nonexistent personalization or workflow controls
 
 Acceptance:
 
