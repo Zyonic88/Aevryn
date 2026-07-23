@@ -56,6 +56,21 @@ Explicit state-change candidates validate the accepted fact state; they must not
 
 Canon update summaries must not classify the same candidate ID as both accepted and rejected.
 
+Rejected candidates may include stable machine-readable reason codes for
+operational review. These codes explain why Canon did not change without
+logging source prose, full extraction payloads, or provider responses.
+
+Current reason codes:
+
+* `low_confidence`
+* `unknown_evidence_anchor`
+* `unknown_entity_reference`
+* `ambiguous_source_order`
+* `state_change_without_current_fact`
+
+Rejected reason metadata is observational. It must not loosen Canon acceptance,
+retry failed candidates silently, or turn an AI proposal into accepted truth.
+
 ## What Does It NOT Own?
 
 Canon Updating does not own:

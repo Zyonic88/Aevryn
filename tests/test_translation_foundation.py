@@ -7,6 +7,7 @@ from aevryn.translation import (
     TranslationEngine,
     TranslationIssue,
     TranslationMode,
+    TranslationSentenceUnderstanding,
     TranslationUnit,
 )
 
@@ -526,4 +527,132 @@ def test_translation_issue_anchor_links_must_be_tuples() -> None:
             source_term="dao",
             message="Ambiguous glossary term preserved for review.",
             evidence_anchor_ids=["anchor_025"],  # type: ignore[arg-type]
+        )
+
+
+def test_translation_uses_sentence_understanding_to_flag_ambiguity() -> None:
+    """Sentence ambiguity should become review metadata without changing source text."""
+    result = TranslationEngine().normalize_unit(
+        TranslationUnit(
+            unit_id="unit_sentence_ambiguity",
+            source_text="The dao core reacted.",
+            evidence_anchor_ids=("anchor_sentence_ambiguity",),
+            sentence_understanding=(
+                TranslationSentenceUnderstanding(
+                    evidence_anchor_id="anchor_sentence_ambiguity",
+                    signals=("translation_ambiguity",),
+                    ambiguity_terms=("dao", "core"),
+                    review_required=True,
+                ),
+            ),
+        )
+    )
+
+    assert result.normalized_text == "The dao core reacted."
+    assert tuple(issue.issue_code for issue in result.issues) == (
+        "translation_sentence_ambiguity",
+        "translation_sentence_ambiguity",
+    )
+    assert tuple(issue.source_term for issue in result.issues) == ("core", "dao")
+    assert all(
+        issue.evidence_anchor_ids == ("anchor_sentence_ambiguity",)
+        for issue in result.issues
+    )
+    assert all(issue.term_kind == "power_system" for issue in result.issues)
+    assert "The dao core reacted." not in {
+        issue.source_term for issue in result.issues
+    }
+    assert "The dao core reacted." not in {issue.message for issue in result.issues}
+
+
+def test_translation_sentence_ambiguity_deduplicates_glossary_review_terms() -> None:
+    """Glossary review should not be duplicated by sentence ambiguity metadata."""
+    result = TranslationEngine().normalize_unit(
+        TranslationUnit(
+            unit_id="unit_sentence_glossary_dedup",
+            source_text="The dao shook.",
+            evidence_anchor_ids=("anchor_sentence_glossary",),
+            sentence_understanding=(
+                TranslationSentenceUnderstanding(
+                    evidence_anchor_id="anchor_sentence_glossary",
+                    signals=("translation_ambiguity",),
+                    ambiguity_terms=("dao",),
+                    review_required=True,
+                ),
+            ),
+        ),
+        glossary=(
+            GlossaryTerm(
+                source_term="dao",
+                preferred_term="Dao",
+                possible_meanings=("path or principle", "blade or saber"),
+                evidence_anchor_id="anchor_sentence_glossary",
+                term_kind="power_system",
+            ),
+        ),
+    )
+
+    assert result.normalized_text == "The dao shook."
+    assert tuple(issue.issue_code for issue in result.issues) == (
+        "translation_review_required",
+    )
+
+
+def test_translation_accepts_world_context_sentence_signals_without_review_noise() -> None:
+    """World-routing signals should remain metadata unless translation is ambiguous."""
+    result = TranslationEngine().normalize_unit(
+        TranslationUnit(
+            unit_id="unit_sentence_world_context",
+            source_text="Zhao Chen entered North Star Academy.",
+            evidence_anchor_ids=("anchor_sentence_world",),
+            sentence_understanding=(
+                TranslationSentenceUnderstanding(
+                    evidence_anchor_id="anchor_sentence_world",
+                    signals=("location_reference", "organization_reference"),
+                    review_required=False,
+                ),
+            ),
+        )
+    )
+
+    assert result.normalized_text == "Zhao Chen entered North Star Academy."
+    assert result.issues == ()
+
+
+def test_translation_unit_rejects_sentence_understanding_anchor_mismatch() -> None:
+    """Sentence metadata must point to one of the unit evidence anchors."""
+    with pytest.raises(ValueError, match="must match evidence anchors"):
+        TranslationUnit(
+            unit_id="unit_sentence_anchor_mismatch",
+            source_text="The dao shook.",
+            evidence_anchor_ids=("anchor_known",),
+            sentence_understanding=(
+                TranslationSentenceUnderstanding(
+                    evidence_anchor_id="anchor_unknown",
+                    signals=("translation_ambiguity",),
+                    ambiguity_terms=("dao",),
+                ),
+            ),
+        )
+
+
+def test_translation_unit_rejects_duplicate_sentence_understanding_anchors() -> None:
+    """Sentence metadata should remain deterministic per evidence anchor."""
+    with pytest.raises(ValueError, match="anchors must be unique"):
+        TranslationUnit(
+            unit_id="unit_sentence_duplicate_anchor",
+            source_text="The dao shook. The dao settled.",
+            evidence_anchor_ids=("anchor_duplicate",),
+            sentence_understanding=(
+                TranslationSentenceUnderstanding(
+                    evidence_anchor_id="anchor_duplicate",
+                    signals=("translation_ambiguity",),
+                    ambiguity_terms=("dao",),
+                ),
+                TranslationSentenceUnderstanding(
+                    evidence_anchor_id="anchor_duplicate",
+                    signals=("translation_ambiguity",),
+                    ambiguity_terms=("dao",),
+                ),
+            ),
         )

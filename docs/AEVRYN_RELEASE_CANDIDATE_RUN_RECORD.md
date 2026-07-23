@@ -133,7 +133,7 @@ Failures block public beta unless an owner-approved residual risk is recorded be
 | Review Timeline | Chapter changes are understandable | Passed with limitation | Timeline output appears; polish remains future UX work |
 | Review Scenes | Scene sheets are understandable | Passed with limitation | Scene output appears; some incomplete evidence states remain |
 | Review Continuity | Continuity view is understandable | Passed with limitation | Continuity output appears; layout polish remains future UX work |
-| Review Prompt Packs | Prompt output is usable or limitation is documented | Passed with limitation | Prompt Packs load; prompt richness remains active product-hardening work |
+| Review Prompt Packs | Prompt output is usable or limitation is documented | Passed with limitation | Prompt Packs load; current-scene action beat hardening is implemented and locally tested; hosted browser validation remains before public-beta positioning |
 | Review Exports | Export options are visible | Passed | `Create snapshot export` action visible |
 | Create export preview | Preview is generated intentionally | Passed | JSON canon snapshot export created with download action |
 | Delete project | Project data is removed from active product surfaces | Passed | Smoke project deleted; dashboard showed 2 projects and direct project URL returned dashboard |
@@ -147,7 +147,7 @@ The smoke path must not require CLI knowledge from the tester.
 | Check | Required Result | Actual Result | Notes |
 | --- | --- | --- | --- |
 | Browser refresh | Workspace restores from API-backed state | Passed | Monitoring restored succeeded state after refresh |
-| Session expiry | User can log in again without corrupting workspace | Passed | Managed identity login was used repeatedly during hosted testing |
+| Session expiry | User can log in again without corrupting workspace | Passed | Managed identity login was used repeatedly during hosted testing; frontend now clears invalid API sessions and returns to login with a human-readable recovery message |
 | API outage messaging | User sees actionable error state | Passed with limitation | Previous hosted-safe API wording was hardened; no outage appeared in final smoke |
 | Failed run visibility | Failure summary is concise and useful | Passed | Earlier timeout failure produced concise retry guidance |
 | Retry after failed run | User can continue or limitation is explicit | Passed | Retry succeeded after timeout hardening |
@@ -215,12 +215,14 @@ This does not require public launch, but it must run outside the purely local pr
 # Known Limitations
 
 ```text
-Prompt Packs load and are usable for alpha/RC verification, but prompt richness still needs product hardening before public beta positioning.
+Prompt Packs load and are usable for alpha/RC verification. Current-scene action beat hardening is implemented and locally tested, but prompt richness still needs hosted browser validation before public beta positioning.
 Identity review summaries appear across several output tabs and should be condensed in UX hardening.
 Some Unknown/No-data states remain where accepted canon evidence is incomplete.
 Settings and broader user profile preferences remain intentionally minimal.
 Initial public trust/legal/support pages are published; owner/legal review and final public-beta approval remain incomplete.
-Production observability policy candidate is selected, but hosted retention configuration and final bounded log review remain incomplete before public beta.
+Production observability policy candidate is selected, and hosted
+`observability-config-check` passed with metadata-only output on 2026-07-17.
+Final bounded hosted log review remains incomplete before public beta.
 AI provider disclosure candidate is selected, but provider terms, final model configuration, and public-beta provider verification remain incomplete.
 ```
 
@@ -232,14 +234,14 @@ Public beta may proceed only if each residual risk is explicit and accepted by t
 
 | Risk | Impact | Mitigation | Owner Decision |
 | --- | --- | --- | --- |
-| Prompt richness is still below final product ambition | Generated image/video prompts may need user editing | Continue prompt-pack hardening before beta marketing claims | Accepted for internal RC only; blocks public-beta positioning if not improved |
+| Prompt richness still needs hosted validation | Generated image/video prompts may need user editing if the browser output does not reflect the new current-scene action beat hardening clearly | Run hosted prompt-pack browser validation before beta marketing claims | Accepted for internal RC only; blocks public-beta positioning until validated |
 | Output UX polish remains alpha-grade in some tabs | Users may find repeated summaries or dense cards tiring | Continue UX hardening before broad public beta | Accepted for internal RC only |
 | Public legal/trust/support pages need owner and legal review | Public users may see draft wording that is not public-beta approved | Review public-facing site/legal docs before public beta | Blocks public beta |
-| Production observability policy needs hosted verification | Hosted logging and monitoring retention need final public-beta verification | Verify hosted retention, alert routing, and bounded log review against the selected production observability policy | Blocks public beta |
+| Production observability policy needs final bounded log review | Hosted logging and monitoring configuration passed, but final log review still needs public-beta verification | Complete final bounded hosted log review against the selected production observability policy | Blocks public beta |
 | Backup retention wording needs production verification | Users need accurate deletion and backup expectations | Verify the selected public-beta backup wording against final production backup behavior | Blocks public beta |
 | AI provider disclosure needs provider verification | Users need accurate expectations for when story excerpts leave Aevryn-owned systems | Verify provider terms, retention, training behavior, abuse monitoring, and final model configuration against the selected disclosure candidate | Blocks public beta |
-| Restore/audit drill has not run | Recovery confidence is incomplete for public users | Complete a dated restore/audit drill record proving ownership, deletion, audit integrity, and metadata-only restore logs | Blocks public beta |
-| Hosted audit integrity passed, but hosted audit append-only access verification failed because the current database role can update/delete audit rows | Audit confidence is incomplete for public users | Provision or switch Cloud Run to a restricted PostgreSQL application role, rerun `audit-access-verify`, verify retention, and complete the restore/audit drill | Blocks public beta |
+| Restore/audit drill passed | Recovery evidence is no longer the blocker | Maintain the dated restore/audit drill record and rerun before material infrastructure changes | Accepted for Gate 5 |
+| Hosted audit append-only access verification passed with restricted runtime role | Audit access evidence is no longer the blocker | Maintain restricted runtime role and rerun audit access verification before public-beta signoff | Accepted for Gate 5 |
 
 If a risk touches story privacy, deletion, account security, provider training, or data ownership, the default decision should be block.
 
@@ -265,8 +267,8 @@ If one person holds multiple responsibilities, each responsibility must still be
 ```text
 Internal V2 release candidate: Signed off
 Public beta: Blocked
-Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, hosted audit integrity verification, and initial public page publication passed. Public beta remains blocked by hosted audit append-only access verification, public-facing legal/trust/support review, hosted observability verification, backup retention verification, AI provider verification, restore/audit readiness, prompt-pack polish, and final public-beta approval.
-Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support review, hosted observability verification, backup retention verification, AI provider verification, restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, initial public page publication, and dated restore/audit drill passed. Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, and final public-beta approval.
+Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, and final public-beta approval.
 ```
 
 ---

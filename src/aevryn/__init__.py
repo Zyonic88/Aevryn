@@ -23,6 +23,7 @@ from aevryn.canon import (
     EntityType,
     Evidence,
     MissingEvidenceError,
+    RejectedCanonCandidate,
     StoryPosition,
     UnknownEntityError,
 )
@@ -59,6 +60,8 @@ from aevryn.extraction import (
     SceneEvidenceAnchor,
     SceneExtractionInput,
     SceneExtractor,
+    SceneSentenceUnderstanding,
+    SceneSignal,
     StaticAIExtractionClient,
     UrllibOpenAIResponsesTransport,
 )
@@ -126,6 +129,11 @@ from aevryn.scenes import (
     SceneEngine,
     SceneEnvironmentSnapshot,
 )
+from aevryn.sentences import (
+    SentenceSignal,
+    SentenceUnderstanding,
+    SentenceUnderstandingEngine,
+)
 from aevryn.timeline import (
     DuplicateChapterError,
     DuplicateEventError,
@@ -145,6 +153,7 @@ from aevryn.translation import (
     TranslatedUnit,
     TranslationEngine,
     TranslationIssue,
+    TranslationSentenceUnderstanding,
     TranslationUnit,
 )
 from aevryn.world import WorldEntityFact, WorldEntityState, WorldState, WorldStateBuilder
@@ -178,6 +187,7 @@ __all__ = [
     "postgresql_schema_statements",
     "project_database_schema_digest",
     "RecordNotFoundError",
+    "RejectedCanonCandidate",
     "SnapshotRecord",
     "StoryRecord",
     "UserRecord",
@@ -256,11 +266,16 @@ __all__ = [
     "SceneEngine",
     "SceneEvidenceAnchor",
     "SceneExtractionInput",
+    "SceneSentenceUnderstanding",
+    "SceneSignal",
     "SceneExtractor",
     "StaticAIExtractionClient",
     "SurfaceReference",
     "UrllibOpenAIResponsesTransport",
     "SceneEnvironmentSnapshot",
+    "SentenceSignal",
+    "SentenceUnderstanding",
+    "SentenceUnderstandingEngine",
     "SourceParagraph",
     "SourceFileText",
     "SourceFileTextExtractor",
@@ -275,6 +290,7 @@ __all__ = [
     "TranslatedUnit",
     "TranslationEngine",
     "TranslationIssue",
+    "TranslationSentenceUnderstanding",
     "TranslationUnit",
     "UnknownEntityError",
     "WorldEntityFact",

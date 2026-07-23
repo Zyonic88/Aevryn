@@ -90,6 +90,16 @@ export class ApiError extends Error {
   }
 }
 
+type AuthenticationFailureHandler = (error: ApiError) => void;
+
+let authenticationFailureHandler: AuthenticationFailureHandler | null = null;
+
+export function setAuthenticationFailureHandler(
+  handler: AuthenticationFailureHandler | null,
+): void {
+  authenticationFailureHandler = handler;
+}
+
 export type LoginRequest = {
   email: string;
   password: string;
@@ -210,15 +220,17 @@ export async function postJson(
   {
     headers,
     body,
+    method = "POST",
   }: {
     headers: HeadersInit;
     body: unknown;
+    method?: "POST" | "PUT";
   },
 ): Promise<JsonPostResponse> {
   let response: Response;
   try {
     response = await fetch(url, {
-      method: "POST",
+      method,
       headers,
       body: JSON.stringify(body),
     });
@@ -563,14 +575,7 @@ export class AevrynApiClient {
 
     const payload = await readJsonPayload(response);
     if (!response.ok) {
-      const errorPayload = z
-        .object({ error: z.string().optional(), detail: z.string().optional() })
-        .safeParse(payload);
-      throw new ApiError(
-        errorPayload.data?.detail ?? "Aevryn API request failed.",
-        response.status,
-        errorPayload.data?.error ?? "request_failed",
-      );
+      throw apiErrorFromResponsePayload(response.status, payload);
     }
 
     const parsed = schema.safeParse(payload);
@@ -597,14 +602,7 @@ export class AevrynApiClient {
 
     if (!response.ok) {
       const payload = await readJsonPayload(response);
-      const errorPayload = z
-        .object({ error: z.string().optional(), detail: z.string().optional() })
-        .safeParse(payload);
-      throw new ApiError(
-        errorPayload.data?.detail ?? "Aevryn API request failed.",
-        response.status,
-        errorPayload.data?.error ?? "request_failed",
-      );
+      throw apiErrorFromResponsePayload(response.status, payload);
     }
   }
 
@@ -619,14 +617,7 @@ export class AevrynApiClient {
 
     if (!response.ok) {
       const payload = await readJsonPayload(response);
-      const errorPayload = z
-        .object({ error: z.string().optional(), detail: z.string().optional() })
-        .safeParse(payload);
-      throw new ApiError(
-        errorPayload.data?.detail ?? "Aevryn API request failed.",
-        response.status,
-        errorPayload.data?.error ?? "request_failed",
-      );
+      throw apiErrorFromResponsePayload(response.status, payload);
     }
 
     return {
@@ -717,6 +708,28 @@ async function readJsonPayload(response: Response): Promise<unknown> {
     }
     return {};
   }
+}
+
+function apiErrorFromResponsePayload(status: number, payload: unknown): ApiError {
+  const errorPayload = z
+    .object({ error: z.string().optional(), detail: z.string().optional() })
+    .safeParse(payload);
+  const error = new ApiError(
+    errorPayload.data?.detail ?? "Aevryn API request failed.",
+    status,
+    errorPayload.data?.error ?? "request_failed",
+  );
+  if (isAuthenticationBoundaryError(error)) {
+    authenticationFailureHandler?.(error);
+  }
+  return error;
+}
+
+function isAuthenticationBoundaryError(error: ApiError): boolean {
+  return (
+    error.status === 401 &&
+    ["authentication_required", "invalid_session", "session_required"].includes(error.code)
+  );
 }
 
 async function readOptionalJsonPayload(response: Response): Promise<unknown> {
