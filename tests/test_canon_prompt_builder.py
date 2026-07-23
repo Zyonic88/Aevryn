@@ -79,6 +79,23 @@ def test_canon_prompt_builder_builds_bundle() -> None:
     assert bundle.animation_prompt
 
 
+def test_canon_prompt_builder_keeps_machine_scene_ids_out_of_prompt_text() -> None:
+    """Prompt text should not expose internal scene identifiers."""
+    context = build_context()
+    bundle = CanonPromptBuilder().build_bundle(context)
+    prompt_text = "\n".join(
+        (
+            bundle.image_prompt,
+            bundle.narration_prompt,
+            bundle.camera_prompt,
+            bundle.animation_prompt,
+        )
+    )
+
+    assert context.scene.scene_id not in prompt_text
+    assert "Scene ID:" not in prompt_text
+
+
 def test_canon_prompt_builder_does_not_dump_full_scene_text() -> None:
     """Prompt builder keeps source text concise."""
     prompt = CanonPromptBuilder().build_image_prompt(build_context())

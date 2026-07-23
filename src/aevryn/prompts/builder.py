@@ -332,7 +332,6 @@ class CanonPromptBuilder:
         """Return scene identity section."""
         return (
             f"Scene: {context.scene.title}\n"
-            f"Scene ID: {context.scene.scene_id}\n"
             f"Source Summary: {CanonPromptBuilder._source_summary(context)}"
         )
 
@@ -355,7 +354,6 @@ class CanonPromptBuilder:
         """Return scene analysis section."""
         return "\n".join(
             [
-                f"Scene ID: {analysis.scene_id}",
                 f"Scene Summary: {CanonPromptBuilder._shorten(analysis.summary)}",
                 f"Purpose: {CanonPromptBuilder._shorten(analysis.purpose)}",
                 f"Conflict: {CanonPromptBuilder._shorten(analysis.conflict)}",
@@ -370,7 +368,6 @@ class CanonPromptBuilder:
         return "\n".join(
             [
                 f"Scene Summary: {CanonPromptBuilder._shorten(analysis.summary, width=220)}",
-                f"Scene ID: {analysis.scene_id}",
                 f"Purpose: {CanonPromptBuilder._shorten(analysis.purpose)}",
                 f"Conflict: {CanonPromptBuilder._shorten(analysis.conflict)}",
                 f"Mood and tone: {CanonPromptBuilder._shorten(analysis.mood)}",

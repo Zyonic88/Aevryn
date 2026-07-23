@@ -560,7 +560,7 @@ def test_presentation_engine_preserves_prompt_safeguards_when_prompt_is_long() -
 
 
 def test_presentation_engine_removes_prompt_structural_placeholders() -> None:
-    """Prompt presentation should not expose raw prompt section placeholders."""
+    """Prompt presentation should not expose structural or internal placeholders."""
     _card, context, analysis, pack = build_outputs()
     prompt_bundle = PromptBundle(
         image_prompt="\n".join(
@@ -569,6 +569,13 @@ def test_presentation_engine_removes_prompt_structural_placeholders() -> None:
                 "- Unknown",
                 "- Iron Sword",
                 "Scene ID: source_demo_chapter_002_scene_001",
+                "Source ID: aevryn_import_bundle",
+                (
+                    "Evidence anchor: "
+                    "aevryn_import_bundle_chapter_010_scene_001_paragraph_023_"
+                    "sentence_002_anchor"
+                ),
+                "Import ID: import_7d8de6b4_a531_4f4e_b22e_b5c18acd4dbf",
             ]
         ),
         narration_prompt=pack.prompt_bundle.narration_prompt,
@@ -581,10 +588,7 @@ def test_presentation_engine_removes_prompt_structural_placeholders() -> None:
 
     view = engine.production_pack(pack=compact_pack, scene=scene)
 
-    assert view.image_prompt.items == (
-        "Iron Sword",
-        "Scene ID: source_demo_chapter_002_scene_001",
-    )
+    assert view.image_prompt.items == ("Iron Sword",)
 
 
 def test_export_engine_writes_presentation_views() -> None:

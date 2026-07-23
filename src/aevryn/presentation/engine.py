@@ -140,6 +140,18 @@ _EXPLICIT_RACE_TERMS = (
     ("Vampire", ("vampire",)),
 )
 _MAX_PROMPT_PRESENTATION_LINES = 48
+_INTERNAL_PROMPT_LINE_PATTERNS = (
+    re.compile(r"^(scene|source|import|project|story|chapter) id\s*:", re.IGNORECASE),
+    re.compile(r"^evidence anchor\s*:", re.IGNORECASE),
+    re.compile(r"\baevryn_import_bundle\b", re.IGNORECASE),
+    re.compile(r"\bimport_[a-z0-9][a-z0-9_]*\b", re.IGNORECASE),
+    re.compile(r"\b[a-z0-9]+_chapter_\d{3}_scene_\d{3}\b", re.IGNORECASE),
+    re.compile(
+        r"\bchapter_\d{3}_scene_\d{3}_paragraph_\d{3}_sentence_\d{3}_anchor\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b[a-z0-9][a-z0-9_]*_anchor(?:_\d+)?\b", re.IGNORECASE),
+)
 
 
 class PresentationEngine:
@@ -771,8 +783,18 @@ class PresentationEngine:
         stripped_line = PresentationEngine._strip_markdown_bullet(line.strip())
         if not stripped_line or stripped_line == "Unknown" or stripped_line.endswith(":"):
             return None
+        if PresentationEngine._is_internal_prompt_line(stripped_line):
+            return None
 
         return PresentationEngine._shorten(stripped_line)
+
+    @staticmethod
+    def _is_internal_prompt_line(line: str) -> bool:
+        """Return whether a prompt line exposes internal IDs or evidence plumbing."""
+        return any(
+            pattern.search(line)
+            for pattern in _INTERNAL_PROMPT_LINE_PATTERNS
+        )
 
     @staticmethod
     def _is_prompt_safeguard_line(line: str) -> bool:

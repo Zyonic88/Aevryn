@@ -171,7 +171,8 @@ def test_runner_builds_prompt_bundle_from_demo_pipeline() -> None:
 
     bundle = runner.build_prompt_bundle(result=result)
 
-    assert "Scene ID: demo_chapter_002_scene_001" in bundle.image_prompt
+    assert "Scene Summary:" in bundle.image_prompt
+    assert "demo_chapter_002_scene_001" not in bundle.image_prompt
     assert "Iron Sword" in bundle.animation_prompt
     assert "item_iron_sword" not in bundle.animation_prompt
 
