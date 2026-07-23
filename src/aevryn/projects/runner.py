@@ -1432,7 +1432,9 @@ def _add_identity_profile_fact(
     attribute = fact.attribute.lower()
     if attribute in {"display_name", "name", "alias"}:
         aliases_by_id.setdefault(fact.entity_id, set()).add(fact.value)
-    elif attribute in {"title", "role", "profession"}:
+    elif attribute in {"title", "role", "profession"} or (
+        attribute == "status" and _status_value_is_title_like(fact.value)
+    ):
         titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
     elif attribute in {"description", "appearance", "race", "species", "gender", "sex"}:
         descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
@@ -1456,6 +1458,15 @@ def _pronouns_for_identity_fact_value(value: str) -> tuple[str, ...]:
     if gender_terms == {"male"}:
         return ("he", "him", "his")
     return ()
+
+
+def _status_value_is_title_like(value: str) -> bool:
+    """Return whether a status value is safe to reuse as an identity title."""
+    tokens = _identity_surface_tokens(value)
+    if not 1 <= len(tokens) <= 4:
+        return False
+    normalized = " ".join(tokens)
+    return normalized in _TITLE_LIKE_STATUS_VALUES
 
 
 def _explicit_gender_terms_for_identity_surfaces(values: tuple[str, ...]) -> set[str]:
@@ -1512,6 +1523,32 @@ _MALE_IDENTITY_TERMS = {
     "princes",
 }
 _GENDER_NEGATION_TERMS = {"not", "no", "non", "without"}
+_TITLE_LIKE_STATUS_VALUES = {
+    "admiral",
+    "baron",
+    "baroness",
+    "captain",
+    "chief",
+    "chief engineer",
+    "commander",
+    "doctor",
+    "director",
+    "elder",
+    "emperor",
+    "empress",
+    "general",
+    "king",
+    "lady",
+    "lord",
+    "master",
+    "officer",
+    "prince",
+    "princess",
+    "professor",
+    "queen",
+    "teacher",
+    "vice captain",
+}
 
 
 def _identity_surface_tokens(value: str) -> tuple[str, ...]:
