@@ -841,6 +841,83 @@ def test_runner_resolves_pronoun_from_explicit_family_role_support() -> None:
     )
 
 
+def test_runner_resolves_possessive_relationship_label_to_existing_identity() -> None:
+    """Explicit relationship labels should resolve possessive references without duplicates."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_li_na",
+                        "entity_type": "character",
+                        "display_name": "Li Na",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_li_na_relationship_sister",
+                        "entity_id": "character_li_na",
+                        "attribute": "relationship_context",
+                        "value": "sister of Zhao Chen",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_002_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_zhao_chens_sister",
+                        "entity_type": "character",
+                        "display_name": "Zhao Chen's sister",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_zhao_chens_sister_status_waiting",
+                        "entity_id": "character_zhao_chens_sister",
+                        "attribute": "status",
+                        "value": "Waiting",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_li_na"
+    assert result.database.retrieve_entity("character_zhao_chens_sister") is None
+    status_fact = result.database.retrieve_current_fact("character_li_na", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Waiting"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_li_na"
+        and decision.reference.text == "Zhao Chen's sister"
+        for decision in result.identity_resolutions
+    )
+
+
 def test_runner_does_not_use_negated_gender_words_for_pronoun_support() -> None:
     """Negated gender words should not create unsafe pronoun support."""
     runner = AevrynProjectRunner()

@@ -362,6 +362,9 @@ Verified hardening:
 * entity resolution and project-runner tests resolve title-plus-name references
   such as General Charlotte to the existing Canon identity when the title/name
   support is explicit, while keeping shared titles ambiguous
+* project-runner identity profiles preserve explicit relationship labels such as
+  "sister of Zhao Chen," allowing possessive references like "Zhao Chen's sister"
+  to resolve to an existing identity without creating duplicate character cards
 * character profiles and stored snapshot API output hide contradictory
   Human-plus-non-human race/species values instead of displaying both as Canon
 * verified with the focused processed-character-panel frontend test
