@@ -3834,7 +3834,49 @@ describe("App shell routing", () => {
 
   it("previews production packs from the prompt packs workspace tab", async () => {
     const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
     storeAuthenticatedProject();
+    const promptPreviewWithManyDetails = {
+      ...promptPreviewPayload,
+      production_pack: {
+        ...promptPreviewPayload.production_pack,
+        image_prompt: {
+          ...promptPreviewPayload.production_pack.image_prompt,
+          items: [
+            ...promptPreviewPayload.production_pack.image_prompt.items,
+            "Character: Mark.",
+            "Setting: Quiet hangar.",
+            "Object: Rusty Dagger.",
+            "Mood: Tense.",
+            "Lighting: Neutral.",
+            "Camera: Medium shot.",
+            "Action: Mark carries the dagger.",
+            "Continuity guard: Do not add unsupported characters.",
+            "Hidden full-copy detail: preserve this line.",
+          ],
+        },
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.promptsPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(promptPreviewWithManyDetails)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
 
     render(
       <MemoryRouter initialEntries={["/projects/project_alpha/prompts"]}>
@@ -3873,6 +3915,18 @@ describe("App shell routing", () => {
     expect(
       within(imagePromptPreview).getByText("Scene Summary: Mark prepares in the hangar."),
     ).toBeInTheDocument();
+    expect(
+      within(promptPreviewResult).queryByText("Hidden full-copy detail: preserve this line."),
+    ).not.toBeInTheDocument();
+    await user.click(within(promptPreviewResult).getByRole("button", { name: "Copy Image Prompt" }));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        expect.stringContaining("Hidden full-copy detail: preserve this line."),
+      ),
+    );
+    expect(writeText).toHaveBeenCalledWith(
+      expect.not.stringContaining("more canon details available"),
+    );
     expect(screen.getByText("Chapter 1 / Chapter 1, Scene 1")).toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);

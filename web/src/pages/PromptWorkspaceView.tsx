@@ -185,7 +185,7 @@ function PromptPreviewResult({ result }: { result: PromptPreview }) {
 
 function PromptSection({ section }: { section: OutputSection }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const promptText = readablePromptText(section, { maxItems: 10 });
+  const promptText = readablePromptText(section);
   const promptSummary = readablePromptSummary(section);
   const promptPreview = readablePromptPreview(section, { maxItems: 3 });
 
