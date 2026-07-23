@@ -360,7 +360,7 @@ Remaining hardening:
 * reduce incorrect item/skill/location/organization categorization where evidence supports a better class
 * avoid tailoring classification to one novel
 * preserve uncertain classifications as reviewable instead of pretending certainty
-* use sentence-level meaning signals as routing metadata without making them Canon truth
+* ~~use sentence-level meaning signals as routing metadata without making them Canon truth~~
 * keep world cards collapsed and searchable/scannable
 
 Verified hardening:
@@ -373,6 +373,13 @@ Verified hardening:
   from relationship and accepted-entity text, including system, weapon, armor,
   creature, vehicle, and timeline-event IDs
 * verified with readable-output frontend unit test, lint, and production build
+* sentence understanding routes item, skill, system, location, and organization
+  cues as metadata-only guidance; mixed or ambiguous cues remain reviewable
+  instead of becoming Canon truth
+* system reward, mission, quest, and points language is treated as system context
+  rather than a usable skill unless the evidence explicitly describes an ability
+* verified with sentence-understanding, extraction, and evidence-bounded AI
+  extraction tests
 
 Acceptance:
 

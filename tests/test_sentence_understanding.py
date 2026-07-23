@@ -63,6 +63,23 @@ def test_sentence_understanding_detects_system_ui_phrases() -> None:
     assert "quest reward" in understanding.cue_terms
 
 
+def test_sentence_understanding_keeps_system_rewards_out_of_skill_context() -> None:
+    """Quest, mission, points, and reward language are system context, not abilities."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_system_rewards",
+        title="Sentence System Rewards",
+        text="Chapter 1\nThe mission reward gave Zhao Chen 100 system points.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "mission reward" in understanding.cue_terms
+    assert "points" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_treats_skill_phrase_as_skill_context() -> None:
     """An item-like word inside a skill phrase should not become a separate item."""
     imported = StoryImporter().import_text(
