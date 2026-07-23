@@ -1007,7 +1007,6 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "restore_database_audit_access_verify=passed",
         "restore_database_audit_ledger_verify=passed",
         "records_verified=5195",
-        "restore-api-config-check",
         "ok=restore_api_config_contract_checked",
         "production_traffic_attached=false",
         "PARTIAL - restored Supabase project exists, private restore API exists, "
@@ -1015,14 +1014,24 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "PARTIAL - source restore-point candidate recorded; "
         "Supabase backup/PITR point not selected",
         "PASSED - restored database audit ledger verified 5195 records",
-        "BLOCKED - restore API boundary verifier not run",
-        "deleted_story_absent_from_product_surfaces=not_run",
+        "PASSED - restore API boundary verifier denied cross-user "
+        "project/story/import/export access",
+        "PASSED - restore API boundary verifier confirmed owner-scoped import "
+        "metadata and denied cross-user source access",
+        "PASSED - restore API boundary verifier confirmed owner export "
+        "metadata/download and denied cross-user export access",
+        "PASSED - restore API boundary verifier confirmed deleted story absence",
+        "deleted_story_absent_from_product_surfaces=passed",
+        "restore_drill_api_boundaries_verified=passed",
         "audit_ledger_integrity_after_restore=passed",
-        "operator_broad_manuscript_access_required=not_run",
+        "operator_broad_manuscript_access_required=false",
         "production_traffic_attached=false",
-        "This dated record is accepted only as source-environment preflight evidence.",
+        "Restore API boundary result: PASSED",
+        "Deletion-after-restore result: PASSED THROUGH ISOLATED API",
+        "restore_logs_metadata_only=not_run_requires_hosted_log_review",
+        "This dated record is accepted as source-environment preflight evidence",
         "This record cannot close Gate 5.",
-        "python -m aevryn.cli restore-drill-verify",
+        "ok=restore_drill_api_boundaries_verified",
     )
 
     for term in required_terms:

@@ -288,12 +288,12 @@ payload was recorded in this document.
 | Delete disposable story | Active product surfaces no longer show it | `PASSED - disposable story deleted before restore-point capture` |
 | Capture restore point | Backup or restore point ID recorded | `PARTIAL - source restore-point candidate recorded; Supabase backup/PITR point not selected` |
 | Restore isolated target | Restored environment is separated from production traffic | `PARTIAL - restored Supabase project exists, private restore API exists, config preflight passed, and no production Cloud Run traffic is attached` |
-| Verify ownership boundaries | Cross-user project/story reads fail closed | `BLOCKED - restore API boundary verifier not run` |
-| Verify source references | Source bytes resolve only for the owner | `BLOCKED - restore API boundary verifier not run` |
-| Verify export references | Export access resolves only for the owner | `BLOCKED - restore API boundary verifier not run` |
-| Verify deleted story behavior | Deleted story does not reappear in active product surfaces | `BLOCKED - restore API boundary verifier not run` |
+| Verify ownership boundaries | Cross-user project/story reads fail closed | `PASSED - restore API boundary verifier denied cross-user project/story/import/export access` |
+| Verify source references | Source bytes resolve only for the owner | `PASSED - restore API boundary verifier confirmed owner-scoped import metadata and denied cross-user source access` |
+| Verify export references | Export access resolves only for the owner | `PASSED - restore API boundary verifier confirmed owner export metadata/download and denied cross-user export access` |
+| Verify deleted story behavior | Deleted story does not reappear in active product surfaces | `PASSED - restore API boundary verifier confirmed deleted story absence` |
 | Verify audit chain | Audit integrity check passes after restore | `PASSED - restored database audit ledger verified 5195 records` |
-| Verify restore logs | Logs remain metadata-only | `BLOCKED - restore API boundary verifier not run` |
+| Verify restore logs | Logs remain metadata-only | `BLOCKED - hosted restore log review not run` |
 | Verify operator access | Restore did not require broad manuscript browsing | `PARTIAL - private service deployed and checked without broad manuscript browsing` |
 
 ---
@@ -301,11 +301,11 @@ payload was recorded in this document.
 # Required Assertions
 
 ```text
-restored_projects_scoped_to_owner=not_run
-cross_user_reads_fail_closed=not_run
-source_storage_references_private=not_run
-export_downloads_owner_scoped=not_run
-deleted_story_absent_from_product_surfaces=not_run
+restored_projects_scoped_to_owner=passed
+cross_user_reads_fail_closed=passed
+source_storage_references_private=passed
+export_downloads_owner_scoped=passed
+deleted_story_absent_from_product_surfaces=passed
 audit_ledger_integrity_after_restore=passed
 restored_audit_records_verified=5195
 restore_api_config_check=passed
@@ -315,8 +315,9 @@ audit_records_metadata_only=passed_for_source_preflight_and_restored_database_cl
 restore_logs_no_source_prose=not_run
 restore_logs_no_full_provider_payloads=not_run
 restore_logs_no_credentials_or_private_urls=not_run
-operator_broad_manuscript_access_required=not_run
+operator_broad_manuscript_access_required=false
 production_traffic_attached=false
+restore_drill_api_boundaries_verified=passed
 ```
 
 ---
@@ -328,7 +329,8 @@ Restore drill result: BLOCKED
 Audit integrity result: SOURCE PREFLIGHT AND RESTORED DATABASE AUDIT VERIFY PASSED
 Metadata-only log review result: SOURCE PREFLIGHT AND RESTORED DATABASE CLI OUTPUT PASSED
 Source fixture result: PASSED
-Deletion-after-restore result: NOT RUN
+Restore API boundary result: PASSED
+Deletion-after-restore result: PASSED THROUGH ISOLATED API
 Public beta: BLOCKED
 ```
 
@@ -342,10 +344,10 @@ Reason:
 
 ```text
 The source environment preflight, source fixture, restored target isolation,
-restored database audit verification, private restore API deployment, and restore
-API config preflight passed. The drill still has not verified ownership
-boundaries, source/export owner scoping, deleted-story behavior, or restore logs
-through the isolated Aevryn API. This record cannot close Gate 5.
+restored database audit verification, private restore API deployment, restore
+API config preflight, and isolated restore API boundary verification passed. The
+drill still has not verified hosted restore logs for source prose, provider
+payloads, credentials, or private URLs. This record cannot close Gate 5.
 ```
 
 ---
@@ -357,19 +359,40 @@ Use the isolated Aevryn API target and continue the drill using
 
 The next run must verify:
 
-* restored ownership boundaries
-* cross-user access denial
-* source and export owner-scoped access
-* deleted-story absence from active product surfaces
-* audit integrity after restore
-* metadata-only restore logs
-* no broad manuscript browsing by restore operators
+* hosted restore logs contain no source prose
+* hosted restore logs contain no full provider prompts or responses
+* hosted restore logs contain no credentials, tokens, database URLs, storage
+  references, or private bucket names
 
-The restored API boundary verification command is:
+The restored API boundary verification command passed:
 
-```powershell
-python -m aevryn.cli restore-api-config-check
-python -m aevryn.cli restore-drill-verify --clipboard-session-tokens --project-id <project_id> --active-story-id <active_story_id> --disposable-story-id <disposable_story_id> --import-id <import_id> --export-id <export_id>
+```text
+drill_verification=isolated_api
+project_id=restore_drill_project_1acd3f86bd984a258fc04c976642131d
+owner_project_read=passed
+owner_active_story_present=passed
+deleted_story_absent_from_product_surfaces=passed
+owner_import_metadata_visible=passed
+source_storage_owner_scoped=passed
+project_status=succeeded
+snapshots_available=true
+owner_export_metadata_visible=passed
+owner_export_download_available=passed
+export_storage_owner_scoped=passed
+cross_user_project_read=denied
+cross_user_story_imports=denied
+cross_user_exports=denied
+cross_user_export_download=denied
+deleted_story_imports=denied
+private_cloud_run_auth=present
+source_bytes_printed=0
+export_bytes_printed=0
+storage_refs_printed=0
+secrets_printed=0
+restore_logs_metadata_only=not_run_requires_hosted_log_review
+production_traffic_attached=false
+public_beta=blocked_until_restore_logs_review_passes
+ok=restore_drill_api_boundaries_verified
 ```
 
 The restore API config preflight must report
@@ -380,6 +403,9 @@ before the boundary verifier can count toward Gate 5.
 
 # Acceptance
 
-This dated record is accepted only as source-environment preflight evidence.
+This dated record is accepted as source-environment preflight evidence, restored
+database audit evidence, restore API configuration evidence, and isolated restore
+API boundary evidence.
 
-It is not accepted as a completed restore/audit drill.
+It is not accepted as a completed restore/audit drill until the hosted restore
+log review passes.
