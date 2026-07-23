@@ -495,12 +495,19 @@ Verified evidence:
 * owner export download availability passed in `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
 * cross-user export access and download were denied in `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
 * export limitations are documented in `docs/AEVRYN_EXPORT_ENGINE.md`
+* API export creation/listing returns metadata only and does not expose
+  `storage_ref` or private storage paths
+* frontend stored-export cards display download availability while explicitly
+  hiding private storage references
+* export API and database tests keep metadata and download routes project-owner
+  scoped after the storage/database hardening
 
 Remaining hardening:
 
 * rerun export creation and download in the final hosted browser pass
-* keep export metadata visible without exposing private storage references
-* keep exports project-owner scoped after any storage or database changes
+* ~~keep export metadata visible without exposing private storage references~~
+* ~~keep exports project-owner scoped after any storage or database changes~~
+* ~~keep export download requests authenticated and timestamped from the frontend client~~
 
 Acceptance:
 
