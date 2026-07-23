@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PublicOnlyRoute } from "./components/PublicOnlyRoute";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
+import { PasswordRecoveryPage } from "./pages/PasswordRecoveryPage";
 import { ProjectWorkspacePage } from "./pages/ProjectWorkspacePage";
 import {
   AcceptableUsePage,
@@ -38,6 +39,7 @@ export function App() {
           <Route path="/support" element={<SupportPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/acceptable-use" element={<AcceptableUsePage />} />
+          <Route path="/password-recovery" element={<PasswordRecoveryPage />} />
           <Route element={<PublicOnlyRoute />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

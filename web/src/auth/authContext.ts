@@ -8,6 +8,7 @@ export type AuthContextValue = {
   isSessionRestoring: boolean;
   sessionPersistenceError: string | null;
   clearSessionPersistenceError: () => void;
+  invalidateSession: (reason: string) => void;
   setSession: (session: AuthSession) => void;
   logout: () => void;
 };

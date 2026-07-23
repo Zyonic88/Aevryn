@@ -36,6 +36,9 @@ It must run in a staging or release-candidate environment, not against productio
 
 The required result template is defined in `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`.
 
+The provider-specific execution runbook is defined in
+`docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`.
+
 ---
 
 # Privacy Boundary
@@ -99,6 +102,9 @@ It must not contain real unpublished manuscript content.
 16. Confirm restore logs and diagnostics are metadata-only.
 17. Record the result in the release-candidate readiness record.
 18. Copy `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md` into a dated drill record and complete every result field.
+
+Provider-specific execution details must follow
+`docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`.
 
 ---
 

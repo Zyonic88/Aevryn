@@ -67,6 +67,9 @@ def test_production_observability_policy_preserves_metadata_only_boundary() -> N
         "Operational logs and traces: retain up to 30 days.",
         "Security alerts and incident notes: retain up to 1 year.",
         "bounded log review",
+        "hosted production-like observability configuration gate passed on",
+        "ok=observability_config_contract_checked",
+        "bounded hosted log review",
         "application-level metadata-only tests remain required",
     )
 

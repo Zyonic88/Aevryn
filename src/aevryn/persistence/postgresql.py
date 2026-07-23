@@ -312,11 +312,23 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
 
 def _required_database_url(database_url: str) -> str:
     """Return a nonblank PostgreSQL database URL."""
-    if not isinstance(database_url, str) or not database_url.strip():
+    if not isinstance(database_url, str):
         raise ValueError("PostgreSQL database URL cannot be blank.")
-    if not database_url.startswith(("postgresql://", "postgres://")):
+    normalized_url = _normalized_database_url(database_url)
+    if not normalized_url:
+        raise ValueError("PostgreSQL database URL cannot be blank.")
+    if not normalized_url.startswith(("postgresql://", "postgres://")):
         raise ValueError("PostgreSQL database URL must use postgresql:// or postgres://.")
-    return database_url.strip()
+    return normalized_url
+
+
+def _normalized_database_url(database_url: str) -> str:
+    """Trim copy/paste wrapping without weakening URL validation."""
+    normalized_url = database_url.strip()
+    if len(normalized_url) >= 2 and normalized_url[0] == normalized_url[-1]:
+        if normalized_url[0] in {"'", '"'}:
+            normalized_url = normalized_url[1:-1].strip()
+    return normalized_url
 
 
 def _default_connect_factory() -> ConnectFactory:

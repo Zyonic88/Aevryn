@@ -61,6 +61,22 @@ def single_chapter_source_file() -> Path:
     return path
 
 
+def ambiguous_translation_source_file() -> Path:
+    """Create a one-chapter source file with translation ambiguity cues."""
+    path = Path("build") / "test_project_runner" / "ambiguous_translation.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(
+            [
+                "Chapter 1",
+                "Charlotte studied the dao core.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def two_scene_source_file() -> Path:
     """Create a one-chapter source file with two explicit scenes."""
     path = Path("build") / "test_project_runner" / "two_scene_chapter.txt"
@@ -230,6 +246,34 @@ def test_runner_feeds_translation_normalized_text_to_extraction() -> None:
     assert result.translation_units[0].normalized_text == "Mark bought an Iron Blade."
     assert result.translation_units[0].source_scene_id == "demo_chapter_001_scene_001"
     assert result.extraction_results[0].scene_id == "demo_chapter_001_scene_001"
+
+
+def test_runner_feeds_sentence_ambiguity_to_translation_review() -> None:
+    """Project translation units should receive sentence ambiguity metadata."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=ambiguous_translation_source_file(),
+        source_id="demo",
+    )
+
+    result = runner.run_imported_source(
+        imported_source=imported_source,
+        extractor=EmptyExtractor(),
+    )
+
+    assert result.translation_units[0].normalized_text == "Charlotte studied the dao core."
+    assert tuple(issue.source_term for issue in result.translation_units[0].issues) == (
+        "core",
+        "dao",
+    )
+    assert all(
+        issue.issue_code == "translation_sentence_ambiguity"
+        for issue in result.translation_units[0].issues
+    )
+    assert all(
+        issue.evidence_anchor_ids
+        for issue in result.translation_units[0].issues
+    )
 
 
 def test_runner_builds_phase12_translation_and_identity_metadata() -> None:
@@ -407,6 +451,150 @@ def test_runner_resolves_title_name_surface_to_prior_identity() -> None:
         decision.status == "resolved"
         and decision.entity_id == "character_charlotte"
         and decision.reference.text == "General Charlotte"
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_uses_title_like_status_for_title_name_resolution() -> None:
+    """Short title-like status facts should support later title/name references."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_status_general",
+                        "entity_id": "character_charlotte",
+                        "attribute": "status",
+                        "value": "General",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_001_scene_002": {
+                "entities": [
+                    {
+                        "entity_id": "character_general_charlotte",
+                        "entity_type": "character",
+                        "display_name": "General Charlotte",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_general_charlotte_status_present",
+                        "entity_id": "character_general_charlotte",
+                        "attribute": "status",
+                        "value": "Present",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_charlotte"
+    assert result.database.retrieve_entity("character_general_charlotte") is None
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_charlotte"
+        and decision.reference.text == "General Charlotte"
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_does_not_use_generic_status_for_title_name_resolution() -> None:
+    """Generic status facts must not become title surfaces for identity merging."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_status_present",
+                        "entity_id": "character_charlotte",
+                        "attribute": "status",
+                        "value": "Present",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_001_scene_002": {
+                "entities": [
+                    {
+                        "entity_id": "character_present_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Present Charlotte",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == (
+        "character_present_charlotte",
+    )
+    assert result.extraction_results[1].entities[0].entity_id == (
+        "character_present_charlotte"
+    )
+    assert result.database.retrieve_entity("character_present_charlotte") is not None
+    assert all(
+        not (
+            decision.status == "resolved"
+            and decision.entity_id == "character_charlotte"
+            and decision.reference.text == "Present Charlotte"
+        )
         for decision in result.identity_resolutions
     )
 

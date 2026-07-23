@@ -22,16 +22,14 @@ import {
   compactIdentityReviewItems,
   identityReviewDetails,
   identityReviewKey,
-  identityReviewStatusLabel,
   identityReviewTitle,
   reviewItemCountLabel,
-  translationReviewDetails,
-  translationReviewKey,
 } from "./languageIdentityDisplay";
 import {
   isInternalOutputPlaceholder,
   readableOutputItems,
   readableOutputText,
+  readablePromptPreview,
   readablePromptSummary,
   readablePromptText,
 } from "./readableOutput";
@@ -135,8 +133,8 @@ function ProjectOutputSummary({
       </dl>
       <LanguageIdentityStatus outputs={outputs} />
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
-      {hasIdentityReviewItems(outputs) ? (
-        <IdentityReviewPanel outputs={outputs} defaultOpen={surface === "characters"} />
+      {surface === "characters" && hasIdentityReviewItems(outputs) ? (
+        <IdentityReviewPanel outputs={outputs} defaultOpen />
       ) : null}
       <ReadableSurfacePanels surface={surface} outputs={outputs} />
       {surfaceSummary.status === "waiting" ? (
@@ -170,6 +168,11 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
     summary.translation_review_count > 0
       ? reviewItemCountLabel(summary.translation_review_count)
       : "No review items";
+  const identityReviewCount = summary.identity_ambiguous_count + summary.identity_unresolved_count;
+  const identityReviewStatus =
+    identityReviewCount > 0
+      ? `${reviewItemCountLabel(identityReviewCount)} need character review`
+      : "No character review items";
   return (
     <div
       className="compact-list language-identity-status"
@@ -187,18 +190,12 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
           {summary.identity_decision_count.toLocaleString()} reference decisions; {identityDetails}
         </span>
       </div>
-      {summary.translation_review_items.slice(0, 4).map((item) => (
-        <div className="compact-row" key={translationReviewKey(item)}>
-          <strong>{item.issue_label}</strong>
-          <span>{translationReviewDetails(item)}</span>
-        </div>
-      ))}
-      {compactIdentityReviewItems(summary.identity_review_items, 4).map((item) => (
-        <div className="compact-row" key={identityReviewKey(item)}>
-          <strong>{identityReviewStatusLabel(item.status)}</strong>
-          <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
-        </div>
-      ))}
+      <div className="compact-row">
+        <strong>Review</strong>
+        <span>
+          {translationStatus}; {identityReviewStatus}
+        </span>
+      </div>
     </div>
   );
 }
@@ -692,6 +689,7 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
             <span aria-hidden="true"> - </span>
             <span>{continuitySceneSummary(scene)}</span>
           </summary>
+          <ContinuityScenePreview scene={scene} />
           <div className="continuity-change-grid">
             <ContinuityBucket title="New" records={scene.new} />
             <ContinuityBucket title="Updated" records={scene.updated} />
@@ -713,6 +711,20 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
         }
       />
     </div>
+  );
+}
+
+function ContinuityScenePreview({ scene }: { scene: ContinuityReport["scenes"][number] }) {
+  const previewItems = continuityPreviewItems(scene);
+  if (previewItems.length === 0) {
+    return null;
+  }
+  return (
+    <ul className="continuity-preview-list" aria-label="Continuity highlights">
+      {previewItems.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -805,6 +817,18 @@ function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): stri
   const changeLabel = `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
   const stableLabel = `${stableCount.toLocaleString()} still known`;
   return `${changeLabel}; ${stableLabel}`;
+}
+
+function continuityPreviewItems(scene: ContinuityReport["scenes"][number]): string[] {
+  const records = [
+    ...scene.new.map((record) => ({ ...record, bucket: "New" })),
+    ...scene.updated.map((record) => ({ ...record, bucket: "Updated" })),
+    ...scene.invalidated.map((record) => ({ ...record, bucket: "Invalidated" })),
+  ];
+  return records.slice(0, 2).map((record) => {
+    const description = readableOutputItems([record.description])[0] ?? "Unknown";
+    return `${record.bucket}: ${description}`;
+  });
 }
 
 function timelineGroupChangeLabel(changeCount: number): string {
@@ -931,6 +955,7 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
     full ? {} : { maxItems: MAX_VISIBLE_PROMPT_DETAILS },
   );
   const promptSummary = readablePromptSummary(section);
+  const promptPreview = readablePromptPreview(section, { maxItems: 3 });
 
   async function copyPrompt() {
     const clipboard = navigator.clipboard;
@@ -963,6 +988,19 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
           </button>
         </div>
       </div>
+      <ul className="prompt-preview-list" aria-label={`${section.title} preview`}>
+        {promptPreview.items.length > 0 ? (
+          promptPreview.items.map((item) => <li key={item}>{item}</li>)
+        ) : (
+          <li>Unknown.</li>
+        )}
+      </ul>
+      {promptPreview.hiddenCount > 0 ? (
+        <p className="prompt-preview-overflow">
+          {promptPreview.hiddenCount.toLocaleString()} more prompt{" "}
+          {promptPreview.hiddenCount === 1 ? "detail" : "details"} inside.
+        </p>
+      ) : null}
       <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
         <summary>
           Show {section.title} - {promptSummary}

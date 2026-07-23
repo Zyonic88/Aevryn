@@ -29,6 +29,7 @@ from aevryn.extraction import (
     ExtractionResult,
     SceneEvidenceAnchor,
     SceneExtractionInput,
+    SceneSentenceUnderstanding,
     StaticAIExtractionClient,
 )
 from aevryn.extraction.engine import SceneExtractor
@@ -40,10 +41,12 @@ from aevryn.importing import (
 )
 from aevryn.prompts import CanonPromptBuilder, PromptBundle
 from aevryn.scenes import CanonSceneContext, SceneContextBuilder
+from aevryn.sentences import SentenceUnderstanding, SentenceUnderstandingEngine
 from aevryn.translation import (
     GlossaryTerm,
     TranslatedUnit,
     TranslationEngine,
+    TranslationSentenceUnderstanding,
     TranslationUnit,
 )
 from aevryn.world import WorldState, WorldStateBuilder
@@ -392,6 +395,10 @@ class AevrynProjectRunner:
                         for anchor in imported_source.anchors
                         if anchor.scene_id == requested_scene_id
                     )
+                    sentence_understanding = _sentence_understanding_for_scene(
+                        imported_source=imported_source,
+                        scene_id=requested_scene_id,
+                    )
                     return SceneExtractionInput(
                         scene_id=scene.scene_id,
                         text="\n\n".join(scene.paragraphs),
@@ -403,6 +410,7 @@ class AevrynProjectRunner:
                             )
                             for anchor in anchors
                         ),
+                        sentence_understanding=sentence_understanding,
                     )
 
         raise ValueError(f"Unknown scene: {requested_scene_id}")
@@ -416,6 +424,9 @@ class AevrynProjectRunner:
         """Build Translation Foundation units without changing source structure."""
         requested_scene_ids = {scene_id} if scene_id is not None else None
         units: list[TranslationUnit] = []
+        sentence_understanding_by_scene = _translation_sentence_understanding_by_scene(
+            imported_source
+        )
         for chapter in imported_source.story.chapters:
             for scene in chapter.scenes:
                 if requested_scene_ids is not None and scene.scene_id not in requested_scene_ids:
@@ -430,6 +441,10 @@ class AevrynProjectRunner:
                         unit_id=f"translation_{scene.scene_id}",
                         source_text="\n\n".join(scene.paragraphs),
                         evidence_anchor_ids=tuple(anchor.anchor_id for anchor in anchors),
+                        sentence_understanding=sentence_understanding_by_scene.get(
+                            scene.scene_id,
+                            (),
+                        ),
                         source_chapter_id=chapter.chapter_id,
                         source_scene_id=scene.scene_id,
                     )
@@ -1164,6 +1179,63 @@ def _translated_scene_text_by_id(
     }
 
 
+def _sentence_understanding_for_scene(
+    *,
+    imported_source: ImportedSource,
+    scene_id: str,
+) -> tuple[SceneSentenceUnderstanding, ...]:
+    """Return extraction-safe sentence-understanding metadata for a scene."""
+    return tuple(
+        _scene_sentence_understanding(understanding)
+        for understanding in SentenceUnderstandingEngine().analyze_imported_source(
+            imported_source
+        )
+        if understanding.source_scene_id == scene_id
+    )
+
+
+def _translation_sentence_understanding_by_scene(
+    imported_source: ImportedSource,
+) -> dict[str, tuple[TranslationSentenceUnderstanding, ...]]:
+    """Return translation-safe sentence-understanding metadata by scene."""
+    grouped: dict[str, list[TranslationSentenceUnderstanding]] = {}
+    for understanding in SentenceUnderstandingEngine().analyze_imported_source(
+        imported_source
+    ):
+        grouped.setdefault(understanding.source_scene_id, []).append(
+            _translation_sentence_understanding(understanding)
+        )
+    return {
+        scene_id: tuple(scene_understanding)
+        for scene_id, scene_understanding in grouped.items()
+    }
+
+
+def _translation_sentence_understanding(
+    understanding: SentenceUnderstanding,
+) -> TranslationSentenceUnderstanding:
+    """Convert sentence understanding to translation-facing metadata."""
+    return TranslationSentenceUnderstanding(
+        evidence_anchor_id=understanding.evidence_anchor_id,
+        signals=understanding.signals,
+        ambiguity_terms=understanding.ambiguity_terms,
+        review_required=understanding.review_required,
+    )
+
+
+def _scene_sentence_understanding(
+    understanding: SentenceUnderstanding,
+) -> SceneSentenceUnderstanding:
+    """Convert sentence understanding to extraction-facing metadata."""
+    return SceneSentenceUnderstanding(
+        evidence_anchor_id=understanding.evidence_anchor_id,
+        signals=understanding.signals,
+        cue_terms=understanding.cue_terms,
+        ambiguity_terms=understanding.ambiguity_terms,
+        review_required=understanding.review_required,
+    )
+
+
 def _chapter_id_from_scene_id(scene_id: str) -> str:
     """Return the imported chapter ID prefix for a stable scene ID."""
     marker = "_scene_"
@@ -1360,7 +1432,9 @@ def _add_identity_profile_fact(
     attribute = fact.attribute.lower()
     if attribute in {"display_name", "name", "alias"}:
         aliases_by_id.setdefault(fact.entity_id, set()).add(fact.value)
-    elif attribute in {"title", "role", "profession"}:
+    elif attribute in {"title", "role", "profession"} or (
+        attribute == "status" and _status_value_is_title_like(fact.value)
+    ):
         titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
     elif attribute in {"description", "appearance", "race", "species", "gender", "sex"}:
         descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
@@ -1384,6 +1458,15 @@ def _pronouns_for_identity_fact_value(value: str) -> tuple[str, ...]:
     if gender_terms == {"male"}:
         return ("he", "him", "his")
     return ()
+
+
+def _status_value_is_title_like(value: str) -> bool:
+    """Return whether a status value is safe to reuse as an identity title."""
+    tokens = _identity_surface_tokens(value)
+    if not 1 <= len(tokens) <= 4:
+        return False
+    normalized = " ".join(tokens)
+    return normalized in _TITLE_LIKE_STATUS_VALUES
 
 
 def _explicit_gender_terms_for_identity_surfaces(values: tuple[str, ...]) -> set[str]:
@@ -1440,6 +1523,32 @@ _MALE_IDENTITY_TERMS = {
     "princes",
 }
 _GENDER_NEGATION_TERMS = {"not", "no", "non", "without"}
+_TITLE_LIKE_STATUS_VALUES = {
+    "admiral",
+    "baron",
+    "baroness",
+    "captain",
+    "chief",
+    "chief engineer",
+    "commander",
+    "doctor",
+    "director",
+    "elder",
+    "emperor",
+    "empress",
+    "general",
+    "king",
+    "lady",
+    "lord",
+    "master",
+    "officer",
+    "prince",
+    "princess",
+    "professor",
+    "queen",
+    "teacher",
+    "vice captain",
+}
 
 
 def _identity_surface_tokens(value: str) -> tuple[str, ...]:

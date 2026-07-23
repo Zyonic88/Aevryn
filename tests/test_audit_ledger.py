@@ -147,6 +147,13 @@ def test_postgresql_audit_ledger_rejects_non_postgresql_database_url() -> None:
         PostgresqlAuditLedger("sqlite:///aevryn.db", connect_factory=lambda _: None)
 
 
+def test_postgresql_audit_ledger_normalizes_pasted_database_url() -> None:
+    """Restore drills should tolerate whitespace and quoted pasted PostgreSQL URLs."""
+    assert audit_postgresql._required_database_url(
+        '  "postgresql://example.invalid/aevryn"  '
+    ) == "postgresql://example.invalid/aevryn"
+
+
 def test_postgresql_audit_ledger_requires_psycopg_when_no_factory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -319,7 +326,7 @@ def test_postgresql_audit_ledger_detects_tampered_persisted_rows() -> None:
 def test_postgresql_audit_access_report_returns_metadata_only_privileges() -> None:
     """Audit access reporting should inspect privileges without reading audit rows."""
     connection = FakeAuditConnection()
-    connection.access_report_row = (True, True, True, False, False, False)
+    connection.access_report_row = (True, True, True, False, False, False, False)
 
     report = postgresql_audit_access_report(
         "postgresql://example.invalid/aevryn",
@@ -333,6 +340,7 @@ def test_postgresql_audit_access_report_returns_metadata_only_privileges() -> No
         "can_update": False,
         "can_delete": False,
         "can_truncate": False,
+        "is_table_owner": False,
     }
     assert connection.audit_rows_selected == 0
 
@@ -340,7 +348,7 @@ def test_postgresql_audit_access_report_returns_metadata_only_privileges() -> No
 def test_postgresql_audit_access_report_rejects_non_boolean_values() -> None:
     """Audit access reports should fail if PostgreSQL returns unexpected shapes."""
     connection = FakeAuditConnection()
-    connection.access_report_row = (True, "yes", True, False, False, False)
+    connection.access_report_row = (True, "yes", True, False, False, False, False)
 
     with pytest.raises(PersistenceError, match="select privilege"):
         postgresql_audit_access_report(
@@ -358,6 +366,7 @@ class FakeAuditConnection:
             True,
             True,
             True,
+            False,
             False,
             False,
             False,

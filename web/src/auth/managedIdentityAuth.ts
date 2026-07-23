@@ -76,6 +76,53 @@ export async function refreshConfiguredAuthSession(session: AuthSession): Promis
   });
 }
 
+export async function requestConfiguredPasswordRecovery({
+  email,
+  redirectTo,
+}: {
+  email: string;
+  redirectTo: string;
+}): Promise<void> {
+  if (!isManagedIdentityAuthConfigured()) {
+    throw new Error("Password recovery requires the managed identity provider.");
+  }
+
+  const response = await supabaseAuthRequest({
+    path: `/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
+    body: { email },
+    authorizationToken: SUPABASE_ANON_KEY,
+  });
+  if (!response.ok) {
+    throw new Error(supabaseErrorMessage(readSupabasePayload(response.payload)));
+  }
+}
+
+export async function completeConfiguredPasswordRecovery({
+  accessToken,
+  password,
+}: {
+  accessToken: string;
+  password: string;
+}): Promise<void> {
+  if (!isManagedIdentityAuthConfigured()) {
+    throw new Error("Password recovery requires the managed identity provider.");
+  }
+  const token = textValue(accessToken);
+  if (!token) {
+    throw new Error("Password recovery link is invalid or expired.");
+  }
+
+  const response = await supabaseAuthRequest({
+    path: "/auth/v1/user",
+    method: "PUT",
+    body: { password },
+    authorizationToken: token,
+  });
+  if (!response.ok) {
+    throw new Error(supabaseErrorMessage(readSupabasePayload(response.payload)));
+  }
+}
+
 async function supabasePasswordAuth({
   path,
   body,
@@ -92,14 +139,10 @@ async function supabasePasswordAuth({
   }
 
   try {
-    const response = await postJson(`${SUPABASE_URL}${path}`, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
+    const response = await supabaseAuthRequest({
+      path,
       body,
+      authorizationToken: SUPABASE_ANON_KEY,
     });
     const payload = readSupabasePayload(response.payload);
     if (!response.ok) {
@@ -123,6 +166,33 @@ async function supabasePasswordAuth({
     }
     throw new Error("Managed identity provider is unreachable.");
   }
+}
+
+async function supabaseAuthRequest({
+  path,
+  body,
+  authorizationToken,
+  method = "POST",
+}: {
+  path: string;
+  body: Record<string, unknown>;
+  authorizationToken: string;
+  method?: "POST" | "PUT";
+}) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error("Managed identity provider is not configured.");
+  }
+  const response = await postJson(`${SUPABASE_URL}${path}`, {
+    method,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${authorizationToken}`,
+    },
+    body,
+  });
+  return response;
 }
 
 function readSupabasePayload(payload: unknown): SupabaseAuthResponse {
