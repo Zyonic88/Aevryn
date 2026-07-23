@@ -298,11 +298,18 @@ Verified evidence:
 
 Remaining hardening:
 
-* keep scene-level continuity highlights scannable
+* ~~keep scene-level continuity highlights scannable~~
 * keep large buckets collapsed during hosted browser validation
 * continue reducing repeated or low-value retained-canon noise when new examples appear
 * ~~verify no raw IDs appear in normal user view~~
 * verify continuity remains Canon-backed and does not invent explanations
+
+Verified hardening:
+
+* normal continuity output shows scene-level summaries with the first visible
+  new/changed Canon highlight before expansion
+* continuity preview keeps full change buckets collapsed and retained-canon
+  detail nested, while retained-canon Markdown examples remain bounded
 
 Acceptance:
 
