@@ -3466,6 +3466,7 @@ describe("App shell routing", () => {
     const previewCard = screen.getAllByRole("heading", { name: "Mark" })[0].closest("article");
     expect(previewCard).not.toBeNull();
     expect(previewCard?.querySelector(".character-portrait")).toHaveTextContent("M");
+    expect(previewCard?.querySelector("img")).toBeNull();
     expect(previewCard?.querySelector("details.profile-disclosure")).not.toHaveAttribute("open");
     expect(screen.getAllByText("Rusty Dagger").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Luna - Ally").length).toBeGreaterThanOrEqual(1);
@@ -3487,6 +3488,7 @@ describe("App shell routing", () => {
     const characterCard = characterHeading.closest("article");
     expect(characterCard).not.toBeNull();
     expect(characterCard?.querySelector(".character-portrait")).toHaveTextContent("M");
+    expect(characterCard?.querySelector("img")).toBeNull();
     expect(characterCard?.querySelector("details.profile-disclosure")).not.toHaveAttribute("open");
     const markCard = within(characterCard as HTMLElement);
     expect(screen.getAllByRole("heading", { name: "Mark" })).toHaveLength(1);
