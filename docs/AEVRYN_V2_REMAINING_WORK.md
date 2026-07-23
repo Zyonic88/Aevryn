@@ -393,16 +393,22 @@ Settings are honest, useful, and not misleading for beta.
 Status:
 
 ```text
-Functional baseline
+Baseline verified; final pass remains
 ```
+
+Verified evidence:
+
+* hosted snapshot export creation passed in `docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md`
+* owner export metadata visibility passed in `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
+* owner export download availability passed in `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
+* cross-user export access and download were denied in `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
+* export limitations are documented in `docs/AEVRYN_EXPORT_ENGINE.md`
 
 Remaining hardening:
 
-* verify export creation on hosted environment
-* verify export download authorization
-* verify export metadata is visible without exposing private storage references
-* verify exports remain project-owner scoped
-* export limitations are documented in `docs/AEVRYN_EXPORT_ENGINE.md`
+* rerun export creation and download in the final hosted browser pass
+* keep export metadata visible without exposing private storage references
+* keep exports project-owner scoped after any storage or database changes
 
 Acceptance:
 
@@ -563,7 +569,7 @@ Track future ideas in:
 
 4. Run hosted browser pass:
    * 10-chapter canonical beta path
-   * export/download
+   * confirm export/download still works
    * deletion
    * session recovery
 
