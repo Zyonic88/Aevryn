@@ -156,8 +156,7 @@ function ContinuityPreviewResult({ result }: { result: ContinuityPreview }) {
     <section className="project-panel" aria-label="Continuity preview result">
       <h2>Continuity Report</h2>
       <p className="result-summary">
-        {scenes.length.toLocaleString()} scene{scenes.length === 1 ? "" : "s"} for{" "}
-        {result.continuity_report.source_id}.
+        {scenes.length.toLocaleString()} continuity scene{scenes.length === 1 ? "" : "s"} ready.
       </p>
       {scenes.length > 0 ? (
         <div className="continuity-scene-list">
@@ -215,7 +214,7 @@ function ContinuityBucket({ title, records }: { title: string; records: Continui
         <ul>
           {records.map((record) => (
             <li key={record.record_id}>
-              <strong>{record.record_type}</strong>:{" "}
+              <strong>{readableRecordType(record.record_type)}</strong>:{" "}
               {readableOutputItems([record.description])[0] ?? "Unknown"}
               <span className="continuity-evidence">
                 Evidence from {formatEvidenceScope(record)}
@@ -236,4 +235,12 @@ function bucketKeys(): ContinuityBucketKey[] {
 
 function changeBucketKeys(): ContinuityBucketKey[] {
   return ["new", "updated", "invalidated"];
+}
+
+function readableRecordType(value: string): string {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+    .join(" ");
 }

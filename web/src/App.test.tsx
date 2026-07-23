@@ -3799,6 +3799,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
+    expect(screen.getByText("2 continuity scenes ready.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Chapter 1, Scene 1" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Chapter 2, Scene 1" })).toBeInTheDocument();
     const stableContinuityDetails = screen.getAllByText("1 still known")[0].closest("details");
@@ -3830,6 +3831,7 @@ describe("App shell routing", () => {
       1,
     );
     expect(screen.queryByText(/source_alpha_anchor_002/u)).not.toBeInTheDocument();
+    expect(screen.queryByText("source_alpha")).not.toBeInTheDocument();
   });
 
   it("previews production packs from the prompt packs workspace tab", async () => {
