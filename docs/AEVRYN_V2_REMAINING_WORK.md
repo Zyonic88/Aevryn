@@ -331,7 +331,15 @@ Remaining hardening:
 * ensure race/gender remain Canon-truthful and not story-specific guesses
 * keep character card sections collapsed and readable
 * ensure character portraits remain neutral placeholders until a real portrait/reference system exists
-* verify no source-backed placeholder text leaks into user output
+* ~~verify no source-backed placeholder text leaks into user output~~
+
+Verified hardening:
+
+* processed character panels hide the source-backed evidence placeholder from
+  normal user output
+* identity review hides evidence anchors and raw scene IDs while keeping ambiguous
+  and unresolved references visible for review
+* verified with the focused processed-character-panel frontend test
 
 Acceptance:
 
