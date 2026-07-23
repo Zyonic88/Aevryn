@@ -156,7 +156,9 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
         exports={exportsQuery.data?.exports ?? []}
         exportsError={exportsQuery.error}
         isCreatePending={createSnapshotExport.isPending}
-        isDownloadPending={downloadExport.isPending}
+        downloadingExportId={
+          downloadExport.isPending ? (downloadExport.variables?.export_id ?? null) : null
+        }
         isLoading={statusQuery.isLoading || exportsQuery.isLoading}
         latestSnapshotId={statusQuery.data?.snapshots.latest_snapshot_id ?? ""}
         mutationError={createSnapshotExport.error ?? downloadExport.error}
@@ -267,7 +269,7 @@ function ProjectStoredExportsPanel({
   exports,
   exportsError,
   isCreatePending,
-  isDownloadPending,
+  downloadingExportId,
   isLoading,
   latestSnapshotId,
   mutationError,
@@ -279,7 +281,7 @@ function ProjectStoredExportsPanel({
   exports: ProjectExport[];
   exportsError: Error | null;
   isCreatePending: boolean;
-  isDownloadPending: boolean;
+  downloadingExportId: string | null;
   isLoading: boolean;
   latestSnapshotId: string;
   mutationError: Error | null;
@@ -290,6 +292,10 @@ function ProjectStoredExportsPanel({
 }) {
   const sortedExports = [...exports].sort((left, right) =>
     right.created_at.localeCompare(left.created_at),
+  );
+  const isDownloadPending = downloadingExportId !== null;
+  const downloadingExport = exports.find(
+    (exportRecord) => exportRecord.export_id === downloadingExportId,
   );
 
   return (
@@ -339,7 +345,8 @@ function ProjectStoredExportsPanel({
       {createdExportId ? <p className="success-note">Snapshot export created.</p> : null}
       {isDownloadPending ? (
         <p className="success-note" role="status">
-          Preparing authenticated download.
+          Preparing authenticated download
+          {downloadingExport ? ` for ${downloadingExport.filename}` : ""}.
         </p>
       ) : null}
       {!latestSnapshotId && !isLoading ? (
@@ -366,7 +373,7 @@ function ProjectStoredExportsPanel({
                 disabled={isDownloadPending}
                 onClick={() => onDownload(exportRecord)}
               >
-                Download
+                {downloadingExportId === exportRecord.export_id ? "Preparing" : "Download"}
               </button>
             </article>
           ))}
