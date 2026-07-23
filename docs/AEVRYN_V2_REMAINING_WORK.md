@@ -550,6 +550,9 @@ Verified evidence:
   hiding private storage references
 * export API and database tests keep metadata and download routes project-owner
   scoped after the storage/database hardening
+* export creation normalizes submitted path-like filenames to basename-only
+  metadata before writing storage-backed exports, while storage still rejects
+  path-shaped filenames as a lower-level guard
 
 Remaining hardening:
 
@@ -557,6 +560,7 @@ Remaining hardening:
 * ~~keep export metadata visible without exposing private storage references~~
 * ~~keep exports project-owner scoped after any storage or database changes~~
 * ~~keep export download requests authenticated and timestamped from the frontend client~~
+* ~~keep export filenames from shaping storage paths or download headers~~
 
 Acceptance:
 

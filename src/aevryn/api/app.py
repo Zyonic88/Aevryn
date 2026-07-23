@@ -15,7 +15,7 @@ import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, cast
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
@@ -4622,8 +4622,16 @@ def _snapshot_export_filename(
 ) -> str:
     """Return a safe filename for one snapshot export."""
     if filename is not None and filename.strip():
-        return filename.strip()
+        return _export_metadata_filename(filename)
     return f"{snapshot.snapshot_kind}_{snapshot.snapshot_id}.json"
+
+
+def _export_metadata_filename(value: str) -> str:
+    """Return basename-only export metadata from a submitted filename."""
+    name = Path(PureWindowsPath(value.strip()).name).name.strip()
+    if not name or name in {".", ".."}:
+        return "aevryn-export.json"
+    return name
 
 
 def _snapshot_kind_filter(value: str | None) -> SnapshotKind | None:
