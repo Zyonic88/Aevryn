@@ -210,15 +210,17 @@ export async function postJson(
   {
     headers,
     body,
+    method = "POST",
   }: {
     headers: HeadersInit;
     body: unknown;
+    method?: "POST" | "PUT";
   },
 ): Promise<JsonPostResponse> {
   let response: Response;
   try {
     response = await fetch(url, {
-      method: "POST",
+      method,
       headers,
       body: JSON.stringify(body),
     });

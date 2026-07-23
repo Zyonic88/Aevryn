@@ -9,6 +9,15 @@ export type RegisterFormValues = LoginFormValues & {
   displayName: string;
 };
 
+export type PasswordRecoveryFormValues = {
+  email: string;
+};
+
+export type PasswordUpdateFormValues = {
+  password: string;
+  confirmPassword: string;
+};
+
 export type LoginPayloadValues = {
   email: string;
   password: string;
@@ -17,6 +26,14 @@ export type LoginPayloadValues = {
 export type RegisterPayloadValues = LoginPayloadValues & {
   userId: string;
   displayName: string;
+};
+
+export type PasswordRecoveryPayloadValues = {
+  email: string;
+};
+
+export type PasswordUpdatePayloadValues = {
+  password: string;
 };
 
 export function buildLoginPayload(values: LoginFormValues): LoginPayloadValues {
@@ -42,6 +59,26 @@ export function buildRegisterPayload(values: RegisterFormValues): RegisterPayloa
     userId: userIdFromEmail(login.email),
     displayName,
   };
+}
+
+export function buildPasswordRecoveryPayload(
+  values: PasswordRecoveryFormValues,
+): PasswordRecoveryPayloadValues {
+  const email = normalizeEmail(values.email);
+  if (!isLikelyEmail(email)) {
+    throw new Error("Enter a valid email address.");
+  }
+  return { email };
+}
+
+export function buildPasswordUpdatePayload(
+  values: PasswordUpdateFormValues,
+): PasswordUpdatePayloadValues {
+  validateNewPassword(values.password);
+  if (values.password !== values.confirmPassword) {
+    throw new Error("Passwords do not match.");
+  }
+  return { password: values.password };
 }
 
 export function normalizeEmail(email: string): string {

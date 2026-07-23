@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildLoginPayload,
+  buildPasswordRecoveryPayload,
+  buildPasswordUpdatePayload,
   buildRegisterPayload,
   normalizeDisplayName,
   normalizeEmail,
@@ -50,5 +52,29 @@ describe("auth form validation", () => {
     expect(() => validateNewPassword("lowercase1234")).toThrow("uppercase");
     expect(() => validateNewPassword("NoNumberPass")).toThrow("number");
     expect(() => validateNewPassword(" StrongPass123 ")).toThrow("whitespace");
+  });
+
+  it("builds password recovery payloads with normalized email", () => {
+    expect(buildPasswordRecoveryPayload({ email: "  DEMO@Example.COM  " })).toEqual({
+      email: "demo@example.com",
+    });
+    expect(() => buildPasswordRecoveryPayload({ email: "demo" })).toThrow(
+      "Enter a valid email address.",
+    );
+  });
+
+  it("builds password update payloads only when confirmation matches", () => {
+    expect(
+      buildPasswordUpdatePayload({
+        password: "FreshPassword123",
+        confirmPassword: "FreshPassword123",
+      }),
+    ).toEqual({ password: "FreshPassword123" });
+    expect(() =>
+      buildPasswordUpdatePayload({
+        password: "FreshPassword123",
+        confirmPassword: "DifferentPassword123",
+      }),
+    ).toThrow("Passwords do not match.");
   });
 });

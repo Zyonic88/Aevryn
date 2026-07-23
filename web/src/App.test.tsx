@@ -1132,6 +1132,55 @@ describe("App shell routing", () => {
     expect(screen.queryByRole("heading", { name: "Monitoring" })).not.toBeInTheDocument();
   });
 
+  it("links from login to password recovery", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/login"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("link", { name: "Reset your password" }));
+
+    expect(screen.getByRole("heading", { name: "Recover password" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send reset link" })).toBeInTheDocument();
+  });
+
+  it("validates password recovery emails before contacting identity provider", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/password-recovery"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText("Email"), "invalid-email");
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(await screen.findByText("Enter a valid email address.")).toBeInTheDocument();
+    expect(vi.mocked(fetch)).not.toHaveBeenCalledWith(
+      expect.stringContaining("/auth/v1/recover"),
+      expect.anything(),
+    );
+  });
+
+  it("renders the new-password form from a managed recovery callback", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={["/password-recovery#type=recovery&access_token=recovery-token"]}
+      >
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Set new password" })).toBeInTheDocument();
+    expect(screen.getByLabelText("New password")).toBeInTheDocument();
+    expect(screen.getByLabelText("Confirm password")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Update password" })).toBeInTheDocument();
+  });
+
   it("redirects authenticated users away from auth screens", async () => {
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
 
