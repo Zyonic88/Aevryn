@@ -8,6 +8,8 @@ It consolidates the remaining work that cannot be completed by repository code a
 
 Internal alpha is limited to Aetherra Labs owner/operator development and Codex-assisted verification. Public beta is the first milestone where outside users may be invited to upload their own work.
 
+The combined engineering, product, operations, legal, and hardening backlog is tracked in `docs/AEVRYN_V2_REMAINING_WORK.md`.
+
 ---
 
 # Status

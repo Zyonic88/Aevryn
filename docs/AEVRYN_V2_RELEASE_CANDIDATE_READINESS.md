@@ -22,6 +22,8 @@ External setup work that cannot be completed by repository code alone is consoli
 
 Phase 12 acceptance is recorded in `docs/AEVRYN_V2_PHASE_12_ACCEPTANCE.md`.
 
+The active remaining-work and hardening backlog is tracked in `docs/AEVRYN_V2_REMAINING_WORK.md`.
+
 ---
 
 # Core Rule
