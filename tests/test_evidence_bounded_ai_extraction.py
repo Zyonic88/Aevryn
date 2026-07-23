@@ -150,6 +150,12 @@ def test_ai_extractor_returns_evidence_bounded_candidates() -> None:
     assert "gender, race, species, role" in client.prompt
     assert "Use entity_type=system only for named power systems" in client.prompt
     assert "Use entity_type=skill only for usable abilities" in client.prompt
+    assert "Classify entities by what they are in the story" in client.prompt
+    assert "system-created item is still an item or vehicle" in client.prompt
+    assert "Do not classify a product, blueprint, title, rank" in client.prompt
+    assert "Use entity_type=organization for factions" in client.prompt
+    assert "anonymous group phrase" in client.prompt
+    assert "choose the most concrete supported category" in client.prompt
     assert anchor_id in client.prompt
 
 

@@ -303,6 +303,32 @@ class EvidenceBoundedAIExtractor:
                     "describes them."
                 ),
                 (
+                    "Classify entities by what they are in the story, not by who created, "
+                    "granted, sold, displayed, or described them. Physical objects stay "
+                    "physical: swords are weapons, armor is armor, starships are vehicles, "
+                    "blueprints/books/tokens/artifacts are items, and rooms or academies "
+                    "are buildings or locations. A system-created item is still an item "
+                    "or vehicle unless the evidence states it is a usable ability."
+                ),
+                (
+                    "Use entity_type=skill only when the evidence describes an ability "
+                    "that a character can use, activate, learn, cast, train, or possess "
+                    "as a capability. Do not classify a product, blueprint, title, rank, "
+                    "currency, reward, quest, ship, weapon, or equipment as a skill."
+                ),
+                (
+                    "Use entity_type=organization for factions, academies, clans, guilds, "
+                    "departments, armies, companies, or empires. Use building for a "
+                    "physical facility and location for a broader place or region. Do "
+                    "not create a character entity for an anonymous group phrase unless "
+                    "that group acts as a continuing named entity in the evidence."
+                ),
+                (
+                    "If evidence supports multiple categories, choose the most concrete "
+                    "supported category. If the category is not supported by evidence, "
+                    "omit the entity rather than forcing a confident classification."
+                ),
+                (
                     "Allowed entity_type values: armor, building, character, creature, "
                     "item, location, organization, skill, system, timeline_event, vehicle, "
                     "weapon."
