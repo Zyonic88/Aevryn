@@ -33,6 +33,7 @@ import {
   readablePromptSummary,
   readablePromptText,
 } from "./readableOutput";
+import { downloadPromptText } from "./promptDownload";
 
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
@@ -1174,6 +1175,14 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
             onClick={() => void copyPrompt()}
           >
             Copy
+          </button>
+          <button
+            type="button"
+            className="text-button"
+            aria-label={`Download ${section.title}`}
+            onClick={() => downloadPromptText(section, promptText)}
+          >
+            Download
           </button>
         </div>
       </div>

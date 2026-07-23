@@ -257,6 +257,10 @@ Verified hardening:
   extra characters
 * verified with prompt-builder, prompt-engine, scene-context, presentation, and
   project-runner tests
+* prompt sections expose visible copy and local text-download actions for each
+  prompt body without calling a backend export path
+* verified with prompt-download unit tests, focused prompt workspace test, full
+  frontend test suite, lint, and production build
 
 Acceptance:
 

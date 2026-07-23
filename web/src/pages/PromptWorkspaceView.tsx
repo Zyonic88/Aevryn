@@ -18,6 +18,7 @@ import {
   readablePromptSummary,
   readablePromptText,
 } from "../output/readableOutput";
+import { downloadPromptText } from "../output/promptDownload";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
@@ -217,6 +218,14 @@ function PromptSection({ section }: { section: OutputSection }) {
             onClick={() => void copyPrompt()}
           >
             Copy
+          </button>
+          <button
+            type="button"
+            className="text-button"
+            aria-label={`Download ${section.title}`}
+            onClick={() => downloadPromptText(section, promptText)}
+          >
+            Download
           </button>
         </div>
       </div>
