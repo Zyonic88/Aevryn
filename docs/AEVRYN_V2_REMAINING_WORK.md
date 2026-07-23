@@ -402,7 +402,7 @@ Remaining hardening:
 * verify export download authorization
 * verify export metadata is visible without exposing private storage references
 * verify exports remain project-owner scoped
-* document export limitations
+* export limitations are documented in `docs/AEVRYN_EXPORT_ENGINE.md`
 
 Acceptance:
 
