@@ -260,14 +260,20 @@ Prompt Packs are useful for beta without promising one-click perfect image/video
 Status:
 
 ```text
-In progress
+Improved; final browser validation remains
 ```
+
+Verified evidence:
+
+* collapsed scene summaries now include the first visible change before detail expansion
+* normal output uses "retained canon" instead of "still known" wording
+* continuity details remain collapsed and paginated
 
 Remaining hardening:
 
 * keep scene-level continuity highlights scannable
-* keep large buckets collapsed
-* reduce repeated or low-value "still known" noise
+* keep large buckets collapsed during hosted browser validation
+* continue reducing repeated or low-value retained-canon noise when new examples appear
 * verify no raw IDs appear in normal user view
 * verify continuity remains Canon-backed and does not invent explanations
 
@@ -282,8 +288,14 @@ Continuity answers "What changed?" without forcing users to read machine-like li
 Status:
 
 ```text
-In progress
+Improved; final browser validation remains
 ```
+
+Verified evidence:
+
+* character card bodies remain collapsed with neutral placeholder portraits
+* Recent Changes no longer repeats identity/profile facts already represented in card sections
+* identity/profile facts remain visible in their dedicated sections instead of being hidden
 
 Remaining hardening:
 
