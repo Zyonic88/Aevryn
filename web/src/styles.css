@@ -1434,6 +1434,15 @@ select:focus {
   gap: 10px;
 }
 
+.continuity-preview-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 12px;
+  padding-left: 20px;
+  color: #253044;
+  font-size: 14px;
+}
+
 .nested-disclosure {
   margin-top: 10px;
   border: 1px solid #e1e7ef;

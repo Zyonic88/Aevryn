@@ -688,6 +688,7 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
             <span aria-hidden="true"> - </span>
             <span>{continuitySceneSummary(scene)}</span>
           </summary>
+          <ContinuityScenePreview scene={scene} />
           <div className="continuity-change-grid">
             <ContinuityBucket title="New" records={scene.new} />
             <ContinuityBucket title="Updated" records={scene.updated} />
@@ -709,6 +710,20 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
         }
       />
     </div>
+  );
+}
+
+function ContinuityScenePreview({ scene }: { scene: ContinuityReport["scenes"][number] }) {
+  const previewItems = continuityPreviewItems(scene);
+  if (previewItems.length === 0) {
+    return null;
+  }
+  return (
+    <ul className="continuity-preview-list" aria-label="Continuity highlights">
+      {previewItems.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -801,6 +816,18 @@ function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): stri
   const changeLabel = `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
   const stableLabel = `${stableCount.toLocaleString()} still known`;
   return `${changeLabel}; ${stableLabel}`;
+}
+
+function continuityPreviewItems(scene: ContinuityReport["scenes"][number]): string[] {
+  const records = [
+    ...scene.new.map((record) => ({ ...record, bucket: "New" })),
+    ...scene.updated.map((record) => ({ ...record, bucket: "Updated" })),
+    ...scene.invalidated.map((record) => ({ ...record, bucket: "Invalidated" })),
+  ];
+  return records.slice(0, 2).map((record) => {
+    const description = readableOutputItems([record.description])[0] ?? "Unknown";
+    return `${record.bucket}: ${description}`;
+  });
 }
 
 function timelineGroupChangeLabel(changeCount: number): string {

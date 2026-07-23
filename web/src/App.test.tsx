@@ -1589,6 +1589,8 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Current Weapon: Rusty Dagger.",
     );
+    expect(continuityOutput).toHaveTextContent("New: Current Weapon: Rusty Dagger.");
+    expect(continuityOutput).toHaveTextContent("Updated: Current Weapon: Iron Sword.");
     const continuityDetailRows = continuityOutput.querySelectorAll("details.detail-disclosure");
     expect(continuityDetailRows.length).toBeGreaterThanOrEqual(1);
     expect(continuityDetailRows[0]?.querySelector("summary")).toHaveTextContent(
@@ -3750,6 +3752,12 @@ describe("App shell routing", () => {
     expect(stableContinuityDetails).not.toBeNull();
     expect(stableContinuityDetails).not.toHaveAttribute("open");
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
+    expect(screen.getAllByText("New: Current Weapon: Rusty Dagger.").length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(
+      screen.getAllByText("Updated: Current Weapon: Iron Sword.").length,
+    ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getAllByText((_content, element) => {
         return (
