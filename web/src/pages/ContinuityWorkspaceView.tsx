@@ -23,7 +23,7 @@ const DEFAULT_AI_RESPONSE =
 const bucketLabels = {
   new: "New",
   updated: "Updated",
-  still_known: "Still Known",
+  still_known: "Retained Canon",
   invalidated: "Invalidated",
 } as const;
 
@@ -197,7 +197,7 @@ function ContinuitySceneCard({ scene }: { scene: ContinuityScene }) {
         </div>
         {scene.still_known.length > 0 ? (
           <details className="nested-disclosure">
-            <summary>{`${scene.still_known.length.toLocaleString()} still known`}</summary>
+            <summary>{`${scene.still_known.length.toLocaleString()} retained canon`}</summary>
             <ContinuityBucket title={bucketLabels.still_known} records={scene.still_known} />
           </details>
         ) : null}

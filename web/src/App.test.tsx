@@ -1623,22 +1623,22 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Current Weapon: Rusty Dagger.",
     );
-    expect(continuityOutput).toHaveTextContent("New: Current Weapon: Rusty Dagger.");
-    expect(continuityOutput).toHaveTextContent("Updated: Current Weapon: Iron Sword.");
+    expect(continuityOutput).toHaveTextContent("New canon: Current Weapon: Rusty Dagger.");
+    expect(continuityOutput).toHaveTextContent("Changed canon: Current Weapon: Iron Sword.");
     const continuityDetailRows = continuityOutput.querySelectorAll("details.detail-disclosure");
     expect(continuityDetailRows.length).toBeGreaterThanOrEqual(1);
     expect(continuityDetailRows[0]?.querySelector("summary")).toHaveTextContent(
-      /Chapter 1, Scene 1\s+-\s+\d+ changes?; \d+ still known/u,
+      /Chapter 1, Scene 1\s+-\s+\d+ changes?: New canon: Current Weapon: Rusty Dagger\.; \d+ retained canon/u,
     );
     continuityDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
-    expect(continuityOutput).toHaveTextContent("1 still known");
+    expect(continuityOutput).toHaveTextContent("1 retained canon");
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview continuity" }));
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
     const previewContinuityDetails = screen.getAllByText("Continuity details")[0].closest("details");
     expect(previewContinuityDetails).not.toBeNull();
     expect(previewContinuityDetails).not.toHaveAttribute("open");
-    const stableContinuityDetails = screen.getAllByText("1 still known")[0].closest("details");
+    const stableContinuityDetails = screen.getAllByText("1 retained canon")[0].closest("details");
     expect(stableContinuityDetails).not.toBeNull();
     expect(stableContinuityDetails).not.toHaveAttribute("open");
 
@@ -3925,15 +3925,15 @@ describe("App shell routing", () => {
     expect(screen.getByText("2 continuity scenes ready.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Chapter 1, Scene 1" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Chapter 2, Scene 1" })).toBeInTheDocument();
-    const stableContinuityDetails = screen.getAllByText("1 still known")[0].closest("details");
+    const stableContinuityDetails = screen.getAllByText("1 retained canon")[0].closest("details");
     expect(stableContinuityDetails).not.toBeNull();
     expect(stableContinuityDetails).not.toHaveAttribute("open");
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
-    expect(screen.getAllByText("New: Current Weapon: Rusty Dagger.").length).toBeGreaterThanOrEqual(
-      1,
-    );
     expect(
-      screen.getAllByText("Updated: Current Weapon: Iron Sword.").length,
+      screen.getAllByText("New canon: Current Weapon: Rusty Dagger.").length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText("Changed canon: Current Weapon: Iron Sword.").length,
     ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getAllByText((_content, element) => {

@@ -746,14 +746,14 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
           </summary>
           <ContinuityScenePreview scene={scene} />
           <div className="continuity-change-grid">
-            <ContinuityBucket title="New" records={scene.new} />
-            <ContinuityBucket title="Updated" records={scene.updated} />
-            <ContinuityBucket title="Invalidated" records={scene.invalidated} />
+            <ContinuityBucket title="New Canon" records={scene.new} />
+            <ContinuityBucket title="Changed Canon" records={scene.updated} />
+            <ContinuityBucket title="No Longer Current" records={scene.invalidated} />
           </div>
           {scene.still_known.length > 0 ? (
             <details className="nested-disclosure">
-              <summary>{`${scene.still_known.length.toLocaleString()} still known`}</summary>
-              <ContinuityBucket title="Still Known" records={scene.still_known} />
+              <summary>{`${scene.still_known.length.toLocaleString()} retained canon`}</summary>
+              <ContinuityBucket title="Retained Canon" records={scene.still_known} />
             </details>
           ) : null}
         </details>
@@ -936,15 +936,19 @@ function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): stri
   const changeCount = continuityChangeCount(scene);
   const stableCount = scene.still_known.length;
   const changeLabel = `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
-  const stableLabel = `${stableCount.toLocaleString()} still known`;
-  return `${changeLabel}; ${stableLabel}`;
+  const stableLabel = `${stableCount.toLocaleString()} retained canon`;
+  const firstChange = continuityPreviewItems(scene)[0];
+  if (!firstChange) {
+    return `${changeLabel}; ${stableLabel}`;
+  }
+  return `${changeLabel}: ${firstChange}; ${stableLabel}`;
 }
 
 function continuityPreviewItems(scene: ContinuityReport["scenes"][number]): string[] {
   const records = [
-    ...scene.new.map((record) => ({ ...record, bucket: "New" })),
-    ...scene.updated.map((record) => ({ ...record, bucket: "Updated" })),
-    ...scene.invalidated.map((record) => ({ ...record, bucket: "Invalidated" })),
+    ...scene.new.map((record) => ({ ...record, bucket: "New canon" })),
+    ...scene.updated.map((record) => ({ ...record, bucket: "Changed canon" })),
+    ...scene.invalidated.map((record) => ({ ...record, bucket: "No longer current" })),
   ];
   return records.slice(0, 2).map((record) => {
     const description = readableOutputItems([record.description])[0] ?? "Unknown";
