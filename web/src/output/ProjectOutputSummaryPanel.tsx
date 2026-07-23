@@ -29,6 +29,7 @@ import {
   isInternalOutputPlaceholder,
   readableOutputItems,
   readableOutputText,
+  readablePromptPreview,
   readablePromptSummary,
   readablePromptText,
 } from "./readableOutput";
@@ -954,6 +955,7 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
     full ? {} : { maxItems: MAX_VISIBLE_PROMPT_DETAILS },
   );
   const promptSummary = readablePromptSummary(section);
+  const promptPreview = readablePromptPreview(section, { maxItems: 3 });
 
   async function copyPrompt() {
     const clipboard = navigator.clipboard;
@@ -986,6 +988,19 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
           </button>
         </div>
       </div>
+      <ul className="prompt-preview-list" aria-label={`${section.title} preview`}>
+        {promptPreview.items.length > 0 ? (
+          promptPreview.items.map((item) => <li key={item}>{item}</li>)
+        ) : (
+          <li>Unknown.</li>
+        )}
+      </ul>
+      {promptPreview.hiddenCount > 0 ? (
+        <p className="prompt-preview-overflow">
+          {promptPreview.hiddenCount.toLocaleString()} more prompt{" "}
+          {promptPreview.hiddenCount === 1 ? "detail" : "details"} inside.
+        </p>
+      ) : null}
       <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
         <summary>
           Show {section.title} - {promptSummary}

@@ -66,6 +66,18 @@ export function readablePromptSummary(section: { items: string[] }): string {
   return `${items.length.toLocaleString()} ${label} ready.`;
 }
 
+export function readablePromptPreview(
+  section: { items: string[] },
+  options: { maxItems?: number } = {},
+): { items: string[]; hiddenCount: number } {
+  const maxItems = Math.max(1, options.maxItems ?? 3);
+  const items = readablePromptItems(section);
+  return {
+    items: items.slice(0, maxItems).map(toSentence),
+    hiddenCount: Math.max(0, items.length - maxItems),
+  };
+}
+
 function readablePromptItems(section: { items: string[] }): string[] {
   return readableOutputItems(section.items)
     .filter((item) => !/^Scene ID:/iu.test(item));

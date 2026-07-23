@@ -1544,6 +1544,27 @@ select:focus {
   overflow-wrap: anywhere;
 }
 
+.prompt-preview-list {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding-left: 20px;
+  color: #253044;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.prompt-preview-list li {
+  overflow-wrap: anywhere;
+}
+
+.prompt-preview-overflow {
+  margin: -2px 0 10px;
+  color: #637089;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .prompt-disclosure {
   border: 1px solid #dbe3ec;
   border-radius: 6px;

@@ -3487,7 +3487,10 @@ describe("App shell routing", () => {
 
     const selectedPack = screen.getByRole("article", { name: "Selected prompt pack" });
     expect(within(selectedPack).getByRole("heading", { name: "Scene 1" })).toBeInTheDocument();
-    expect(within(selectedPack).getByText(/Scene 1 image prompt detail/u)).toBeInTheDocument();
+    const imagePromptPreview = within(selectedPack).getByRole("list", {
+      name: "Image Prompt preview",
+    });
+    expect(within(imagePromptPreview).getByText("Scene 1 image prompt detail.")).toBeInTheDocument();
     expect(screen.queryByText(/Scene 2 image prompt detail/u)).not.toBeInTheDocument();
     const promptBodies = selectedPack.querySelectorAll("details.prompt-disclosure");
     expect(promptBodies).toHaveLength(4);
@@ -3504,7 +3507,12 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: /^Scene 2\b/u }));
 
     expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
-    expect(within(selectedPack).getByText(/Scene 2 image prompt detail/u)).toBeInTheDocument();
+    const updatedImagePromptPreview = within(selectedPack).getByRole("list", {
+      name: "Image Prompt preview",
+    });
+    expect(
+      within(updatedImagePromptPreview).getByText("Scene 2 image prompt detail."),
+    ).toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {
@@ -3799,6 +3807,9 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
     const promptPreviewResult = screen.getByRole("region", { name: "Prompt pack preview result" });
+    const imagePromptPreview = within(promptPreviewResult).getByRole("list", {
+      name: "Image Prompt preview",
+    });
     expect(
       within(promptPreviewResult).getByText(/Show Image Prompt - \d+ prompt details ready\./u),
     ).toBeInTheDocument();
@@ -3814,6 +3825,9 @@ describe("App shell routing", () => {
     expect(
       screen.getAllByText(/Scene Summary: Mark prepares in the hangar/u).length,
     ).toBeGreaterThanOrEqual(1);
+    expect(
+      within(imagePromptPreview).getByText("Scene Summary: Mark prepares in the hangar."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Chapter 1 / Chapter 1, Scene 1")).toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);
@@ -3863,7 +3877,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
-    expect(screen.getByText("Unknown.")).toBeInTheDocument();
+    expect(screen.getAllByText("Unknown.").length).toBeGreaterThanOrEqual(1);
   });
 
   it("clears stale production packs when local AI JSON validation fails", async () => {
