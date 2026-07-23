@@ -11,6 +11,8 @@ SceneSignal = Literal[
     "description",
     "identity_reference",
     "relationship_reference",
+    "location_reference",
+    "organization_reference",
     "item_reference",
     "skill_reference",
     "system_reference",

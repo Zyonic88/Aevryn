@@ -152,6 +152,52 @@ def test_sentence_understanding_detects_relationship_language() -> None:
     assert "relationship_reference" in understanding.signals
 
 
+def test_sentence_understanding_detects_location_and_organization_language() -> None:
+    """World-routing cues should surface places and institutions without deciding Canon."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_world_context",
+        title="Sentence World Context",
+        text=(
+            "Chapter 1\n"
+            "Zhao Chen stood inside the North Star Academy classroom while the "
+            "Starlight Empire fleet waited."
+        ),
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "location_reference" in understanding.signals
+    assert "organization_reference" in understanding.signals
+    assert "north star academy" in understanding.cue_terms
+    assert "classroom" in understanding.cue_terms
+    assert "starlight empire" in understanding.cue_terms
+    assert "fleet" in understanding.cue_terms
+
+
+def test_sentence_understanding_keeps_location_and_organization_metadata_compact() -> None:
+    """World-routing metadata should not carry full manuscript prose."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_world_privacy",
+        title="Sentence World Privacy",
+        text="Chapter 1\nThe captain walked through the academy hall.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+    serialized_values = (
+        understanding.sentence_id,
+        understanding.evidence_anchor_id,
+        understanding.source_chapter_id,
+        understanding.source_scene_id,
+        *understanding.signals,
+        *understanding.cue_terms,
+        *understanding.ambiguity_terms,
+    )
+
+    assert "location_reference" in understanding.signals
+    assert "organization_reference" in understanding.signals
+    assert all("captain walked through" not in value for value in serialized_values)
+
+
 def test_sentence_understanding_requires_matching_anchor() -> None:
     """Sentence analysis must remain tied to the exact source evidence anchor."""
     sentence = ImportedSentence(

@@ -64,6 +64,65 @@ RELATIONSHIP_CUES = frozenset(
         "sister",
     }
 )
+LOCATION_CUES = frozenset(
+    {
+        "academy",
+        "base",
+        "building",
+        "camp",
+        "city",
+        "classroom",
+        "courtyard",
+        "forest",
+        "fortress",
+        "hall",
+        "hangar",
+        "kingdom",
+        "planet",
+        "region",
+        "room",
+        "sector",
+        "station",
+        "territory",
+        "world",
+    }
+)
+LOCATION_PHRASE_CUES = frozenset(
+    {
+        "captain department",
+        "military academy",
+        "north star academy",
+        "star system",
+        "starship academy",
+        "training room",
+    }
+)
+ORGANIZATION_CUES = frozenset(
+    {
+        "academy",
+        "army",
+        "clan",
+        "company",
+        "department",
+        "empire",
+        "faction",
+        "fleet",
+        "guild",
+        "kingdom",
+        "sect",
+        "starfleet",
+    }
+)
+ORGANIZATION_PHRASE_CUES = frozenset(
+    {
+        "captain department",
+        "galactic alliance",
+        "military academy",
+        "north star academy",
+        "starlight empire",
+        "starship academy",
+    }
+)
 ITEM_CUES = frozenset(
     {
         "armor",
@@ -198,6 +257,12 @@ class SentenceUnderstandingEngine:
         cue_terms: list[str] = []
         signals: list[SentenceSignal] = []
         item_terms = set(tokens & ITEM_CUES) | set(phrase_terms & ITEM_PHRASE_CUES)
+        location_terms = set(tokens & LOCATION_CUES) | set(
+            phrase_terms & LOCATION_PHRASE_CUES
+        )
+        organization_terms = set(tokens & ORGANIZATION_CUES) | set(
+            phrase_terms & ORGANIZATION_PHRASE_CUES
+        )
         skill_terms = set(tokens & SKILL_CUES) | set(phrase_terms & SKILL_PHRASE_CUES)
         system_terms = set(tokens & SYSTEM_CUES) | set(phrase_terms & SYSTEM_PHRASE_CUES)
         item_terms -= _item_terms_owned_by_skill_phrases(
@@ -210,6 +275,8 @@ class SentenceUnderstandingEngine:
         _append_signal_if(signals, "description", bool(tokens & DESCRIPTION_CUES))
         _append_signal_if(signals, "identity_reference", bool(tokens & IDENTITY_CUES))
         _append_signal_if(signals, "relationship_reference", bool(tokens & RELATIONSHIP_CUES))
+        _append_signal_if(signals, "location_reference", bool(location_terms))
+        _append_signal_if(signals, "organization_reference", bool(organization_terms))
         _append_signal_if(signals, "item_reference", bool(item_terms))
         _append_signal_if(signals, "skill_reference", bool(skill_terms))
         _append_signal_if(signals, "system_reference", bool(system_terms))
@@ -221,6 +288,8 @@ class SentenceUnderstandingEngine:
         _append_signal_if(signals, "translation_ambiguity", bool(ambiguity_terms))
 
         cue_terms.extend(_ordered_intersection(tokens, ACTION_CUES))
+        cue_terms.extend(_ordered_terms(location_terms))
+        cue_terms.extend(_ordered_terms(organization_terms))
         cue_terms.extend(_ordered_terms(item_terms))
         cue_terms.extend(_ordered_terms(skill_terms))
         cue_terms.extend(_ordered_terms(system_terms))
@@ -282,6 +351,8 @@ def _sentence_phrase_terms(text: str) -> set[str]:
     )
     phrase_candidates = (
         ITEM_PHRASE_CUES
+        | LOCATION_PHRASE_CUES
+        | ORGANIZATION_PHRASE_CUES
         | SKILL_PHRASE_CUES
         | SYSTEM_PHRASE_CUES
         | TRANSLATION_AMBIGUITY_PHRASE_CUES

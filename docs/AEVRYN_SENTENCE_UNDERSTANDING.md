@@ -42,6 +42,8 @@ Sentence Understanding owns:
 * relationship-reference cues
 * identity-reference cues
 * translation ambiguity cues
+* location-reference cues
+* organization-reference cues
 * evidence-anchor linkage
 * review-required metadata
 
@@ -157,6 +159,8 @@ probably doing:
 * description
 * identity reference
 * relationship reference
+* location reference
+* organization reference
 * item reference
 * skill reference
 * system reference
@@ -178,11 +182,19 @@ Examples:
 * `sword technique`
 * `cultivation art`
 * `spirit core`
+* `north star academy`
+* `starlight empire`
 
 Phrase cues help route downstream extraction and translation review. They do
 not create Canon entities. For example, `sword technique` may route as a skill
 phrase without treating `sword` as a separate item unless the sentence also
 describes an actual sword object.
+
+Some world terms are intentionally ambiguous. For example, `academy` may be a
+physical location, a building, or an organization depending on the story
+sentence. Sentence Understanding may mark both location and organization
+signals when the compact cues support both readings. Extraction and Canon must
+still decide the supported entity type from evidence.
 
 ## Privacy Boundary
 
