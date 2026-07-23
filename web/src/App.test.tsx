@@ -1132,6 +1132,47 @@ describe("App shell routing", () => {
     expect(screen.queryByRole("heading", { name: "Monitoring" })).not.toBeInTheDocument();
   });
 
+  it("recovers to login when an authenticated API request reports an invalid session", async () => {
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(API_PATHS.projects)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                error: "invalid_session",
+                detail: "Supabase JWT has expired.",
+              }),
+              { status: 401 },
+            ),
+          );
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your session expired. Please log in again.",
+    );
+    expect(window.localStorage.getItem("aevryn.session")).toBeNull();
+    expect(document.body).not.toHaveTextContent("Supabase JWT has expired.");
+  });
+
   it("links from login to password recovery", async () => {
     const user = userEvent.setup();
 
@@ -3267,22 +3308,18 @@ describe("App shell routing", () => {
     expect(screen.queryByText(sourceBackedPlaceholder)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Unknown character" })).toBeInTheDocument();
     expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();
-    expect(screen.getAllByText("Glossary term needs review").length).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getAllByText(
-        "Chapter 1, Scene 1; 1 source link preserved; Aevryn preserved an uncertain term for review.",
-      ).length,
-    ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText("7 reference decisions; 5 resolved / 1 ambiguous / 1 unresolved"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Needs review")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 review item; 2 review items need character review"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Glossary term needs review")).not.toBeInTheDocument();
     expect(
       screen.getAllByText(
         "Chapter 1, Scene 1; 2 possible matches; 87% confidence; Aevryn did not merge this reference",
       ).length,
     ).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Unresolved reference")).toBeInTheDocument();
     expect(
       screen.getAllByText(
         "Chapter 1, Scene 2; no supported match; Aevryn left this reference unresolved",
@@ -3611,19 +3648,11 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "World" })).toBeInTheDocument();
     await waitFor(() =>
-      expect(container.querySelector("details.identity-review-panel > summary")).toBeInTheDocument(),
+      expect(container.querySelector("details.identity-review-panel")).not.toBeInTheDocument(),
     );
-    const identityReviewToggle = container.querySelector(
-      "details.identity-review-panel > summary",
-    ) as HTMLElement;
-    const identityReviewDisclosure = container.querySelector(
-      "details.identity-review-panel",
-    ) as HTMLDetailsElement;
-    expect(identityReviewToggle).toBeInTheDocument();
-    expect(identityReviewDisclosure.open).toBe(false);
-    await user.click(identityReviewToggle);
-    expect(identityReviewDisclosure.open).toBe(true);
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByText("1 review item; 2 review items need character review"),
+    ).toBeInTheDocument();
     await user.click(screen.getByText("Developer preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}The hangar was quiet.");

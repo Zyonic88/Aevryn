@@ -147,7 +147,7 @@ The smoke path must not require CLI knowledge from the tester.
 | Check | Required Result | Actual Result | Notes |
 | --- | --- | --- | --- |
 | Browser refresh | Workspace restores from API-backed state | Passed | Monitoring restored succeeded state after refresh |
-| Session expiry | User can log in again without corrupting workspace | Passed | Managed identity login was used repeatedly during hosted testing |
+| Session expiry | User can log in again without corrupting workspace | Passed | Managed identity login was used repeatedly during hosted testing; frontend now clears invalid API sessions and returns to login with a human-readable recovery message |
 | API outage messaging | User sees actionable error state | Passed with limitation | Previous hosted-safe API wording was hardened; no outage appeared in final smoke |
 | Failed run visibility | Failure summary is concise and useful | Passed | Earlier timeout failure produced concise retry guidance |
 | Retry after failed run | User can continue or limitation is explicit | Passed | Retry succeeded after timeout hardening |

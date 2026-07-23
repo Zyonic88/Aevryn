@@ -55,9 +55,7 @@ export function DashboardPage() {
       void navigate(`/projects/${project.project_id}`);
     },
     onError(error) {
-      setProjectError(
-        error instanceof Error ? error.message : "Project could not be created.",
-      );
+      setProjectError(error instanceof Error ? error.message : "Project could not be created.");
     },
   });
   const deleteProjectMutation = useMutation({
@@ -170,7 +168,7 @@ export function DashboardPage() {
                   disabled={deleteProjectMutation.isPending}
                   onClick={() => requestProjectDeletion(project.id, project.name)}
                 >
-                  <span aria-hidden="true">×</span>
+                  <span aria-hidden="true">x</span>
                 </button>
               </div>
             ))}

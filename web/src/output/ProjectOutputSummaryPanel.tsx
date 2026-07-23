@@ -22,11 +22,8 @@ import {
   compactIdentityReviewItems,
   identityReviewDetails,
   identityReviewKey,
-  identityReviewStatusLabel,
   identityReviewTitle,
   reviewItemCountLabel,
-  translationReviewDetails,
-  translationReviewKey,
 } from "./languageIdentityDisplay";
 import {
   isInternalOutputPlaceholder,
@@ -135,8 +132,8 @@ function ProjectOutputSummary({
       </dl>
       <LanguageIdentityStatus outputs={outputs} />
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
-      {hasIdentityReviewItems(outputs) ? (
-        <IdentityReviewPanel outputs={outputs} defaultOpen={surface === "characters"} />
+      {surface === "characters" && hasIdentityReviewItems(outputs) ? (
+        <IdentityReviewPanel outputs={outputs} defaultOpen />
       ) : null}
       <ReadableSurfacePanels surface={surface} outputs={outputs} />
       {surfaceSummary.status === "waiting" ? (
@@ -170,6 +167,11 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
     summary.translation_review_count > 0
       ? reviewItemCountLabel(summary.translation_review_count)
       : "No review items";
+  const identityReviewCount = summary.identity_ambiguous_count + summary.identity_unresolved_count;
+  const identityReviewStatus =
+    identityReviewCount > 0
+      ? `${reviewItemCountLabel(identityReviewCount)} need character review`
+      : "No character review items";
   return (
     <div
       className="compact-list language-identity-status"
@@ -187,18 +189,12 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
           {summary.identity_decision_count.toLocaleString()} reference decisions; {identityDetails}
         </span>
       </div>
-      {summary.translation_review_items.slice(0, 4).map((item) => (
-        <div className="compact-row" key={translationReviewKey(item)}>
-          <strong>{item.issue_label}</strong>
-          <span>{translationReviewDetails(item)}</span>
-        </div>
-      ))}
-      {compactIdentityReviewItems(summary.identity_review_items, 4).map((item) => (
-        <div className="compact-row" key={identityReviewKey(item)}>
-          <strong>{identityReviewStatusLabel(item.status)}</strong>
-          <span>{identityReviewDetails(item, identityReviewAction(item.status))}</span>
-        </div>
-      ))}
+      <div className="compact-row">
+        <strong>Review</strong>
+        <span>
+          {translationStatus}; {identityReviewStatus}
+        </span>
+      </div>
     </div>
   );
 }
