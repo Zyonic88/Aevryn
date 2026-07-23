@@ -639,6 +639,7 @@ const projectOutputsPayload = {
       descriptions: { title: "Descriptions", items: ["human male captain", sourceBackedPlaceholder] },
       race: { title: "Race", items: ["Human"] },
       gender: { title: "Gender", items: ["Male"] },
+      current_abilities: { title: "Current Abilities", items: ["Cartography"] },
       recent_changes: {
         title: "Recent Changes",
         items: [
@@ -1518,6 +1519,10 @@ describe("App shell routing", () => {
     expect(
       await screen.findByRole("region", { name: "Processed project output" }),
     ).toHaveTextContent("2 accepted character or entity records");
+    await user.type(screen.getByLabelText("Search characters"), "Tracking");
+    expect(screen.getByRole("heading", { name: "Mark" })).toBeInTheDocument();
+    expect(screen.getByText("Showing 1 of 1 character profiles.")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Search characters"));
     expect(screen.getByLabelText("Source text")).not.toBeVisible();
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview characters" }));

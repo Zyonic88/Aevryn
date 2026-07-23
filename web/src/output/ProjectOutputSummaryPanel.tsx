@@ -475,14 +475,7 @@ function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
   const normalizedQuery = query.trim().toLowerCase();
   const filteredProfiles = normalizedQuery
     ? profiles.filter((profile) =>
-        [
-          readableCharacterName(profile.display_name),
-          readableCharacterSubtitle(profile.subtitle),
-          profile.evidence_summary,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery),
+        searchableCharacterText(profile).toLowerCase().includes(normalizedQuery),
       )
     : profiles;
   const visibleProfiles = filteredProfiles.slice(0, visibleCount);
@@ -529,6 +522,31 @@ function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
       />
     </div>
   );
+}
+
+function searchableCharacterText(profile: CharacterProfile): string {
+  const sections = [
+    profile.aliases,
+    profile.titles,
+    profile.descriptions,
+    profile.race,
+    profile.gender,
+    profile.status,
+    profile.current_goal,
+    profile.current_equipment,
+    profile.current_abilities,
+    profile.current_assets,
+    profile.territory,
+    profile.relationships,
+    profile.current_limitations,
+    characterRecentChanges(profile),
+  ];
+  return [
+    readableCharacterName(profile.display_name),
+    readableCharacterSubtitle(profile.subtitle),
+    profile.evidence_summary,
+    ...sections.flatMap((section) => readableOutputItems(section.items)),
+  ].join(" ");
 }
 
 function WorldPanel({ world }: { world: WorldSheet }) {
