@@ -285,6 +285,25 @@ class ValidSkillExtractor:
         )
 
 
+class MisclassifiedProfessionSkillExtractor:
+    """Extractor that labels a rank or profession as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious profession/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_chief_engineer",
+                    entity_type="skill",
+                    display_name="Chief Engineer",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.92,
+                ),
+            ),
+        )
+
+
 class MisclassifiedSystemExtractor:
     """Extractor that labels a concrete object as a system."""
 
@@ -299,6 +318,25 @@ class MisclassifiedSystemExtractor:
                     display_name="Starship blueprint",
                     evidence_anchor_id=scene.evidence_anchor_ids[0],
                     confidence=0.95,
+                ),
+            ),
+        )
+
+
+class MisclassifiedSystemItemExtractor:
+    """Extractor that labels a named governing system as a physical item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious system/item classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_super_starfleet_system",
+                    entity_type="item",
+                    display_name="Super Starfleet System",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.94,
                 ),
             ),
         )
@@ -566,6 +604,19 @@ def test_extraction_accepts_explicit_skill_terms() -> None:
     assert result.entities[0].entity_id == "skill_eye_of_insight"
 
 
+def test_extraction_rejects_obvious_profession_as_skill() -> None:
+    """Ranks and professions must not be accepted as skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedProfessionSkillExtractor())
+
+    with pytest.raises(ValueError, match="rank or profession cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
 def test_extraction_rejects_obvious_physical_object_as_system() -> None:
     """Concrete objects must not be accepted as system entities."""
     imported = StoryImporter().import_text(
@@ -576,6 +627,19 @@ def test_extraction_rejects_obvious_physical_object_as_system() -> None:
     engine = EntityExtractionEngine(extractor=MisclassifiedSystemExtractor())
 
     with pytest.raises(ValueError, match="physical object cannot be system"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_obvious_system_as_item() -> None:
+    """Named governing systems must not be accepted as physical items."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSystemItemExtractor())
+
+    with pytest.raises(ValueError, match="governing system cannot be physical item"):
         engine.extract_imported_source(imported)
 
 

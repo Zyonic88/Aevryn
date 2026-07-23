@@ -75,6 +75,25 @@ SYSTEM_ENTITY_TERMS = frozenset(
         "system",
     }
 )
+ROLE_OR_TITLE_ENTITY_TERMS = frozenset(
+    {
+        "admiral",
+        "baron",
+        "baroness",
+        "captain",
+        "commander",
+        "department",
+        "doctor",
+        "engineer",
+        "general",
+        "officer",
+        "professor",
+        "recruit",
+        "soldier",
+        "student",
+        "teacher",
+    }
+)
 ENTITY_ID_TYPE_PREFIXES = {
     "armor": "armor",
     "building": "building",
@@ -444,14 +463,29 @@ class EntityExtractionEngine:
         physical_terms = classification_terms & PHYSICAL_ENTITY_TERMS
         skill_terms = classification_terms & SKILL_ENTITY_TERMS
         system_terms = classification_terms & SYSTEM_ENTITY_TERMS
+        role_or_title_terms = classification_terms & ROLE_OR_TITLE_ENTITY_TERMS
         if entity.entity_type == "skill" and physical_terms and not skill_terms:
             return (
                 "Entity classification conflict: physical object cannot be skill: "
                 f"{entity.display_name}."
             )
+        if entity.entity_type == "skill" and role_or_title_terms and not skill_terms:
+            return (
+                "Entity classification conflict: rank or profession cannot be skill: "
+                f"{entity.display_name}."
+            )
         if entity.entity_type == "system" and physical_terms and not system_terms:
             return (
                 "Entity classification conflict: physical object cannot be system: "
+                f"{entity.display_name}."
+            )
+        if (
+            entity.entity_type in {"item", "weapon", "armor", "vehicle"}
+            and system_terms
+            and not physical_terms
+        ):
+            return (
+                "Entity classification conflict: governing system cannot be physical item: "
                 f"{entity.display_name}."
             )
         if (
