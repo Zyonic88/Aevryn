@@ -900,6 +900,10 @@ def test_project_import_snapshot_humanizes_presentation_machine_ids() -> None:
     assert "Zhao Chen is located in North Star Academy" in world_items
     assert "Character: Zhao Chen" in prompt_items
     assert all("(E1)" not in item for item in prompt_items)
+    assert all("source_demo" not in item for item in prompt_items)
+    assert all("_chapter_" not in item for item in prompt_items)
+    assert all("Evidence anchor" not in item for item in prompt_items)
+    assert all("Zhao Chen entered North Star Academy" not in item for item in prompt_items)
     assert all("Aevryn Import Bundle" not in item for item in continuity_items)
     assert all("State Valid From Event" not in item for item in continuity_items)
     assert "Zhao Chen current location: North Star Academy" in continuity_items

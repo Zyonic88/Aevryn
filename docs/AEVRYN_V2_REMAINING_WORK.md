@@ -243,8 +243,8 @@ Remaining hardening:
 
 * run hosted browser validation against the current prompt-pack output
 * confirm prompts include enough scene-specific action, setting, character, and object context
-* ensure prompts do not include raw manuscript prose
-* ensure prompts do not expose evidence anchors, import bundle IDs, source IDs, or internal placeholders
+* ~~ensure normal prompt-pack presentation does not include raw manuscript prose~~
+* ~~ensure normal prompt-pack presentation does not expose evidence anchors, import bundle IDs, source IDs, or internal placeholders~~
 * ~~keep prompt bodies collapsed by default~~
 * ~~make copy/export affordances obvious~~
 * keep production-batching out of V2 unless explicitly re-scoped
@@ -264,6 +264,9 @@ Verified hardening:
 * prompt bodies are collapsed by default and expose bounded previews before expansion
 * verified with focused prompt scene-picker test and prompt-download/readable-output
   unit tests
+* browser-facing snapshot prompt items exclude exact imported sentences, source IDs,
+  chapter/scene ID fragments, evidence-anchor labels, and short provider entity IDs
+* verified with background-worker presentation payload tests and presentation-engine tests
 
 Acceptance:
 
