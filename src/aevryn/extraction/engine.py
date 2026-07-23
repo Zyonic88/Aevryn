@@ -14,12 +14,147 @@ from aevryn.extraction.models import (
     ExtractionResult,
     SceneEvidenceAnchor,
     SceneExtractionInput,
+    SceneSentenceUnderstanding,
 )
 from aevryn.importing import EvidenceAnchor, ImportedSource
+from aevryn.sentences import SentenceUnderstanding, SentenceUnderstandingEngine
 
 logger = logging.getLogger(__name__)
 
 UnknownAnchorPolicy = Literal["raise", "reject_candidate"]
+
+PHYSICAL_ENTITY_TERMS = frozenset(
+    {
+        "armor",
+        "artifact",
+        "battlecruiser",
+        "blade",
+        "blueprint",
+        "book",
+        "car",
+        "coin",
+        "credits",
+        "cruiser",
+        "dagger",
+        "equipment",
+        "facility",
+        "gun",
+        "hangar",
+        "jacket",
+        "manual",
+        "potion",
+        "rifle",
+        "room",
+        "ship",
+        "shuttle",
+        "spaceship",
+        "spear",
+        "starship",
+        "sword",
+        "token",
+        "uniform",
+        "vehicle",
+        "vessel",
+        "weapon",
+    }
+)
+SKILL_ENTITY_TERMS = frozenset(
+    {
+        "ability",
+        "art",
+        "cast",
+        "spell",
+        "skill",
+        "technique",
+    }
+)
+SYSTEM_ENTITY_TERMS = frozenset(
+    {
+        "interface",
+        "panel",
+        "system",
+    }
+)
+ROLE_OR_TITLE_ENTITY_TERMS = frozenset(
+    {
+        "admiral",
+        "baron",
+        "baroness",
+        "captain",
+        "commander",
+        "department",
+        "doctor",
+        "engineer",
+        "general",
+        "officer",
+        "professor",
+        "recruit",
+        "soldier",
+        "student",
+        "teacher",
+    }
+)
+ANONYMOUS_GROUP_CHARACTER_TERMS = frozenset(
+    {
+        "beastmen",
+        "boys",
+        "crew",
+        "girls",
+        "guards",
+        "men",
+        "people",
+        "recruits",
+        "servants",
+        "slaves",
+        "soldiers",
+        "students",
+        "troops",
+        "women",
+    }
+)
+SINGULAR_CHARACTER_REFERENCE_TERMS = frozenset(
+    {
+        "boy",
+        "brother",
+        "captain",
+        "commander",
+        "daughter",
+        "father",
+        "girl",
+        "guard",
+        "husband",
+        "man",
+        "member",
+        "mother",
+        "officer",
+        "person",
+        "prince",
+        "princess",
+        "queen",
+        "recruit",
+        "sister",
+        "slave",
+        "soldier",
+        "son",
+        "student",
+        "teacher",
+        "wife",
+        "woman",
+    }
+)
+ENTITY_ID_TYPE_PREFIXES = {
+    "armor": "armor",
+    "building": "building",
+    "character": "character",
+    "creature": "creature",
+    "item": "item",
+    "location": "location",
+    "organization": "organization",
+    "skill": "skill",
+    "system": "system",
+    "vehicle": "vehicle",
+    "weapon": "weapon",
+}
 
 
 class SceneExtractor(Protocol):
@@ -66,6 +201,7 @@ class EntityExtractionEngine:
             Extraction results in scene order.
         """
         anchors_by_scene = self._anchors_by_scene(imported_source.anchors)
+        understanding_by_scene = self._sentence_understanding_by_scene(imported_source)
         results = tuple(
             self.extract_scene(
                 scene_id=scene.scene_id,
@@ -76,6 +212,7 @@ class EntityExtractionEngine:
                 )
                 or "\n\n".join(scene.paragraphs),
                 anchors=anchors_by_scene.get(scene.scene_id, ()),
+                sentence_understanding=understanding_by_scene.get(scene.scene_id, ()),
             )
             for chapter in imported_source.story.chapters
             for scene in chapter.scenes
@@ -175,6 +312,7 @@ class EntityExtractionEngine:
         scene_id: str,
         text: str,
         anchors: tuple[EvidenceAnchor, ...],
+        sentence_understanding: tuple[SceneSentenceUnderstanding, ...] = (),
     ) -> ExtractionResult:
         """Extract candidates from one scene without changing Canon.
 
@@ -182,6 +320,8 @@ class EntityExtractionEngine:
             scene_id: Imported scene identifier.
             text: Scene source text.
             anchors: Evidence anchors belonging to the scene.
+            sentence_understanding: Optional sentence-level meaning metadata for
+                the scene's evidence anchors.
 
         Returns:
             Validated extraction result.
@@ -202,6 +342,7 @@ class EntityExtractionEngine:
                     )
                     for anchor in anchors
                 ),
+                sentence_understanding=sentence_understanding,
             )
         )
         result = self._validate_result(result=result, allowed_anchor_ids=anchor_ids)
@@ -221,6 +362,37 @@ class EntityExtractionEngine:
             },
         )
         return result
+
+    @staticmethod
+    def _sentence_understanding_by_scene(
+        imported_source: ImportedSource,
+    ) -> dict[str, tuple[SceneSentenceUnderstanding, ...]]:
+        """Return extraction-safe sentence-understanding metadata by scene."""
+        understandings = SentenceUnderstandingEngine().analyze_imported_source(
+            imported_source
+        )
+        grouped: dict[str, list[SceneSentenceUnderstanding]] = {}
+        for understanding in understandings:
+            grouped.setdefault(understanding.source_scene_id, []).append(
+                EntityExtractionEngine._scene_sentence_understanding(understanding)
+            )
+        return {
+            scene_id: tuple(scene_understandings)
+            for scene_id, scene_understandings in grouped.items()
+        }
+
+    @staticmethod
+    def _scene_sentence_understanding(
+        understanding: SentenceUnderstanding,
+    ) -> SceneSentenceUnderstanding:
+        """Convert full sentence understanding to extraction-facing metadata."""
+        return SceneSentenceUnderstanding(
+            evidence_anchor_id=understanding.evidence_anchor_id,
+            signals=understanding.signals,
+            cue_terms=understanding.cue_terms,
+            ambiguity_terms=understanding.ambiguity_terms,
+            review_required=understanding.review_required,
+        )
 
     def _validate_result(
         self,
@@ -321,6 +493,96 @@ class EntityExtractionEngine:
         if entity.evidence_anchor_id not in allowed_anchor_ids:
             raise ValueError(f"Unknown evidence anchor: {entity.evidence_anchor_id}")
         EntityExtractionEngine._validate_confidence(entity.confidence)
+        classification_error = EntityExtractionEngine._entity_classification_error(entity)
+        if classification_error is not None:
+            raise ValueError(classification_error)
+
+    @staticmethod
+    def _entity_classification_error(entity: ExtractedEntity) -> str | None:
+        """Return a deterministic error for obvious entity classification conflicts."""
+        expected_type = EntityExtractionEngine._expected_type_from_entity_id(entity.entity_id)
+        if expected_type is not None and expected_type != entity.entity_type:
+            return (
+                "Entity classification conflicts with entity ID prefix: "
+                f"{entity.entity_id} is {entity.entity_type}, expected {expected_type}."
+            )
+
+        classification_terms = EntityExtractionEngine._classification_terms(entity)
+        physical_terms = classification_terms & PHYSICAL_ENTITY_TERMS
+        skill_terms = classification_terms & SKILL_ENTITY_TERMS
+        system_terms = classification_terms & SYSTEM_ENTITY_TERMS
+        role_or_title_terms = classification_terms & ROLE_OR_TITLE_ENTITY_TERMS
+        anonymous_group_terms = classification_terms & ANONYMOUS_GROUP_CHARACTER_TERMS
+        singular_reference_terms = (
+            classification_terms & SINGULAR_CHARACTER_REFERENCE_TERMS
+        )
+        if (
+            entity.entity_type == "character"
+            and anonymous_group_terms
+            and not singular_reference_terms
+        ):
+            return (
+                "Entity classification conflict: anonymous group phrase cannot be "
+                f"character: {entity.display_name}."
+            )
+        if entity.entity_type == "skill" and physical_terms and not skill_terms:
+            return (
+                "Entity classification conflict: physical object cannot be skill: "
+                f"{entity.display_name}."
+            )
+        if entity.entity_type == "skill" and role_or_title_terms and not skill_terms:
+            return (
+                "Entity classification conflict: rank or profession cannot be skill: "
+                f"{entity.display_name}."
+            )
+        if entity.entity_type == "system" and physical_terms and not system_terms:
+            return (
+                "Entity classification conflict: physical object cannot be system: "
+                f"{entity.display_name}."
+            )
+        if (
+            entity.entity_type in {"item", "weapon", "armor", "vehicle"}
+            and system_terms
+            and not physical_terms
+        ):
+            return (
+                "Entity classification conflict: governing system cannot be physical item: "
+                f"{entity.display_name}."
+            )
+        if (
+            entity.entity_type in {"item", "weapon", "armor", "vehicle"}
+            and skill_terms
+            and not physical_terms
+        ):
+            return (
+                "Entity classification conflict: usable ability cannot be physical item: "
+                f"{entity.display_name}."
+            )
+        return None
+
+    @staticmethod
+    def _expected_type_from_entity_id(entity_id: str) -> str | None:
+        """Return expected entity type from a conventional entity ID prefix."""
+        prefix = entity_id.split("_", maxsplit=1)[0]
+        return ENTITY_ID_TYPE_PREFIXES.get(prefix)
+
+    @staticmethod
+    def _classification_terms(entity: ExtractedEntity) -> set[str]:
+        """Return lowercase tokens used for deterministic classification checks."""
+        raw_text = entity.display_name
+        tokens = {
+            token
+            for token in "".join(
+                character.lower() if character.isalnum() else " "
+                for character in raw_text
+            ).split()
+            if token
+        }
+        if "battle" in tokens and "cruiser" in tokens:
+            tokens.add("battlecruiser")
+        if "star" in tokens and "ship" in tokens:
+            tokens.add("starship")
+        return tokens
 
     @staticmethod
     def _validate_relationship(

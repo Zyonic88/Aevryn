@@ -13,6 +13,7 @@ from aevryn import (
     ExtractionResult,
     SceneEvidenceAnchor,
     SceneExtractionInput,
+    SceneSentenceUnderstanding,
     StoryImporter,
 )
 
@@ -20,8 +21,13 @@ from aevryn import (
 class FakeExtractor:
     """Test extractor that behaves like an AI boundary without calling AI."""
 
+    def __init__(self) -> None:
+        """Create the extractor."""
+        self.scenes: list[SceneExtractionInput] = []
+
     def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
         """Return deterministic candidates for tests."""
+        self.scenes.append(scene)
         first_anchor = scene.evidence_anchor_ids[0]
         return ExtractionResult(
             scene_id=scene.scene_id,
@@ -238,6 +244,180 @@ class BadConfidenceExtractor:
         )
 
 
+class MisclassifiedSkillExtractor:
+    """Extractor that labels a concrete object as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious item/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_t3_blizzard_blueprint",
+                    entity_type="skill",
+                    display_name=(
+                        "T3 Blizzard-class Light Interstellar Battlecruiser "
+                        "technical blueprint"
+                    ),
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.95,
+                ),
+            ),
+        )
+
+
+class ValidSkillExtractor:
+    """Extractor that labels a named ability as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid skill candidate."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_eye_of_insight",
+                    entity_type="skill",
+                    display_name="Eye of Insight technique",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.93,
+                ),
+            ),
+        )
+
+
+class MisclassifiedProfessionSkillExtractor:
+    """Extractor that labels a rank or profession as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious profession/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_chief_engineer",
+                    entity_type="skill",
+                    display_name="Chief Engineer",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.92,
+                ),
+            ),
+        )
+
+
+class MisclassifiedSystemExtractor:
+    """Extractor that labels a concrete object as a system."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious item/system classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="system_starship_blueprint",
+                    entity_type="system",
+                    display_name="Starship blueprint",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.95,
+                ),
+            ),
+        )
+
+
+class MisclassifiedSystemItemExtractor:
+    """Extractor that labels a named governing system as a physical item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious system/item classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_super_starfleet_system",
+                    entity_type="item",
+                    display_name="Super Starfleet System",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.94,
+                ),
+            ),
+        )
+
+
+class ValidSystemExtractor:
+    """Extractor that labels a named interface/mechanic as a system."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid system candidate."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="system_super_starfleet",
+                    entity_type="system",
+                    display_name="Super Starfleet System interface",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
+class AnonymousGroupCharacterExtractor:
+    """Extractor that labels an anonymous group phrase as a character."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious group/character classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_female_soldiers",
+                    entity_type="character",
+                    display_name="Female Soldiers",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
+class SingularUnnamedCharacterExtractor:
+    """Extractor that labels a singular unnamed person reference as a character."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid singular unnamed character candidate."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_unnamed_female_crew_member",
+                    entity_type="character",
+                    display_name="Unnamed female crew member",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.88,
+                ),
+            ),
+        )
+
+
+class MismatchedEntityPrefixExtractor:
+    """Extractor that contradicts its entity ID prefix."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an entity whose ID prefix and type disagree."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_fireball",
+                    entity_type="skill",
+                    display_name="Fireball",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
 class WrongSceneIdExtractor:
     """Extractor that returns candidates under the wrong scene ID."""
 
@@ -316,7 +496,8 @@ def test_extract_imported_source_returns_candidates_with_evidence() -> None:
         title="Demo",
         text=imported_source_text(),
     )
-    engine = EntityExtractionEngine(extractor=FakeExtractor())
+    extractor = FakeExtractor()
+    engine = EntityExtractionEngine(extractor=extractor)
 
     results = engine.extract_imported_source(imported)
 
@@ -324,6 +505,11 @@ def test_extract_imported_source_returns_candidates_with_evidence() -> None:
     assert results[0].entities[0].entity_id == "character_mark"
     assert results[0].entities[0].evidence_anchor_id == imported.anchors[0].anchor_id
     assert results[0].relationships[0].relationship_type == "owns"
+    assert extractor.scenes[0].sentence_understanding
+    assert extractor.scenes[0].sentence_understanding[0].evidence_anchor_id == (
+        imported.anchors[0].anchor_id
+    )
+    assert "item_reference" in extractor.scenes[0].sentence_understanding[0].signals
 
 
 def test_extraction_result_does_not_update_canon() -> None:
@@ -426,6 +612,126 @@ def test_extraction_rejects_invalid_confidence() -> None:
     engine = EntityExtractionEngine(extractor=BadConfidenceExtractor())
 
     with pytest.raises(ValueError, match="confidence"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_obvious_physical_object_as_skill() -> None:
+    """Concrete objects must not be accepted as skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSkillExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_explicit_skill_terms() -> None:
+    """Named techniques remain valid skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidSkillExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_id == "skill_eye_of_insight"
+
+
+def test_extraction_rejects_obvious_profession_as_skill() -> None:
+    """Ranks and professions must not be accepted as skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedProfessionSkillExtractor())
+
+    with pytest.raises(ValueError, match="rank or profession cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_obvious_physical_object_as_system() -> None:
+    """Concrete objects must not be accepted as system entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSystemExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be system"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_obvious_system_as_item() -> None:
+    """Named governing systems must not be accepted as physical items."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSystemItemExtractor())
+
+    with pytest.raises(ValueError, match="governing system cannot be physical item"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_explicit_system_terms() -> None:
+    """Named interfaces remain valid system entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidSystemExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_id == "system_super_starfleet"
+
+
+def test_extraction_rejects_anonymous_group_phrase_as_character() -> None:
+    """Anonymous plural groups must not become character cards."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=AnonymousGroupCharacterExtractor())
+
+    with pytest.raises(ValueError, match="anonymous group phrase cannot be character"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_singular_unnamed_character_reference() -> None:
+    """Singular unnamed people can remain character candidates when evidence supports them."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=SingularUnnamedCharacterExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_id == "character_unnamed_female_crew_member"
+
+
+def test_extraction_rejects_entity_type_prefix_mismatch() -> None:
+    """Entity IDs and entity types must not contradict each other."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MismatchedEntityPrefixExtractor())
+
+    with pytest.raises(ValueError, match="entity ID prefix"):
         engine.extract_imported_source(imported)
 
 
@@ -670,6 +976,38 @@ def test_scene_extraction_input_rejects_anchor_object_mismatch() -> None:
                 SceneEvidenceAnchor(
                     anchor_id="anchor_002",
                     quote="Mark draws the sword.",
+                ),
+            ),
+        )
+
+
+def test_scene_extraction_input_rejects_duplicate_sentence_understanding() -> None:
+    """Sentence-understanding metadata must not duplicate evidence anchors."""
+    understanding = SceneSentenceUnderstanding(
+        evidence_anchor_id="anchor_001",
+        signals=("item_reference",),
+    )
+
+    with pytest.raises(ValueError, match="sentence-understanding anchors"):
+        SceneExtractionInput(
+            scene_id="source_chapter_001_scene_001",
+            text="Mark draws the sword.",
+            evidence_anchor_ids=("anchor_001",),
+            sentence_understanding=(understanding, understanding),
+        )
+
+
+def test_scene_extraction_input_rejects_sentence_understanding_anchor_mismatch() -> None:
+    """Sentence-understanding metadata must stay inside allowed scene anchors."""
+    with pytest.raises(ValueError, match="must reference evidence anchor IDs"):
+        SceneExtractionInput(
+            scene_id="source_chapter_001_scene_001",
+            text="Mark draws the sword.",
+            evidence_anchor_ids=("anchor_001",),
+            sentence_understanding=(
+                SceneSentenceUnderstanding(
+                    evidence_anchor_id="anchor_002",
+                    signals=("item_reference",),
                 ),
             ),
         )

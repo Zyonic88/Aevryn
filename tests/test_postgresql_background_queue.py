@@ -12,6 +12,7 @@ from aevryn.workers import (
     JobNotFoundError,
     PostgresqlBackgroundJobQueue,
 )
+from aevryn.workers import postgresql_queue as queue_postgresql
 
 
 def queued_job(job_id: str = "job_demo") -> BackgroundJob:
@@ -169,6 +170,13 @@ def test_postgresql_background_queue_requires_psycopg_when_no_factory(
 
     with pytest.raises(PersistenceError, match="psycopg is required"):
         PostgresqlBackgroundJobQueue("postgresql://example.invalid/aevryn")
+
+
+def test_postgresql_background_queue_normalizes_pasted_database_url() -> None:
+    """Durable queue config should tolerate whitespace around PostgreSQL URLs."""
+    assert queue_postgresql._required_database_url(
+        "  postgresql://example.invalid/aevryn  "
+    ) == "postgresql://example.invalid/aevryn"
 
 
 class FakeUniqueViolation(Exception):

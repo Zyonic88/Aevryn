@@ -264,7 +264,19 @@ def postgresql_audit_access_report(
                             'TRUNCATE'
                         ),
                         false
-                    ) AS can_truncate;
+                    ) AS can_truncate,
+                    COALESCE(
+                        (
+                            SELECT c.relowner = (
+                                SELECT role.oid
+                                FROM pg_roles role
+                                WHERE role.rolname = current_user
+                            )
+                            FROM pg_class c
+                            WHERE c.oid = to_regclass('audit_ledger_records')
+                        ),
+                        false
+                    ) AS is_table_owner;
                 """
             )
             row = cursor.fetchone()
@@ -277,16 +289,29 @@ def postgresql_audit_access_report(
         "can_update": _row_bool(row[3], "audit update privilege"),
         "can_delete": _row_bool(row[4], "audit delete privilege"),
         "can_truncate": _row_bool(row[5], "audit truncate privilege"),
+        "is_table_owner": _row_bool(row[6], "audit table ownership"),
     }
 
 
 def _required_database_url(database_url: str) -> str:
     """Return a nonblank PostgreSQL database URL."""
-    if not isinstance(database_url, str) or not database_url.strip():
+    if not isinstance(database_url, str):
         raise ValueError("PostgreSQL database URL cannot be blank.")
-    if not database_url.startswith(("postgresql://", "postgres://")):
+    normalized_url = _normalized_database_url(database_url)
+    if not normalized_url:
+        raise ValueError("PostgreSQL database URL cannot be blank.")
+    if not normalized_url.startswith(("postgresql://", "postgres://")):
         raise ValueError("PostgreSQL database URL must use postgresql:// or postgres://.")
-    return database_url.strip()
+    return normalized_url
+
+
+def _normalized_database_url(database_url: str) -> str:
+    """Trim copy/paste wrapping without weakening URL validation."""
+    normalized_url = database_url.strip()
+    if len(normalized_url) >= 2 and normalized_url[0] == normalized_url[-1]:
+        if normalized_url[0] in {"'", '"'}:
+            normalized_url = normalized_url[1:-1].strip()
+    return normalized_url
 
 
 def _default_connect_factory() -> ConnectFactory:

@@ -7,7 +7,7 @@
 --
 -- Safety rules:
 --   1. Do not commit rendered copies of this file.
---   2. Replace <runtime_role> only in the reviewed execution copy.
+--   2. Replace <runtime_role> and <migration_owner> only in the reviewed execution copy.
 --   3. Do not paste database URLs, passwords, hostnames, or usernames into this file.
 --   4. Run only after schema bootstrap/migrations have already been applied.
 --   5. Cloud Run must use AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false.
@@ -16,6 +16,10 @@
 BEGIN;
 
 GRANT USAGE ON SCHEMA public TO "<runtime_role>";
+
+ALTER TABLE public.audit_ledger_records OWNER TO "<migration_owner>";
+
+REVOKE ALL ON TABLE public.audit_ledger_records FROM PUBLIC;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
     public.users,

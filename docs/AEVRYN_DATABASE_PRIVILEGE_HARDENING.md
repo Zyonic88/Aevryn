@@ -10,15 +10,19 @@ This document tracks the production database least-privilege posture required be
 
 ```text
 Area: Database privilege hardening
-Status: Started
-Public beta: Blocked
+Status: Accepted
+Public beta: Audit database role gate passed; broader public beta remains blocked
 ```
 
 The 2026-07-14 hosted audit gate verified that the audit table exists and the audit hash chain is valid.
 
 The same gate also found that the currently configured database role can update and delete `audit_ledger_records`.
 
-That is not acceptable for public beta.
+That was not acceptable for public beta.
+
+The 2026-07-17 hosted audit role rotation moved Cloud Run to a restricted
+runtime PostgreSQL role and verified append-only audit access with metadata-only
+output.
 
 ---
 
@@ -57,6 +61,7 @@ audit_ledger_records INSERT: true
 audit_ledger_records UPDATE: false
 audit_ledger_records DELETE: false
 audit_ledger_records TRUNCATE: false
+audit_ledger_records TABLE OWNER: false
 ```
 
 The hosted release gate is:
@@ -103,22 +108,32 @@ Reviewed SQL template:
 docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql
 ```
 
+Operational runbook:
+
+```text
+docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md
+```
+
 1. Confirm the current schema exists and the hosted audit ledger verifies.
 2. Create or update the restricted runtime database role through a reviewed migration or Supabase SQL editor session.
 3. Grant the runtime role only the privileges required for normal application behavior.
 4. Grant `SELECT` and `INSERT` on `audit_ledger_records`.
 5. Revoke `UPDATE`, `DELETE`, and `TRUNCATE` on `audit_ledger_records`.
-6. Grant sequence privileges only if the runtime role requires them for tables with sequences.
-7. Update the production database URL secret to use the restricted runtime role.
-8. Set `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` in Cloud Run.
-9. Redeploy Cloud Run.
-10. Run the verification gates in this document.
+6. Ensure the runtime role does not own `audit_ledger_records`.
+7. Revoke public table privileges on `audit_ledger_records`.
+8. Grant sequence privileges only if the runtime role requires them for tables with sequences.
+9. Update the production database URL secret to use the restricted runtime role.
+10. Set `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` in Cloud Run.
+11. Redeploy Cloud Run.
+12. Run the verification gates in this document.
 
 The runtime role may read, insert, update, and delete normal product records where required by project workflows, project deletion, import processing, background jobs, snapshots, exports, and settings.
 
 The runtime role must not update or delete audit history.
 
 The runtime role must not truncate audit history.
+
+The runtime role must not own the audit table.
 
 Audit append serialization uses a transaction-scoped PostgreSQL advisory lock so audit writes do not require table-level update/delete privileges.
 
@@ -134,6 +149,7 @@ Required verification after remediation:
 * `aevryn audit-ledger-verify` passes without printing secrets
 * `aevryn audit-access-report` reports SELECT and INSERT as true
 * `aevryn audit-access-report` reports UPDATE, DELETE, and TRUNCATE as false
+* `aevryn audit-access-report` reports `is_table_owner=false`
 * `aevryn audit-access-verify` passes
 * `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` is present in the hosted runtime configuration
 * hosted API startup still succeeds
@@ -157,6 +173,22 @@ audit-ledger-verify: passed
 audit-access-report: passed
 audit-access-verify: failed
 reason: UPDATE privilege is present; DELETE privilege is also present in the report
+```
+
+2026-07-17 hosted restricted runtime role verification:
+
+```text
+audit-ledger-verify: passed
+records_verified=1338
+audit-access-report: passed
+can_select=true
+can_insert=true
+can_update=false
+can_delete=false
+can_truncate=false
+is_table_owner=false
+audit-access-verify: passed
+secrets_printed=0
 ```
 
 No secrets or source content were printed.

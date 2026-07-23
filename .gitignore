@@ -42,6 +42,7 @@ docs/AEVRYN_AI_CODING_RULES.md
 /output/
 /exports/
 /generated/
+/Aevryn test chapters/
 /performance-baselines/
 /snapshots/*
 !/snapshots/README.md

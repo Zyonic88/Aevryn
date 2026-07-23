@@ -38,7 +38,45 @@ OpenAI mode requires:
 * `AEVRYN_OPENAI_API_KEY`
 * `AEVRYN_OPENAI_MODEL`
 
-The default worker path remains non-provider-backed unless provider mode is explicitly configured.
+Aevryn's current OpenAI integration uses the OpenAI Responses API endpoint for
+evidence-bounded extraction.
+
+The request payload explicitly sets:
+
+```text
+store=false
+```
+
+That setting is required so Aevryn does not intentionally create persistent
+provider application state for extraction requests.
+
+The current provider review was updated on 2026-07-16 against official OpenAI
+data-use and API data-controls material:
+
+* OpenAI states that API inputs and outputs are not used for model training by
+  default unless an organization explicitly opts in.
+* OpenAI's API data-controls documentation identifies `/v1/responses` as not
+  used for training, with abuse-monitoring retention listed as 30 days by
+  default.
+* OpenAI's API data-controls documentation states that `/v1/responses`
+  application state retention is 30 days by default or when `store=true`, and
+  that Zero Data Retention treats `store` as false.
+
+Source URLs reviewed:
+
+* `https://openai.com/policies/how-your-data-is-used-to-improve-model-performance/`
+* `https://openai.com/business-data/`
+* `https://platform.openai.com/docs/models/default-usage-policies-by-endpoint`
+
+This review reduces uncertainty, but it does not approve OpenAI for public
+beta by itself.
+
+Public beta remains blocked until Aetherra Labs records the final production
+OpenAI organization/project data-control posture, final model configuration,
+account-level opt-in status, retention posture, and user-facing disclosure.
+
+The default worker path remains non-provider-backed unless provider mode is
+explicitly configured.
 
 The current public-beta disclosure candidate is recorded in
 `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`.
@@ -155,6 +193,18 @@ Before a provider can be approved, the review must determine whether provider-su
 * deleted or aged out on a predictable schedule
 
 If no-training behavior cannot be guaranteed or disclosed accurately, provider-backed extraction must remain disabled for public beta unless users explicitly opt in with plain-language consent.
+
+For OpenAI Responses API extraction, public-beta approval also requires:
+
+* request payloads keep `store=false`
+* background mode remains disabled unless separately reviewed
+* stateful Conversations, Assistants, Threads, Vector Stores, Files, Batches,
+  Evals, and fine-tuning endpoints remain out of scope unless separately
+  reviewed
+* organization or project data-sharing controls remain opt-out by default
+* any Zero Data Retention or Modified Abuse Monitoring decision is recorded
+  accurately before public disclosure
+* provider logs and Aevryn logs remain metadata-only
 
 ---
 

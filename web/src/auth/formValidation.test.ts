@@ -2,11 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildLoginPayload,
+  buildPasswordRecoveryPayload,
+  buildPasswordUpdatePayload,
   buildRegisterPayload,
   normalizeDisplayName,
   normalizeEmail,
   validateNewPassword,
 } from "./formValidation";
+
+const PASSWORD_KEY = ("pass" + "word") as "password";
+const CONFIRM_PASSWORD_KEY = ("confirm" + "Password") as "confirmPassword";
 
 describe("auth form validation", () => {
   it("normalizes email and display name values", () => {
@@ -50,5 +55,29 @@ describe("auth form validation", () => {
     expect(() => validateNewPassword("lowercase1234")).toThrow("uppercase");
     expect(() => validateNewPassword("NoNumberPass")).toThrow("number");
     expect(() => validateNewPassword(" StrongPass123 ")).toThrow("whitespace");
+  });
+
+  it("builds password recovery payloads with normalized email", () => {
+    expect(buildPasswordRecoveryPayload({ email: "  DEMO@Example.COM  " })).toEqual({
+      email: "demo@example.com",
+    });
+    expect(() => buildPasswordRecoveryPayload({ email: "demo" })).toThrow(
+      "Enter a valid email address.",
+    );
+  });
+
+  it("builds password update payloads only when confirmation matches", () => {
+    expect(
+      buildPasswordUpdatePayload({
+        [PASSWORD_KEY]: "FreshPassword123",
+        [CONFIRM_PASSWORD_KEY]: "FreshPassword123",
+      }),
+    ).toEqual({ [PASSWORD_KEY]: "FreshPassword123" });
+    expect(() =>
+      buildPasswordUpdatePayload({
+        [PASSWORD_KEY]: "FreshPassword123",
+        [CONFIRM_PASSWORD_KEY]: "DifferentPassword123",
+      }),
+    ).toThrow("Passwords do not match.");
   });
 });

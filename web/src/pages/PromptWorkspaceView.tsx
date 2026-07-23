@@ -13,7 +13,11 @@ import {
   buildPromptPreviewPayload,
   canSubmitPromptPreviewInput,
 } from "../previewing/previewPayload";
-import { readablePromptSummary, readablePromptText } from "../output/readableOutput";
+import {
+  readablePromptPreview,
+  readablePromptSummary,
+  readablePromptText,
+} from "../output/readableOutput";
 import type { ProjectSummary } from "../projects/projectStore";
 
 const DEFAULT_SOURCE_TEXT = "Chapter 1\n";
@@ -183,6 +187,7 @@ function PromptSection({ section }: { section: OutputSection }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const promptText = readablePromptText(section, { maxItems: 10 });
   const promptSummary = readablePromptSummary(section);
+  const promptPreview = readablePromptPreview(section, { maxItems: 3 });
 
   async function copyPrompt() {
     const clipboard = navigator.clipboard;
@@ -215,6 +220,19 @@ function PromptSection({ section }: { section: OutputSection }) {
           </button>
         </div>
       </div>
+      <ul className="prompt-preview-list" aria-label={`${section.title} preview`}>
+        {promptPreview.items.length > 0 ? (
+          promptPreview.items.map((item) => <li key={item}>{item}</li>)
+        ) : (
+          <li>Unknown.</li>
+        )}
+      </ul>
+      {promptPreview.hiddenCount > 0 ? (
+        <p className="prompt-preview-overflow">
+          {promptPreview.hiddenCount.toLocaleString()} more prompt{" "}
+          {promptPreview.hiddenCount === 1 ? "detail" : "details"} inside.
+        </p>
+      ) : null}
       <details className="prompt-disclosure" aria-label={`${section.title} prompt body`}>
         <summary>
           Show {section.title} - {promptSummary}
