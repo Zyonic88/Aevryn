@@ -5,7 +5,12 @@ from typing import Any, cast
 
 import pytest
 
-from aevryn import CanonDatabase, CanonUpdater, CanonUpdateSummary
+from aevryn import (
+    CanonDatabase,
+    CanonUpdater,
+    CanonUpdateSummary,
+    RejectedCanonCandidate,
+)
 from aevryn.extraction import (
     ExtractedEntity,
     ExtractedFact,
@@ -168,6 +173,12 @@ def test_canon_updater_rejects_same_position_display_name_change() -> None:
 
     assert summary.accepted_entities == ()
     assert summary.rejected_candidates == ("character_mark",)
+    assert summary.rejected_reasons == (
+        RejectedCanonCandidate(
+            candidate_id="character_mark",
+            reason_code="ambiguous_source_order",
+        ),
+    )
     assert character is not None
     assert character.entity.display_name == "Mark"
 
@@ -289,7 +300,10 @@ def test_canon_updater_skips_same_value_replacement_fact() -> None:
     )
 
     assert summary.accepted_facts == ()
-    assert summary.accepted_state_changes == ()
+    assert all(
+        "current_weapon_iron_sword" not in state_change_id
+        for state_change_id in summary.accepted_state_changes
+    )
     assert len(active_points) == 1
     assert active_points[0].fact_id == "fact_character_mark_system_points_100_first"
 
@@ -397,6 +411,12 @@ def test_canon_updater_rejects_low_confidence_candidate() -> None:
 
     assert summary.accepted_entities == ()
     assert summary.rejected_candidates == ("character_mark",)
+    assert summary.rejected_reasons == (
+        RejectedCanonCandidate(
+            candidate_id="character_mark",
+            reason_code="low_confidence",
+        ),
+    )
     assert database.retrieve_character("character_mark") is None
 
 
@@ -431,6 +451,12 @@ def test_canon_updater_rejects_unknown_anchor_candidate() -> None:
 
     assert summary.accepted_entities == ()
     assert summary.rejected_candidates == ("character_mark",)
+    assert summary.rejected_reasons == (
+        RejectedCanonCandidate(
+            candidate_id="character_mark",
+            reason_code="unknown_evidence_anchor",
+        ),
+    )
     assert database.retrieve_character("character_mark") is None
 
 
@@ -494,6 +520,29 @@ def test_canon_update_summary_rejects_invalid_ids() -> None:
     with pytest.raises(ValueError, match="cannot contain whitespace"):
         CanonUpdateSummary(
             rejected_candidates=("character mark",),
+        )
+
+
+def test_canon_update_summary_rejects_reason_without_rejected_candidate() -> None:
+    """Rejected reason metadata must correspond to rejected candidate IDs."""
+    with pytest.raises(ValueError, match="reason IDs must match rejected candidates"):
+        CanonUpdateSummary(
+            rejected_candidates=("character_mark",),
+            rejected_reasons=(
+                RejectedCanonCandidate(
+                    candidate_id="character_other",
+                    reason_code="low_confidence",
+                ),
+            ),
+        )
+
+
+def test_rejected_canon_candidate_rejects_invalid_reason_code() -> None:
+    """Rejected reason codes should remain machine-readable."""
+    with pytest.raises(ValueError, match="reason code cannot contain whitespace"):
+        RejectedCanonCandidate(
+            candidate_id="character_mark",
+            reason_code="low confidence",
         )
 
 
@@ -726,6 +775,41 @@ def test_canon_updater_does_not_report_unstored_state_change_candidates() -> Non
     )
 
 
+def test_canon_updater_reports_state_change_without_current_fact_reason() -> None:
+    """Rejected state changes explain when no matching current fact exists."""
+    database = CanonDatabase()
+    updater = CanonUpdater(database=database)
+    state_change = ExtractedStateChange(
+        entity_id="character_mark",
+        attribute="current_weapon",
+        value="Iron Sword",
+        valid_from_anchor_id=anchor().anchor_id,
+        confidence=0.9,
+    )
+
+    summary = updater.apply_extraction_result(
+        result=extraction_result(
+            entities=(accepted_entity(),),
+            state_changes=(state_change,),
+        ),
+        anchors=(anchor(),),
+    )
+
+    assert all(
+        "current_weapon_iron_sword" not in state_change_id
+        for state_change_id in summary.accepted_state_changes
+    )
+    assert summary.rejected_candidates == (
+        "state_candidate_character_mark_current_weapon_iron_sword",
+    )
+    assert summary.rejected_reasons == (
+        RejectedCanonCandidate(
+            candidate_id="state_candidate_character_mark_current_weapon_iron_sword",
+            reason_code="state_change_without_current_fact",
+        ),
+    )
+
+
 def test_canon_updater_keeps_multiple_abilities_active() -> None:
     """Accepted ability facts accumulate as active canon state."""
     database = CanonDatabase()
@@ -789,4 +873,10 @@ def test_canon_updater_rejects_relationship_with_unknown_entity() -> None:
     assert summary.accepted_relationships == ()
     assert summary.rejected_candidates == (
         "relationship_character_mark_owns_item_iron_sword",
+    )
+    assert summary.rejected_reasons == (
+        RejectedCanonCandidate(
+            candidate_id="relationship_character_mark_owns_item_iron_sword",
+            reason_code="unknown_entity_reference",
+        ),
     )

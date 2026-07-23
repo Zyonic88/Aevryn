@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import type { LoginRequest } from "../api/client";
 import { buildLoginPayload } from "../auth/formValidation";
@@ -10,10 +10,12 @@ import { ErrorMessage } from "../components/Feedback";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { setSession } = useAuth();
+  const location = useLocation();
+  const { clearSessionPersistenceError, sessionPersistenceError, setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const loginMessage = loginMessageFromLocationState(location.state);
 
   const login = useMutation({
     mutationFn: (payload: LoginRequest) => loginWithConfiguredAuth(payload),
@@ -28,6 +30,7 @@ export function LoginPage() {
     try {
       const payload = buildLoginPayload({ email, password });
       setFormError(null);
+      clearSessionPersistenceError();
       login.mutate({ ...payload, now: new Date().toISOString() });
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Login form is invalid.");
@@ -61,13 +64,22 @@ export function LoginPage() {
             />
           </label>
           {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+          {sessionPersistenceError ? <ErrorMessage>{sessionPersistenceError}</ErrorMessage> : null}
           {login.error ? <ErrorMessage>{login.error.message}</ErrorMessage> : null}
+          {loginMessage ? (
+            <p className="success-note" role="status">
+              {loginMessage}
+            </p>
+          ) : null}
           <button type="submit" className="primary-button" disabled={login.isPending}>
             {login.isPending ? "Logging in" : "Log in"}
           </button>
         </form>
         <p className="auth-switch">
           New to Aevryn? <Link to="/register">Create an account</Link>
+        </p>
+        <p className="auth-switch">
+          Need access? <Link to="/password-recovery">Reset your password</Link>
         </p>
         <nav className="auth-links" aria-label="Public information">
           <Link to="/trust">Trust</Link>
@@ -77,4 +89,12 @@ export function LoginPage() {
       </section>
     </main>
   );
+}
+
+function loginMessageFromLocationState(state: unknown): string | null {
+  if (typeof state !== "object" || state === null || !("message" in state)) {
+    return null;
+  }
+  const message = (state as { message?: unknown }).message;
+  return typeof message === "string" && message.trim() ? message.trim() : null;
 }

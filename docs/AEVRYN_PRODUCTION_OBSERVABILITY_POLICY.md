@@ -194,6 +194,26 @@ retention window, security alert flag, and metadata-only logging flag without
 printing secrets. It does not inspect hosted log contents and does not replace
 the bounded hosted log review.
 
+The hosted production-like observability configuration gate passed on
+2026-07-17 with metadata-only output:
+
+```text
+deployment_env=production
+log_destination=hosted
+monitoring_destination=hosted
+log_retention_days=30
+monitoring_retention_days=30
+security_alerts_enabled=true
+metadata_only_logging=true
+bounded_hosted_log_review=required
+public_beta=blocked_until_bounded_hosted_log_review
+secrets_printed=0
+ok=observability_config_contract_checked
+```
+
+This verifies configuration posture only. It does not replace the bounded hosted
+log review.
+
 ---
 
 # Public-Beta Blockers

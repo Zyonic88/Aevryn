@@ -6,6 +6,8 @@ from aevryn.translation.models import (
     TranslatedUnit,
     TranslationIssue,
     TranslationMode,
+    TranslationSentenceSignal,
+    TranslationSentenceUnderstanding,
     TranslationTermKind,
     TranslationUnit,
 )
@@ -16,6 +18,8 @@ __all__ = [
     "TranslationEngine",
     "TranslationIssue",
     "TranslationMode",
+    "TranslationSentenceSignal",
+    "TranslationSentenceUnderstanding",
     "TranslationTermKind",
     "TranslationUnit",
 ]

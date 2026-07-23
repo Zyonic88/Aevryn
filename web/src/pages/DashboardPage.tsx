@@ -12,6 +12,7 @@ import {
   createProjectShell,
   defaultProjectName,
   normalizeProjectName,
+  type ProjectSummary,
 } from "../projects/projectStore";
 
 export function DashboardPage() {
@@ -32,9 +33,7 @@ export function DashboardPage() {
     enabled: session !== null,
   });
   const createProjectMutation = useMutation({
-    mutationFn: (name: string) => {
-      const now = new Date();
-      const shell = createProjectShell(name, { now });
+    mutationFn: (shell: ProjectSummary) => {
       return apiClient.createProject(
         { project_id: shell.id, name: shell.name, now: shell.updatedAt },
         requireSessionToken(session),
@@ -55,9 +54,7 @@ export function DashboardPage() {
       void navigate(`/projects/${project.project_id}`);
     },
     onError(error) {
-      setProjectError(
-        error instanceof Error ? error.message : "Project could not be created.",
-      );
+      setProjectError(error instanceof Error ? error.message : "Project could not be created.");
     },
   });
   const deleteProjectMutation = useMutation({
@@ -83,17 +80,34 @@ export function DashboardPage() {
   );
 
   const normalizedProjectName = normalizeProjectName(projectName);
+  const pendingProjectId = createProjectMutation.isPending
+    ? createProjectMutation.variables?.id
+    : undefined;
   const projects = useMemo(
-    () =>
-      (projectsQuery.data?.projects ?? [])
+    () => {
+      const confirmedProjects = (projectsQuery.data?.projects ?? [])
         .map(projectSummaryFromApiProject)
-        .sort(compareProjectActivity),
-    [projectsQuery.data?.projects],
+        .sort(compareProjectActivity);
+      const pendingProject = createProjectMutation.variables;
+      if (
+        !createProjectMutation.isPending ||
+        !pendingProject ||
+        confirmedProjects.some((project) => project.id === pendingProject.id)
+      ) {
+        return confirmedProjects;
+      }
+      return [pendingProject, ...confirmedProjects];
+    },
+    [
+      createProjectMutation.isPending,
+      createProjectMutation.variables,
+      projectsQuery.data?.projects,
+    ],
   );
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    createProjectMutation.mutate(projectName);
+    createProjectMutation.mutate(createProjectShell(projectName, { now: new Date() }));
   }
 
   function requestProjectDeletion(projectId: string, projectTitle: string) {
@@ -133,11 +147,17 @@ export function DashboardPage() {
           <button
             type="submit"
             className="primary-button"
+            aria-busy={createProjectMutation.isPending}
             disabled={!normalizedProjectName || createProjectMutation.isPending}
           >
             {createProjectMutation.isPending ? "Creating..." : "Create project"}
           </button>
         </form>
+        {createProjectMutation.isPending && createProjectMutation.variables ? (
+          <LoadingMessage>
+            Creating workspace for {createProjectMutation.variables.name}.
+          </LoadingMessage>
+        ) : null}
         {projectError ? <ErrorMessage>{projectError}</ErrorMessage> : null}
         {projectsQuery.isLoading ? <LoadingMessage>Loading projects.</LoadingMessage> : null}
         {projectsQuery.error ? <ErrorMessage>{projectsQuery.error.message}</ErrorMessage> : null}
@@ -152,26 +172,41 @@ export function DashboardPage() {
         {projects.length > 0 ? (
           <div className="project-list">
             {projects.map((project) => (
-              <div key={project.id} className="project-row project-row-action">
-                <Link
-                  to={`/projects/${project.id}`}
-                  className="project-select-link"
-                  aria-label={`${project.name} Updated ${formatDateTime(project.updatedAt)} Open workspace`}
-                >
-                  <strong>{project.name}</strong>
-                  <span>Updated {formatDateTime(project.updatedAt)}</span>
-                  <small>Open workspace</small>
-                </Link>
-                <button
-                  type="button"
-                  className="icon-button danger-button"
-                  aria-label={`Delete project ${project.name}`}
-                  title={`Delete project ${project.name}`}
-                  disabled={deleteProjectMutation.isPending}
-                  onClick={() => requestProjectDeletion(project.id, project.name)}
-                >
-                  <span aria-hidden="true">×</span>
-                </button>
+              <div
+                key={project.id}
+                className={`project-row project-row-action${
+                  project.id === pendingProjectId ? " project-row-pending" : ""
+                }`}
+              >
+                {project.id === pendingProjectId ? (
+                  <div className="project-select-link" aria-label={`${project.name} creating`}>
+                    <strong>{project.name}</strong>
+                    <span>Started {formatDateTime(project.updatedAt)}</span>
+                    <small>Creating workspace</small>
+                  </div>
+                ) : (
+                  <>
+                    <Link
+                      to={`/projects/${project.id}`}
+                      className="project-select-link"
+                      aria-label={`${project.name} Updated ${formatDateTime(project.updatedAt)} Open workspace`}
+                    >
+                      <strong>{project.name}</strong>
+                      <span>Updated {formatDateTime(project.updatedAt)}</span>
+                      <small>Open workspace</small>
+                    </Link>
+                    <button
+                      type="button"
+                      className="icon-button danger-button"
+                      aria-label={`Delete project ${project.name}`}
+                      title={`Delete project ${project.name}`}
+                      disabled={deleteProjectMutation.isPending}
+                      onClick={() => requestProjectDeletion(project.id, project.name)}
+                    >
+                      <span aria-hidden="true">x</span>
+                    </button>
+                  </>
+                )}
               </div>
             ))}
           </div>
