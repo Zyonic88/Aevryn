@@ -399,6 +399,25 @@ class AnonymousGroupCharacterExtractor:
         )
 
 
+class RaceGenderGroupCharacterExtractor:
+    """Extractor that labels a plural race/gender group as one character."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a plural group that should stay out of character cards."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_female_half_beastman_slaves",
+                    entity_type="character",
+                    display_name="Female Half-Beastman Slaves",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
 class SingularUnnamedCharacterExtractor:
     """Extractor that labels a singular unnamed person reference as a character."""
 
@@ -735,6 +754,19 @@ def test_extraction_rejects_anonymous_group_phrase_as_character() -> None:
         text=imported_source_text(),
     )
     engine = EntityExtractionEngine(extractor=AnonymousGroupCharacterExtractor())
+
+    with pytest.raises(ValueError, match="anonymous group phrase cannot be character"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_plural_race_gender_group_as_character() -> None:
+    """Plural race/gender groups must not become a single character card."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=RaceGenderGroupCharacterExtractor())
 
     with pytest.raises(ValueError, match="anonymous group phrase cannot be character"):
         engine.extract_imported_source(imported)

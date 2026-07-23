@@ -349,6 +349,10 @@ Verified hardening:
 * character cards and developer-preview cards use neutral initials placeholders
   without rendering fake portrait images before a real portrait/reference system
   exists
+* extraction rejects plural race/gender group phrases as character cards while
+  preserving singular unnamed character candidates when evidence supports them
+* entity resolution keeps pronouns, shared honorifics, near-tied matches, and
+  low-confidence descriptions ambiguous instead of force-merging identities
 * verified with the focused processed-character-panel frontend test
 
 Acceptance:
