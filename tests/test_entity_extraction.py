@@ -399,6 +399,27 @@ class AnonymousGroupCharacterExtractor:
         )
 
 
+class ValidSystemCreatedItemExtractor:
+    """Extractor that labels a system-created physical object as an item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a physical item that was produced by a story system."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_t3_blizzard_blueprint",
+                    entity_type="item",
+                    display_name=(
+                        "T3 Blizzard-class Light Interstellar Battlecruiser technical blueprint"
+                    ),
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
 class RaceGenderGroupCharacterExtractor:
     """Extractor that labels a plural race/gender group as one character."""
 
@@ -744,6 +765,23 @@ def test_extraction_accepts_explicit_system_terms() -> None:
     result = engine.extract_imported_source(imported)[0]
 
     assert result.entities[0].entity_id == "system_super_starfleet"
+
+
+def test_extraction_accepts_system_created_physical_items() -> None:
+    """A system-created object should remain an item when it is physically concrete."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidSystemCreatedItemExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_type == "item"
+    assert result.entities[0].display_name == (
+        "T3 Blizzard-class Light Interstellar Battlecruiser technical blueprint"
+    )
 
 
 def test_extraction_rejects_anonymous_group_phrase_as_character() -> None:

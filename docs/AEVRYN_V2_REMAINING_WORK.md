@@ -395,6 +395,8 @@ Verified hardening:
   instead of becoming Canon truth
 * system reward, mission, quest, and points language is treated as system context
   rather than a usable skill unless the evidence explicitly describes an ability
+* system-created physical objects such as technical blueprints remain item
+  candidates when evidence supports a concrete object classification
 * verified with sentence-understanding, extraction, and evidence-bounded AI
   extraction tests
 
