@@ -2036,11 +2036,51 @@ describe("App shell routing", () => {
       expect(screen.queryByRole("link", { name: /Alpha Updated/u })).not.toBeInTheDocument(),
     );
     expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete project Alpha?");
-    expect(confirmSpy).toHaveBeenNthCalledWith(
-      2,
-      "Project data will be lost forever, are you sure?",
-    );
+    expect(confirmSpy).toHaveBeenNthCalledWith(2, "Story data will be lost forever, are you sure?");
     expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`${API_PATHS.projects}/project_alpha`),
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("does not delete a project when the second confirmation is cancelled", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi
+      .spyOn(window, "confirm")
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false);
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      if (url.endsWith(API_PATHS.projects)) {
+        return Promise.resolve(new Response(JSON.stringify({ projects: [projectAlphaPayload] })));
+      }
+      if (init?.method === "DELETE") {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      return projectApiFallbackResponse(url);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("1 project")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete project Alpha" }));
+
+    expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete project Alpha?");
+    expect(confirmSpy).toHaveBeenNthCalledWith(2, "Story data will be lost forever, are you sure?");
+    expect(screen.getByRole("link", { name: /Alpha Updated/u })).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
       expect.stringContaining(`${API_PATHS.projects}/project_alpha`),
       expect.objectContaining({ method: "DELETE" }),
     );
