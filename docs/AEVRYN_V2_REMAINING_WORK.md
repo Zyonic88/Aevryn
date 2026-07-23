@@ -353,6 +353,9 @@ Verified hardening:
   preserving singular unnamed character candidates when evidence supports them
 * entity resolution keeps pronouns, shared honorifics, near-tied matches, and
   low-confidence descriptions ambiguous instead of force-merging identities
+* entity resolution and project-runner tests resolve title-plus-name references
+  such as General Charlotte to the existing Canon identity when the title/name
+  support is explicit, while keeping shared titles ambiguous
 * character profiles and stored snapshot API output hide contradictory
   Human-plus-non-human race/species values instead of displaying both as Canon
 * verified with the focused processed-character-panel frontend test
