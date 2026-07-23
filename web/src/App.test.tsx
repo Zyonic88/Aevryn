@@ -4012,6 +4012,73 @@ describe("App shell routing", () => {
     expect(screen.queryByText("source_alpha")).not.toBeInTheDocument();
   });
 
+  it("shows when continuity buckets hide additional retained records", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const retainedRecords = Array.from({ length: 10 }, (_, index) => ({
+      record_id: `retained_record_${index + 1}`,
+      record_type: "fact",
+      description: `character_mark retained_detail_${index + 1} = Known value.`,
+      evidence_id: `source_alpha_anchor_${index + 10}`,
+      chapter_id: "source_alpha_chapter_002",
+      scene_id: "source_alpha_chapter_002_scene_001",
+    }));
+    const continuityPreviewWithManyRetained = {
+      ...continuityPreviewPayload,
+      continuity_report: {
+        ...continuityPreviewPayload.continuity_report,
+        scenes: [
+          {
+            ...continuityPreviewPayload.continuity_report.scenes[1],
+            still_known: retainedRecords,
+          },
+        ],
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.continuityPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(continuityPreviewWithManyRetained)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/continuity"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Continuity" });
+    await user.click(screen.getByText("Developer preview"));
+    await user.click(screen.getByRole("button", { name: "Preview continuity" }));
+
+    expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
+    expect(screen.getByText("10 retained canon")).toBeInTheDocument();
+    expect(screen.getByText("2 additional retained canon records hidden.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) => element?.textContent?.includes("Retained Detail 8: Known value.") ?? false,
+        { selector: "li" },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        (_, element) => element?.textContent?.includes("Retained Detail 9: Known value.") ?? false,
+        { selector: "li" },
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it("previews production packs from the prompt packs workspace tab", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);

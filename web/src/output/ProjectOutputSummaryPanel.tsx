@@ -858,16 +858,23 @@ function ContinuityBucket({
   if (records.length === 0) {
     return null;
   }
+  const visibleRecords = records.slice(0, 8);
+  const hiddenCount = records.length - visibleRecords.length;
   return (
     <div>
       <strong>{title}</strong>
       <ul>
-        {records.slice(0, 8).map((record) => (
+        {visibleRecords.map((record) => (
           <li key={record.record_id}>
             <span>{readableOutputItems([record.description])[0] ?? "Unknown"}</span>
           </li>
         ))}
       </ul>
+      {hiddenCount > 0 ? (
+        <p className="field-note">
+          {hiddenCount.toLocaleString()} additional {title.toLowerCase()} records hidden.
+        </p>
+      ) : null}
     </div>
   );
 }

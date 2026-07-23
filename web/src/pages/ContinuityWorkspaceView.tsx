@@ -207,21 +207,30 @@ function ContinuitySceneCard({ scene }: { scene: ContinuityScene }) {
 }
 
 function ContinuityBucket({ title, records }: { title: string; records: ContinuityRecord[] }) {
+  const visibleRecords = records.slice(0, 8);
+  const hiddenCount = records.length - visibleRecords.length;
   return (
     <section className="profile-section">
       <h4>{title}</h4>
       {records.length > 0 ? (
-        <ul>
-          {records.map((record) => (
-            <li key={record.record_id}>
-              <strong>{readableRecordType(record.record_type)}</strong>:{" "}
-              {readableOutputItems([record.description])[0] ?? "Unknown"}
-              <span className="continuity-evidence">
-                Evidence from {formatEvidenceScope(record)}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul>
+            {visibleRecords.map((record) => (
+              <li key={record.record_id}>
+                <strong>{readableRecordType(record.record_type)}</strong>:{" "}
+                {readableOutputItems([record.description])[0] ?? "Unknown"}
+                <span className="continuity-evidence">
+                  Evidence from {formatEvidenceScope(record)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {hiddenCount > 0 ? (
+            <p className="field-note">
+              {hiddenCount.toLocaleString()} additional {title.toLowerCase()} records hidden.
+            </p>
+          ) : null}
+        </>
       ) : (
         <p>Unknown</p>
       )}

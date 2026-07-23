@@ -310,6 +310,9 @@ Verified hardening:
   new/changed Canon highlight before expansion
 * continuity preview keeps full change buckets collapsed and retained-canon
   detail nested, while retained-canon Markdown examples remain bounded
+* processed-output and preview continuity buckets cap retained-record detail
+  lists and show hidden-record counts, so large projects stay readable without
+  pretending overflow does not exist
 
 Acceptance:
 
