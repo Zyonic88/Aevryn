@@ -416,6 +416,11 @@ Verified hardening:
 * physical skill-source phrases such as skill book, spell book, skill manual, and
   technique manual route as item context instead of automatically becoming usable
   skills, while separate skill cues in the same sentence remain reviewable
+* system-resource phrases such as skill points and experience points route as
+  system context rather than usable skills, while separate ability cues in the
+  same sentence remain visible and reviewable
+* physical skill-source scrolls route as item context rather than automatically
+  becoming usable skills
 * verified with sentence-understanding, extraction, and evidence-bounded AI
   extraction tests
 

@@ -138,6 +138,7 @@ ITEM_CUES = frozenset(
         "manual",
         "potion",
         "rifle",
+        "scroll",
         "ship",
         "spear",
         "starship",
@@ -154,9 +155,12 @@ ITEM_PHRASE_CUES = frozenset(
         "source crystal",
         "skill book",
         "skill manual",
+        "skill scroll",
         "spell book",
+        "spell scroll",
         "star ship",
         "starship blueprint",
+        "technique scroll",
         "technique manual",
         "technical blueprint",
     }
@@ -194,8 +198,10 @@ SYSTEM_CUES = frozenset(
 )
 SYSTEM_PHRASE_CUES = frozenset(
     {
+        "experience points",
         "mission reward",
         "quest reward",
+        "skill points",
         "status panel",
         "system interface",
         "system message",
@@ -225,6 +231,7 @@ TRANSLATION_AMBIGUITY_PHRASE_CUES = frozenset(
 )
 SKILL_PHRASE_ITEM_CONTEXT_TERMS = frozenset({"art", "blade", "sword"})
 ITEM_PHRASE_SKILL_CONTEXT_TERMS = frozenset({"skill", "spell", "technique"})
+SYSTEM_PHRASE_SKILL_CONTEXT_TERMS = frozenset({"skill"})
 DIALOGUE_PATTERN = re.compile(r'["\']|\b(said|asked|replied|shouted|whispered)\b', re.I)
 
 
@@ -271,10 +278,17 @@ class SentenceUnderstandingEngine:
         skill_terms = set(tokens & SKILL_CUES) | set(phrase_terms & SKILL_PHRASE_CUES)
         system_terms = set(tokens & SYSTEM_CUES) | set(phrase_terms & SYSTEM_PHRASE_CUES)
         item_terms -= _item_terms_owned_by_skill_phrases(
+            text=sentence.text,
             phrase_terms=phrase_terms,
             item_terms=item_terms,
         )
         skill_terms -= _skill_terms_owned_by_item_phrases(
+            text=sentence.text,
+            phrase_terms=phrase_terms,
+            skill_terms=skill_terms,
+        )
+        skill_terms -= _skill_terms_owned_by_system_phrases(
+            text=sentence.text,
             phrase_terms=phrase_terms,
             skill_terms=skill_terms,
         )
@@ -375,6 +389,7 @@ def _sentence_phrase_terms(text: str) -> set[str]:
 
 def _item_terms_owned_by_skill_phrases(
     *,
+    text: str,
     phrase_terms: set[str],
     item_terms: set[str],
 ) -> set[str]:
@@ -383,11 +398,17 @@ def _item_terms_owned_by_skill_phrases(
     owned_terms: set[str] = set()
     for phrase in skill_phrases:
         owned_terms.update(set(phrase.split()) & SKILL_PHRASE_ITEM_CONTEXT_TERMS)
-    return owned_terms & item_terms
+    return _exclusively_phrase_owned_terms(
+        text=text,
+        owned_terms=owned_terms,
+        phrase_terms=skill_phrases,
+        candidate_terms=item_terms,
+    )
 
 
 def _skill_terms_owned_by_item_phrases(
     *,
+    text: str,
     phrase_terms: set[str],
     skill_terms: set[str],
 ) -> set[str]:
@@ -396,7 +417,68 @@ def _skill_terms_owned_by_item_phrases(
     owned_terms: set[str] = set()
     for phrase in item_phrases:
         owned_terms.update(set(phrase.split()) & ITEM_PHRASE_SKILL_CONTEXT_TERMS)
-    return owned_terms & skill_terms
+    return _exclusively_phrase_owned_terms(
+        text=text,
+        owned_terms=owned_terms,
+        phrase_terms=item_phrases,
+        candidate_terms=skill_terms,
+    )
+
+
+def _skill_terms_owned_by_system_phrases(
+    *,
+    text: str,
+    phrase_terms: set[str],
+    skill_terms: set[str],
+) -> set[str]:
+    """Return skill-like words that are part of known system/resource phrases."""
+    system_phrases = phrase_terms & SYSTEM_PHRASE_CUES
+    owned_terms: set[str] = set()
+    for phrase in system_phrases:
+        owned_terms.update(set(phrase.split()) & SYSTEM_PHRASE_SKILL_CONTEXT_TERMS)
+    return _exclusively_phrase_owned_terms(
+        text=text,
+        owned_terms=owned_terms,
+        phrase_terms=system_phrases,
+        candidate_terms=skill_terms,
+    )
+
+
+def _exclusively_phrase_owned_terms(
+    *,
+    text: str,
+    owned_terms: set[str],
+    phrase_terms: set[str],
+    candidate_terms: set[str],
+) -> set[str]:
+    """Return terms whose sentence occurrences are fully owned by known phrases."""
+    removable_terms = owned_terms & candidate_terms
+    if not removable_terms:
+        return set()
+    word_counts = _sentence_word_counts(text)
+    return {
+        term
+        for term in removable_terms
+        if word_counts.get(term, 0) <= _phrase_owned_term_count(phrase_terms, term)
+    }
+
+
+def _sentence_word_counts(text: str) -> dict[str, int]:
+    """Return normalized word occurrence counts for one sentence."""
+    counts: dict[str, int] = {}
+    for token in (
+        "".join(
+            character.lower() if character.isalnum() else " "
+            for character in text
+        ).split()
+    ):
+        counts[token] = counts.get(token, 0) + 1
+    return counts
+
+
+def _phrase_owned_term_count(phrase_terms: set[str], term: str) -> int:
+    """Return how many phrase cues contain one owned term."""
+    return sum(phrase.split().count(term) for phrase in phrase_terms)
 
 
 def _append_signal_if(

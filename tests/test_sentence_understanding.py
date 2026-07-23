@@ -80,6 +80,43 @@ def test_sentence_understanding_keeps_system_rewards_out_of_skill_context() -> N
     assert understanding.review_required is True
 
 
+def test_sentence_understanding_keeps_skill_points_out_of_skill_context() -> None:
+    """Skill points are system-resource context, not a usable ability."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_points",
+        title="Sentence Skill Points",
+        text="Chapter 1\nThe status panel awarded Zhao Chen 10 skill points.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "skill points" in understanding.cue_terms
+    assert "status panel" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_keeps_real_skill_after_skill_points_reviewable() -> None:
+    """System resources and a separate ability cue should both remain visible."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_points_and_skill",
+        title="Sentence Skill Points And Skill",
+        text=(
+            "Chapter 1\n"
+            "The status panel spent 10 skill points to unlock Shadow Step skill."
+        ),
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "skill points" in understanding.cue_terms
+    assert "skill" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_keeps_system_skill_context_reviewable() -> None:
     """System UI listing a skill should be reviewed instead of treated as settled meaning."""
     imported = StoryImporter().import_text(
@@ -126,6 +163,22 @@ def test_sentence_understanding_treats_skill_book_as_item_context() -> None:
     assert "item_reference" in understanding.signals
     assert "skill_reference" not in understanding.signals
     assert "skill book" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_treats_spell_scroll_as_item_context() -> None:
+    """A physical spell scroll is item context, not automatically a usable ability."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_spell_scroll",
+        title="Sentence Spell Scroll",
+        text="Chapter 1\nCharlotte placed the spell scroll into her bag.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "spell scroll" in understanding.cue_terms
     assert understanding.review_required is False
 
 
