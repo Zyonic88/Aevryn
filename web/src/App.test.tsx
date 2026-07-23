@@ -1660,6 +1660,9 @@ describe("App shell routing", () => {
       /Chapter 1, Scene 1\s+-\s+\d+ changes?: New canon: Current Weapon: Rusty Dagger\.; \d+ retained canon/u,
     );
     continuityDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
+    expect(continuityOutput).not.toHaveTextContent(
+      /source_alpha|fact_character_mark|record_|_chapter_\d{3}_scene_\d{3}|source_alpha_anchor/u,
+    );
     expect(continuityOutput).toHaveTextContent("1 retained canon");
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview continuity" }));

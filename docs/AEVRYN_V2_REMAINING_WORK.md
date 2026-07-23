@@ -292,13 +292,16 @@ Verified evidence:
 * collapsed scene summaries now include the first visible change before detail expansion
 * normal output uses "retained canon" instead of "still known" wording
 * continuity details remain collapsed and paginated
+* normal continuity output hides source IDs, chapter/scene ID fragments,
+  evidence-anchor IDs, fact record IDs, and raw source identifiers
+* verified with the frontend alpha smoke test across workspace surfaces
 
 Remaining hardening:
 
 * keep scene-level continuity highlights scannable
 * keep large buckets collapsed during hosted browser validation
 * continue reducing repeated or low-value retained-canon noise when new examples appear
-* verify no raw IDs appear in normal user view
+* ~~verify no raw IDs appear in normal user view~~
 * verify continuity remains Canon-backed and does not invent explanations
 
 Acceptance:
