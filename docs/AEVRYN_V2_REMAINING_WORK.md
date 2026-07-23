@@ -361,7 +361,7 @@ Remaining hardening:
 * avoid tailoring classification to one novel
 * preserve uncertain classifications as reviewable instead of pretending certainty
 * ~~use sentence-level meaning signals as routing metadata without making them Canon truth~~
-* keep world cards collapsed and searchable/scannable
+* ~~keep world cards collapsed and searchable/scannable~~
 
 Verified hardening:
 
@@ -372,6 +372,9 @@ Verified hardening:
 * frontend readable-output formatter strips every supported Canon entity-type prefix
   from relationship and accepted-entity text, including system, weapon, armor,
   creature, vehicle, and timeline-event IDs
+* normal World output is searchable, keeps world cards collapsed, and hides raw
+  source IDs, entity IDs, chapter-scene fragments, and evidence anchors in the
+  frontend alpha smoke path
 * verified with readable-output frontend unit test, lint, and production build
 * sentence understanding routes item, skill, system, location, and organization
   cues as metadata-only guidance; mixed or ambiguous cues remain reviewable

@@ -1594,6 +1594,9 @@ describe("App shell routing", () => {
     const worldDetailPanels = worldOutput.querySelectorAll("details.profile-disclosure");
     expect(worldDetailPanels.length).toBeGreaterThanOrEqual(1);
     worldDetailPanels.forEach((panel) => expect(panel).not.toHaveAttribute("open"));
+    expect(worldOutput).not.toHaveTextContent(
+      /source_alpha|location_hangar|organization_|item_|character_mark|_chapter_\d{3}_scene_\d{3}|source_alpha_anchor/u,
+    );
     expect(screen.getByLabelText("AI response JSON")).not.toBeVisible();
     await user.click(screen.getByText("Developer preview"));
     await user.click(await screen.findByRole("button", { name: "Preview world" }));
