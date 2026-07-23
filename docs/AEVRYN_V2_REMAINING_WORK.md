@@ -247,7 +247,7 @@ Remaining hardening:
 * ~~ensure normal prompt-pack presentation does not expose evidence anchors, import bundle IDs, source IDs, or internal placeholders~~
 * ~~keep prompt bodies collapsed by default~~
 * ~~make copy/export affordances obvious~~
-* keep production-batching out of V2 unless explicitly re-scoped
+* ~~keep production-batching out of V2 unless explicitly re-scoped~~
 
 Verified hardening:
 
@@ -270,6 +270,8 @@ Verified hardening:
 * prompt-builder regression coverage requires every prompt type to preserve scene
   production brief, current action beats, character presence, setting, and
   scene-relevant object/world context when Canon provides it
+* prompt workspace regression coverage verifies V2 does not expose batch-generation,
+  credits, subscription, or paid production controls in Prompt Packs
 
 Acceptance:
 

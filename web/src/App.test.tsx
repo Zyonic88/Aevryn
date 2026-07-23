@@ -3705,6 +3705,12 @@ describe("App shell routing", () => {
     expect(
       within(selectedPack).getByRole("button", { name: "Download Image Prompt" }),
     ).toBeInTheDocument();
+    expect(
+      within(selectedPack).queryByRole("button", {
+        name: /generate all|batch|credits|subscription|buy/i,
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Production batch|Credits required|Subscribe|Buy credits/u)).not.toBeInTheDocument();
     await user.click(within(selectedPack).getByRole("button", { name: "Copy Image Prompt" }));
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Scene 1 image prompt detail")),
