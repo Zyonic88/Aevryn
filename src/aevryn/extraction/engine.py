@@ -94,6 +94,24 @@ ROLE_OR_TITLE_ENTITY_TERMS = frozenset(
         "teacher",
     }
 )
+NON_CAPABILITY_SKILL_TERMS = frozenset(
+    {
+        "credit",
+        "credits",
+        "currency",
+        "department",
+        "mission",
+        "point",
+        "points",
+        "profession",
+        "quest",
+        "rank",
+        "reward",
+        "role",
+        "task",
+        "title",
+    }
+)
 ANONYMOUS_GROUP_CHARACTER_TERMS = frozenset(
     {
         "beastmen",
@@ -512,6 +530,9 @@ class EntityExtractionEngine:
         skill_terms = classification_terms & SKILL_ENTITY_TERMS
         system_terms = classification_terms & SYSTEM_ENTITY_TERMS
         role_or_title_terms = classification_terms & ROLE_OR_TITLE_ENTITY_TERMS
+        non_capability_skill_terms = (
+            classification_terms & NON_CAPABILITY_SKILL_TERMS
+        )
         anonymous_group_terms = classification_terms & ANONYMOUS_GROUP_CHARACTER_TERMS
         singular_reference_terms = (
             classification_terms & SINGULAR_CHARACTER_REFERENCE_TERMS
@@ -534,6 +555,15 @@ class EntityExtractionEngine:
             return (
                 "Entity classification conflict: rank or profession cannot be skill: "
                 f"{entity.display_name}."
+            )
+        if (
+            entity.entity_type == "skill"
+            and non_capability_skill_terms
+            and not skill_terms
+        ):
+            return (
+                "Entity classification conflict: non-capability story concept cannot "
+                f"be skill: {entity.display_name}."
             )
         if entity.entity_type == "system" and physical_terms and not system_terms:
             return (

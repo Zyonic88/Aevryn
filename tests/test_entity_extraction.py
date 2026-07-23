@@ -304,6 +304,25 @@ class MisclassifiedProfessionSkillExtractor:
         )
 
 
+class MisclassifiedQuestRewardSkillExtractor:
+    """Extractor that labels a story-management concept as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious non-capability/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_quarterly_task_reward",
+                    entity_type="skill",
+                    display_name="Quarterly task reward",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.92,
+                ),
+            ),
+        )
+
+
 class MisclassifiedSystemExtractor:
     """Extractor that labels a concrete object as a system."""
 
@@ -652,6 +671,19 @@ def test_extraction_rejects_obvious_profession_as_skill() -> None:
     engine = EntityExtractionEngine(extractor=MisclassifiedProfessionSkillExtractor())
 
     with pytest.raises(ValueError, match="rank or profession cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_story_management_concepts_as_skills() -> None:
+    """Quests, rewards, and similar concepts must not become skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedQuestRewardSkillExtractor())
+
+    with pytest.raises(ValueError, match="non-capability story concept cannot be skill"):
         engine.extract_imported_source(imported)
 
 

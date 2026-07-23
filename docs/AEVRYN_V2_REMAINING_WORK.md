@@ -328,6 +328,13 @@ Remaining hardening:
 * use sentence-level meaning signals as routing metadata without making them Canon truth
 * keep world cards collapsed and searchable/scannable
 
+Verified hardening:
+
+* deterministic extraction guard rejects quests, rewards, points, ranks, titles, roles,
+  professions, and similar non-capability story concepts when they are incorrectly
+  proposed as skills without explicit ability language
+* verified with extraction, evidence-bounded extraction, world, and project-runner tests
+
 Acceptance:
 
 ```text
