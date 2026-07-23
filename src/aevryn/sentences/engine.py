@@ -89,6 +89,15 @@ ITEM_CUES = frozenset(
         "weapon",
     }
 )
+ITEM_PHRASE_CUES = frozenset(
+    {
+        "battle cruiser",
+        "source crystal",
+        "star ship",
+        "starship blueprint",
+        "technical blueprint",
+    }
+)
 SKILL_CUES = frozenset(
     {
         "ability",
@@ -97,6 +106,15 @@ SKILL_CUES = frozenset(
         "spell",
         "skill",
         "technique",
+    }
+)
+SKILL_PHRASE_CUES = frozenset(
+    {
+        "cultivation art",
+        "eye of insight",
+        "martial art",
+        "movement technique",
+        "sword technique",
     }
 )
 SYSTEM_CUES = frozenset(
@@ -109,6 +127,16 @@ SYSTEM_CUES = frozenset(
         "reward",
         "status",
         "system",
+    }
+)
+SYSTEM_PHRASE_CUES = frozenset(
+    {
+        "mission reward",
+        "quest reward",
+        "status panel",
+        "system interface",
+        "system message",
+        "system prompt",
     }
 )
 TRANSLATION_AMBIGUITY_CUES = frozenset(
@@ -124,6 +152,15 @@ TRANSLATION_AMBIGUITY_CUES = frozenset(
         "vessel",
     }
 )
+TRANSLATION_AMBIGUITY_PHRASE_CUES = frozenset(
+    {
+        "cultivation realm",
+        "dao seal",
+        "spirit core",
+        "system panel",
+    }
+)
+SKILL_PHRASE_ITEM_CONTEXT_TERMS = frozenset({"art", "blade", "sword"})
 DIALOGUE_PATTERN = re.compile(r'["\']|\b(said|asked|replied|shouted|whispered)\b', re.I)
 
 
@@ -157,25 +194,36 @@ class SentenceUnderstandingEngine:
         if sentence.sentence_id != anchor.sentence_id:
             raise ValueError("Sentence understanding anchor must match sentence ID.")
         tokens = _sentence_tokens(sentence.text)
+        phrase_terms = _sentence_phrase_terms(sentence.text)
         cue_terms: list[str] = []
         signals: list[SentenceSignal] = []
+        item_terms = set(tokens & ITEM_CUES) | set(phrase_terms & ITEM_PHRASE_CUES)
+        skill_terms = set(tokens & SKILL_CUES) | set(phrase_terms & SKILL_PHRASE_CUES)
+        system_terms = set(tokens & SYSTEM_CUES) | set(phrase_terms & SYSTEM_PHRASE_CUES)
+        item_terms -= _item_terms_owned_by_skill_phrases(
+            phrase_terms=phrase_terms,
+            item_terms=item_terms,
+        )
 
         _append_signal_if(signals, "dialogue", bool(DIALOGUE_PATTERN.search(sentence.text)))
         _append_signal_if(signals, "action", bool(tokens & ACTION_CUES))
         _append_signal_if(signals, "description", bool(tokens & DESCRIPTION_CUES))
         _append_signal_if(signals, "identity_reference", bool(tokens & IDENTITY_CUES))
         _append_signal_if(signals, "relationship_reference", bool(tokens & RELATIONSHIP_CUES))
-        _append_signal_if(signals, "item_reference", bool(tokens & ITEM_CUES))
-        _append_signal_if(signals, "skill_reference", bool(tokens & SKILL_CUES))
-        _append_signal_if(signals, "system_reference", bool(tokens & SYSTEM_CUES))
+        _append_signal_if(signals, "item_reference", bool(item_terms))
+        _append_signal_if(signals, "skill_reference", bool(skill_terms))
+        _append_signal_if(signals, "system_reference", bool(system_terms))
 
-        ambiguity_terms = _ordered_intersection(tokens, TRANSLATION_AMBIGUITY_CUES)
+        ambiguity_terms = _ordered_terms(
+            set(tokens & TRANSLATION_AMBIGUITY_CUES)
+            | set(phrase_terms & TRANSLATION_AMBIGUITY_PHRASE_CUES)
+        )
         _append_signal_if(signals, "translation_ambiguity", bool(ambiguity_terms))
 
         cue_terms.extend(_ordered_intersection(tokens, ACTION_CUES))
-        cue_terms.extend(_ordered_intersection(tokens, ITEM_CUES))
-        cue_terms.extend(_ordered_intersection(tokens, SKILL_CUES))
-        cue_terms.extend(_ordered_intersection(tokens, SYSTEM_CUES))
+        cue_terms.extend(_ordered_terms(item_terms))
+        cue_terms.extend(_ordered_terms(skill_terms))
+        cue_terms.extend(_ordered_terms(system_terms))
 
         if not signals:
             signals.append("description")
@@ -224,6 +272,40 @@ def _sentence_tokens(text: str) -> set[str]:
     return tokens
 
 
+def _sentence_phrase_terms(text: str) -> set[str]:
+    """Return normalized phrase cues present in one sentence."""
+    normalized = " ".join(
+        "".join(
+            character.lower() if character.isalnum() else " "
+            for character in text
+        ).split()
+    )
+    phrase_candidates = (
+        ITEM_PHRASE_CUES
+        | SKILL_PHRASE_CUES
+        | SYSTEM_PHRASE_CUES
+        | TRANSLATION_AMBIGUITY_PHRASE_CUES
+    )
+    return {
+        phrase
+        for phrase in phrase_candidates
+        if re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized)
+    }
+
+
+def _item_terms_owned_by_skill_phrases(
+    *,
+    phrase_terms: set[str],
+    item_terms: set[str],
+) -> set[str]:
+    """Return item-like words that are part of known skill phrases."""
+    skill_phrases = phrase_terms & SKILL_PHRASE_CUES
+    owned_terms: set[str] = set()
+    for phrase in skill_phrases:
+        owned_terms.update(set(phrase.split()) & SKILL_PHRASE_ITEM_CONTEXT_TERMS)
+    return owned_terms & item_terms
+
+
 def _append_signal_if(
     signals: list[SentenceSignal],
     signal: SentenceSignal,
@@ -237,6 +319,11 @@ def _append_signal_if(
 def _ordered_intersection(tokens: set[str], candidates: frozenset[str]) -> tuple[str, ...]:
     """Return stable candidate terms present in token set."""
     return tuple(term for term in sorted(candidates) if term in tokens)
+
+
+def _ordered_terms(values: set[str]) -> tuple[str, ...]:
+    """Return stable terms from an unordered set."""
+    return tuple(sorted(values))
 
 
 def _review_required(

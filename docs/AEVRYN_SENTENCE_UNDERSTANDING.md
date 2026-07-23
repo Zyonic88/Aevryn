@@ -167,6 +167,23 @@ These are routing hints, not Canon facts.
 If a sentence has both item and skill signals, Aevryn should treat the sentence
 as review-worthy instead of pretending the classification is obvious.
 
+Sentence Understanding may also detect compact phrase cues when a single word is
+too ambiguous on its own.
+
+Examples:
+
+* `status panel`
+* `quest reward`
+* `system interface`
+* `sword technique`
+* `cultivation art`
+* `spirit core`
+
+Phrase cues help route downstream extraction and translation review. They do
+not create Canon entities. For example, `sword technique` may route as a skill
+phrase without treating `sword` as a separate item unless the sentence also
+describes an actual sword object.
+
 ## Privacy Boundary
 
 Sentence Understanding output should remain metadata-only.

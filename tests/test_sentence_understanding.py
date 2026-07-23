@@ -48,6 +48,52 @@ def test_sentence_understanding_does_not_treat_ordinary_item_use_as_skill() -> N
     assert understanding.review_required is False
 
 
+def test_sentence_understanding_detects_system_ui_phrases() -> None:
+    """System interface phrases should be recognized as system context."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_system_phrases",
+        title="Sentence System Phrases",
+        text="Chapter 1\nA blue status panel opened and displayed a quest reward.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "status panel" in understanding.cue_terms
+    assert "quest reward" in understanding.cue_terms
+
+
+def test_sentence_understanding_treats_skill_phrase_as_skill_context() -> None:
+    """An item-like word inside a skill phrase should not become a separate item."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_phrase",
+        title="Sentence Skill Phrase",
+        text="Chapter 1\nCharlotte practiced the Moon Shadow sword technique.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "skill_reference" in understanding.signals
+    assert "sword technique" in understanding.cue_terms
+    assert "item_reference" not in understanding.signals
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_keeps_separate_item_and_skill_reviewable() -> None:
+    """Separate item and skill cues should still route to review."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_separate_item_skill",
+        title="Sentence Separate Item Skill",
+        text="Chapter 1\nCharlotte raised her sword and prepared a technique.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_keeps_full_source_text_out_of_metadata() -> None:
     """Understanding output stores signals and cue terms, not full manuscript prose."""
     imported = StoryImporter().import_text(
