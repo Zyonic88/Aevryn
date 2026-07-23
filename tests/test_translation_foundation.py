@@ -598,6 +598,27 @@ def test_translation_sentence_ambiguity_deduplicates_glossary_review_terms() -> 
     )
 
 
+def test_translation_accepts_world_context_sentence_signals_without_review_noise() -> None:
+    """World-routing signals should remain metadata unless translation is ambiguous."""
+    result = TranslationEngine().normalize_unit(
+        TranslationUnit(
+            unit_id="unit_sentence_world_context",
+            source_text="Zhao Chen entered North Star Academy.",
+            evidence_anchor_ids=("anchor_sentence_world",),
+            sentence_understanding=(
+                TranslationSentenceUnderstanding(
+                    evidence_anchor_id="anchor_sentence_world",
+                    signals=("location_reference", "organization_reference"),
+                    review_required=False,
+                ),
+            ),
+        )
+    )
+
+    assert result.normalized_text == "Zhao Chen entered North Star Academy."
+    assert result.issues == ()
+
+
 def test_translation_unit_rejects_sentence_understanding_anchor_mismatch() -> None:
     """Sentence metadata must point to one of the unit evidence anchors."""
     with pytest.raises(ValueError, match="must match evidence anchors"):
