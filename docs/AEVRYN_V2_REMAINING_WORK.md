@@ -305,7 +305,7 @@ Characters are readable and honest even when identity resolution is uncertain.
 Status:
 
 ```text
-Open
+In progress
 ```
 
 Remaining hardening:
@@ -313,6 +313,7 @@ Remaining hardening:
 * reduce incorrect item/skill/location/organization categorization where evidence supports a better class
 * avoid tailoring classification to one novel
 * preserve uncertain classifications as reviewable instead of pretending certainty
+* use sentence-level meaning signals as routing metadata without making them Canon truth
 * keep world cards collapsed and searchable/scannable
 
 Acceptance:

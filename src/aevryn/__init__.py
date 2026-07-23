@@ -126,6 +126,11 @@ from aevryn.scenes import (
     SceneEngine,
     SceneEnvironmentSnapshot,
 )
+from aevryn.sentences import (
+    SentenceSignal,
+    SentenceUnderstanding,
+    SentenceUnderstandingEngine,
+)
 from aevryn.timeline import (
     DuplicateChapterError,
     DuplicateEventError,
@@ -261,6 +266,9 @@ __all__ = [
     "SurfaceReference",
     "UrllibOpenAIResponsesTransport",
     "SceneEnvironmentSnapshot",
+    "SentenceSignal",
+    "SentenceUnderstanding",
+    "SentenceUnderstandingEngine",
     "SourceParagraph",
     "SourceFileText",
     "SourceFileTextExtractor",
