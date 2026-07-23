@@ -276,6 +276,7 @@ class CanonPromptBuilder:
                 self._narration_direction_section(analysis),
                 self._character_identity_reference_section(context),
                 self._character_section(context),
+                self._visual_identity_known_unknown_section(context),
                 self._world_context_section(context),
                 self._continuity_guard_section(analysis),
             )

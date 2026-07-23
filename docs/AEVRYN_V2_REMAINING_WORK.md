@@ -272,6 +272,9 @@ Verified hardening:
   scene-relevant object/world context when Canon provides it
 * prompt workspace regression coverage verifies V2 does not expose batch-generation,
   credits, subscription, or paid production controls in Prompt Packs
+* narration prompts now carry the same per-character known/missing visual identity
+  boundary as visual prompt types, keeping cross-prompt character appearance
+  handling Canon-bounded instead of inferred
 
 Acceptance:
 

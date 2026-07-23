@@ -396,6 +396,50 @@ def test_canon_prompt_builder_tracks_known_and_unknown_visual_identity_traits() 
     )
 
 
+def test_canon_prompt_builder_carries_visual_identity_guard_into_narration() -> None:
+    """Narration prompts should preserve known and missing visual identity boundaries."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("gender", "Male"),
+        ("race", "Human"),
+        ("hair_color", "Black"),
+    ):
+        fact_id = f"fact_mark_narration_visual_identity_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_008",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_mark_narration_visual_identity_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_008_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_narration_prompt(context)
+
+    assert "Visual ID:" in prompt
+    assert "- Mark: known gender,hair,race/species." in prompt
+    assert "Missing" in prompt
+    assert "Do not guess missing visual traits." in prompt
+    assert "Narrate using only accepted canon facts." in prompt
+
+
 def test_canon_prompt_builder_adds_visual_requirements_to_visual_prompt_types() -> None:
     """Image, camera, and animation prompts carry mandatory canon visual references."""
     imported_source = build_imported_source()
