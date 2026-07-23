@@ -1332,6 +1332,12 @@ def test_restore_drill_verify_checks_api_boundaries_without_printing_private_dat
         "/exports/export_restore/download"
     )
     assert captured_requests[0].get_header("Authorization") == "Bearer owner-token"
+    request_now = captured_requests[0].get_header("X-aevryn-now")
+    assert request_now
+    assert all(
+        request.get_header("X-aevryn-now") == request_now
+        for request in captured_requests
+    )
     assert (
         captured_requests[0].get_header("X-serverless-authorization")
         == "Bearer cloud-run-token"

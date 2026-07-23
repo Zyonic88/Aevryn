@@ -2611,12 +2611,15 @@ def _run_restore_drill_verify(
         if cloud_run_session_credential
         else {}
     )
+    request_now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     owner_headers = {
         "Authorization": f"Bearer {owner_session_credential}",
+        "X-Aevryn-Now": request_now,
         **cloud_run_headers,
     }
     other_headers = {
         "Authorization": f"Bearer {other_session_credential}",
+        "X-Aevryn-Now": request_now,
         **cloud_run_headers,
     }
     owner_project = _hosted_json_request(
