@@ -397,6 +397,13 @@ Remaining hardening:
 * ensure token/session details are never displayed
 * verify login always lands on Dashboard
 
+Verified hardening:
+
+* password-recovery completion returns users to Login with a human-readable success
+  message, clears any stored session, and does not render the recovery token
+* verified with focused recovery UI test, managed-identity auth tests, session tests,
+  full App test suite, lint, and production build
+
 Acceptance:
 
 ```text

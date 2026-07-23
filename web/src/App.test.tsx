@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 import { API_PATHS } from "./api/client";
+import * as managedIdentityAuth from "./auth/managedIdentityAuth";
 import { MAX_IMPORT_SOURCE_CHARACTERS } from "./importing/importPayload";
 
 const session = {
@@ -1225,6 +1226,34 @@ describe("App shell routing", () => {
     expect(screen.getByLabelText("New password")).toBeInTheDocument();
     expect(screen.getByLabelText("Confirm password")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Update password" })).toBeInTheDocument();
+  });
+
+  it("returns to login after completing managed password recovery", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    vi.spyOn(managedIdentityAuth, "completeConfiguredPasswordRecovery").mockResolvedValue(
+      undefined,
+    );
+
+    render(
+      <MemoryRouter
+        initialEntries={["/password-recovery#type=recovery&access_token=recovery-token"]}
+      >
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Set new password" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("New password"), "FreshStrongPass123");
+    await user.type(screen.getByLabelText("Confirm password"), "FreshStrongPass123");
+    await user.click(screen.getByRole("button", { name: "Update password" }));
+
+    expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Password updated. Log in with your new password.",
+    );
+    expect(window.localStorage.getItem("aevryn.session")).toBeNull();
+    expect(document.body).not.toHaveTextContent("recovery-token");
   });
 
   it("shows a human-readable message for expired managed recovery links", async () => {
