@@ -427,7 +427,7 @@ Remaining hardening:
 * hosted browser validation for expired-session recovery
 * ensure recovery errors remain human-readable
 * ensure token/session details are never displayed
-* verify login always lands on Dashboard
+* ~~verify login always lands on Dashboard~~
 
 Verified hardening:
 
@@ -435,6 +435,11 @@ Verified hardening:
   message, clears any stored session, and does not render the recovery token
 * verified with focused recovery UI test, managed-identity auth tests, session tests,
   full App test suite, lint, and production build
+* expired sessions from deep project routes return to Login and then land on
+  Dashboard after successful login instead of reopening the stale route
+* invalid authenticated API sessions show a human-readable expired-session message
+  and clear stored session data without displaying token/JWT internals
+* verified with focused session-recovery frontend tests
 
 Acceptance:
 
