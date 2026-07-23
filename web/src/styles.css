@@ -691,6 +691,7 @@ input:focus {
 
   .dashboard-grid,
   .diagnostics-grid,
+  .export-safety-summary,
   .metric-grid,
   .monitoring-detail-grid,
   .monitoring-event-row,
@@ -1034,6 +1035,11 @@ select:focus {
 
 .settings-scope-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.export-safety-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 0 16px;
 }
 
 .settings-scope-grid a,

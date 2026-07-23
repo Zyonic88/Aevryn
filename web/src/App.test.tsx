@@ -4111,7 +4111,52 @@ describe("App shell routing", () => {
   it("creates stored snapshot exports from the exports workspace tab", async () => {
     const user = userEvent.setup();
     storeAuthenticatedProject();
-    const fetchMock = vi.mocked(fetch);
+    const olderExport = {
+      ...projectExportPayload,
+      export_id: "export_older",
+      filename: "older-canon-snapshot.json",
+      created_at: "2026-06-20T00:00:00.000Z",
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
+        return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+      }
+      if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+        return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/exports`)) {
+        if (init?.method === "POST") {
+          const body = JSON.parse(String(init.body));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                ...projectExportPayload,
+                export_id: body.export_id,
+                snapshot_id: body.snapshot_id,
+                export_format: body.export_format,
+                filename: body.filename,
+                created_at: body.now,
+              }),
+            ),
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ exports: [olderExport, projectExportPayload] })),
+        );
+      }
+      return projectApiFallbackResponse(url);
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
     render(
       <MemoryRouter initialEntries={["/projects/project_alpha/exports"]}>
@@ -4120,9 +4165,22 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Stored Exports" })).toBeInTheDocument();
+    const storedExports = screen.getByRole("region", { name: "Stored exports" });
+    expect(
+      await within(storedExports).findByText("Latest accepted Canon snapshot"),
+    ).toBeInTheDocument();
+    expect(within(storedExports).getByText("Authenticated download only")).toBeInTheDocument();
+    expect(within(storedExports).getByText("Private storage reference hidden")).toBeInTheDocument();
     expect(await screen.findByText("alpha-canon-snapshot.json")).toBeInTheDocument();
-    expect(screen.getByText(/Canon Snapshot \/ JSON \| 128 B \|/u)).toBeInTheDocument();
+    const exportNames = within(storedExports).getAllByRole("heading", { level: 3 });
+    expect(exportNames.map((heading) => heading.textContent)).toEqual([
+      "alpha-canon-snapshot.json",
+      "older-canon-snapshot.json",
+    ]);
+    expect(screen.getAllByText(/Canon Snapshot \/ JSON \| 128 B \|/u)).toHaveLength(2);
     expect(screen.queryByText(/Â/u)).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("storage://");
+    expect(document.body).not.toHaveTextContent("storage_ref");
     await user.click(screen.getByRole("button", { name: "Create snapshot export" }));
 
     await waitFor(() => {

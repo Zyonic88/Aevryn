@@ -288,13 +288,17 @@ function ProjectStoredExportsPanel({
   statusError: Error | null;
   createdExportId: string | null;
 }) {
+  const sortedExports = [...exports].sort((left, right) =>
+    right.created_at.localeCompare(left.created_at),
+  );
+
   return (
     <section className="project-panel" aria-label="Stored exports">
       <div className="panel-heading-row">
         <div>
           <h2>Stored Exports</h2>
           <p className="field-note">
-            Create a downloadable JSON export from the latest accepted canon snapshot.
+            Create a downloadable JSON export from the latest accepted Canon snapshot.
           </p>
         </div>
         <button
@@ -307,20 +311,46 @@ function ProjectStoredExportsPanel({
         </button>
       </div>
 
+      <dl className="settings-summary-list export-safety-summary" aria-label="Export behavior">
+        <div>
+          <dt>Snapshot source</dt>
+          <dd>
+            {latestSnapshotId ? "Latest accepted Canon snapshot" : "Waiting for processed Canon"}
+          </dd>
+        </div>
+        <div>
+          <dt>Beta export</dt>
+          <dd>Canon Snapshot / JSON</dd>
+        </div>
+        <div>
+          <dt>Access</dt>
+          <dd>Authenticated download only</dd>
+        </div>
+        <div>
+          <dt>Storage</dt>
+          <dd>Private storage reference hidden</dd>
+        </div>
+      </dl>
+
       {isLoading ? <LoadingMessage>Loading stored exports.</LoadingMessage> : null}
       {statusError ? <ErrorMessage>{statusError.message}</ErrorMessage> : null}
       {exportsError ? <ErrorMessage>{exportsError.message}</ErrorMessage> : null}
       {mutationError ? <ErrorMessage>{mutationError.message}</ErrorMessage> : null}
       {createdExportId ? <p className="success-note">Snapshot export created.</p> : null}
+      {isDownloadPending ? (
+        <p className="success-note" role="status">
+          Preparing authenticated download.
+        </p>
+      ) : null}
       {!latestSnapshotId && !isLoading ? (
         <EmptyState title="No snapshot ready">
           Process an import before creating a stored export.
         </EmptyState>
       ) : null}
 
-      {exports.length > 0 ? (
+      {sortedExports.length > 0 ? (
         <div className="export-list">
-          {exports.map((exportRecord) => (
+          {sortedExports.map((exportRecord) => (
             <article className="export-list-item" key={exportRecord.export_id}>
               <div>
                 <h3>{exportRecord.filename}</h3>
