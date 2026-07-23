@@ -845,6 +845,7 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
             <h3>{selectedPack.scene.title}</h3>
             <p>{selectedPack.scene.chapter_label}</p>
           </header>
+          <PromptCanonInputs pack={selectedPack} />
           <div className="profile-section-grid prompt-scene-context">
             <PanelSection section={selectedPack.scene.characters_present} />
             <PanelSection section={selectedPack.scene.location} />
@@ -864,6 +865,71 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
       </div>
     </div>
   );
+}
+
+function PromptCanonInputs({ pack }: { pack: ProductionPack }) {
+  const guardrailCount = promptGuardrailCount(pack);
+  const inputs = [
+    promptInputStatus("Characters", pack.scene.characters_present),
+    promptInputStatus("Setting", pack.scene.location, pack.scene.environment),
+    promptInputStatus("Visual details", pack.scene.visual_highlights),
+    promptInputStatus("Continuity", pack.scene.continuity_changes),
+    {
+      label: "Constraints",
+      value:
+        guardrailCount > 0
+          ? `${guardrailCount.toLocaleString()} canon guardrail${
+              guardrailCount === 1 ? "" : "s"
+            }`
+          : "No explicit guardrails",
+    },
+  ];
+  return (
+    <div className="prompt-canon-inputs" aria-label="Prompt canon inputs">
+      <strong>Canon inputs</strong>
+      <dl>
+        {inputs.map((input) => (
+          <div key={input.label}>
+            <dt>{input.label}</dt>
+            <dd>{input.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+function promptInputStatus(label: string, ...sections: OutputSection[]): { label: string; value: string } {
+  const count = sections.reduce(
+    (total, section) => total + knownSectionItems(section).length,
+    0,
+  );
+  return {
+    label,
+    value:
+      count > 0 ? `${count.toLocaleString()} known detail${count === 1 ? "" : "s"}` : "Unknown",
+  };
+}
+
+function knownSectionItems(section: OutputSection): string[] {
+  return readableOutputItems(section.items).filter((item) => item !== "Unknown");
+}
+
+function promptGuardrailCount(pack: ProductionPack): number {
+  const guardrailPatterns = [
+    /\bonly accepted\b/iu,
+    /\bwithout inventing\b/iu,
+    /\bunsupported\b/iu,
+    /\bforbidden\b/iu,
+    /\bdo not\b/iu,
+    /\bmust not\b/iu,
+  ];
+  return readableOutputItems([
+    ...pack.image_prompt.items,
+    ...pack.narration_prompt.items,
+    ...pack.camera_prompt.items,
+    ...pack.animation_prompt.items,
+  ]).filter((item) => guardrailPatterns.some((pattern) => pattern.test(item))).length;
 }
 
 function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): string {

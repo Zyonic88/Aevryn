@@ -3585,6 +3585,17 @@ describe("App shell routing", () => {
 
     const selectedPack = screen.getByRole("article", { name: "Selected prompt pack" });
     expect(within(selectedPack).getByRole("heading", { name: "Scene 1" })).toBeInTheDocument();
+    const canonInputs = within(selectedPack).getByLabelText("Prompt canon inputs");
+    expect(canonInputs).toHaveTextContent("Canon inputs");
+    expect(canonInputs).toHaveTextContent("Characters");
+    expect(canonInputs).toHaveTextContent("1 known detail");
+    expect(canonInputs).toHaveTextContent("Setting");
+    expect(canonInputs).toHaveTextContent("2 known details");
+    expect(canonInputs).toHaveTextContent("Visual details");
+    expect(canonInputs).toHaveTextContent("Continuity");
+    expect(canonInputs).toHaveTextContent("Constraints");
+    expect(canonInputs).toHaveTextContent("4 canon guardrails");
+    expect(within(canonInputs).queryByText(/source_alpha_chapter/u)).not.toBeInTheDocument();
     const imagePromptPreview = within(selectedPack).getByRole("list", {
       name: "Image Prompt preview",
     });
