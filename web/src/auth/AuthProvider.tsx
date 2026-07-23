@@ -70,6 +70,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       clearSessionPersistenceError() {
         setSessionPersistenceError(null);
       },
+      invalidateSession(reason) {
+        clearStoredSession();
+        setSessionPersistenceError(reason);
+        setIsSessionRestoring(false);
+        setSessionState(null);
+      },
       setSession(nextSession) {
         const persisted = writeStoredSession(nextSession);
         setSessionPersistenceError(persisted ? null : SESSION_PERSISTENCE_ERROR);

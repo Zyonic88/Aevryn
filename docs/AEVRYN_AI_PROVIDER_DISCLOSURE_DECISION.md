@@ -53,7 +53,9 @@ Aevryn does not send account passwords, session tokens, API keys, unrelated proj
 
 Provider output is not Canon. Aevryn validates provider output against evidence from the uploaded story before accepting it into Canon-backed project state.
 
-Aetherra Labs does not train on user stories without explicit opt-in. Provider-backed extraction must remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, and no-training posture are reviewed, documented, and disclosed accurately.
+Aetherra Labs does not train on user stories without explicit opt-in. The current OpenAI review records that OpenAI API inputs and outputs are not used for model training by default unless an organization explicitly opts in, and that Aevryn's Responses API extraction requests set `store=false`.
+
+Provider-backed extraction must remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, no-training posture, production account data-control settings, and final model configuration are reviewed, documented, and disclosed accurately.
 ```
 
 ---
@@ -118,6 +120,9 @@ Before public beta, Aetherra Labs must verify and record:
 * whether submitted data is shared with subprocessors
 * whether a no-training configuration or agreement is active
 * how provider-submitted data ages out or is deleted
+* whether Responses API requests remain `store=false`
+* whether production organization/project settings preserve no-training by
+  default
 
 If this behavior cannot be verified and disclosed accurately, provider-backed extraction must remain disabled for public beta.
 

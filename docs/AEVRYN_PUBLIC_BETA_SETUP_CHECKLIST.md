@@ -8,6 +8,8 @@ It consolidates the remaining work that cannot be completed by repository code a
 
 Internal alpha is limited to Aetherra Labs owner/operator development and Codex-assisted verification. Public beta is the first milestone where outside users may be invited to upload their own work.
 
+The combined engineering, product, operations, legal, and hardening backlog is tracked in `docs/AEVRYN_V2_REMAINING_WORK.md`.
+
 ---
 
 # Status
@@ -131,7 +133,7 @@ Tracking docs:
 Status:
 
 ```text
-OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Provider terms review, production model selection, provider verification, and public-beta approval remain open.
+OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17, including `request_storage=disabled` and `responses_store=false`. Provider terms review, OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.
 ```
 
 ---
@@ -160,6 +162,8 @@ Tracking docs:
 
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
 * `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
+* `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`
+* `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
 * `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
@@ -169,7 +173,7 @@ Tracking docs:
 Status:
 
 ```text
-Restore plan and restore/audit drill record template exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Audit integrity, access verification, and access-report commands exist. Hosted audit integrity verification passed with metadata-only output. Hosted audit access report passed, but append-only access verification failed because the current database role has UPDATE and DELETE privileges on `audit_ledger_records`. Production now requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` so schema bootstrap and migrations are separated from the runtime app role. Production backup provider verification, dated restore drill execution, hosted production audit adapter verification, retention enforcement, restricted audit database role provisioning, hosted access-control verification review, and restore/audit drill completion are not complete.
+Restore plan, restore/audit drill record template, and provider-specific backup/restore runbook exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Audit integrity, access verification, and access-report commands exist. Hosted audit integrity verification passed with metadata-only output. Hosted audit access report and append-only access verification passed with a restricted runtime PostgreSQL role; the report showed `can_update=false`, `can_delete=false`, `can_truncate=false`, and `is_table_owner=false`. Production now requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` so schema bootstrap and migrations are separated from the runtime app role. Production backup provider verification runbook is selected. The 2026-07-17/2026-07-23 restore/audit drill passed source preflight, restored database audit verification, isolated restore API boundary verification, deleted-story verification, owner-scoped source/export verification, and bounded hosted restore log review with metadata-only evidence. Gate 5 is no longer a public-beta blocker; public-facing wording still requires owner/legal review.
 ```
 
 ---
@@ -207,7 +211,7 @@ Tracking docs:
 Status:
 
 ```text
-Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. api.aevryn.ai custom-domain health smoke returned OK. Frontend, managed-identity, hosted creator workflow, export creation, log review, and smoke project cleanup passed in the hosted production-like environment. Production observability policy candidate selected for owner/security review. Public beta remains blocked by non-smoke readiness items.
+Local production config contract passed. 2026-07-01 local smoke attempt verified fail-closed behavior when production-like environment variables were absent. 2026-07-01 local production-style smoke passed for PostgreSQL Project Database and Cloudflare R2. Cloud Run revision aevryn-api-00003-9v4 deployed and /v2/health returned OK. api.aevryn.ai custom-domain health smoke returned OK. Frontend, managed-identity, hosted creator workflow, export creation, log review, and smoke project cleanup passed in the hosted production-like environment. Hosted production-like `aevryn observability-config-check` passed with metadata-only output on 2026-07-17. Production observability policy candidate selected for owner/security review. Final bounded hosted log review remains required. Public beta remains blocked by non-smoke readiness items.
 ```
 
 ---

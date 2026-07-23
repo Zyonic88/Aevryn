@@ -12,13 +12,13 @@ Gate 5 turns backup, restore, disaster recovery, and audit-ledger contracts into
 
 ```text
 Gate: Backup, Recovery, And Audit
-Status: Started
-Public beta: Blocked
+Status: Passed for public-beta readiness evidence
+Public beta: Not blocked by Gate 5
 ```
 
-Aevryn has local deletion tests and audit-ledger architecture.
-
-Public beta still needs production backup, restore, and audit-storage decisions.
+Aevryn has production backup, restore, and audit-storage decisions backed by
+tested restore/audit evidence. Public beta still requires the separate
+public-facing, provider, product-polish, and final approval gates.
 
 ---
 
@@ -43,6 +43,8 @@ Gate 5 builds on:
 * `docs/DATA_RETENTION_POLICY.md`
 * `docs/AEVRYN_RESTORE_TEST_PLAN.md`
 * `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`
+* `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`
+* `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
 
 These documents define the privacy and engineering boundaries.
 
@@ -87,6 +89,9 @@ Restore tests must not expose full manuscripts in logs, support artifacts, or sc
 The concrete restore drill is defined in `docs/AEVRYN_RESTORE_TEST_PLAN.md`.
 
 The required result template is defined in `docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md`.
+
+The provider-specific execution runbook is defined in
+`docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`.
 
 ---
 
@@ -176,7 +181,7 @@ The public product must not promise instant deletion from every backup unless pr
 
 # Public Beta Blockers
 
-Public beta remains blocked until:
+Gate 5 remained blocked until:
 
 * production backup frequency is selected
 * backup retention window is selected
@@ -189,11 +194,18 @@ Public beta remains blocked until:
 * hosted audit integrity verification is recorded in the release gate
 * deletion and backup language is aligned with production behavior
 
+The listed Gate 5 blockers are now satisfied for public-beta readiness evidence
+through the dated restore/audit drill and related runbooks. Public-facing legal
+wording still requires the separate owner/legal review gate.
+
 Current implementation progress:
 
 ```text
 docs/AEVRYN_RESTORE_TEST_PLAN.md defines the restore drill, privacy boundary, required assertions, and failure handling.
 docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md defines the repeatable restore/audit drill record and stop conditions.
+docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md defines the selected Supabase PostgreSQL and Cloudflare R2 restore procedure, custom role password reset caveat, metadata-only commands, and stop conditions.
+`aevryn restore-api-config-check` verifies that the restored API target is an isolated, production-like restore drill service before API boundary verification begins. It requires `AEVRYN_RESTORE_DRILL_TARGET=true`, rejects `https://api.aevryn.ai`, requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false`, requires hosted metadata-only logging and monitoring, and reports `production_traffic_attached=false` without printing secrets.
+`aevryn restore-drill-verify` verifies restored API ownership, deletion, import, and export boundaries with metadata-only output against an isolated API target.
 Public-beta backup retention wording candidate is selected in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
 Public-beta audit storage policy candidate is selected in `docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md`.
 `PostgresqlAuditLedger` implements the selected PostgreSQL adapter.
@@ -208,7 +220,8 @@ chain without printing secrets.
 `aevryn audit-access-report` reports configured PostgreSQL audit table and
 privilege metadata without reading audit rows or printing secrets.
 `aevryn audit-access-verify` fails closed unless the configured PostgreSQL audit
-role can read and append audit records without update or delete privileges.
+role can read and append audit records without update, delete, truncate, or
+audit-table ownership privileges.
 The hosted audit command sequence is:
 
 ```powershell
@@ -220,12 +233,52 @@ python -m aevryn.cli audit-access-verify
 
 The report command records metadata for review. The verify command owns the
 gate decision and must not be bypassed or weakened to pass a privileged role.
+The report includes `is_table_owner` as a boolean and must report
+`is_table_owner=false` before public beta.
 Hosted `aevryn audit-ledger-verify` passed with metadata-only output on
 2026-07-14. Hosted `aevryn audit-access-report` passed with metadata-only
 output, but hosted `aevryn audit-access-verify` failed because the current
 database role has UPDATE and DELETE privileges on `audit_ledger_records`.
+The restricted runtime role remediation runbook is
+`docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md`.
+On 2026-07-17, Cloud Run was moved to a restricted runtime PostgreSQL role.
+Hosted `aevryn audit-ledger-verify`, `aevryn audit-access-report`, and
+`aevryn audit-access-verify` passed with metadata-only output. The report showed
+`can_update=false`, `can_delete=false`, `can_truncate=false`, and
+`is_table_owner=false`.
 
-Production backup provider verification, restore execution, hosted production audit adapter verification, audit retention enforcement, restricted audit database role provisioning, hosted audit access verification review, and dated restore/audit drill completion remain open.
+Production backup provider verification runbook is selected. Restore execution,
+restricted audit access, and dated restore/audit drill completion have passed.
+The 2026-07-17 source-environment restore preflight passed production config,
+audit integrity, restricted audit access, observability config, and R2 storage
+smoke with metadata-only output. The 2026-07-17 hosted source fixture also
+created synthetic project/story/import/run/snapshot/export evidence and deleted a
+disposable story before restore-point capture. A source restore-point candidate
+timestamp was recorded after post-fixture audit and R2 checks passed. The
+Supabase restore target has been created, and the isolated Aevryn restore
+runtime has been created, pointed at the restored database, and verified.
+The restored Supabase project `aevryn-restore-drill-2026-07-22` exists with
+project ref `zemkfcbijtauvvencxyy`, differs from production ref
+`xmttttbygokqbmwtucgi`, and is not attached to the production Cloud Run API.
+On 2026-07-22, restored database audit verification passed through a restricted
+runtime PostgreSQL role. The restored audit access report and verify commands
+reported `can_update=false`, `can_delete=false`, `can_truncate=false`, and
+`is_table_owner=false`; restored audit ledger verification reported
+`records_verified=5195`. A private Cloud Run restore API service named
+`aevryn-api-restore` was deployed with no unauthenticated public access; an
+authenticated health check passed, an unauthenticated health request returned
+403, and the Cloud Run job `aevryn-restore-config-check-pgz2r` reported
+`ok=restore_api_config_contract_checked`, `production_traffic_attached=false`,
+and `secrets_printed=0`.
+On 2026-07-23, the isolated restore API boundary verifier passed for restored
+ownership boundaries, cross-user denial, source/export owner-scoped access,
+deleted-story behavior, private Cloud Run auth, no source/export bytes printed,
+no storage refs printed, and no secrets printed. The bounded hosted restore
+service/job log review sampled 47 restore service log lines and 11 restore config
+job log lines; it passed for no source prose, no full provider payloads, no
+credentials/tokens/private URLs, no storage refs or signed URLs, no user email
+addresses, no machine-local paths, and metadata-only restore logs. Gate 5 is no
+longer a public-beta blocker.
 ```
 
 ---

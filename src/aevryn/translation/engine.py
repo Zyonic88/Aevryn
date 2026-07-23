@@ -9,6 +9,7 @@ from aevryn.translation.models import (
     TranslatedUnit,
     TranslationIssue,
     TranslationMode,
+    TranslationTermKind,
     TranslationUnit,
 )
 
@@ -33,6 +34,10 @@ class TranslationEngine:
             glossary=stable_glossary,
             issues=issues,
             evidence_anchor_ids=unit.evidence_anchor_ids,
+        )
+        _append_sentence_ambiguity_issues(
+            unit=unit,
+            issues=issues,
         )
 
         return TranslatedUnit(
@@ -115,6 +120,62 @@ def _apply_glossary_once(
         return term.preferred_term
 
     return re.sub(pattern, replace_match, text, flags=re.IGNORECASE)
+
+
+def _append_sentence_ambiguity_issues(
+    *,
+    unit: TranslationUnit,
+    issues: list[TranslationIssue],
+) -> None:
+    """Preserve sentence-level ambiguity as review metadata."""
+    existing_terms = {issue.source_term.casefold() for issue in issues}
+    terms_to_anchor_ids: dict[str, set[str]] = {}
+    source_terms_by_key: dict[str, str] = {}
+    for understanding in unit.sentence_understanding:
+        if (
+            "translation_ambiguity" not in understanding.signals
+            and not understanding.review_required
+        ):
+            continue
+        for term in understanding.ambiguity_terms:
+            term_key = term.casefold()
+            if term_key in existing_terms:
+                continue
+            source_terms_by_key.setdefault(term_key, term)
+            terms_to_anchor_ids.setdefault(term_key, set()).add(
+                understanding.evidence_anchor_id
+            )
+
+    for term_key in sorted(terms_to_anchor_ids):
+        anchor_ids = tuple(sorted(terms_to_anchor_ids[term_key]))
+        issues.append(
+            TranslationIssue(
+                issue_code="translation_sentence_ambiguity",
+                source_term=source_terms_by_key[term_key],
+                message="Sentence ambiguity preserved for review.",
+                evidence_anchor_ids=anchor_ids,
+                term_kind=_sentence_ambiguity_term_kind(source_terms_by_key[term_key]),
+            )
+        )
+
+
+def _sentence_ambiguity_term_kind(term: str) -> TranslationTermKind:
+    """Classify common ambiguity cues for review without creating Canon."""
+    if term.casefold() in {
+        "art",
+        "core",
+        "cultivation",
+        "dao",
+        "dantian",
+        "qi",
+        "realm",
+        "seal",
+        "spirit",
+        "system",
+        "vessel",
+    }:
+        return "power_system"
+    return "term"
 
 
 def _glossary_pattern(glossary: tuple[GlossaryTerm, ...]) -> str:

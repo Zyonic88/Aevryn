@@ -1981,6 +1981,94 @@ def test_project_status_worker_state_ignores_other_project_terminal_failures() -
     assert payload["latest_failure_summary"] == ""
 
 
+def test_project_status_worker_state_ignores_same_project_stale_failed_jobs() -> None:
+    """Succeeded latest runs should keep old same-project worker failures historical."""
+    repository = InMemoryProjectRepository()
+    queue = InMemoryJobQueue()
+    import_content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            background_job_queue=queue,
+            background_job_handler=ProjectImportSnapshotHandler(
+                repository=repository,
+                import_content_store=import_content_store,
+            ),
+            import_content_store=import_content_store,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    saved_import = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json={
+            "import_id": "import_alpha",
+            "source_id": "source_alpha",
+            "filename": "chapter_001.txt",
+            "content_base64": base64.b64encode(b"Chapter 1\nAlpha.").decode("ascii"),
+            "title": "Alpha Source",
+            "now": NOW,
+        },
+    )
+    assert saved_import.status_code == 200
+    queue.enqueue(
+        BackgroundJob(
+            job_id="job_old_failure",
+            kind="process_import",
+            run_id="run_old_failure",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="queued",
+            queued_at=NOW,
+            status_updated_at=NOW,
+        )
+    )
+    assert queue.claim_next(claimed_at=SOON) is not None
+    queue.fail(
+        job_id="job_old_failure",
+        failed_at="2026-06-27T00:45:00Z",
+        error_summary="Old same-project failure.",
+    )
+    submitted_run = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports/import_alpha/runs",
+        headers=auth_headers("token_001"),
+        json={"run_id": "run_alpha", "job_id": "job_alpha", "now": NOW},
+    )
+    assert submitted_run.status_code == 200
+    processed = client.post(
+        "/v2/workers/process",
+        json={
+            "started_at": SOON,
+            "finished_at": "2026-06-27T00:45:00Z",
+            "max_jobs": 1,
+        },
+    )
+    assert processed.status_code == 200
+
+    response = client.get(
+        "/v2/projects/project_alpha/status",
+        headers=auth_headers("token_001"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    assert payload["latest_engine_run"]["status"] == "succeeded"
+    assert payload["worker"] == {
+        "state": "idle",
+        "total_jobs": 2,
+        "queued_jobs": 0,
+        "running_jobs": 0,
+        "succeeded_jobs": 1,
+        "failed_jobs": 1,
+        "next_job_id": "",
+    }
+    assert payload["latest_failure_summary"] == ""
+
+
 def test_project_status_responses_include_request_ids() -> None:
     """Project status should carry request IDs on success and error responses."""
     repository = InMemoryProjectRepository()
@@ -2420,6 +2508,69 @@ def test_project_outputs_humanize_legacy_presentation_machine_ids() -> None:
     assert "Character: Zhao Chen (E1)" not in response.text
     assert "State Valid From Event" not in response.text
     assert "Aevryn Import Bundle" not in response.text
+
+
+def test_project_outputs_hide_persisted_conflicting_gender_values() -> None:
+    """Stored profile payloads should never display contradictory gender values."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    snapshot_payload = _legacy_machine_id_snapshot_payload()
+    characters = snapshot_payload["presentation"]["characters"]  # type: ignore[index]
+    assert isinstance(characters, list)
+    characters[0]["gender"] = {"title": "Gender", "items": ["Male", "Female"]}
+    repository.record_import(
+        ImportRecord(
+            import_id="import_alpha",
+            story_id="story_alpha",
+            source_id="source_alpha",
+            filename="chapter_001.txt",
+            source_format="txt",
+            storage_ref="storage://projects/project_alpha/imports/import_alpha/source.txt",
+            chapter_count=1,
+            scene_count=1,
+            evidence_anchor_count=1,
+            created_at=NOW,
+        )
+    )
+    repository.record_engine_run(
+        EngineRunRecord(
+            run_id="run_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="succeeded",
+            engine_version="aevryn_v1",
+            started_at=NOW,
+            status_updated_at=SOON,
+            finished_at=SOON,
+        )
+    )
+    repository.store_snapshot(
+        SnapshotRecord(
+            snapshot_id="snapshot_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            run_id="run_alpha",
+            snapshot_kind="canon",
+            content_type="application/json",
+            serialized_output=json.dumps(snapshot_payload),
+            created_at=SOON,
+        )
+    )
+
+    response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["character_profiles"][0]["gender"]["items"] == ["Unknown"]
+    assert '"items":["Male","Female"]' not in response.text
 
 
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:

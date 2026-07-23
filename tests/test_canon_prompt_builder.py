@@ -169,6 +169,31 @@ def test_canon_prompt_builder_includes_current_scene_visual_anchors() -> None:
     )
 
 
+def test_canon_prompt_builder_includes_bounded_current_scene_action_beats() -> None:
+    """Prompts include compact canon-backed beats without storing source prose."""
+    context = build_context()
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+    action_section = prompt.split("Current scene action beats:", 1)[1].split("\n\n", 1)[0]
+
+    assert "Current scene action beats:" in prompt
+    assert "Mark Current Weapon: Iron Sword" in action_section
+    assert "Scene purpose:" in action_section
+    assert "Mark wakes in the forest" not in action_section
+    assert action_section.count("\n- ") == 3
+
+
+def test_canon_prompt_builder_adds_action_beats_to_all_prompt_types() -> None:
+    """Every production prompt carries the same bounded scene moment context."""
+    builder = CanonPromptBuilder()
+    context = build_context()
+
+    assert "Current scene action beats:" in builder.build_image_prompt(context)
+    assert "Current scene action beats:" in builder.build_narration_prompt(context)
+    assert "Current scene action beats:" in builder.build_camera_prompt(context)
+    assert "Current scene action beats:" in builder.build_animation_prompt(context)
+
+
 def test_canon_prompt_builder_includes_action_visual_anchors() -> None:
     """Image prompts include current-scene body language as visual anchors."""
     imported_source = StoryImporter().import_text(
@@ -299,6 +324,65 @@ def test_canon_prompt_builder_includes_confirmed_visible_character_traits() -> N
     assert "Appearance: Not specified by accepted canon." not in prompt
 
 
+def test_canon_prompt_builder_tracks_known_and_unknown_visual_identity_traits() -> None:
+    """Image prompts should identify which character visual traits are still unknown."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("gender", "Male"),
+        ("race", "Human"),
+        ("hair_color", "Black"),
+    ):
+        fact_id = f"fact_mark_visual_identity_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_008",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_mark_visual_identity_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_008_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "Visual ID:" in prompt
+    assert "- Mark: known gender,hair,race/species." in prompt
+    assert "Missing" in prompt
+    assert "gender" not in prompt.split("Missing", 1)[1].split(";", 1)[0]
+    assert "race/species" not in prompt.split("Missing", 1)[1].split(
+        ";",
+        1,
+    )[0]
+    assert (
+        "Do not guess missing visual traits." in prompt
+    )
+
+
+def test_canon_prompt_builder_marks_missing_visual_identity_neutral() -> None:
+    """Missing character appearance should be explicit without rejecting the prompt."""
+    prompt = CanonPromptBuilder().build_image_prompt(build_context())
+
+    assert "- Mark: known none." in prompt
+    assert "Missing" in prompt
+    assert "neutral" in prompt
+
+
 def test_canon_prompt_builder_separates_facts_composition_lighting_and_style() -> None:
     """Image prompts keep story understanding before production style."""
     prompt = CanonPromptBuilder().build_image_prompt(build_context())
@@ -383,6 +467,55 @@ def test_canon_prompt_builder_uses_scene_relevant_character_facts() -> None:
     assert "school_year" not in prompt
 
 
+def test_canon_prompt_builder_carries_stable_character_appearance_from_cards() -> None:
+    """Visual prompts preserve accepted character-sheet appearance across scenes."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("hair_color", "Silver"),
+        ("eye_color", "Blue"),
+        ("build", "Lean"),
+        ("school_year", "First Year"),
+    ):
+        fact_id = f"fact_001_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_001",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_001_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_001_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    builder = CanonPromptBuilder()
+    image_prompt = builder.build_image_prompt(context)
+    camera_prompt = builder.build_camera_prompt(context)
+    animation_prompt = builder.build_animation_prompt(context)
+
+    assert "- Hair Color: Silver" in image_prompt
+    assert "- Eye Color: Blue" in image_prompt
+    assert "- Build: Lean" in image_prompt
+    assert "School Year: First Year" not in image_prompt
+    assert "- Hair Color: Silver" in camera_prompt
+    assert "- Eye Color: Blue" in animation_prompt
+
+
 def test_canon_prompt_builder_omits_mechanical_metadata_from_character_details() -> None:
     """Prompt character details omit task math that belongs in audit views."""
     imported_source = build_imported_source()
@@ -450,7 +583,7 @@ def test_canon_prompt_builder_shortens_long_analysis_text() -> None:
     )
 
     assert "Sentence 020" not in prompt
-    assert len(prompt) < 4600
+    assert len(prompt) < 5000
 
 
 class DuplicateAnalysisAnalyzer(SceneAnalyzer):

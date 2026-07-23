@@ -1132,6 +1132,96 @@ describe("App shell routing", () => {
     expect(screen.queryByRole("heading", { name: "Monitoring" })).not.toBeInTheDocument();
   });
 
+  it("recovers to login when an authenticated API request reports an invalid session", async () => {
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(API_PATHS.projects)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                error: "invalid_session",
+                detail: "Supabase JWT has expired.",
+              }),
+              { status: 401 },
+            ),
+          );
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your session expired. Please log in again.",
+    );
+    expect(window.localStorage.getItem("aevryn.session")).toBeNull();
+    expect(document.body).not.toHaveTextContent("Supabase JWT has expired.");
+  });
+
+  it("links from login to password recovery", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/login"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("link", { name: "Reset your password" }));
+
+    expect(screen.getByRole("heading", { name: "Recover password" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send reset link" })).toBeInTheDocument();
+  });
+
+  it("validates password recovery emails before contacting identity provider", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/password-recovery"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText("Email"), "invalid-email");
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(await screen.findByText("Enter a valid email address.")).toBeInTheDocument();
+    expect(vi.mocked(fetch)).not.toHaveBeenCalledWith(
+      expect.stringContaining("/auth/v1/recover"),
+      expect.anything(),
+    );
+  });
+
+  it("renders the new-password form from a managed recovery callback", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={["/password-recovery#type=recovery&access_token=recovery-token"]}
+      >
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Set new password" })).toBeInTheDocument();
+    expect(screen.getByLabelText("New password")).toBeInTheDocument();
+    expect(screen.getByLabelText("Confirm password")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Update password" })).toBeInTheDocument();
+  });
+
   it("redirects authenticated users away from auth screens", async () => {
     window.localStorage.setItem("aevryn.session", JSON.stringify(session));
 
@@ -1499,6 +1589,8 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Current Weapon: Rusty Dagger.",
     );
+    expect(continuityOutput).toHaveTextContent("New: Current Weapon: Rusty Dagger.");
+    expect(continuityOutput).toHaveTextContent("Updated: Current Weapon: Iron Sword.");
     const continuityDetailRows = continuityOutput.querySelectorAll("details.detail-disclosure");
     expect(continuityDetailRows.length).toBeGreaterThanOrEqual(1);
     expect(continuityDetailRows[0]?.querySelector("summary")).toHaveTextContent(
@@ -1760,6 +1852,51 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Project storage failed.");
     expect(screen.queryByRole("link", { name: /Temporary Project/ })).not.toBeInTheDocument();
+  });
+
+  it("shows a pending project row while project creation is in flight", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(API_PATHS.projects) && init?.method !== "POST") {
+          return Promise.resolve(new Response(JSON.stringify({ projects: [] })));
+        }
+        if (url.endsWith(API_PATHS.projects) && init?.method === "POST") {
+          return new Promise<Response>(() => {});
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    const input = await screen.findByLabelText("Project name");
+    await user.clear(input);
+    await user.type(input, "Fast Feedback Test");
+    await user.click(screen.getByRole("button", { name: "Create project" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Creating workspace for Fast Feedback Test.",
+    );
+    expect(screen.getByText("Fast Feedback Test")).toBeInTheDocument();
+    expect(screen.getByText("Creating workspace")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Creating..." })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
   });
 
   it("creates and opens a project", async () => {
@@ -3218,22 +3355,18 @@ describe("App shell routing", () => {
     expect(screen.queryByText(sourceBackedPlaceholder)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Unknown character" })).toBeInTheDocument();
     expect(screen.getByText("8 normalized scenes; 1 review item")).toBeInTheDocument();
-    expect(screen.getAllByText("Glossary term needs review").length).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getAllByText(
-        "Chapter 1, Scene 1; 1 source link preserved; Aevryn preserved an uncertain term for review.",
-      ).length,
-    ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText("7 reference decisions; 5 resolved / 1 ambiguous / 1 unresolved"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Needs review")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 review item; 2 review items need character review"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Glossary term needs review")).not.toBeInTheDocument();
     expect(
       screen.getAllByText(
         "Chapter 1, Scene 1; 2 possible matches; 87% confidence; Aevryn did not merge this reference",
       ).length,
     ).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Unresolved reference")).toBeInTheDocument();
     expect(
       screen.getAllByText(
         "Chapter 1, Scene 2; no supported match; Aevryn left this reference unresolved",
@@ -3399,7 +3532,10 @@ describe("App shell routing", () => {
 
     const selectedPack = screen.getByRole("article", { name: "Selected prompt pack" });
     expect(within(selectedPack).getByRole("heading", { name: "Scene 1" })).toBeInTheDocument();
-    expect(within(selectedPack).getByText(/Scene 1 image prompt detail/u)).toBeInTheDocument();
+    const imagePromptPreview = within(selectedPack).getByRole("list", {
+      name: "Image Prompt preview",
+    });
+    expect(within(imagePromptPreview).getByText("Scene 1 image prompt detail.")).toBeInTheDocument();
     expect(screen.queryByText(/Scene 2 image prompt detail/u)).not.toBeInTheDocument();
     const promptBodies = selectedPack.querySelectorAll("details.prompt-disclosure");
     expect(promptBodies).toHaveLength(4);
@@ -3416,7 +3552,12 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: /^Scene 2\b/u }));
 
     expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
-    expect(within(selectedPack).getByText(/Scene 2 image prompt detail/u)).toBeInTheDocument();
+    const updatedImagePromptPreview = within(selectedPack).getByRole("list", {
+      name: "Image Prompt preview",
+    });
+    expect(
+      within(updatedImagePromptPreview).getByText("Scene 2 image prompt detail."),
+    ).toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {
@@ -3562,19 +3703,11 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "World" })).toBeInTheDocument();
     await waitFor(() =>
-      expect(container.querySelector("details.identity-review-panel > summary")).toBeInTheDocument(),
+      expect(container.querySelector("details.identity-review-panel")).not.toBeInTheDocument(),
     );
-    const identityReviewToggle = container.querySelector(
-      "details.identity-review-panel > summary",
-    ) as HTMLElement;
-    const identityReviewDisclosure = container.querySelector(
-      "details.identity-review-panel",
-    ) as HTMLDetailsElement;
-    expect(identityReviewToggle).toBeInTheDocument();
-    expect(identityReviewDisclosure.open).toBe(false);
-    await user.click(identityReviewToggle);
-    expect(identityReviewDisclosure.open).toBe(true);
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByText("1 review item; 2 review items need character review"),
+    ).toBeInTheDocument();
     await user.click(screen.getByText("Developer preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}The hangar was quiet.");
@@ -3672,6 +3805,12 @@ describe("App shell routing", () => {
     expect(stableContinuityDetails).not.toBeNull();
     expect(stableContinuityDetails).not.toHaveAttribute("open");
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
+    expect(screen.getAllByText("New: Current Weapon: Rusty Dagger.").length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(
+      screen.getAllByText("Updated: Current Weapon: Iron Sword.").length,
+    ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getAllByText((_content, element) => {
         return (
@@ -3713,6 +3852,9 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
     const promptPreviewResult = screen.getByRole("region", { name: "Prompt pack preview result" });
+    const imagePromptPreview = within(promptPreviewResult).getByRole("list", {
+      name: "Image Prompt preview",
+    });
     expect(
       within(promptPreviewResult).getByText(/Show Image Prompt - \d+ prompt details ready\./u),
     ).toBeInTheDocument();
@@ -3728,6 +3870,9 @@ describe("App shell routing", () => {
     expect(
       screen.getAllByText(/Scene Summary: Mark prepares in the hangar/u).length,
     ).toBeGreaterThanOrEqual(1);
+    expect(
+      within(imagePromptPreview).getByText("Scene Summary: Mark prepares in the hangar."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Chapter 1 / Chapter 1, Scene 1")).toBeInTheDocument();
     expect(screen.queryByText("source_alpha_chapter_001_scene_001")).not.toBeInTheDocument();
     expect(screen.getAllByText("1 verified evidence reference").length).toBeGreaterThanOrEqual(1);
@@ -3777,7 +3922,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
-    expect(screen.getByText("Unknown.")).toBeInTheDocument();
+    expect(screen.getAllByText("Unknown.").length).toBeGreaterThanOrEqual(1);
   });
 
   it("clears stale production packs when local AI JSON validation fails", async () => {

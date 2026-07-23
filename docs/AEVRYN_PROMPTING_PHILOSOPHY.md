@@ -156,6 +156,8 @@ Instead:
 * Current state changes.
 * Scene-relevant facts enter the prompt.
 * Unknown details remain unknown.
+* Known visual traits are listed explicitly.
+* Missing visual traits are named as unspecified, not invented.
 
 Example character prompt sections:
 
@@ -172,6 +174,19 @@ Relationship Context
 ```
 
 This improves consistency across generated media.
+
+For image, camera, and animation prompts, Aevryn should separate:
+
+* known character appearance
+* known race or species
+* known gender
+* known clothing or equipment
+* known posture or expression
+* unspecified visual traits
+
+If Canon does not support a visual trait, the prompt should tell the generation
+tool to keep that trait neutral. This avoids over-tightening extraction while
+still preventing confident-looking hallucinations in generated media.
 
 ---
 

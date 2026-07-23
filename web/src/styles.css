@@ -430,6 +430,10 @@ input:focus {
   grid-template-columns: minmax(0, 1fr) 32px;
 }
 
+.project-row-pending {
+  border-style: dashed;
+}
+
 .story-row-action {
   grid-template-columns: minmax(0, 1fr) auto 32px;
 }
@@ -1149,10 +1153,12 @@ select:focus {
 .profile-card {
   display: grid;
   gap: 18px;
+  min-width: 0;
   padding: 18px;
   border: 1px solid #dbe3ec;
   border-radius: 8px;
   background: #fbfcfe;
+  overflow-wrap: anywhere;
 }
 
 .profile-card h3,
@@ -1179,6 +1185,10 @@ select:focus {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 14px;
   align-items: center;
+}
+
+.character-profile-header > div:last-child {
+  min-width: 0;
 }
 
 .character-portrait {
@@ -1229,10 +1239,12 @@ select:focus {
 }
 
 .profile-section {
+  min-width: 0;
   padding: 12px;
   border: 1px solid #e2e7ee;
   border-radius: 6px;
   background: #ffffff;
+  overflow-wrap: anywhere;
 }
 
 .profile-section h4,
@@ -1434,6 +1446,15 @@ select:focus {
   gap: 10px;
 }
 
+.continuity-preview-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 12px;
+  padding-left: 20px;
+  color: #253044;
+  font-size: 14px;
+}
+
 .nested-disclosure {
   margin-top: 10px;
   border: 1px solid #e1e7ef;
@@ -1533,6 +1554,27 @@ select:focus {
   white-space: pre-line;
   line-height: 1.55;
   overflow-wrap: anywhere;
+}
+
+.prompt-preview-list {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding-left: 20px;
+  color: #253044;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.prompt-preview-list li {
+  overflow-wrap: anywhere;
+}
+
+.prompt-preview-overflow {
+  margin: -2px 0 10px;
+  color: #637089;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .prompt-disclosure {

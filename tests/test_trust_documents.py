@@ -809,13 +809,13 @@ def test_github_support_files_exist_for_hosted_controls() -> None:
 
 
 def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
-    """Gate 5 should block public beta on production backup and audit decisions."""
+    """Gate 5 should track completed backup, recovery, and audit evidence."""
     document = read_doc("docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md")
 
     required_terms = (
         "Gate: Backup, Recovery, And Audit",
-        "Status: Started",
-        "Public beta: Blocked",
+        "Status: Passed for public-beta readiness evidence",
+        "Public beta: Not blocked by Gate 5",
         "Recovery must not become hidden retention.",
         "backup frequency",
         "recovery point objective",
@@ -823,14 +823,47 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "backup retention window",
         "restore test",
         "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
+        "docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md",
+        "docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md",
         "repeatable restore/audit drill record and stop conditions",
+        "selected Supabase PostgreSQL and Cloudflare R2 restore procedure",
+        "custom role password reset caveat",
+        "restore-api-config-check",
+        "AEVRYN_RESTORE_DRILL_TARGET=true",
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
+        "production_traffic_attached=false",
+        "restore-drill-verify",
         "docs/AEVRYN_AUDIT_STORAGE_POLICY_DECISION.md",
         "managed PostgreSQL audit tables",
         "production audit storage",
         "audit retention",
         "audit access controls",
+        "is_table_owner=false",
         "metadata-only",
         "tamper-evident",
+        "source-environment restore preflight passed",
+        "hosted source fixture",
+        "synthetic project/story/import/run/snapshot/export evidence",
+        "source restore-point candidate",
+        "Gate 5 is no",
+        "longer a public-beta blocker.",
+        "aevryn-restore-drill-2026-07-22",
+        "zemkfcbijtauvvencxyy",
+        "not attached to the production Cloud Run API",
+        "restored database audit verification passed through a restricted",
+        "records_verified=5195",
+        "private Cloud Run restore API service named",
+        "aevryn-restore-config-check-pgz2r",
+        "isolated restore API boundary verifier passed",
+        "bounded hosted restore",
+        "service/job log review sampled 47 restore service log lines",
+        "no source prose",
+        "no full provider payloads",
+        "credentials/tokens/private URLs",
+        "no storage refs or signed URLs",
+        "no user email",
+        "addresses, no machine-local paths",
+        "no machine-local paths",
     )
 
     for term in required_terms:
@@ -889,6 +922,7 @@ def test_restore_test_plan_document_tracks_recovery_privacy_drill() -> None:
         "Cloudflare R2 object references",
         "staging or release-candidate environment",
         "docs/AEVRYN_RESTORE_AUDIT_DRILL_RECORD.md",
+        "docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md",
         "full manuscripts",
         "machine-local paths",
         "dedicated test account",
@@ -914,6 +948,7 @@ def test_restore_audit_drill_record_tracks_public_beta_drill_template() -> None:
         "Record type: Restore and audit drill record",
         "Status: Template selected",
         "Public beta: Blocked",
+        "docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md",
         "Restore service without restoring private story exposure.",
         "Production traffic attached",
         "one disposable story that is deleted before backup capture",
@@ -928,6 +963,142 @@ def test_restore_audit_drill_record_tracks_public_beta_drill_template() -> None:
         "Any exposed secret must be rotated.",
         "Any exposed private story content must be treated as a privacy incident.",
         "Public beta remains blocked unless the final result is `passed`.",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate() -> None:
+    """Dated restore drill record should distinguish source preflight from restore pass."""
+    document = read_doc("docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md")
+
+    required_terms = (
+        "Drill ID: restore-audit-2026-07-17-001",
+        "Status: Restore/audit drill passed",
+        "Source fixture: Passed",
+        "Final result: passed",
+        "production_config_check=passed",
+        "audit_ledger_verify=passed",
+        "records_verified=1375",
+        "can_update=false",
+        "can_delete=false",
+        "can_truncate=false",
+        "is_table_owner=false",
+        "observability_config_check=passed",
+        "storage_smoke=passed",
+        "objects_created=1",
+        "objects_deleted=1",
+        "project_id=restore_drill_project_1acd3f86bd984a258fc04c976642131d",
+        "active_story_id=restore_drill_story_1acd3f86bd984a258fc04c976642131d",
+        "disposable_story_id=restore_drill_disposable_1acd3f86bd984a258fc04c976642131d",
+        "import_id=restore_drill_import_1acd3f86bd984a258fc04c976642131d",
+        "run_id=restore_drill_run_1acd3f86bd984a258fc04c976642131d",
+        "Source fixture result: PASSED",
+        "restore_drill_fixture_prepared",
+        "source_restore_point_candidate_utc=2026-07-17T02:27:13Z",
+        "records_verified=1413",
+        "source_r2_storage_smoke=passed",
+        "storage_smoke_objects_created=1",
+        "storage_smoke_objects_deleted=1",
+        "restore_project_name=aevryn-restore-drill-2026-07-22",
+        "restore_project_ref=zemkfcbijtauvvencxyy",
+        "restore_project_ref_differs_from_production=true",
+        "production_cloud_run_points_to_restore_project=false",
+        "cloud_run_restore_service_exists=true",
+        "cloud_run_restore_service_name=aevryn-api-restore",
+        "cloud_run_restore_public_access=false",
+        "restore_api_authenticated_health=passed",
+        "restore_api_unauthenticated_health_denied=passed",
+        "restore_api_config_check=passed",
+        "restore_api_config_execution=aevryn-restore-config-check-pgz2r",
+        "restore_api_config_ok=restore_api_config_contract_checked",
+        "restore_api_config_secrets_printed=0",
+        "restore_database_audit_access_report=passed",
+        "restore_database_audit_access_verify=passed",
+        "restore_database_audit_ledger_verify=passed",
+        "records_verified=5195",
+        "ok=restore_api_config_contract_checked",
+        "production_traffic_attached=false",
+        "PARTIAL - restored Supabase project exists, private restore API exists, "
+        "config preflight passed, and no production Cloud Run traffic is attached",
+        "PASSED WITH LIMITATION - restored Supabase project name/ref recorded; "
+        "provider restore-point ID not available in this record",
+        "PASSED - restored database audit ledger verified 5195 records",
+        "PASSED - restore API boundary verifier denied cross-user "
+        "project/story/import/export access",
+        "PASSED - restore API boundary verifier confirmed owner-scoped import "
+        "metadata and denied cross-user source access",
+        "PASSED - restore API boundary verifier confirmed owner export "
+        "metadata/download and denied cross-user export access",
+        "PASSED - restore API boundary verifier confirmed deleted story absence",
+        "deleted_story_absent_from_product_surfaces=passed",
+        "restore_drill_api_boundaries_verified=passed",
+        "audit_ledger_integrity_after_restore=passed",
+        "operator_broad_manuscript_access_required=false",
+        "production_traffic_attached=false",
+        "Restore API boundary result: PASSED",
+        "Deletion-after-restore result: PASSED THROUGH ISOLATED API",
+        "Metadata-only log review result: SOURCE PREFLIGHT, RESTORED DATABASE "
+        "CLI OUTPUT, AND BOUNDED HOSTED RESTORE LOG REVIEW PASSED",
+        "Service sampled lines: 47",
+        "Job sampled lines: 11",
+        "restore_logs_no_source_prose=passed",
+        "restore_logs_no_full_provider_payloads=passed",
+        "restore_logs_no_credentials_or_private_urls=passed",
+        "restore_logs_no_storage_refs_or_signed_urls=passed",
+        "restore_logs_metadata_only=passed",
+        "This dated record is accepted as source-environment preflight evidence",
+        "This dated restore/audit drill is accepted as complete for the restore/audit",
+        "ok=restore_drill_api_boundaries_verified",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_backup_restore_runbook_tracks_provider_specific_restore_drill() -> None:
+    """Backup/restore runbook should define provider-specific public-beta drill steps."""
+    document = read_doc("docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md")
+
+    required_terms = (
+        "Runbook: Backup and restore",
+        "Status: Selected for restore/audit drill execution",
+        "Public beta: Blocked",
+        "Supabase managed PostgreSQL",
+        "Cloudflare R2 private bucket",
+        "Managed PostgreSQL audit table through PostgresqlAuditLedger",
+        "restore-drill-fixture",
+        "restore-api-config-check",
+        "restore-drill-verify",
+        "AEVRYN_RESTORE_DRILL_TARGET=true",
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
+        "restore_api_config_check=passed",
+        "AEVRYN_RESTORE_DRILL_BEARER_TOKEN",
+        "AEVRYN_RESTORE_DRILL_OTHER_BEARER_TOKEN",
+        "AEVRYN_RESTORE_DRILL_CLOUD_RUN_IDENTITY_TOKEN",
+        "X-Serverless-Authorization",
+        "This command does not run the restore drill and does not approve public beta.",
+        "The command fails closed when pointed at `https://api.aevryn.ai`",
+        "Supabase database backups do not include Storage API objects.",
+        "custom database roles",
+        "passwords may need to be reset after restore",
+        "R2 lifecycle rules can expire objects by bucket or prefix.",
+        "Objects are typically removed within 24 hours of the expiration value.",
+        "Encrypted production backups may retain deleted data for up to 30 days.",
+        "separate database target",
+        "separate R2 bucket or prefix",
+        "one disposable story deleted before the restore point is captured",
+        "docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md",
+        "python -m aevryn.cli audit-ledger-verify",
+        "python -m aevryn.cli audit-access-verify",
+        "python -m aevryn.cli observability-config-check",
+        "restore_drill_api_boundaries_verified=passed",
+        "deleted_story_absent_from_product_surfaces=passed",
+        "operator_broad_manuscript_access_required=false",
+        "production_traffic_attached=false",
+        "Stop Conditions",
+        "Any exposed private story content must be treated as a privacy incident.",
     )
 
     for term in required_terms:
@@ -952,6 +1123,12 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "Provider output is not Canon.",
         "selected public-beta disclosure candidate",
         "metadata-only",
+        "OpenAI official data-use and API data-controls review was recorded on 2026-07-16.",
+        "provider configuration gate passed on 2026-07-17",
+        "Responses API extraction adapter now sends store=false",
+        "request_storage=disabled",
+        "responses_store=false",
+        "ok=provider_config_contract_checked",
         "provider data-use disclosure",
     )
 
@@ -972,6 +1149,13 @@ def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None
         "AEVRYN_EXTRACTION_MODE=openai",
         "AEVRYN_OPENAI_API_KEY",
         "AEVRYN_OPENAI_MODEL",
+        "OpenAI Responses API",
+        "store=false",
+        "official OpenAI",
+        "data-use and API data-controls material",
+        "not used for model training by",
+        "abuse-monitoring retention listed as 30 days",
+        "application state retention is 30 days by default or when `store=true`",
         "data retention terms",
         "training behavior",
         "selected scene text required for extraction",
@@ -979,6 +1163,7 @@ def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None
         "full provider prompts",
         "full provider responses",
         "No training on user stories without explicit opt-in.",
+        "stateful Conversations, Assistants, Threads, Vector Stores, Files, Batches",
         "approved_for_public_beta",
         "blocked_pending_terms_review",
     )
@@ -1003,6 +1188,8 @@ def test_ai_provider_disclosure_decision_records_public_beta_candidate() -> None
         "Aevryn does not send account passwords, session tokens, API keys",
         "Provider output is not Canon.",
         "No training on user stories without explicit opt-in.",
+        "Responses API extraction requests set `store=false`",
+        "production account data-control settings",
         "provider-backed extraction must remain disabled for public beta",
         "full provider prompts",
         "full provider responses",
@@ -1098,8 +1285,21 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-14 hosted creator workflow retry passed",
+        "Latest attempt: 2026-07-17 provider and observability config gates passed",
         "Production-like smoke proves configuration and workflow safety.",
+        "Hosted Restricted Audit Role Verification",
+        "Provider And Observability Config Gates",
+        "records_verified=1338",
+        "can_update=false",
+        "can_delete=false",
+        "can_truncate=false",
+        "is_table_owner=false",
+        "ok=audit_access_append_only_verified",
+        "ok=provider_config_contract_checked",
+        "ok=observability_config_contract_checked",
+        "PASSED for provider request storage disabled posture.",
+        "PASSED for hosted observability configuration metadata.",
+        "PASSED for least-privilege append-only audit access.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
         "python -m aevryn.cli storage-smoke",
@@ -1193,7 +1393,8 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         ),
         (
             "Public beta remains blocked by public-facing legal/trust/support "
-            "publication, hosted observability verification, backup/restore/audit readiness, "
+            "publication, final provider review, final bounded hosted observability "
+            "review, backup/restore/audit readiness, "
             "prompt-pack polish, and final public-beta approval."
         ),
     )
@@ -1283,11 +1484,15 @@ def test_database_privilege_template_preserves_append_only_audit_contract() -> N
     """Runtime privilege SQL should keep audit history append-only."""
     document = read_doc("docs/AEVRYN_DATABASE_PRIVILEGE_HARDENING.md")
     template = read_doc("docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql")
+    runbook = read_doc("docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md")
 
     required_document_terms = (
         "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
         "docs/AEVRYN_POSTGRESQL_RUNTIME_PRIVILEGES.sql",
+        "docs/AEVRYN_RESTRICTED_DATABASE_ROLE_RUNBOOK.md",
         "audit_ledger_records TRUNCATE: false",
+        "audit_ledger_records TABLE OWNER: false",
+        "is_table_owner=false",
         "transaction-scoped PostgreSQL advisory lock",
     )
 
@@ -1295,9 +1500,11 @@ def test_database_privilege_template_preserves_append_only_audit_contract() -> N
         assert term in document
 
     required_template_terms = (
-        "Replace <runtime_role> only in the reviewed execution copy.",
+        "Replace <runtime_role> and <migration_owner> only in the reviewed execution copy.",
         "Cloud Run must use AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false.",
         'GRANT USAGE ON SCHEMA public TO "<runtime_role>";',
+        'ALTER TABLE public.audit_ledger_records OWNER TO "<migration_owner>";',
+        "REVOKE ALL ON TABLE public.audit_ledger_records FROM PUBLIC;",
         "public.background_jobs",
         "public.project_settings",
         'GRANT SELECT, INSERT ON TABLE public.audit_ledger_records TO "<runtime_role>";',
@@ -1309,6 +1516,23 @@ def test_database_privilege_template_preserves_append_only_audit_contract() -> N
 
     for term in required_template_terms:
         assert term in template
+
+    required_runbook_terms = (
+        "Do not use the administrative `postgres` connection string in Cloud Run.",
+        "Do not use the Supabase service role key as the PostgreSQL runtime password.",
+        "AEVRYN_PROJECT_DATABASE_URL",
+        "AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false",
+        "can_update=false",
+        "can_delete=false",
+        "can_truncate=false",
+        "is_table_owner=false",
+        "ok=audit_access_append_only_verified",
+        "Do not weaken the command or tests.",
+        "No source prose, credentials, storage URLs, or full AI payloads",
+    )
+
+    for term in required_runbook_terms:
+        assert term in runbook
 
     forbidden_terms = (
         "postgresql://",

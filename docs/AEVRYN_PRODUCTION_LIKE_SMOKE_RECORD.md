@@ -14,7 +14,7 @@ It is separate from the final release-candidate run record because smoke attempt
 Record type: Production-Like Smoke Attempt Log
 Status: Started
 Public beta: Blocked
-Latest attempt: 2026-07-14 hosted creator workflow retry passed; later hosted audit gates partially passed
+Latest attempt: 2026-07-17 provider and observability config gates passed
 ```
 
 Production-like smoke is partially complete.
@@ -32,6 +32,10 @@ Hosted frontend/API custom-domain header smoke has passed.
 Hosted browser-flow smoke verified login/register availability, protected frontend-route redirects, protected API-route authentication, managed-identity login completion, authenticated project create/read/list, and clean browser console output.
 
 Hosted import processing, monitoring workflow status, export creation, production-safe worker posture, and hosted browser UI sweep have passed for the retry smoke.
+
+Hosted restricted audit role verification has passed.
+
+Hosted provider and observability configuration gates have passed.
 
 Final release-candidate signoff is still not complete.
 
@@ -99,6 +103,141 @@ BLOCKED for public beta until Cloud Run uses a restricted PostgreSQL application
 ```
 
 No database URL, database credential, storage key, API key, Supabase key, role name, username, hostname, source prose, full AI payload, or audit row payload was printed.
+
+---
+
+# Attempt 2026-07-17 - Hosted Restricted Audit Role Verification
+
+Environment:
+
+```text
+Execution surface: local PowerShell using Google Secret Manager for the hosted database URL
+Hosted deployment: production-like Cloud Run database target
+Database posture: restricted runtime PostgreSQL role
+Output boundary: metadata-only CLI output
+Result: audit integrity passed; append-only access verification passed
+```
+
+Commands run:
+
+```powershell
+python -m aevryn.cli audit-ledger-verify
+python -m aevryn.cli audit-access-report
+python -m aevryn.cli audit-access-verify
+```
+
+Observed metadata-only results:
+
+```text
+adapter=postgresql
+ledger=audit
+records_verified=1338
+secrets_printed=0
+ok=audit_ledger_postgresql_integrity_verified
+adapter=postgresql
+ledger=audit
+table_exists=true
+can_select=true
+can_insert=true
+can_update=false
+can_delete=false
+can_truncate=false
+is_table_owner=false
+secrets_printed=0
+ok=audit_access_metadata_reported
+adapter=postgresql
+ledger=audit
+table_exists=true
+can_select=true
+can_insert=true
+can_update=false
+can_delete=false
+can_truncate=false
+is_table_owner=false
+secrets_printed=0
+ok=audit_access_append_only_verified
+```
+
+Interpretation:
+
+```text
+PASSED for hosted audit hash-chain integrity verification.
+PASSED for metadata-only audit-gate output.
+PASSED for least-privilege append-only audit access.
+PASSED for restricted runtime role non-ownership of audit history.
+```
+
+No database URL, database credential, storage key, API key, Supabase key, role
+name, username, hostname, source prose, full AI payload, or audit row payload was
+printed.
+
+---
+
+# Attempt 2026-07-17 - Provider And Observability Config Gates
+
+Environment:
+
+```text
+Execution surface: local PowerShell using Google Secret Manager for hosted production-like secrets
+Hosted deployment: production-like Cloud Run configuration target
+Output boundary: metadata-only CLI output
+Result: provider config passed; observability config passed
+```
+
+Commands run:
+
+```powershell
+python -m aevryn.cli provider-config-check
+python -m aevryn.cli observability-config-check
+```
+
+Observed provider metadata-only result:
+
+```text
+deployment_env=production
+provider=openai
+extraction_mode=openai
+model=gpt-5.4-mini
+timeout_seconds=90.0
+max_response_bytes=1048576
+request_storage=disabled
+responses_store=false
+provider_review=required
+public_beta=blocked_until_provider_review
+secrets_printed=0
+ok=provider_config_contract_checked
+```
+
+Observed observability metadata-only result:
+
+```text
+deployment_env=production
+log_destination=hosted
+monitoring_destination=hosted
+log_retention_days=30
+monitoring_retention_days=30
+security_alerts_enabled=true
+metadata_only_logging=true
+bounded_hosted_log_review=required
+public_beta=blocked_until_bounded_hosted_log_review
+secrets_printed=0
+ok=observability_config_contract_checked
+```
+
+Interpretation:
+
+```text
+PASSED for provider configuration metadata.
+PASSED for provider request storage disabled posture.
+PASSED for Responses API store=false posture.
+PASSED for hosted observability configuration metadata.
+OPEN for owner/legal/provider review.
+OPEN for final bounded hosted log review.
+```
+
+No database URL, database credential, storage key, API key, Supabase key, OpenAI
+key, session secret, worker key, source prose, full provider prompt, full
+provider response, or audit row payload was printed.
 
 ---
 
@@ -758,8 +897,8 @@ A successful production-like smoke must record:
 | Check | Expected Result | Status |
 | --- | --- | --- |
 | Production config check | `startup_contract=ready`, `secrets_printed=0` | Passed locally |
-| Provider config check | explicit provider mode, key presence, model, timeout, response-size boundary, no provider keys printed | Required before final public-beta smoke signoff |
-| Observability config check | hosted logs/monitoring, bounded retention, metadata-only logging, security alerts | Required before final public-beta smoke signoff |
+| Provider config check | explicit provider mode, key presence, model, timeout, response-size boundary, no provider keys printed | Passed with metadata-only output; provider review remains required |
+| Observability config check | hosted logs/monitoring, bounded retention, metadata-only logging, security alerts | Passed with metadata-only output; bounded hosted log review remains required |
 | PostgreSQL smoke | create/read/delete synthetic metadata record succeeds | Passed locally |
 | R2 storage smoke | write/read/delete tiny synthetic private object succeeds | Passed locally |
 | API startup | production app starts with local-only adapters rejected | Passed on Cloud Run |
@@ -771,8 +910,8 @@ A successful production-like smoke must record:
 | Authenticated project workflow | create/read/list project metadata through hosted API | Passed for RC Smoke Test Project |
 | Logs | no manuscripts, credentials, tokens, private URLs, usernames, machine-local paths, or full AI payloads | Passed for bounded hosted Cloud Run log review; route-level metadata remains expected access-log data |
 | Audit ledger integrity | `audit-ledger-verify` passes without printing secrets | Passed against hosted database target |
-| Audit access report | `audit-access-report` reports metadata-only table and privilege state | Passed; table exists and current role can select/insert/update/delete |
-| Audit append-only access | `audit-access-verify` rejects update/delete audit privileges | Failed; hosted database role currently has UPDATE and DELETE privileges |
+| Audit access report | `audit-access-report` reports metadata-only table and privilege state | Passed; table exists and restricted runtime role can select/insert but cannot update/delete/truncate/own audit records |
+| Audit append-only access | `audit-access-verify` rejects update/delete audit privileges | Passed with restricted runtime role |
 
 ---
 
@@ -782,11 +921,13 @@ Complete the remaining release-candidate readiness checks that are outside the b
 
 ```text
 Verify hosted retention and bounded-log behavior against the production observability policy before public beta.
-Run `provider-config-check` against the hosted production-like environment before provider smoke or final signoff.
-Run `observability-config-check` against the hosted production-like environment before the final bounded hosted log review.
-Provision or switch Cloud Run to a restricted PostgreSQL application role that preserves audit SELECT/INSERT but removes audit UPDATE/DELETE privileges.
+Complete provider owner/legal review before provider-backed extraction is public-beta approved.
 Complete public-facing legal, trust, and support publication before public beta.
 Complete backup/restore/audit readiness before public beta.
+Run `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md` in an isolated restore target and complete a dated restore/audit drill record.
+The 2026-07-17 restore source preflight is recorded in
+`docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`; it does not close the restore
+gate because no isolated restore target has been verified.
 Continue prompt-pack and output UX polish before public beta positioning.
 ```
 
@@ -812,7 +953,7 @@ Then record the final result in a dated release-candidate run record.
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, hosted audit integrity verification, and internal release-candidate signoff have passed. Public beta remains blocked by hosted audit append-only access verification, public-facing legal/trust/support publication, hosted observability verification, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, final provider review, final bounded hosted observability review, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
 Previously recorded smoke success remains: hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, and internal release-candidate signoff have passed.
-Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support publication, hosted observability verification, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support publication, final provider review, final bounded hosted observability review, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
 ```

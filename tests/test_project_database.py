@@ -376,6 +376,13 @@ def test_postgresql_project_repository_rejects_non_postgresql_database_url() -> 
         PostgresqlProjectRepository("sqlite:///aevryn.db", connect_factory=lambda _: None)
 
 
+def test_postgresql_project_repository_normalizes_pasted_database_url() -> None:
+    """Production database URLs should survive common copy/paste wrapping."""
+    assert postgresql._required_database_url(
+        "  'postgres://example.invalid/aevryn'  "
+    ) == "postgres://example.invalid/aevryn"
+
+
 def test_postgresql_project_repository_requires_psycopg_when_no_factory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

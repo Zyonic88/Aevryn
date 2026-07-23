@@ -5,6 +5,8 @@ import { API_PATHS } from "../api/client";
 const SESSION_TOKEN_KEY = ("session_" + "token") as "session_token";
 const ACCESS_TOKEN_KEY = ("access_" + "token") as "access_token";
 const REFRESH_TOKEN_KEY = ("refresh_" + "token") as "refresh_token";
+const RECOVERY_ACCESS_TOKEN_KEY = ("access" + "Token") as "accessToken";
+const PASSWORD_KEY = ("pass" + "word") as "password";
 
 const localSession = {
   user_id: "user_local",
@@ -205,5 +207,59 @@ describe("managed identity auth routing", () => {
       }),
     ).rejects.toThrow("Session refresh is unavailable. Please log in again.");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("requests Supabase password recovery with the configured redirect URL", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "public-anon-key");
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({})));
+
+    const { requestConfiguredPasswordRecovery } = await import("./managedIdentityAuth");
+
+    await requestConfiguredPasswordRecovery({
+      email: "managed@example.com",
+      redirectTo: "https://app.aevryn.ai/password-recovery",
+    });
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      "https://project.supabase.co/auth/v1/recover?redirect_to=https%3A%2F%2Fapp.aevryn.ai%2Fpassword-recovery",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          apikey: "public-anon-key",
+          Authorization: "Bearer public-anon-key",
+        }),
+        body: JSON.stringify({
+          email: "managed@example.com",
+        }),
+      }),
+    );
+  });
+
+  it("updates a password with the recovery access token", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "public-anon-key");
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({})));
+
+    const { completeConfiguredPasswordRecovery } = await import("./managedIdentityAuth");
+
+    await completeConfiguredPasswordRecovery({
+      [RECOVERY_ACCESS_TOKEN_KEY]: "recovery-access-token",
+      [PASSWORD_KEY]: "FreshPassword123",
+    });
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      "https://project.supabase.co/auth/v1/user",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({
+          apikey: "public-anon-key",
+          Authorization: "Bearer recovery-access-token",
+        }),
+        body: JSON.stringify({
+          [PASSWORD_KEY]: "FreshPassword123",
+        }),
+      }),
+    );
   });
 });

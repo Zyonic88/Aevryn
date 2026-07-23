@@ -21,6 +21,8 @@ from aevryn.extraction.models import (
     ExtractionResult,
     SceneEvidenceAnchor,
     SceneExtractionInput,
+    SceneSentenceUnderstanding,
+    SceneSignal,
 )
 
 __all__ = [
@@ -36,6 +38,8 @@ __all__ = [
     "OpenAIResponsesTransport",
     "SceneEvidenceAnchor",
     "SceneExtractionInput",
+    "SceneSentenceUnderstanding",
+    "SceneSignal",
     "SceneExtractor",
     "StaticAIExtractionClient",
     "UrllibOpenAIResponsesTransport",

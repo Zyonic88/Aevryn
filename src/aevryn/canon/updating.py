@@ -29,6 +29,19 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
+class RejectedCanonCandidate:
+    """Machine-readable reason for a rejected Canon update candidate."""
+
+    candidate_id: str
+    reason_code: str
+
+    def __post_init__(self) -> None:
+        """Validate rejected candidate metadata."""
+        _require_machine_token(self.candidate_id, "Canon rejected candidate ID")
+        _require_machine_token(self.reason_code, "Canon rejected reason code")
+
+
+@dataclass(frozen=True, slots=True)
 class CanonUpdateSummary:
     """Summary of accepted and rejected canon update candidates."""
 
@@ -37,6 +50,7 @@ class CanonUpdateSummary:
     accepted_relationships: tuple[str, ...] = ()
     accepted_state_changes: tuple[str, ...] = ()
     rejected_candidates: tuple[str, ...] = ()
+    rejected_reasons: tuple[RejectedCanonCandidate, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate accepted and rejected candidate summary IDs."""
@@ -59,6 +73,18 @@ class CanonUpdateSummary:
             raise ValueError(
                 "Canon summary IDs cannot be both accepted and rejected: "
                 f"{overlap}"
+            )
+        _require_unique_machine_tokens(
+            tuple(reason.candidate_id for reason in self.rejected_reasons),
+            "rejected reason candidate",
+        )
+        rejected_candidate_ids = set(self.rejected_candidates)
+        reason_candidate_ids = {reason.candidate_id for reason in self.rejected_reasons}
+        if not reason_candidate_ids.issubset(rejected_candidate_ids):
+            unknown_ids = ", ".join(sorted(reason_candidate_ids - rejected_candidate_ids))
+            raise ValueError(
+                "Canon rejected reason IDs must match rejected candidates: "
+                f"{unknown_ids}"
             )
 
 
@@ -110,10 +136,18 @@ class CanonUpdater:
         accepted_relationships: list[str] = []
         accepted_state_changes: list[str] = []
         rejected_candidates: list[str] = []
+        rejected_reasons: list[RejectedCanonCandidate] = []
 
         for candidate in result.entities:
-            if not self._candidate_is_acceptable(candidate, anchor_by_id):
+            rejection_reason = self._candidate_rejection_reason(candidate, anchor_by_id)
+            if rejection_reason is not None:
                 rejected_candidates.append(candidate.entity_id)
+                rejected_reasons.append(
+                    RejectedCanonCandidate(
+                        candidate_id=candidate.entity_id,
+                        reason_code=rejection_reason,
+                    )
+                )
                 continue
 
             anchor = anchor_by_id[candidate.evidence_anchor_id]
@@ -137,12 +171,19 @@ class CanonUpdater:
 
         known_entity_ids = set(accepted_entities)
         for fact_candidate in result.facts:
-            if not self._fact_is_acceptable(
+            rejection_reason = self._fact_rejection_reason(
                 fact=fact_candidate,
                 anchor_by_id=anchor_by_id,
                 known_entity_ids=known_entity_ids,
-            ):
+            )
+            if rejection_reason is not None:
                 rejected_candidates.append(fact_candidate.fact_id)
+                rejected_reasons.append(
+                    RejectedCanonCandidate(
+                        candidate_id=fact_candidate.fact_id,
+                        reason_code=rejection_reason,
+                    )
+                )
                 continue
 
             anchor = anchor_by_id[fact_candidate.evidence_anchor_id]
@@ -168,13 +209,19 @@ class CanonUpdater:
             accepted_facts.append(fact.fact_id)
 
         for relationship in result.relationships:
-            if not self._relationship_is_acceptable(
+            rejection_reason = self._relationship_rejection_reason(
                 relationship=relationship,
                 anchor_by_id=anchor_by_id,
                 known_entity_ids=known_entity_ids,
-            ):
-                rejected_candidates.append(
-                    self._relationship_id(relationship)
+            )
+            if rejection_reason is not None:
+                relationship_id = self._relationship_id(relationship)
+                rejected_candidates.append(relationship_id)
+                rejected_reasons.append(
+                    RejectedCanonCandidate(
+                        candidate_id=relationship_id,
+                        reason_code=rejection_reason,
+                    )
                 )
                 continue
 
@@ -196,7 +243,7 @@ class CanonUpdater:
                 attribute=state_change.attribute,
                 value=state_change.value,
             )
-            if not self._state_change_is_acceptable(
+            rejection_reason = self._state_change_rejection_reason(
                 entity_id=state_change.entity_id,
                 attribute=state_change.attribute,
                 value=state_change.value,
@@ -204,8 +251,15 @@ class CanonUpdater:
                 anchor_id=state_change.valid_from_anchor_id,
                 anchor_by_id=anchor_by_id,
                 known_entity_ids=known_entity_ids,
-            ):
+            )
+            if rejection_reason is not None:
                 rejected_candidates.append(state_change_id)
+                rejected_reasons.append(
+                    RejectedCanonCandidate(
+                        candidate_id=state_change_id,
+                        reason_code=rejection_reason,
+                    )
+                )
                 continue
 
         summary = CanonUpdateSummary(
@@ -214,6 +268,7 @@ class CanonUpdater:
             accepted_relationships=tuple(accepted_relationships),
             accepted_state_changes=tuple(accepted_state_changes),
             rejected_candidates=tuple(rejected_candidates),
+            rejected_reasons=tuple(rejected_reasons),
         )
         logger.info(
             "Applied extraction result to Canon",
@@ -232,6 +287,9 @@ class CanonUpdater:
                 extra={
                     "scene_id": result.scene_id,
                     "rejected_candidates": summary.rejected_candidates,
+                    "rejected_reason_codes": tuple(
+                        reason.reason_code for reason in summary.rejected_reasons
+                    ),
                 },
             )
 
@@ -262,15 +320,25 @@ class CanonUpdater:
         anchor_by_id: dict[str, EvidenceAnchor],
     ) -> bool:
         """Return whether an extracted entity can be accepted."""
+        return self._candidate_rejection_reason(candidate, anchor_by_id) is None
+
+    def _candidate_rejection_reason(
+        self,
+        candidate: ExtractedEntity,
+        anchor_by_id: dict[str, EvidenceAnchor],
+    ) -> str | None:
+        """Return a stable rejection reason for an extracted entity candidate."""
+        if candidate.confidence < self._minimum_confidence:
+            return "low_confidence"
         anchor = anchor_by_id.get(candidate.evidence_anchor_id)
-        return (
-            candidate.confidence >= self._minimum_confidence
-            and anchor is not None
-            and self._display_name_position_is_acceptable(
-                candidate=candidate,
-                anchor=anchor,
-            )
-        )
+        if anchor is None:
+            return "unknown_evidence_anchor"
+        if not self._display_name_position_is_acceptable(
+            candidate=candidate,
+            anchor=anchor,
+        ):
+            return "ambiguous_source_order"
+        return None
 
     def _display_name_position_is_acceptable(
         self,
@@ -301,11 +369,30 @@ class CanonUpdater:
     ) -> bool:
         """Return whether an extracted relationship can be accepted."""
         return (
-            relationship.confidence >= self._minimum_confidence
-            and relationship.evidence_anchor_id in anchor_by_id
-            and self._entity_is_known(relationship.source_entity_id, known_entity_ids)
-            and self._entity_is_known(relationship.target_entity_id, known_entity_ids)
+            self._relationship_rejection_reason(
+                relationship=relationship,
+                anchor_by_id=anchor_by_id,
+                known_entity_ids=known_entity_ids,
+            )
+            is None
         )
+
+    def _relationship_rejection_reason(
+        self,
+        relationship: ExtractedRelationship,
+        anchor_by_id: dict[str, EvidenceAnchor],
+        known_entity_ids: set[str],
+    ) -> str | None:
+        """Return a stable rejection reason for an extracted relationship."""
+        if relationship.confidence < self._minimum_confidence:
+            return "low_confidence"
+        if relationship.evidence_anchor_id not in anchor_by_id:
+            return "unknown_evidence_anchor"
+        if not self._entity_is_known(relationship.source_entity_id, known_entity_ids):
+            return "unknown_entity_reference"
+        if not self._entity_is_known(relationship.target_entity_id, known_entity_ids):
+            return "unknown_entity_reference"
+        return None
 
     def _fact_is_acceptable(
         self,
@@ -314,13 +401,32 @@ class CanonUpdater:
         known_entity_ids: set[str],
     ) -> bool:
         """Return whether an extracted fact can be accepted."""
-        anchor = anchor_by_id.get(fact.evidence_anchor_id)
         return (
-            fact.confidence >= self._minimum_confidence
-            and anchor is not None
-            and self._entity_is_known(fact.entity_id, known_entity_ids)
-            and self._replacement_fact_position_is_acceptable(fact=fact, anchor=anchor)
+            self._fact_rejection_reason(
+                fact=fact,
+                anchor_by_id=anchor_by_id,
+                known_entity_ids=known_entity_ids,
+            )
+            is None
         )
+
+    def _fact_rejection_reason(
+        self,
+        fact: ExtractedFact,
+        anchor_by_id: dict[str, EvidenceAnchor],
+        known_entity_ids: set[str],
+    ) -> str | None:
+        """Return a stable rejection reason for an extracted fact candidate."""
+        if fact.confidence < self._minimum_confidence:
+            return "low_confidence"
+        anchor = anchor_by_id.get(fact.evidence_anchor_id)
+        if anchor is None:
+            return "unknown_evidence_anchor"
+        if not self._entity_is_known(fact.entity_id, known_entity_ids):
+            return "unknown_entity_reference"
+        if not self._replacement_fact_position_is_acceptable(fact=fact, anchor=anchor):
+            return "ambiguous_source_order"
+        return None
 
     def _replacement_fact_position_is_acceptable(
         self,
@@ -364,6 +470,36 @@ class CanonUpdater:
         known_entity_ids: set[str],
     ) -> bool:
         """Return whether an extracted state-change candidate matches Canon."""
+        return (
+            self._state_change_rejection_reason(
+                entity_id=entity_id,
+                attribute=attribute,
+                value=value,
+                confidence=confidence,
+                anchor_id=anchor_id,
+                anchor_by_id=anchor_by_id,
+                known_entity_ids=known_entity_ids,
+            )
+            is None
+        )
+
+    def _state_change_rejection_reason(
+        self,
+        entity_id: str,
+        attribute: str,
+        value: str,
+        confidence: float,
+        anchor_id: str,
+        anchor_by_id: dict[str, EvidenceAnchor],
+        known_entity_ids: set[str],
+    ) -> str | None:
+        """Return a stable rejection reason for an extracted state change."""
+        if confidence < self._minimum_confidence:
+            return "low_confidence"
+        if anchor_id not in anchor_by_id:
+            return "unknown_evidence_anchor"
+        if not self._entity_is_known(entity_id, known_entity_ids):
+            return "unknown_entity_reference"
         current_fact = self._database.retrieve_current_fact(
             entity_id=entity_id,
             attribute=attribute,
@@ -377,12 +513,9 @@ class CanonUpdater:
             if is_additive_fact_attribute(attribute)
             else current_fact is not None and current_fact.value == value
         )
-        return (
-            confidence >= self._minimum_confidence
-            and anchor_id in anchor_by_id
-            and self._entity_is_known(entity_id, known_entity_ids)
-            and value_is_current
-        )
+        if not value_is_current:
+            return "state_change_without_current_fact"
+        return None
 
     def _additive_fact_value_is_active(
         self,
@@ -673,9 +806,12 @@ def _require_unique_machine_tokens(values: tuple[str, ...], field_name: str) -> 
     if len(values) != len(set(values)):
         raise ValueError(f"Canon summary {field_name} IDs cannot contain duplicates.")
     for value in values:
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError(f"Canon summary {field_name} ID is required.")
-        if any(character.isspace() for character in value):
-            raise ValueError(
-                f"Canon summary {field_name} ID cannot contain whitespace."
-            )
+        _require_machine_token(value, f"Canon summary {field_name} ID")
+
+
+def _require_machine_token(value: str, field_name: str) -> None:
+    """Validate a stable machine-readable token."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required.")
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{field_name} cannot contain whitespace.")

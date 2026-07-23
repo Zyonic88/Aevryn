@@ -101,6 +101,28 @@ Story Import creates source anchors from the original text.
 
 Translation Engine may run after Story Import and before Entity Extraction.
 
+Sentence Understanding may run between Story Import and Translation to expose
+metadata-only action, dialogue, skill, system, item, relationship, identity, and
+ambiguity signals.
+
+Translation may use those signals to preserve meaning, but Sentence
+Understanding does not translate text and does not make Canon decisions.
+
+When Sentence Understanding marks a source term as translation-ambiguous,
+Translation must convert that metadata into a review issue unless a glossary
+entry already owns the same term. Translation must preserve the source term
+until review or glossary policy resolves it.
+
+This handoff is metadata-only:
+
+* evidence anchor ID
+* signal names
+* compact ambiguity terms
+* review-required flag
+
+It must not pass full source sentences, paragraphs, chapters, or raw AI
+payloads through translation-review metadata.
+
 It produces translated scene text that still points back to original source anchors.
 
 Entity Extraction may read translated or normalized scene text, but extracted candidates must still cite evidence anchors.

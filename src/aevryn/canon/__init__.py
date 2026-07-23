@@ -22,7 +22,11 @@ from aevryn.canon.models import (
     Evidence,
     StoryPosition,
 )
-from aevryn.canon.updating import CanonUpdater, CanonUpdateSummary
+from aevryn.canon.updating import (
+    CanonUpdater,
+    CanonUpdateSummary,
+    RejectedCanonCandidate,
+)
 
 __all__ = [
     "CanonConflict",
@@ -39,6 +43,7 @@ __all__ = [
     "EntityType",
     "Evidence",
     "MissingEvidenceError",
+    "RejectedCanonCandidate",
     "StoryPosition",
     "UnknownEntityError",
 ]

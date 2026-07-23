@@ -98,6 +98,45 @@ Weapons and armor are specialized items.
 
 An Item wrapper may wrap `item`, `weapon`, or `armor` entities.
 
+## Skill
+
+A Skill is an Entity that represents an ability, spell, technique, command,
+power, or learned action.
+
+Skills may belong to a character, organization, system, or world rule.
+
+A Skill is not a physical object.
+
+If a term describes something a character can carry, own, inspect, repair,
+equip, spend, or lose, it should not be classified as a skill unless the source
+explicitly identifies it as an ability, spell, technique, or equivalent action.
+
+## System
+
+A System is an Entity that represents an in-story interface, rules engine,
+quest layer, status panel, progression mechanic, or supernatural/mechanical
+framework.
+
+A System is not automatically present in every story.
+
+If the source does not establish a system-like mechanic, Aevryn should not
+invent one. If the evidence is ambiguous, the candidate should remain
+reviewable instead of being treated as Canon truth.
+
+## Classification Boundary
+
+Entity Extraction proposes classifications, but Canon decides truth.
+
+Aevryn uses layered safeguards for item, skill, and system classification:
+
+* provider instructions define the classification contract
+* extraction validation rejects obvious contradictions, such as a physical
+  blueprint proposed as a skill
+* entity ID prefixes and entity types must not conflict
+* ambiguous terms remain reviewable instead of being forced into a class
+* rules must remain story-neutral and must not depend on one novel's naming
+  conventions
+
 ## Fact
 
 A Fact is a claim about an Entity.

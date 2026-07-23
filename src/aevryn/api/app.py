@@ -208,6 +208,7 @@ PROJECT_DATABASE_ADAPTER_ENV = "AEVRYN_PROJECT_DATABASE_ADAPTER"
 PROJECT_DATABASE_BOOTSTRAP_ENV = "AEVRYN_PROJECT_DATABASE_BOOTSTRAP"
 PROJECT_DATABASE_PATH_ENV = "AEVRYN_PROJECT_DATABASE_PATH"
 PROJECT_DATABASE_URL_ENV = "AEVRYN_PROJECT_DATABASE_URL"
+RESTORE_DRILL_TARGET_ENV = "AEVRYN_RESTORE_DRILL_TARGET"
 AUTH_STORE_PATH_ENV = "AEVRYN_AUTH_STORE_PATH"
 IMPORT_STORAGE_PATH_ENV = "AEVRYN_IMPORT_STORAGE_PATH"
 STORAGE_PROVIDER_ENV = "AEVRYN_STORAGE_PROVIDER"
@@ -2367,11 +2368,19 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "for production."
         )
     environment_name = environ.get(ENVIRONMENT_NAME_ENV, "").strip().lower()
-    if environment_name != "production":
+    restore_drill_target = environ.get(RESTORE_DRILL_TARGET_ENV, "").strip().lower()
+    if environment_name == "production":
+        if restore_drill_target == "true":
+            raise ValueError(
+                "AEVRYN_ENVIRONMENT_NAME must not be production when "
+                "AEVRYN_RESTORE_DRILL_TARGET=true."
+            )
+    elif restore_drill_target != "true":
         raise ValueError(
             "AEVRYN_ENVIRONMENT_NAME=production is required when "
             "AEVRYN_DEPLOYMENT_ENV=production. Production must be separated from "
-            "local, test, and staging environments."
+            "local, test, and staging environments. Isolated restore targets must "
+            "set AEVRYN_RESTORE_DRILL_TARGET=true."
         )
     if environ.get(PROJECT_DATABASE_BOOTSTRAP_ENV, "").strip().lower() != "false":
         raise ValueError(
@@ -4067,9 +4076,20 @@ def _snapshot_section_or_unknown(
     if not section_payload:
         return OutputSection(title=title, items=("Unknown",))
     try:
-        return _section_from_payload(section_payload, display_names=display_names)
+        section = _section_from_payload(section_payload, display_names=display_names)
     except (ValueError, ValidationError):
         return OutputSection(title=title, items=("Unknown",))
+    if key == "gender":
+        return _resolved_snapshot_gender_section(section)
+    return section
+
+
+def _resolved_snapshot_gender_section(section: OutputSection) -> OutputSection:
+    """Hide contradictory persisted gender values from human profile output."""
+    normalized_items = {item.lower() for item in section.items}
+    if {"male", "female"}.issubset(normalized_items):
+        return OutputSection(title=section.title, items=("Unknown",))
+    return section
 
 
 def _section_from_payload(
@@ -4403,14 +4423,11 @@ def _project_status_worker(
         (job.job_id for job in jobs if job.status == "queued"),
         "",
     )
-    if running_jobs > 0:
-        state = "running"
-    elif queued_jobs > 0:
-        state = "queued"
-    elif latest_run is not None and latest_run.status == "failed":
-        state = "failed"
-    else:
-        state = "idle"
+    state = _project_status_worker_state(
+        latest_run=latest_run,
+        queued_jobs=queued_jobs,
+        running_jobs=running_jobs,
+    )
     return ProjectStatusWorker(
         state=state,
         total_jobs=len(jobs),
@@ -4420,6 +4437,22 @@ def _project_status_worker(
         failed_jobs=failed_jobs,
         next_job_id=next_job_id,
     )
+
+
+def _project_status_worker_state(
+    *,
+    latest_run: EngineRunRecord | None,
+    queued_jobs: int,
+    running_jobs: int,
+) -> str:
+    """Return the current worker state without inheriting stale terminal jobs."""
+    if running_jobs > 0:
+        return "running"
+    if queued_jobs > 0:
+        return "queued"
+    if latest_run is not None and latest_run.status == "failed":
+        return "failed"
+    return "idle"
 
 
 def _recent_workflow_events(

@@ -1,11 +1,23 @@
-﻿import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useLayoutEffect } from "react";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 
+import { setAuthenticationFailureHandler } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { ErrorMessage } from "./Feedback";
 
+const AUTHENTICATION_RECOVERY_MESSAGE = "Your session expired. Please log in again.";
+
 export function AppLayout() {
   const navigate = useNavigate();
-  const { session, sessionPersistenceError, logout } = useAuth();
+  const { session, sessionPersistenceError, invalidateSession, logout } = useAuth();
+
+  useLayoutEffect(() => {
+    setAuthenticationFailureHandler(() => {
+      invalidateSession(AUTHENTICATION_RECOVERY_MESSAGE);
+      void navigate("/login", { replace: true });
+    });
+    return () => setAuthenticationFailureHandler(null);
+  }, [invalidateSession, navigate]);
 
   function submitLogout() {
     logout();
