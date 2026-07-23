@@ -44,6 +44,14 @@ const WORLD_CARD_PAGE_SIZE = 48;
 const TIMELINE_GROUP_PAGE_SIZE = 60;
 const SCENE_CARD_PAGE_SIZE = 48;
 const CONTINUITY_SCENE_PAGE_SIZE = 24;
+const CHARACTER_RECENT_CHANGE_PROFILE_LABELS = new Set([
+  "alias",
+  "description",
+  "gender",
+  "name",
+  "race",
+  "title",
+]);
 
 export function ProjectOutputSummaryPanel({
   project,
@@ -446,13 +454,69 @@ function evidenceFactCount(summary: string): number {
 }
 
 function characterRecentChanges(profile: CharacterProfile): OutputSection {
+  const representedValues = representedCharacterProfileValues(profile);
   return {
     title: profile.recent_changes.title,
     items: readableOutputItems(profile.recent_changes.items).filter(
-      (item) =>
-        !item.startsWith("Name: ") && !item.startsWith("Race: ") && !item.startsWith("Gender: "),
+      (item) => !isRepresentedCharacterProfileChange(item, representedValues),
     ),
   };
+}
+
+function representedCharacterProfileValues(profile: CharacterProfile): Set<string> {
+  const representedSections = [
+    profile.aliases,
+    profile.titles,
+    profile.descriptions,
+    profile.race,
+    profile.gender,
+    profile.status,
+    profile.current_goal,
+    profile.current_equipment,
+    profile.current_abilities,
+    profile.current_assets,
+    profile.territory,
+    profile.relationships,
+    profile.current_limitations,
+  ];
+  return new Set(
+    [
+      readableCharacterName(profile.display_name),
+      readableCharacterSubtitle(profile.subtitle),
+      ...representedSections.flatMap((section) => readableOutputItems(section.items)),
+    ]
+      .flatMap((item) => [item, profileChangeValue(item)])
+      .map(normalizedProfileComparisonValue)
+      .filter(Boolean),
+  );
+}
+
+function isRepresentedCharacterProfileChange(
+  item: string,
+  representedValues: Set<string>,
+): boolean {
+  const label = normalizedProfileComparisonValue(profileChangeLabel(item));
+  const normalizedItem = normalizedProfileComparisonValue(item);
+  const normalizedValue = normalizedProfileComparisonValue(profileChangeValue(item));
+  return (
+    CHARACTER_RECENT_CHANGE_PROFILE_LABELS.has(label) ||
+    representedValues.has(normalizedItem) ||
+    representedValues.has(normalizedValue)
+  );
+}
+
+function profileChangeLabel(item: string): string {
+  const labelMatch = item.match(/^([^:]+):\s*.+$/u);
+  return labelMatch ? labelMatch[1] : "";
+}
+
+function profileChangeValue(item: string): string {
+  const valueMatch = item.match(/^[^:]+:\s*(.+)$/u);
+  return valueMatch ? valueMatch[1] : item;
+}
+
+function normalizedProfileComparisonValue(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function readableCharacterSubtitle(subtitle: string): string {

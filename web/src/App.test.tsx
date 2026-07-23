@@ -3463,6 +3463,13 @@ describe("App shell routing", () => {
     expect(markCard.getByText("Captain")).toBeInTheDocument();
     expect(markCard.getByRole("heading", { name: "Descriptions" })).toBeInTheDocument();
     expect(markCard.getByText("Rusty Dagger")).toBeInTheDocument();
+    const recentChangesSection = Array.from(
+      (characterCard as HTMLElement).querySelectorAll(".profile-section"),
+    ).find((section) => section.querySelector("h4")?.textContent === "Recent Changes");
+    expect(recentChangesSection).toBeDefined();
+    expect(recentChangesSection).not.toHaveTextContent("Name: Mark");
+    expect(recentChangesSection).not.toHaveTextContent("Gender: Male");
+    expect(recentChangesSection).not.toHaveTextContent("Current Weapon: Rusty Dagger");
     expect(screen.queryByText("Name: Mark")).not.toBeInTheDocument();
     expect(screen.queryByText(sourceBackedPlaceholder)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Unknown character" })).toBeInTheDocument();
