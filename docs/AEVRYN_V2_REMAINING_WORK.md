@@ -405,7 +405,7 @@ Remaining hardening:
 * ~~verify stuck jobs do not block future imports forever~~
 * ~~keep progress stepper accurate and API-provided~~
 * ~~avoid fake percentages when exact progress is unavailable~~
-* keep import warnings human-readable
+* ~~keep import warnings human-readable~~
 
 Verified hardening:
 
@@ -417,6 +417,9 @@ Verified hardening:
   summaries instead of leaving durable runs pending forever
 * active processing displays API-backed states such as Queued, Processing,
   Snapshot, and Output ready without fake percentages
+* deferred source formats, source-format API failures, oversized pasted imports,
+  and failed re-inspection paths show user-facing explanations and avoid stale
+  import-structure output
 
 Acceptance:
 
