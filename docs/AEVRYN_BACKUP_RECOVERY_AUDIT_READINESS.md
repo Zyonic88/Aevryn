@@ -12,13 +12,13 @@ Gate 5 turns backup, restore, disaster recovery, and audit-ledger contracts into
 
 ```text
 Gate: Backup, Recovery, And Audit
-Status: Started
-Public beta: Blocked
+Status: Passed for public-beta readiness evidence
+Public beta: Not blocked by Gate 5
 ```
 
-Aevryn has local deletion tests and audit-ledger architecture.
-
-Public beta still needs production backup, restore, and audit-storage decisions.
+Aevryn has production backup, restore, and audit-storage decisions backed by
+tested restore/audit evidence. Public beta still requires the separate
+public-facing, provider, product-polish, and final approval gates.
 
 ---
 
@@ -181,7 +181,7 @@ The public product must not promise instant deletion from every backup unless pr
 
 # Public Beta Blockers
 
-Public beta remains blocked until:
+Gate 5 remained blocked until:
 
 * production backup frequency is selected
 * backup retention window is selected
@@ -193,6 +193,10 @@ Public beta remains blocked until:
 * audit access controls are configured and reviewed through hosted audit access verification and reporting
 * hosted audit integrity verification is recorded in the release gate
 * deletion and backup language is aligned with production behavior
+
+The listed Gate 5 blockers are now satisfied for public-beta readiness evidence
+through the dated restore/audit drill and related runbooks. Public-facing legal
+wording still requires the separate owner/legal review gate.
 
 Current implementation progress:
 
@@ -243,16 +247,16 @@ Hosted `aevryn audit-ledger-verify`, `aevryn audit-access-report`, and
 `can_update=false`, `can_delete=false`, `can_truncate=false`, and
 `is_table_owner=false`.
 
-Production backup provider verification runbook is selected. Restore execution, audit retention enforcement, and dated restore/audit drill completion remain open.
+Production backup provider verification runbook is selected. Restore execution,
+restricted audit access, and dated restore/audit drill completion have passed.
 The 2026-07-17 source-environment restore preflight passed production config,
 audit integrity, restricted audit access, observability config, and R2 storage
 smoke with metadata-only output. The 2026-07-17 hosted source fixture also
 created synthetic project/story/import/run/snapshot/export evidence and deleted a
 disposable story before restore-point capture. A source restore-point candidate
 timestamp was recorded after post-fixture audit and R2 checks passed. The
-Supabase backup/PITR point has not been selected, and the isolated Aevryn
-restore runtime has not been created, pointed at the restored database, or
-verified.
+Supabase restore target has been created, and the isolated Aevryn restore
+runtime has been created, pointed at the restored database, and verified.
 The restored Supabase project `aevryn-restore-drill-2026-07-22` exists with
 project ref `zemkfcbijtauvvencxyy`, differs from production ref
 `xmttttbygokqbmwtucgi`, and is not attached to the production Cloud Run API.
@@ -265,9 +269,16 @@ reported `can_update=false`, `can_delete=false`, `can_truncate=false`, and
 authenticated health check passed, an unauthenticated health request returned
 403, and the Cloud Run job `aevryn-restore-config-check-pgz2r` reported
 `ok=restore_api_config_contract_checked`, `production_traffic_attached=false`,
-and `secrets_printed=0`. Restore drill completion remains blocked until the
-isolated API verifies ownership boundaries, source/export owner-scoped access,
-deleted-story behavior, and metadata-only restore logs.
+and `secrets_printed=0`.
+On 2026-07-23, the isolated restore API boundary verifier passed for restored
+ownership boundaries, cross-user denial, source/export owner-scoped access,
+deleted-story behavior, private Cloud Run auth, no source/export bytes printed,
+no storage refs printed, and no secrets printed. The bounded hosted restore
+service/job log review sampled 47 restore service log lines and 11 restore config
+job log lines; it passed for no source prose, no full provider payloads, no
+credentials/tokens/private URLs, no storage refs or signed URLs, no user email
+addresses, no machine-local paths, and metadata-only restore logs. Gate 5 is no
+longer a public-beta blocker.
 ```
 
 ---

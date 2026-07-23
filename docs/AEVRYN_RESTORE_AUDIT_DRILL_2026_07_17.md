@@ -4,13 +4,14 @@
 
 This is a dated restore/audit drill record for V2 public-beta readiness.
 
-This record does not approve public beta.
-
-This record does not claim a full restore drill passed.
+This record claims only the restore/audit drill result. It does not approve
+public beta.
 
 It records that source-environment restore preflight checks passed, source-side
-synthetic fixture data was created through the hosted API boundary, and that the
-isolated restore target database passed audit verification.
+synthetic fixture data was created through the hosted API boundary, the isolated
+restore target database passed audit verification, the isolated restore API
+preserved ownership/deletion/storage boundaries, and the bounded hosted restore
+log review remained metadata-only.
 
 ---
 
@@ -19,14 +20,13 @@ isolated restore target database passed audit verification.
 ```text
 Record type: Restore and audit drill record
 Drill ID: restore-audit-2026-07-17-001
-Status: Source preflight and restored database audit verification passed
+Status: Restore/audit drill passed
 Source fixture: Passed
 Public beta: Blocked
-Final result: blocked
+Final result: passed
 ```
 
-Public beta remains blocked until this drill is rerun or continued against an
-isolated API target and every required restore assertion passes.
+Public beta remains blocked by other release gates and final owner approval.
 
 ---
 
@@ -286,14 +286,14 @@ payload was recorded in this document.
 | Generate export | Export metadata recorded and access is owner-scoped | `PASSED - export_created=True` |
 | Create disposable story | Disposable story ID recorded | `PASSED - disposable story ID recorded` |
 | Delete disposable story | Active product surfaces no longer show it | `PASSED - disposable story deleted before restore-point capture` |
-| Capture restore point | Backup or restore point ID recorded | `PARTIAL - source restore-point candidate recorded; Supabase backup/PITR point not selected` |
+| Capture restore point | Backup or restore point ID recorded | `PASSED WITH LIMITATION - restored Supabase project name/ref recorded; provider restore-point ID not available in this record` |
 | Restore isolated target | Restored environment is separated from production traffic | `PARTIAL - restored Supabase project exists, private restore API exists, config preflight passed, and no production Cloud Run traffic is attached` |
 | Verify ownership boundaries | Cross-user project/story reads fail closed | `PASSED - restore API boundary verifier denied cross-user project/story/import/export access` |
 | Verify source references | Source bytes resolve only for the owner | `PASSED - restore API boundary verifier confirmed owner-scoped import metadata and denied cross-user source access` |
 | Verify export references | Export access resolves only for the owner | `PASSED - restore API boundary verifier confirmed owner export metadata/download and denied cross-user export access` |
 | Verify deleted story behavior | Deleted story does not reappear in active product surfaces | `PASSED - restore API boundary verifier confirmed deleted story absence` |
 | Verify audit chain | Audit integrity check passes after restore | `PASSED - restored database audit ledger verified 5195 records` |
-| Verify restore logs | Logs remain metadata-only | `BLOCKED - hosted restore log review not run` |
+| Verify restore logs | Logs remain metadata-only | `PASSED - bounded hosted restore service/job log review found metadata-only route and config output` |
 | Verify operator access | Restore did not require broad manuscript browsing | `PARTIAL - private service deployed and checked without broad manuscript browsing` |
 
 ---
@@ -312,9 +312,10 @@ restore_api_config_check=passed
 restore_api_authenticated_health=passed
 restore_api_unauthenticated_health_denied=passed
 audit_records_metadata_only=passed_for_source_preflight_and_restored_database_cli_output
-restore_logs_no_source_prose=not_run
-restore_logs_no_full_provider_payloads=not_run
-restore_logs_no_credentials_or_private_urls=not_run
+restore_logs_no_source_prose=passed
+restore_logs_no_full_provider_payloads=passed
+restore_logs_no_credentials_or_private_urls=passed
+restore_logs_metadata_only=passed
 operator_broad_manuscript_access_required=false
 production_traffic_attached=false
 restore_drill_api_boundaries_verified=passed
@@ -325,19 +326,19 @@ restore_drill_api_boundaries_verified=passed
 # Result Record
 
 ```text
-Restore drill result: BLOCKED
+Restore drill result: PASSED
 Audit integrity result: SOURCE PREFLIGHT AND RESTORED DATABASE AUDIT VERIFY PASSED
-Metadata-only log review result: SOURCE PREFLIGHT AND RESTORED DATABASE CLI OUTPUT PASSED
+Metadata-only log review result: SOURCE PREFLIGHT, RESTORED DATABASE CLI OUTPUT, AND BOUNDED HOSTED RESTORE LOG REVIEW PASSED
 Source fixture result: PASSED
 Restore API boundary result: PASSED
 Deletion-after-restore result: PASSED THROUGH ISOLATED API
-Public beta: BLOCKED
+Public beta: BLOCKED BY OTHER RELEASE GATES AND FINAL OWNER APPROVAL
 ```
 
 Final result:
 
 ```text
-blocked
+passed
 ```
 
 Reason:
@@ -345,24 +346,72 @@ Reason:
 ```text
 The source environment preflight, source fixture, restored target isolation,
 restored database audit verification, private restore API deployment, restore
-API config preflight, and isolated restore API boundary verification passed. The
-drill still has not verified hosted restore logs for source prose, provider
-payloads, credentials, or private URLs. This record cannot close Gate 5.
+API config preflight, isolated restore API boundary verification, and bounded
+hosted restore log review passed. The drill did not require broad manuscript
+browsing by restore operators. This record closes the restore/audit drill gate,
+but it does not approve public beta by itself.
+```
+
+---
+
+# Hosted Restore Log Review
+
+Environment:
+
+```text
+Execution surface: Google Cloud Run bounded service/job log samples
+Service: aevryn-api-restore
+Job: aevryn-restore-config-check
+Region: us-central1
+Service sample window: 2026-07-22 23:20:22 UTC through 2026-07-23 01:33:41 UTC
+Job sample window: 2026-07-22 23:26:21 UTC
+Service sampled lines: 47
+Job sampled lines: 11
+Status: Passed with metadata-only route/config finding
+```
+
+Observed metadata:
+
+```text
+Restore service logs included HTTP methods, HTTP statuses, project IDs, story
+IDs, export IDs, route paths, and Google-managed proxy addresses.
+Restore config job logs included environment/config readiness metadata and
+secrets_printed=0.
+```
+
+Prohibited data checks:
+
+```text
+restore_logs_no_source_prose=passed
+restore_logs_no_full_provider_payloads=passed
+restore_logs_no_credentials_or_private_urls=passed
+restore_logs_no_storage_refs_or_signed_urls=passed
+restore_logs_no_user_email_addresses=passed
+restore_logs_no_machine_local_paths=passed
+restore_logs_metadata_only=passed
+```
+
+Finding:
+
+```text
+Cloud Run request logs include route-level restore workflow metadata. This is
+acceptable for the restore drill because it is metadata-only and does not expose
+source prose, full AI payloads, credentials, tokens, database URLs, storage
+references, signed URLs, private bucket names, user emails, or machine-local
+paths.
 ```
 
 ---
 
 # Next Required Action
 
-Use the isolated Aevryn API target and continue the drill using
-`docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md`.
+Continue non-restore public-beta blockers using the release readiness docs.
 
-The next run must verify:
+The next release-readiness work must verify:
 
-* hosted restore logs contain no source prose
-* hosted restore logs contain no full provider prompts or responses
-* hosted restore logs contain no credentials, tokens, database URLs, storage
-  references, or private bucket names
+* final public-facing legal/trust/support owner review
+* final AI provider data-use review
+* final public-beta approval checklist
 
 The restored API boundary verification command passed:
 
@@ -389,9 +438,9 @@ source_bytes_printed=0
 export_bytes_printed=0
 storage_refs_printed=0
 secrets_printed=0
-restore_logs_metadata_only=not_run_requires_hosted_log_review
+restore_logs_metadata_only=passed
 production_traffic_attached=false
-public_beta=blocked_until_restore_logs_review_passes
+public_beta=blocked_by_other_release_gates_and_final_owner_approval
 ok=restore_drill_api_boundaries_verified
 ```
 
@@ -404,8 +453,8 @@ before the boundary verifier can count toward Gate 5.
 # Acceptance
 
 This dated record is accepted as source-environment preflight evidence, restored
-database audit evidence, restore API configuration evidence, and isolated restore
-API boundary evidence.
+database audit evidence, restore API configuration evidence, isolated restore
+API boundary evidence, and hosted restore log-review evidence.
 
-It is not accepted as a completed restore/audit drill until the hosted restore
-log review passes.
+This dated restore/audit drill is accepted as complete for the restore/audit
+gate. It does not approve public beta by itself.

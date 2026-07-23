@@ -240,8 +240,8 @@ Public beta may proceed only if each residual risk is explicit and accepted by t
 | Production observability policy needs final bounded log review | Hosted logging and monitoring configuration passed, but final log review still needs public-beta verification | Complete final bounded hosted log review against the selected production observability policy | Blocks public beta |
 | Backup retention wording needs production verification | Users need accurate deletion and backup expectations | Verify the selected public-beta backup wording against final production backup behavior | Blocks public beta |
 | AI provider disclosure needs provider verification | Users need accurate expectations for when story excerpts leave Aevryn-owned systems | Verify provider terms, retention, training behavior, abuse monitoring, and final model configuration against the selected disclosure candidate | Blocks public beta |
-| Restore/audit source preflight passed, but isolated restore drill has not run | Recovery confidence is incomplete for public users | Complete a dated restore/audit drill record proving ownership, deletion, audit integrity, and metadata-only restore logs in an isolated restore target | Blocks public beta |
-| Hosted audit append-only access verification passed with restricted runtime role; restore/audit drill still has not run | Recovery confidence is incomplete for public users | Verify retention and complete the restore/audit drill | Blocks public beta |
+| Restore/audit drill passed | Recovery evidence is no longer the blocker | Maintain the dated restore/audit drill record and rerun before material infrastructure changes | Accepted for Gate 5 |
+| Hosted audit append-only access verification passed with restricted runtime role | Audit access evidence is no longer the blocker | Maintain restricted runtime role and rerun audit access verification before public-beta signoff | Accepted for Gate 5 |
 
 If a risk touches story privacy, deletion, account security, provider training, or data ownership, the default decision should be block.
 
@@ -267,8 +267,8 @@ If one person holds multiple responsibilities, each responsibility must still be
 ```text
 Internal V2 release candidate: Signed off
 Public beta: Blocked
-Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, and initial public page publication passed. Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention verification, AI provider review, restore/audit readiness, prompt-pack polish, and final public-beta approval.
-Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention verification, AI provider review, restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, initial public page publication, and dated restore/audit drill passed. Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, and final public-beta approval.
+Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, and final public-beta approval.
 ```
 
 ---

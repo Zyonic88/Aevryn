@@ -809,13 +809,13 @@ def test_github_support_files_exist_for_hosted_controls() -> None:
 
 
 def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
-    """Gate 5 should block public beta on production backup and audit decisions."""
+    """Gate 5 should track completed backup, recovery, and audit evidence."""
     document = read_doc("docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md")
 
     required_terms = (
         "Gate: Backup, Recovery, And Audit",
-        "Status: Started",
-        "Public beta: Blocked",
+        "Status: Passed for public-beta readiness evidence",
+        "Public beta: Not blocked by Gate 5",
         "Recovery must not become hidden retention.",
         "backup frequency",
         "recovery point objective",
@@ -845,7 +845,8 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "hosted source fixture",
         "synthetic project/story/import/run/snapshot/export evidence",
         "source restore-point candidate",
-        "Supabase backup/PITR point has not been selected",
+        "Gate 5 is no",
+        "longer a public-beta blocker.",
         "aevryn-restore-drill-2026-07-22",
         "zemkfcbijtauvvencxyy",
         "not attached to the production Cloud Run API",
@@ -853,6 +854,16 @@ def test_backup_recovery_audit_readiness_document_tracks_gate_five() -> None:
         "records_verified=5195",
         "private Cloud Run restore API service named",
         "aevryn-restore-config-check-pgz2r",
+        "isolated restore API boundary verifier passed",
+        "bounded hosted restore",
+        "service/job log review sampled 47 restore service log lines",
+        "no source prose",
+        "no full provider payloads",
+        "credentials/tokens/private URLs",
+        "no storage refs or signed URLs",
+        "no user email",
+        "addresses, no machine-local paths",
+        "no machine-local paths",
     )
 
     for term in required_terms:
@@ -964,9 +975,9 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
 
     required_terms = (
         "Drill ID: restore-audit-2026-07-17-001",
-        "Status: Source preflight and restored database audit verification passed",
+        "Status: Restore/audit drill passed",
         "Source fixture: Passed",
-        "Final result: blocked",
+        "Final result: passed",
         "production_config_check=passed",
         "audit_ledger_verify=passed",
         "records_verified=1375",
@@ -1011,8 +1022,8 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "production_traffic_attached=false",
         "PARTIAL - restored Supabase project exists, private restore API exists, "
         "config preflight passed, and no production Cloud Run traffic is attached",
-        "PARTIAL - source restore-point candidate recorded; "
-        "Supabase backup/PITR point not selected",
+        "PASSED WITH LIMITATION - restored Supabase project name/ref recorded; "
+        "provider restore-point ID not available in this record",
         "PASSED - restored database audit ledger verified 5195 records",
         "PASSED - restore API boundary verifier denied cross-user "
         "project/story/import/export access",
@@ -1028,9 +1039,17 @@ def test_dated_restore_audit_drill_record_tracks_preflight_without_closing_gate(
         "production_traffic_attached=false",
         "Restore API boundary result: PASSED",
         "Deletion-after-restore result: PASSED THROUGH ISOLATED API",
-        "restore_logs_metadata_only=not_run_requires_hosted_log_review",
+        "Metadata-only log review result: SOURCE PREFLIGHT, RESTORED DATABASE "
+        "CLI OUTPUT, AND BOUNDED HOSTED RESTORE LOG REVIEW PASSED",
+        "Service sampled lines: 47",
+        "Job sampled lines: 11",
+        "restore_logs_no_source_prose=passed",
+        "restore_logs_no_full_provider_payloads=passed",
+        "restore_logs_no_credentials_or_private_urls=passed",
+        "restore_logs_no_storage_refs_or_signed_urls=passed",
+        "restore_logs_metadata_only=passed",
         "This dated record is accepted as source-environment preflight evidence",
-        "This record cannot close Gate 5.",
+        "This dated restore/audit drill is accepted as complete for the restore/audit",
         "ok=restore_drill_api_boundaries_verified",
     )
 
