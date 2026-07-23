@@ -4079,8 +4079,18 @@ def _snapshot_section_or_unknown(
         section = _section_from_payload(section_payload, display_names=display_names)
     except (ValueError, ValidationError):
         return OutputSection(title=title, items=("Unknown",))
+    if key == "race":
+        return _resolved_snapshot_race_section(section)
     if key == "gender":
         return _resolved_snapshot_gender_section(section)
+    return section
+
+
+def _resolved_snapshot_race_section(section: OutputSection) -> OutputSection:
+    """Hide contradictory persisted race/species values from human profile output."""
+    normalized_items = {item.lower() for item in section.items}
+    if "human" in normalized_items and any(item != "human" for item in normalized_items):
+        return OutputSection(title=section.title, items=("Unknown",))
     return section
 
 

@@ -353,6 +353,8 @@ Verified hardening:
   preserving singular unnamed character candidates when evidence supports them
 * entity resolution keeps pronouns, shared honorifics, near-tied matches, and
   low-confidence descriptions ambiguous instead of force-merging identities
+* character profiles and stored snapshot API output hide contradictory
+  Human-plus-non-human race/species values instead of displaying both as Canon
 * verified with the focused processed-character-panel frontend test
 
 Acceptance:

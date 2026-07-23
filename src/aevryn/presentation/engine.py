@@ -411,6 +411,8 @@ class PresentationEngine:
             support_haystacks=support_haystacks,
             term_groups=term_groups,
         )
+        if title == "Race":
+            direct_items = PresentationEngine._resolved_race_items(direct_items)
         if title == "Gender":
             direct_items = PresentationEngine._resolved_gender_items(direct_items)
         return PresentationSection(
@@ -691,6 +693,18 @@ class PresentationEngine:
         unique_items = tuple(PresentationEngine._unique_values(items))
         normalized_items = {item.lower() for item in unique_items}
         if {"male", "female"}.issubset(normalized_items):
+            return ()
+
+        return unique_items
+
+    @staticmethod
+    def _resolved_race_items(items: Iterable[str]) -> tuple[str, ...]:
+        """Return race/species only when supported values do not conflict."""
+        unique_items = tuple(PresentationEngine._unique_values(items))
+        normalized_items = {item.lower() for item in unique_items}
+        if "human" in normalized_items and any(
+            item != "human" for item in normalized_items
+        ):
             return ()
 
         return unique_items

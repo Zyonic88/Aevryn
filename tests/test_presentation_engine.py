@@ -431,6 +431,45 @@ def test_presentation_engine_hides_conflicting_gender_values() -> None:
     assert profile.gender.items == ("Unknown",)
 
 
+def test_presentation_engine_hides_conflicting_race_values() -> None:
+    """Character profiles should not display Human beside a non-human species."""
+    card, _context, _analysis, _pack = build_outputs()
+    human_evidence = replace(
+        card.facts[0].evidence,
+        quote="Zhao Chen is a human student in the captaincy department.",
+    )
+    half_beastman_evidence = replace(
+        card.facts[0].evidence,
+        quote="Zhao Chen is called a Half-Beastman by mistake.",
+    )
+    identity_card = replace(
+        card,
+        display_name="Zhao Chen",
+        facts=(
+            CanonCharacterFact(
+                attribute="race",
+                value="Human",
+                previous_value=None,
+                evidence=human_evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="race",
+                value="Half-Beastman",
+                previous_value=None,
+                evidence=half_beastman_evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.race.items == ("Unknown",)
+
+
 def test_presentation_engine_builds_scene_sheet() -> None:
     """Presentation Engine builds a scan-friendly scene sheet."""
     _card, context, analysis, _pack = build_outputs()
