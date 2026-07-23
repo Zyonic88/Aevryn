@@ -1283,7 +1283,8 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    const workspaceSidebar = await screen.findByRole("complementary");
+    expect(within(workspaceSidebar).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Characters" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Characters" })).toHaveAttribute(
       "aria-current",
@@ -1505,7 +1506,8 @@ describe("App shell routing", () => {
     );
 
     await user.click(await screen.findByRole("link", { name: /Alpha/ }));
-    expect(await screen.findByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    const workspaceSidebar = await screen.findByRole("complementary");
+    expect(within(workspaceSidebar).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Import" }));
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
@@ -1822,6 +1824,44 @@ describe("App shell routing", () => {
       .filter((link) => link.getAttribute("href")?.startsWith("/projects/"));
     expect(projectLinks[0]).toHaveTextContent("Beta");
     expect(projectLinks[1]).toHaveTextContent("Alpha");
+  });
+
+  it("opens cached dashboard projects without waiting for the project detail request", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("aevryn.session", JSON.stringify(session));
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith(API_PATHS.health)) {
+        return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+      }
+      if (url.endsWith(API_PATHS.capabilities)) {
+        return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+      }
+      if (url.endsWith(API_PATHS.projects)) {
+        return Promise.resolve(new Response(JSON.stringify({ projects: [projectAlphaPayload] })));
+      }
+      if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+        return new Promise<Response>(() => {});
+      }
+      if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
+        return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+      }
+      return projectApiFallbackResponse(url);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("link", { name: /Alpha Updated/u }));
+
+    const workspaceSidebar = await screen.findByRole("complementary");
+    expect(within(workspaceSidebar).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.queryByText("Loading project.")).not.toBeInTheDocument();
   });
 
   it("shows project API create failures", async () => {
