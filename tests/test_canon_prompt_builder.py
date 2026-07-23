@@ -324,6 +324,65 @@ def test_canon_prompt_builder_includes_confirmed_visible_character_traits() -> N
     assert "Appearance: Not specified by accepted canon." not in prompt
 
 
+def test_canon_prompt_builder_tracks_known_and_unknown_visual_identity_traits() -> None:
+    """Image prompts should identify which character visual traits are still unknown."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("gender", "Male"),
+        ("race", "Human"),
+        ("hair_color", "Black"),
+    ):
+        fact_id = f"fact_mark_visual_identity_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_008",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_mark_visual_identity_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_008_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "Visual ID:" in prompt
+    assert "- Mark: known gender,hair,race/species." in prompt
+    assert "Missing" in prompt
+    assert "gender" not in prompt.split("Missing", 1)[1].split(";", 1)[0]
+    assert "race/species" not in prompt.split("Missing", 1)[1].split(
+        ";",
+        1,
+    )[0]
+    assert (
+        "Do not guess missing visual traits." in prompt
+    )
+
+
+def test_canon_prompt_builder_marks_missing_visual_identity_neutral() -> None:
+    """Missing character appearance should be explicit without rejecting the prompt."""
+    prompt = CanonPromptBuilder().build_image_prompt(build_context())
+
+    assert "- Mark: known none." in prompt
+    assert "Missing" in prompt
+    assert "neutral" in prompt
+
+
 def test_canon_prompt_builder_separates_facts_composition_lighting_and_style() -> None:
     """Image prompts keep story understanding before production style."""
     prompt = CanonPromptBuilder().build_image_prompt(build_context())

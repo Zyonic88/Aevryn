@@ -50,6 +50,17 @@ APPEARANCE_ATTRIBUTE_PARTS = frozenset(
         "wing",
     }
 )
+VISUAL_IDENTITY_ATTRIBUTE_GROUPS = {
+    "age": frozenset({"age"}),
+    "build": frozenset({"build", "height"}),
+    "clothing": frozenset({"clothing", "uniform"}),
+    "eyes": frozenset({"eye"}),
+    "face": frozenset({"complexion", "face", "scar"}),
+    "gender": frozenset({"gender"}),
+    "hair": frozenset({"hair"}),
+    "pose": frozenset({"expression", "posture"}),
+    "race/species": frozenset({"race", "species"}),
+}
 
 SCENE_VISUAL_ANCHOR_TERMS = frozenset(
     {
@@ -214,6 +225,7 @@ class CanonPromptBuilder:
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._image_subject_section(context),
+                self._visual_identity_known_unknown_section(context),
                 self._world_context_section(context),
                 self._image_setting_section(analysis),
                 self._visual_direction_section(analysis),
@@ -276,6 +288,7 @@ class CanonPromptBuilder:
                 self._camera_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
                 self._character_section(context),
+                self._visual_identity_known_unknown_section(context),
                 self._world_context_section(context),
                 self._visual_direction_section(analysis),
                 self._lighting_section(analysis),
@@ -305,6 +318,7 @@ class CanonPromptBuilder:
                 self._animation_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
                 self._character_section(context),
+                self._visual_identity_known_unknown_section(context),
                 self._world_context_section(context),
                 self._visual_direction_section(analysis),
                 self._do_not_include_section(context, analysis),
@@ -393,6 +407,42 @@ class CanonPromptBuilder:
         if len(lines) == 1:
             lines.append("- Unknown subjects.")
 
+        return "\n".join(lines)
+
+    def _visual_identity_known_unknown_section(self, context: CanonSceneContext) -> str:
+        """Return per-character visual identity coverage without inventing details."""
+        if not context.character_cards:
+            return "Visual identity coverage:\n- No confirmed character visual identity yet."
+
+        lines = ["Visual ID:"]
+        scene_fact_keys = self._scene_fact_keys(context.active_facts)
+        for card in context.character_cards:
+            character_lines = self._character_fact_lines(
+                card=card,
+                scene_fact_keys=scene_fact_keys,
+            )
+            known_groups = self._known_visual_identity_groups(character_lines)
+            missing_groups = tuple(
+                group_name
+                for group_name in VISUAL_IDENTITY_ATTRIBUTE_GROUPS
+                if group_name not in known_groups
+            )
+            known_text = (
+                ",".join(sorted(known_groups))
+                if known_groups
+                else "none"
+            )
+            missing_text = ",".join(missing_groups[:4])
+            if len(missing_groups) > 4:
+                missing_text = f"{missing_text},other"
+            line = f"- {card.display_name}: known {known_text}."
+            if missing_text:
+                line = f"{line} Missing {missing_text}; neutral."
+            lines.append(line)
+
+        lines.append(
+            "- Do not guess missing visual traits."
+        )
         return "\n".join(lines)
 
     @staticmethod
@@ -737,15 +787,6 @@ class CanonPromptBuilder:
     ) -> str:
         """Return explicit handling for unknown visual details."""
         unknowns: list[str] = []
-        if not any(
-            self._is_appearance_attribute(line)
-            for card in context.character_cards
-            for line in self._character_fact_lines(
-                card=card,
-                scene_fact_keys=self._scene_fact_keys(context.active_facts),
-            )
-        ):
-            unknowns.append("Character physical appearance is not specified.")
         if not analysis.visual_highlights:
             unknowns.append("Specific visual composition is not specified.")
         if not analysis.environment_summary or analysis.environment_summary == "Unknown":
@@ -759,6 +800,18 @@ class CanonPromptBuilder:
                 "- Keep unknown details neutral and do not turn them into new canon.",
             ]
         )
+
+    @staticmethod
+    def _known_visual_identity_groups(character_lines: Iterable[str]) -> tuple[str, ...]:
+        """Return visual identity groups backed by prompt-visible character facts."""
+        known_groups: list[str] = []
+        for line in character_lines:
+            normalized_line = line.lower()
+            for group_name, attribute_parts in VISUAL_IDENTITY_ATTRIBUTE_GROUPS.items():
+                if any(part in normalized_line for part in attribute_parts):
+                    known_groups.append(group_name)
+
+        return tuple(CanonPromptBuilder._unique_values(known_groups))
 
     @staticmethod
     def _do_not_include_section(
