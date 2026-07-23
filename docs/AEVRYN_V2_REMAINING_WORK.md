@@ -401,11 +401,22 @@ Mostly hardened
 Remaining hardening:
 
 * verify multi-file import remains stable with 10-chapter and larger imports
-* verify duplicate processing submissions are blocked
-* verify stuck jobs do not block future imports forever
-* keep progress stepper accurate and API-provided
-* avoid fake percentages when exact progress is unavailable
+* ~~verify duplicate processing submissions are blocked~~
+* ~~verify stuck jobs do not block future imports forever~~
+* ~~keep progress stepper accurate and API-provided~~
+* ~~avoid fake percentages when exact progress is unavailable~~
 * keep import warnings human-readable
+
+Verified hardening:
+
+* hosted browser sessions submit processing to the API and do not drain worker
+  jobs locally
+* saved import processing state remains scoped to the submitted import row, so
+  one stuck/submitting import does not make every saved import look active
+* missing or stale queue jobs are marked failed with retryable, human-readable
+  summaries instead of leaving durable runs pending forever
+* active processing displays API-backed states such as Queued, Processing,
+  Snapshot, and Output ready without fake percentages
 
 Acceptance:
 

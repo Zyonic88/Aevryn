@@ -3003,8 +3003,10 @@ describe("App shell routing", () => {
     await user.click(screen.getAllByRole("button", { name: "Submit processing" })[0]);
 
     expect(await screen.findByRole("button", { name: "Processing" })).toBeDisabled();
-    expect(await screen.findByLabelText("Processing progress")).toHaveTextContent("Queued");
-    expect(screen.getByLabelText("Processing progress")).toHaveTextContent("Processing");
+    const processingProgress = await screen.findByLabelText("Processing progress");
+    expect(processingProgress).toHaveTextContent("Queued");
+    expect(processingProgress).toHaveTextContent("Processing");
+    expect(processingProgress).not.toHaveTextContent(/%/u);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled());
     expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
