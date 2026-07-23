@@ -9,6 +9,7 @@ from aevryn.translation.models import (
     TranslatedUnit,
     TranslationIssue,
     TranslationMode,
+    TranslationTermKind,
     TranslationUnit,
 )
 
@@ -158,7 +159,7 @@ def _append_sentence_ambiguity_issues(
         )
 
 
-def _sentence_ambiguity_term_kind(term: str) -> str:
+def _sentence_ambiguity_term_kind(term: str) -> TranslationTermKind:
     """Classify common ambiguity cues for review without creating Canon."""
     if term.casefold() in {
         "art",
