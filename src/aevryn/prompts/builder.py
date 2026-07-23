@@ -61,6 +61,19 @@ VISUAL_IDENTITY_ATTRIBUTE_GROUPS = {
     "pose": frozenset({"expression", "posture"}),
     "race/species": frozenset({"race", "species"}),
 }
+IDENTITY_REFERENCE_ATTRIBUTE_PARTS = frozenset(
+    {
+        "alias",
+        "description",
+        "family",
+        "identity",
+        "name",
+        "profession",
+        "relationship",
+        "role",
+        "title",
+    }
+)
 
 SCENE_VISUAL_ANCHOR_TERMS = frozenset(
     {
@@ -224,6 +237,7 @@ class CanonPromptBuilder:
                 self._scene_visual_anchor_section(context),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
+                self._character_identity_reference_section(context),
                 self._image_subject_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
@@ -260,6 +274,7 @@ class CanonPromptBuilder:
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._narration_direction_section(analysis),
+                self._character_identity_reference_section(context),
                 self._character_section(context),
                 self._world_context_section(context),
                 self._continuity_guard_section(analysis),
@@ -288,6 +303,7 @@ class CanonPromptBuilder:
                 self._composition_section(context, analysis),
                 self._camera_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
+                self._character_identity_reference_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
@@ -319,6 +335,7 @@ class CanonPromptBuilder:
                 self._scene_directive_section(analysis),
                 self._animation_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
+                self._character_identity_reference_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
@@ -407,6 +424,26 @@ class CanonPromptBuilder:
         if len(lines) == 1:
             lines.append("- Unknown subjects.")
 
+        return "\n".join(lines)
+
+    def _character_identity_reference_section(self, context: CanonSceneContext) -> str:
+        """Return stable identity references from accepted character-card facts."""
+        if not context.character_cards:
+            return ""
+
+        lines = ["Character identity references:"]
+        for card in context.character_cards:
+            identity_lines = self._character_identity_lines(card)[:4]
+            if identity_lines:
+                lines.append(f"- {card.display_name}: " + "; ".join(identity_lines))
+
+        if len(lines) == 1:
+            return ""
+
+        lines.append(
+            "- Treat aliases, titles, roles, and descriptions as identity aids only; "
+            "do not create extra characters from them."
+        )
         return "\n".join(lines)
 
     def _visual_identity_known_unknown_section(self, context: CanonSceneContext) -> str:
@@ -970,6 +1007,18 @@ class CanonPromptBuilder:
         return CanonPromptBuilder._unique_values(lines)
 
     @staticmethod
+    def _character_identity_lines(card: CanonCharacterCard) -> list[str]:
+        """Return stable identity facts that prevent character-reference drift."""
+        lines = (
+            f"{CanonPromptBuilder._attribute_label(fact.attribute)}: "
+            f"{CanonPromptBuilder._shorten(fact.value)}"
+            for fact in sorted(card.facts, key=lambda fact: fact.attribute)
+            if CanonPromptBuilder._is_identity_reference_attribute(fact.attribute)
+            and not CanonPromptBuilder._is_prompt_metadata_attribute(fact.attribute)
+        )
+        return CanonPromptBuilder._unique_values(lines)
+
+    @staticmethod
     def _is_appearance_attribute(line: str) -> bool:
         """Return whether a prompt fact line describes visible appearance."""
         tokens = tuple(
@@ -981,6 +1030,15 @@ class CanonPromptBuilder:
             token == part or token.startswith(part)
             for token in tokens
             for part in APPEARANCE_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
+    def _is_identity_reference_attribute(attribute: str) -> bool:
+        """Return whether a character fact stabilizes reference identity."""
+        normalized_attribute = attribute.lower()
+        return any(
+            part in normalized_attribute
+            for part in IDENTITY_REFERENCE_ATTRIBUTE_PARTS
         )
 
     @staticmethod

@@ -249,6 +249,15 @@ Remaining hardening:
 * make copy/export affordances obvious
 * keep production-batching out of V2 unless explicitly re-scoped
 
+Verified hardening:
+
+* production prompts include compact accepted character-card identity references
+  such as aliases, titles, roles, professions, and descriptions when Canon has them
+* identity references are treated as identity aids only and explicitly must not create
+  extra characters
+* verified with prompt-builder, prompt-engine, scene-context, presentation, and
+  project-runner tests
+
 Acceptance:
 
 ```text
