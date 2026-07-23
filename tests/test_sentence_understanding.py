@@ -80,6 +80,23 @@ def test_sentence_understanding_keeps_system_rewards_out_of_skill_context() -> N
     assert understanding.review_required is True
 
 
+def test_sentence_understanding_keeps_system_skill_context_reviewable() -> None:
+    """System UI listing a skill should be reviewed instead of treated as settled meaning."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_system_skill_review",
+        title="Sentence System Skill Review",
+        text="Chapter 1\nThe status panel listed Sword Technique as a reward.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "status panel" in understanding.cue_terms
+    assert "sword technique" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_treats_skill_phrase_as_skill_context() -> None:
     """An item-like word inside a skill phrase should not become a separate item."""
     imported = StoryImporter().import_text(

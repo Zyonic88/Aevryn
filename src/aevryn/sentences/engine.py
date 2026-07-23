@@ -405,4 +405,6 @@ def _review_required(
     """Return whether sentence-level meaning should be reviewed or routed carefully."""
     if ambiguity_terms:
         return True
+    if "system_reference" in signals and "skill_reference" in signals:
+        return True
     return "skill_reference" in signals and "item_reference" in signals

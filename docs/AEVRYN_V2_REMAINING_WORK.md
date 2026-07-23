@@ -375,7 +375,7 @@ Remaining hardening:
 
 * reduce incorrect item/skill/location/organization categorization where evidence supports a better class
 * avoid tailoring classification to one novel
-* preserve uncertain classifications as reviewable instead of pretending certainty
+* ~~preserve uncertain classifications as reviewable instead of pretending certainty~~
 * ~~use sentence-level meaning signals as routing metadata without making them Canon truth~~
 * ~~keep world cards collapsed and searchable/scannable~~
 
@@ -397,6 +397,8 @@ Verified hardening:
   instead of becoming Canon truth
 * system reward, mission, quest, and points language is treated as system context
   rather than a usable skill unless the evidence explicitly describes an ability
+* system UI plus skill/ability cues are marked reviewable instead of being treated
+  as settled meaning
 * system-created physical objects such as technical blueprints remain item
   candidates when evidence supports a concrete object classification
 * verified with sentence-understanding, extraction, and evidence-bounded AI
