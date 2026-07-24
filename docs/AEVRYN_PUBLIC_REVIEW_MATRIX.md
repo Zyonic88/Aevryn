@@ -46,6 +46,7 @@ One person may hold more than one role, but each role must still be reviewed exp
 Owner review is tracked in:
 
 * `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`
+* `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md`
 
 ---
 
@@ -107,6 +108,7 @@ OpenAI provider config check: passed with metadata-only output on 2026-07-17
 ```text
 Owner review: open
 Owner public review record: created, not complete
+Owner dated review worksheet: prepared, decisions pending
 Attorney review: open
 Public legal review packet: prepared
 Provider terms and data-use review: open
