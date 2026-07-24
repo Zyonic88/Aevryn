@@ -41,6 +41,7 @@ safe-harbor wording.
 
 Owner review must check:
 
+* `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md`
 * `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`
 * `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`
 * `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
@@ -127,3 +128,7 @@ Every owner-controlled public-facing promise has an explicit owner decision,
 remaining attorney/provider/backup blockers are still marked as blockers, and
 no public-beta approval is implied before final signoff.
 ```
+
+The current dated worksheet is:
+
+* `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md`

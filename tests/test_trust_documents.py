@@ -252,6 +252,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Release Candidate Run And Signoff",
         "docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md",
         "docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md",
+        "docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md",
         "docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md",
         "Cloudflare routing rules created, inbound delivery passed",
         "Cloudflare inbound DNS/routing health passed",
@@ -264,6 +265,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Public-beta backup retention wording candidate selected for owner/legal review.",
         "Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`.",
         "Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.",
+        "dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` prepared",
         "Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`.",
         "Official OpenAI source review was recorded on 2026-07-24",
         "production account/project verification checklist exists",
@@ -453,6 +455,7 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "Operations",
         "Provider Review",
         "docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md",
+        "docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md",
         "Page Review Matrix",
         "/trust",
         "/privacy",
@@ -479,6 +482,7 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "OpenAI provider config check: passed with metadata-only output on 2026-07-17",
         "Remaining Blocking Reviews",
         "Owner public review record: created, not complete",
+        "Owner dated review worksheet: prepared, decisions pending",
         "Attorney review: open",
         "Public legal review packet: prepared",
         "Provider terms and data-use review: open",
@@ -575,6 +579,7 @@ def test_owner_public_review_record_tracks_product_truth_decisions() -> None:
         "The owner approves product truth; counsel approves legal language.",
         "Attorney review still controls legal approval",
         "Required Source Documents",
+        "docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md",
         "docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md",
         "docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md",
         "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
@@ -600,6 +605,55 @@ def test_owner_public_review_record_tracks_product_truth_decisions() -> None:
         "deletion wording ignores backup retention",
         "support procedures invite users to send full manuscripts by default",
         "Every owner-controlled public-facing promise has an explicit owner decision",
+        "The current dated worksheet is:",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_dated_owner_public_review_keeps_decisions_pending_until_owner_acts() -> None:
+    """Dated owner review should not approve public beta before decisions exist."""
+    document = read_doc("docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md")
+
+    required_terms = (
+        "Review: Owner public-facing review",
+        "Date: 2026-07-24",
+        "Status: Prepared; owner decisions pending",
+        "Public beta: Blocked",
+        "Approve only what is true today.",
+        "Owner review must not approve legal language",
+        "Source Documents Reviewed",
+        "docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md",
+        "docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md",
+        "docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md",
+        "docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md",
+        "approved_by_owner",
+        "blocked_needs_provider_verification",
+        "blocked_needs_backup_verification",
+        "accepted_residual_beta_risk",
+        "Owner Decision Table",
+        "Operator identity",
+        "Product domain",
+        "Contact aliases",
+        "Trust promise",
+        "Story ownership",
+        "AI training posture",
+        "Provider disclosure",
+        "Backup/deletion wording",
+        "Support procedure",
+        "Content classification",
+        "Legal drafts",
+        "Public beta readiness",
+        "contact aliases are provisioned and tested",
+        "public pages are implemented and production-reachable",
+        "OpenAI production account verification is not complete",
+        "legal-sensitive pages remain drafts pending attorney review",
+        "Do not mark this owner review complete",
+        "Owner public-facing review: Not complete",
+        "Public beta: Blocked",
+        "Every row has an explicit owner decision",
+        "without implying attorney approval",
     )
 
     for term in required_terms:
