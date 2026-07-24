@@ -50,23 +50,31 @@ store=false
 That setting is required so Aevryn does not intentionally create persistent
 provider application state for extraction requests.
 
-The current provider review was updated on 2026-07-16 against official OpenAI
-data-use and API data-controls material:
+The current provider review was updated on 2026-07-24 against official OpenAI
+data-use and API data-controls material. The dated review record is:
+
+* `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`
+
+Reviewed facts:
 
 * OpenAI states that API inputs and outputs are not used for model training by
   default unless an organization explicitly opts in.
 * OpenAI's API data-controls documentation identifies `/v1/responses` as not
   used for training, with abuse-monitoring retention listed as 30 days by
   default.
+* OpenAI's API data-controls documentation states that abuse-monitoring logs
+  may contain prompts and responses.
 * OpenAI's API data-controls documentation states that `/v1/responses`
-  application state retention is 30 days by default or when `store=true`, and
-  that Zero Data Retention treats `store` as false.
+  application state retention is 30 days by default or when `store=true`.
+* OpenAI's API data-controls documentation states that Zero Data Retention
+  treats `store` as false and that Zero Data Retention/Modified Abuse
+  Monitoring require approval and additional requirements.
 
 Source URLs reviewed:
 
-* `https://openai.com/policies/how-your-data-is-used-to-improve-model-performance/`
-* `https://openai.com/business-data/`
 * `https://platform.openai.com/docs/models/default-usage-policies-by-endpoint`
+* `https://platform.openai.com/docs/api-reference/introduction`
+* `https://help.openai.com/en/articles/10306912-sharing-feedback-evaluation-and-fine-tuning-data-and-api-inputs-and-outputs-with-openai`
 
 This review reduces uncertainty, but it does not approve OpenAI for public
 beta by itself.

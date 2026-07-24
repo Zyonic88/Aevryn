@@ -57,14 +57,18 @@ This does not approve provider-backed extraction for public beta.
 
 OpenAI is currently supported as an internal-alpha candidate provider only.
 
-The 2026-07-16 provider review checked official OpenAI data-use and API
+The 2026-07-24 provider review checked official OpenAI data-use and API
 data-controls material and recorded the current review boundary in
-`docs/AEVRYN_AI_PROVIDER_REVIEW.md`.
+`docs/AEVRYN_AI_PROVIDER_REVIEW.md` and
+`docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`.
 
 Current verified posture:
 
 * OpenAI API inputs and outputs are not used for model training by default
   unless an organization explicitly opts in.
+* OpenAI abuse-monitoring logs may contain prompts and responses and are
+  retained for up to 30 days by default unless a different approved retention
+  control applies or law requires longer retention.
 * The configured Aevryn provider path uses the OpenAI Responses API for
   extraction.
 * Aevryn sends Responses API extraction requests with `store=false`.
@@ -97,6 +101,8 @@ Remaining public-beta blockers:
 * final model configuration must be recorded
 * production OpenAI organization/project data-control settings must be reviewed
 * provider retention behavior must be disclosed accurately
+* Modified Abuse Monitoring, Zero Data Retention, and data residency posture
+  must be recorded as unavailable, unapproved, approved, or enabled
 * user-facing privacy/trust copy must be owner/legal reviewed
 * release-candidate provider failure logging must remain metadata-only
 * public-beta signoff must explicitly approve or disable provider-backed
@@ -249,7 +255,8 @@ Current implementation progress:
 docs/AEVRYN_AI_PROVIDER_REVIEW.md defines the provider review checklist, OpenAI alpha-candidate status, data-sent boundary, logging boundary, training/retention decision, disclosure requirements, and approval states.
 docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md records the selected public-beta disclosure candidate.
 `aevryn provider-config-check` verifies provider configuration metadata, including `request_storage=disabled` and `responses_store=false`, without printing provider keys.
-OpenAI official data-use and API data-controls review was recorded on 2026-07-16.
+OpenAI official data-use and API data-controls review was recorded on 2026-07-24.
+docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md records official source links, reviewed facts, technical posture, disclosure candidate, and production account verification requirements.
 Aevryn's Responses API extraction adapter now sends store=false.
 Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17.
 OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.
