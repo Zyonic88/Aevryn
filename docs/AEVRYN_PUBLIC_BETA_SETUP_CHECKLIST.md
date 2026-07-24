@@ -244,6 +244,7 @@ Tracking docs:
 * `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`
 * `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`
 * `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`
+* `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`
 * `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`
 * `docs/TERMS_OF_SERVICE.md`
 * `docs/PRIVACY_POLICY.md`
@@ -253,7 +254,7 @@ Tracking docs:
 Status:
 
 ```text
-Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`. Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`. Owner review, legal review, backup/provider verification, support procedure owner review, and final public-beta signoff remain open.
+Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`. Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`. Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`. Owner review, legal review, backup/provider verification, support procedure owner review, and final public-beta signoff remain open.
 ```
 
 ---
