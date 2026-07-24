@@ -721,7 +721,6 @@ Repository status is understandable, current, and mergeable.
 
 Remaining hardening:
 
-* confirm Cloudflare Pages environment variables are correct
 * ~~confirm app.aevryn.ai and api.aevryn.ai health~~
 * ~~confirm CORS stays explicit~~
 * ~~confirm frontend deploys from the intended branch~~
@@ -737,10 +736,9 @@ Verified hardening:
   image matches the expected release-candidate image without printing project
   IDs, image URLs, secrets, storage references, source prose, or provider
   payloads
-* `cloudflare-pages-config-check` provides a metadata-only Cloudflare Pages
+* `cloudflare-pages-config-check` verified the hosted Cloudflare Pages
   production config gate for branch, build settings, browser-safe API/Supabase
-  variables, and secret typing; hosted execution remains pending until the
-  Cloudflare token/account environment is available in the operator shell
+  variables, and Supabase anon key secret typing with metadata-only output
 * hosted deployment smoke coverage rejects non-HTTPS/non-origin frontend values
   and wildcard API CORS responses before public-beta signoff
 * production startup rejects wildcard, non-HTTPS, and non-origin-shaped CORS
