@@ -77,6 +77,38 @@ SYSTEM_ENTITY_TERMS = frozenset(
         "system",
     }
 )
+PLACE_OR_ORGANIZATION_HEAD_TERMS = frozenset(
+    {
+        "academy",
+        "army",
+        "base",
+        "building",
+        "camp",
+        "city",
+        "clan",
+        "classroom",
+        "company",
+        "courtyard",
+        "department",
+        "empire",
+        "faction",
+        "fleet",
+        "forest",
+        "fortress",
+        "guild",
+        "hall",
+        "hangar",
+        "kingdom",
+        "planet",
+        "region",
+        "room",
+        "sect",
+        "sector",
+        "station",
+        "territory",
+        "world",
+    }
+)
 ROLE_OR_TITLE_ENTITY_TERMS = frozenset(
     {
         "admiral",
@@ -528,9 +560,11 @@ class EntityExtractionEngine:
             )
 
         classification_terms = EntityExtractionEngine._classification_terms(entity)
+        head_term = EntityExtractionEngine._classification_head_term(entity)
         physical_terms = classification_terms & PHYSICAL_ENTITY_TERMS
         skill_terms = classification_terms & SKILL_ENTITY_TERMS
         system_terms = classification_terms & SYSTEM_ENTITY_TERMS
+        place_or_organization_head = head_term in PLACE_OR_ORGANIZATION_HEAD_TERMS
         role_or_title_terms = classification_terms & ROLE_OR_TITLE_ENTITY_TERMS
         non_capability_skill_terms = (
             classification_terms & NON_CAPABILITY_SKILL_TERMS
@@ -547,6 +581,15 @@ class EntityExtractionEngine:
             return (
                 "Entity classification conflict: anonymous group phrase cannot be "
                 f"character: {entity.display_name}."
+            )
+        if (
+            entity.entity_type == "skill"
+            and place_or_organization_head
+            and not skill_terms
+        ):
+            return (
+                "Entity classification conflict: place or organization cannot be skill: "
+                f"{entity.display_name}."
             )
         if entity.entity_type == "skill" and physical_terms and not skill_terms:
             return (
@@ -571,6 +614,14 @@ class EntityExtractionEngine:
             return (
                 "Entity classification conflict: physical object cannot be system: "
                 f"{entity.display_name}."
+            )
+        if (
+            entity.entity_type in {"item", "weapon", "armor", "vehicle"}
+            and place_or_organization_head
+        ):
+            return (
+                "Entity classification conflict: place or organization cannot be "
+                f"physical item: {entity.display_name}."
             )
         if (
             entity.entity_type in {"item", "weapon", "armor", "vehicle"}
@@ -615,6 +666,21 @@ class EntityExtractionEngine:
         if "star" in tokens and "ship" in tokens:
             tokens.add("starship")
         return tokens
+
+    @staticmethod
+    def _classification_head_term(entity: ExtractedEntity) -> str | None:
+        """Return the final normalized word in a display name."""
+        tokens = [
+            token
+            for token in "".join(
+                character.lower() if character.isalnum() else " "
+                for character in entity.display_name
+            ).split()
+            if token
+        ]
+        if not tokens:
+            return None
+        return tokens[-1]
 
     @staticmethod
     def _validate_relationship(

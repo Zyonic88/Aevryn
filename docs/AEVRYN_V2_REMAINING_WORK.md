@@ -445,6 +445,9 @@ Verified hardening:
 * the evidence-bounded AI extraction prompt tells the provider that manuals,
   scrolls, jade slips, and crystals are physical item containers unless evidence
   explicitly states a usable ability
+* deterministic extraction guards reject obvious place or institution heads such
+  as academy, department, empire, room, and station when a provider tries to
+  classify them as physical items or usable skills
 * verified with sentence-understanding, extraction, and evidence-bounded AI
   extraction tests
 

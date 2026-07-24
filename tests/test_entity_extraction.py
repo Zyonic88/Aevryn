@@ -342,6 +342,44 @@ class MisclassifiedQuestRewardSkillExtractor:
         )
 
 
+class MisclassifiedOrganizationItemExtractor:
+    """Extractor that labels an institution as a physical item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious organization/item classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_north_star_academy",
+                    entity_type="item",
+                    display_name="North Star Starship Military Academy",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
+class MisclassifiedLocationSkillExtractor:
+    """Extractor that labels a place as a usable skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious location/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_training_room",
+                    entity_type="skill",
+                    display_name="Training Room",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
 class MisclassifiedSystemExtractor:
     """Extractor that labels a concrete object as a system."""
 
@@ -756,6 +794,32 @@ def test_extraction_rejects_story_management_concepts_as_skills() -> None:
     engine = EntityExtractionEngine(extractor=MisclassifiedQuestRewardSkillExtractor())
 
     with pytest.raises(ValueError, match="non-capability story concept cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_organization_as_physical_item() -> None:
+    """Institutions must not be accepted as physical item entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedOrganizationItemExtractor())
+
+    with pytest.raises(ValueError, match="place or organization cannot be physical item"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_location_as_skill() -> None:
+    """Places must not be accepted as usable skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedLocationSkillExtractor())
+
+    with pytest.raises(ValueError, match="place or organization cannot be skill"):
         engine.extract_imported_source(imported)
 
 
