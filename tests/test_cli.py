@@ -17,6 +17,7 @@ from aevryn.cli import (
     _run_audit_access_report,
     _run_audit_access_verify,
     _run_audit_ledger_verify,
+    _run_hosted_deployment_smoke,
     _run_observability_config_check,
     _run_production_config_check,
     _run_provider_config_check,
@@ -601,6 +602,221 @@ def test_storage_smoke_reads_env_without_printing_credentials(
     assert "secret-r2-secret-key" not in captured.out
     assert "secret-r2-access-key" not in captured.err
     assert "secret-r2-secret-key" not in captured.err
+
+
+def test_hosted_deployment_smoke_help_describes_frontend_api_check(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Hosted deployment smoke help should describe the metadata-only check."""
+    with pytest.raises(SystemExit) as error:
+        main(["hosted-deployment-smoke", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "metadata-only hosted frontend/API deployment smoke test" in output
+    assert "CORS allows the configured frontend origin explicitly" in output
+    assert "never prints secrets" in output
+
+
+def test_hosted_deployment_smoke_requires_process_env(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Hosted deployment smoke should fail before network access when env is missing."""
+    monkeypatch.delenv("AEVRYN_PUBLIC_FRONTEND_BASE_URL", raising=False)
+    monkeypatch.delenv("AEVRYN_PUBLIC_API_BASE_URL", raising=False)
+
+    exit_code = main(["hosted-deployment-smoke"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "AEVRYN_PUBLIC_FRONTEND_BASE_URL is required" in captured.err
+
+
+def test_hosted_deployment_smoke_reports_metadata_without_private_values(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Hosted deployment smoke should print metadata only and no private config."""
+    secret_values = ("secret-api-key", "private-storage-ref")
+    monkeypatch.setenv("AEVRYN_PUBLIC_FRONTEND_BASE_URL", "https://app.aevryn.ai")
+    monkeypatch.setenv("AEVRYN_PUBLIC_API_BASE_URL", "https://api.aevryn.ai")
+    monkeypatch.setenv("AEVRYN_API_KEYS", secret_values[0])
+
+    def fake_smoke(
+        *,
+        frontend_url: str,
+        api_url: str,
+        expected_origin: str,
+        timeout_seconds: float,
+    ) -> dict[str, object]:
+        assert frontend_url == "https://app.aevryn.ai"
+        assert api_url == "https://api.aevryn.ai"
+        assert expected_origin == "https://app.aevryn.ai"
+        assert timeout_seconds == 20.0
+        return {
+            "frontend_status": 200,
+            "api_status": 200,
+            "api_cors_origin": "explicit",
+            "api_request_id": "present",
+            "secrets_printed": 0,
+            "ok": "hosted_deployment_smoke_passed",
+        }
+
+    monkeypatch.setattr("aevryn.cli._run_hosted_deployment_smoke", fake_smoke)
+
+    exit_code = main(["hosted-deployment-smoke"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "frontend_status=200" in captured.out
+    assert "api_status=200" in captured.out
+    assert "api_cors_origin=explicit" in captured.out
+    assert "api_request_id=present" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=hosted_deployment_smoke_passed" in captured.out
+    for secret_value in secret_values:
+        assert secret_value not in captured.out
+        assert secret_value not in captured.err
+
+
+def test_hosted_deployment_smoke_verifies_frontend_api_and_cors(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Hosted deployment smoke should require reachable frontend and explicit CORS."""
+    requests: list[urllib.request.Request] = []
+
+    class FakeResponse:
+        """Minimal urlopen response for hosted deployment smoke tests."""
+
+        def __init__(
+            self,
+            *,
+            status: int,
+            body: bytes,
+            headers: dict[str, str],
+        ) -> None:
+            self.status = status
+            self._body = body
+            self.headers = headers
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return self._body
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        timeout: float,
+    ) -> FakeResponse:
+        assert timeout == 12.0
+        assert request.get_header("User-agent") == "AevrynReleaseSmoke/1.0"
+        requests.append(request)
+        if request.full_url == "https://app.aevryn.ai":
+            return FakeResponse(
+                status=200,
+                body=b"<!doctype html><title>Aevryn</title>",
+                headers={"X-Content-Type-Options": "nosniff"},
+            )
+        if request.full_url == "https://api.aevryn.ai/v2/health":
+            assert request.get_header("Origin") == "https://app.aevryn.ai"
+            return FakeResponse(
+                status=200,
+                body=json.dumps(
+                    {
+                        "status": "ok",
+                        "api_version": "v2",
+                        "engine": "Aevryn",
+                        "storage": {
+                            "project_storage": "configured",
+                            "import_content_storage": "configured",
+                        },
+                    }
+                ).encode("utf-8"),
+                headers={
+                    "Access-Control-Allow-Origin": "https://app.aevryn.ai",
+                    "X-Request-ID": "request-id",
+                },
+            )
+        raise AssertionError(f"Unexpected URL: {request.full_url}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    summary = _run_hosted_deployment_smoke(
+        frontend_url="https://app.aevryn.ai",
+        api_url="https://api.aevryn.ai",
+        expected_origin="https://app.aevryn.ai",
+        timeout_seconds=12.0,
+    )
+
+    assert [request.full_url for request in requests] == [
+        "https://app.aevryn.ai",
+        "https://api.aevryn.ai/v2/health",
+    ]
+    assert summary == {
+        "frontend_status": 200,
+        "frontend_bytes_present": "true",
+        "frontend_security_header": "true",
+        "api_status": 200,
+        "api_version": "v2",
+        "api_engine": "Aevryn",
+        "api_cors_origin": "explicit",
+        "api_request_id": "present",
+        "project_storage": "configured",
+        "import_content_storage": "configured",
+        "secrets_printed": 0,
+        "ok": "hosted_deployment_smoke_passed",
+    }
+
+
+def test_hosted_deployment_smoke_rejects_wildcard_cors(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Hosted deployment smoke should fail closed on wildcard API CORS."""
+
+    class FakeResponse:
+        """Minimal urlopen response with unsafe API CORS metadata."""
+
+        def __init__(self, *, status: int, body: bytes, headers: dict[str, str]) -> None:
+            self.status = status
+            self._body = body
+            self.headers = headers
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return self._body
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        timeout: float,
+    ) -> FakeResponse:
+        assert timeout == 12.0
+        if request.full_url == "https://app.aevryn.ai":
+            return FakeResponse(status=200, body=b"html", headers={})
+        return FakeResponse(
+            status=200,
+            body=json.dumps({"status": "ok", "api_version": "v2"}).encode("utf-8"),
+            headers={"Access-Control-Allow-Origin": "*", "X-Request-ID": "request-id"},
+        )
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    with pytest.raises(ValueError, match="CORS origin is not explicit"):
+        _run_hosted_deployment_smoke(
+            frontend_url="https://app.aevryn.ai",
+            api_url="https://api.aevryn.ai",
+            expected_origin="https://app.aevryn.ai",
+            timeout_seconds=12.0,
+        )
 
 
 def test_worker_drain_help_describes_managed_runner(

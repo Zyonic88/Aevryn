@@ -724,11 +724,17 @@ Remaining hardening:
 * confirm latest API revision is serving intended image
 * confirm Cloudflare Pages environment variables are correct
 * ~~confirm app.aevryn.ai and api.aevryn.ai health~~
-* confirm CORS stays explicit
+* ~~confirm CORS stays explicit~~
 * ~~confirm frontend deploys from the intended branch~~
 
 Verified hardening:
 
+* `hosted-deployment-smoke` now verifies the public frontend is reachable, the
+  public API health endpoint returns `ok`, CORS allows the configured frontend
+  origin explicitly instead of using a wildcard, `X-Request-ID` is present, and
+  the command prints metadata only
+* hosted deployment smoke coverage rejects non-HTTPS/non-origin frontend values
+  and wildcard API CORS responses before public-beta signoff
 * production startup rejects wildcard, non-HTTPS, and non-origin-shaped CORS
   values such as origins with trailing slashes, paths, query strings,
   fragments, or credentials, so deployment mistakes fail closed before browser

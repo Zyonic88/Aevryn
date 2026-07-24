@@ -183,6 +183,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "storage-smoke":
             _handle_storage_smoke()
             return 0
+        if command == "hosted-deployment-smoke":
+            _handle_hosted_deployment_smoke(args)
+            return 0
         if command == "worker-drain":
             _handle_worker_drain(args)
             return 0
@@ -654,6 +657,39 @@ def _build_parser() -> argparse.ArgumentParser:
             "storage secrets."
         ),
         formatter_class=_RawDefaultsHelpFormatter,
+    )
+
+    hosted_deployment_parser = subcommands.add_parser(
+        "hosted-deployment-smoke",
+        help="Run a metadata-only hosted frontend/API deployment smoke test.",
+        description=(
+            "Run a metadata-only hosted frontend/API deployment smoke test. "
+            "Checks that the public frontend is reachable, API health is reachable, "
+            "CORS allows the configured frontend origin explicitly, and request IDs "
+            "are present. It never prints secrets or private storage references."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    hosted_deployment_parser.add_argument(
+        "--frontend-url-env",
+        default=PUBLIC_FRONTEND_BASE_URL_ENV,
+        help="Process environment variable containing the public frontend base URL.",
+    )
+    hosted_deployment_parser.add_argument(
+        "--api-url-env",
+        default=PUBLIC_API_BASE_URL_ENV,
+        help="Process environment variable containing the public API base URL.",
+    )
+    hosted_deployment_parser.add_argument(
+        "--origin-env",
+        default=PUBLIC_FRONTEND_BASE_URL_ENV,
+        help="Process environment variable containing the expected browser Origin.",
+    )
+    hosted_deployment_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=20.0,
+        help="HTTP timeout for each hosted deployment request.",
     )
 
     worker_drain_parser = subcommands.add_parser(
@@ -1419,6 +1455,30 @@ def _handle_storage_smoke() -> None:
         print(f"{key}={value}")
 
 
+def _handle_hosted_deployment_smoke(args: argparse.Namespace) -> None:
+    """Handle the hosted-deployment-smoke command."""
+    frontend_url_env = cast(str, args.frontend_url_env).strip()
+    api_url_env = cast(str, args.api_url_env).strip()
+    origin_env = cast(str, args.origin_env).strip()
+    timeout_seconds = cast(float, args.timeout_seconds)
+    if not frontend_url_env:
+        raise ValueError("--frontend-url-env cannot be blank.")
+    if not api_url_env:
+        raise ValueError("--api-url-env cannot be blank.")
+    if not origin_env:
+        raise ValueError("--origin-env cannot be blank.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+    summary = _run_hosted_deployment_smoke(
+        frontend_url=_required_process_env_value(frontend_url_env),
+        api_url=_required_process_env_value(api_url_env),
+        expected_origin=_required_process_env_value(origin_env),
+        timeout_seconds=timeout_seconds,
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_worker_drain(args: argparse.Namespace) -> None:
     """Handle the worker-drain command."""
     api_url_env = cast(str, args.api_url_env).strip()
@@ -1734,6 +1794,89 @@ def _run_r2_storage_smoke(
         "objects_created": 1,
         "objects_deleted": 1,
         "ok": "storage_r2_smoke_completed",
+    }
+
+
+def _run_hosted_deployment_smoke(
+    *,
+    frontend_url: str,
+    api_url: str,
+    expected_origin: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Verify the hosted frontend/API boundary and return metadata only."""
+    normalized_frontend_url = _validated_https_origin_url(
+        frontend_url,
+        key=PUBLIC_FRONTEND_BASE_URL_ENV,
+        purpose="hosted-deployment-smoke",
+    )
+    normalized_origin = _validated_https_origin_url(
+        expected_origin,
+        key=PUBLIC_FRONTEND_BASE_URL_ENV,
+        purpose="hosted-deployment-smoke origin",
+    )
+    normalized_api_url = _validated_https_api_url(
+        api_url,
+        purpose="hosted-deployment-smoke",
+    )
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+
+    smoke_headers = {"User-Agent": "AevrynReleaseSmoke/1.0"}
+    frontend_status, frontend_bytes, frontend_headers = _hosted_raw_request(
+        url=normalized_frontend_url,
+        method="GET",
+        headers={"Accept": "text/html", **smoke_headers},
+        timeout_seconds=timeout_seconds,
+        purpose="hosted-deployment-smoke frontend",
+    )
+    if frontend_status != 200:
+        raise ValueError(
+            f"hosted-deployment-smoke frontend returned HTTP {frontend_status}."
+        )
+    if frontend_bytes <= 0:
+        raise ValueError("hosted-deployment-smoke frontend returned an empty response.")
+
+    api_status, _api_bytes, api_headers, api_payload = _hosted_json_get(
+        url=f"{normalized_api_url}/v2/health",
+        headers={
+            "Accept": "application/json",
+            "Origin": normalized_origin,
+            **smoke_headers,
+        },
+        timeout_seconds=timeout_seconds,
+        purpose="hosted-deployment-smoke API health",
+    )
+    if api_status != 200:
+        raise ValueError(f"hosted-deployment-smoke API returned HTTP {api_status}.")
+    if str(api_payload.get("status") or "") != "ok":
+        raise ValueError("hosted-deployment-smoke API health status is not ok.")
+
+    cors_origin = api_headers.get("access-control-allow-origin", "")
+    if cors_origin != normalized_origin:
+        raise ValueError("hosted-deployment-smoke API CORS origin is not explicit.")
+    if not api_headers.get("x-request-id", "").strip():
+        raise ValueError("hosted-deployment-smoke API response is missing X-Request-ID.")
+
+    storage_payload = api_payload.get("storage")
+    storage = storage_payload if isinstance(storage_payload, dict) else {}
+    return {
+        "frontend_status": frontend_status,
+        "frontend_bytes_present": _bool_text(frontend_bytes > 0),
+        "frontend_security_header": _bool_text(
+            frontend_headers.get("x-content-type-options", "").lower() == "nosniff"
+        ),
+        "api_status": api_status,
+        "api_version": str(api_payload.get("api_version") or "unknown"),
+        "api_engine": str(api_payload.get("engine") or "unknown"),
+        "api_cors_origin": "explicit",
+        "api_request_id": "present",
+        "project_storage": str(storage.get("project_storage") or "unknown"),
+        "import_content_storage": str(
+            storage.get("import_content_storage") or "unknown"
+        ),
+        "secrets_printed": 0,
+        "ok": "hosted_deployment_smoke_passed",
     }
 
 
@@ -2958,6 +3101,87 @@ def _hosted_json_request(
         ) from error
 
 
+def _hosted_raw_request(
+    *,
+    url: str,
+    method: str,
+    headers: dict[str, str],
+    timeout_seconds: float,
+    purpose: str,
+) -> tuple[int, int, dict[str, str]]:
+    """Return hosted response metadata without exposing response bodies."""
+    request = urllib.request.Request(
+        url,
+        headers=headers,
+        method=method,
+    )
+    try:
+        # Bandit B310: caller validates the HTTPS URL before calling this helper.
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:  # nosec B310
+            return response.status, len(response.read()), _safe_headers(response.headers)
+    except urllib.error.HTTPError as error:
+        return error.code, 0, _safe_headers(error.headers)
+    except urllib.error.URLError as error:
+        raise ValueError(f"{purpose} failed before receiving a response.") from error
+
+
+def _hosted_json_get(
+    *,
+    url: str,
+    headers: dict[str, str],
+    timeout_seconds: float,
+    purpose: str,
+) -> tuple[int, int, dict[str, str], dict[str, object]]:
+    """Return hosted JSON metadata without printing full response bodies."""
+    status_code, byte_count, response_headers, payload = _hosted_json_url_request(
+        url=url,
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+        purpose=purpose,
+    )
+    return status_code, byte_count, response_headers, payload
+
+
+def _hosted_json_url_request(
+    *,
+    url: str,
+    headers: dict[str, str],
+    timeout_seconds: float,
+    purpose: str,
+) -> tuple[int, int, dict[str, str], dict[str, object]]:
+    """GET one hosted JSON URL and return bounded metadata."""
+    request = urllib.request.Request(
+        url,
+        headers=headers,
+        method="GET",
+    )
+    try:
+        # Bandit B310: caller validates the HTTPS URL before calling this helper.
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:  # nosec B310
+            raw_body = response.read()
+            payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+            if not isinstance(payload, dict):
+                raise ValueError(f"{purpose} returned non-object JSON.")
+            return (
+                response.status,
+                len(raw_body),
+                _safe_headers(response.headers),
+                cast(dict[str, object], payload),
+            )
+    except urllib.error.HTTPError as error:
+        detail = _hosted_api_error_detail(error)
+        raise ValueError(f"{purpose} failed with HTTP {error.code}: {detail}") from error
+    except urllib.error.URLError as error:
+        raise ValueError(f"{purpose} failed before receiving a response.") from error
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"{purpose} returned invalid JSON.") from error
+
+
+def _safe_headers(headers: Any) -> dict[str, str]:
+    """Return lower-case response headers safe for metadata checks."""
+    return {str(key).lower(): str(value) for key, value in headers.items()}
+
+
 def _validated_https_api_url(api_url: str, *, purpose: str) -> str:
     """Return a normalized hosted API URL after HTTPS validation."""
     normalized_api_url = api_url.rstrip("/")
@@ -2965,6 +3189,19 @@ def _validated_https_api_url(api_url: str, *, purpose: str) -> str:
     if parsed_api_url.scheme != "https" or not parsed_api_url.netloc:
         raise ValueError(f"AEVRYN_PUBLIC_API_BASE_URL must use https:// for {purpose}.")
     return normalized_api_url
+
+
+def _validated_https_origin_url(url: str, *, key: str, purpose: str) -> str:
+    """Return a normalized HTTPS origin URL without paths or credentials."""
+    normalized_url = url.rstrip("/")
+    parsed_url = urllib.parse.urlsplit(normalized_url)
+    if parsed_url.scheme != "https" or not parsed_url.netloc:
+        raise ValueError(f"{key} must use https:// for {purpose}.")
+    if parsed_url.username or parsed_url.password:
+        raise ValueError(f"{key} cannot include credentials for {purpose}.")
+    if parsed_url.path not in {"", "/"} or parsed_url.query or parsed_url.fragment:
+        raise ValueError(f"{key} must be an origin URL for {purpose}.")
+    return urllib.parse.urlunsplit((parsed_url.scheme, parsed_url.netloc, "", "", ""))
 
 
 def _hosted_api_error_detail(error: urllib.error.HTTPError) -> str:
