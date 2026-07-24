@@ -55,6 +55,7 @@ Counsel and owner review should also cross-check:
 * `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 * `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`
 * `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`
+* `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
 * `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`
 * `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`
@@ -136,5 +137,6 @@ This packet is accepted when:
 ```text
 The owner and attorney can review one consolidated packet and record every
 legal-sensitive approval, blocker, and required public-page change before
-public beta.
+public beta, with owner-controlled product-truth decisions tracked separately
+from attorney-controlled legal approval.
 ```
