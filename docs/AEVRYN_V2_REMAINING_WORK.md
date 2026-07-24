@@ -388,6 +388,9 @@ Verified hardening:
 * character profiles reject explicitly negated race/species support such as
   "not a Half-Beastman" and "without any human ancestry," while preserving the
   surrounding context as readable relationship/origin information
+* prompt packs omit negated visual identity facts from character detail lines
+  and visual identity coverage, preventing denied race/species/gender evidence
+  from becoming positive image or narration guidance
 * verified with the focused processed-character-panel frontend test
 
 Acceptance:

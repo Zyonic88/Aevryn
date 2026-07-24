@@ -7,7 +7,7 @@ import re
 import textwrap
 from collections.abc import Iterable
 
-from aevryn.characters import CanonCharacterCard
+from aevryn.characters import CanonCharacterCard, CanonCharacterFact
 from aevryn.core import Fact, Relationship
 from aevryn.prompts.models import ProductionPack, PromptBundle
 from aevryn.scenes import CanonSceneContext, SceneAnalysis, SceneAnalyzer
@@ -61,6 +61,11 @@ VISUAL_IDENTITY_ATTRIBUTE_GROUPS = {
     "pose": frozenset({"expression", "posture"}),
     "race/species": frozenset({"race", "species"}),
 }
+VISUAL_IDENTITY_NEGATION_ATTRIBUTES = frozenset({"gender", "race", "sex", "species"})
+VISUAL_IDENTITY_NEGATION_TERMS = frozenset({"never", "no", "non", "not", "without"})
+VISUAL_IDENTITY_NEGATION_BRIDGE_TERMS = frozenset(
+    {"a", "an", "any", "confirmed", "half", "known", "the"}
+)
 IDENTITY_REFERENCE_ATTRIBUTE_PARTS = frozenset(
     {
         "alias",
@@ -1004,6 +1009,7 @@ class CanonPromptBuilder:
                 or CanonPromptBuilder._is_appearance_attribute(fact.attribute)
             )
             and not CanonPromptBuilder._is_prompt_metadata_attribute(fact.attribute)
+            and not CanonPromptBuilder._is_negated_visual_identity_fact(fact)
         )
         return CanonPromptBuilder._unique_values(lines)
 
@@ -1049,6 +1055,54 @@ class CanonPromptBuilder:
         return any(
             part in normalized_attribute
             for part in PROMPT_METADATA_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
+    def _is_negated_visual_identity_fact(fact: CanonCharacterFact) -> bool:
+        """Return whether evidence explicitly denies a visual identity fact."""
+        normalized_attribute = fact.attribute.lower()
+        if normalized_attribute not in VISUAL_IDENTITY_NEGATION_ATTRIBUTES:
+            return False
+        return CanonPromptBuilder._identity_term_is_negated(
+            fact.evidence.quote,
+            fact.value,
+        )
+
+    @staticmethod
+    def _identity_term_is_negated(value: str, term: str) -> bool:
+        """Return whether an identity term is explicitly denied nearby."""
+        value_parts = CanonPromptBuilder._identity_parts(value)
+        term_parts = CanonPromptBuilder._identity_parts(term)
+        if not value_parts or not term_parts:
+            return False
+
+        window = len(term_parts)
+        for index in range(0, len(value_parts) - window + 1):
+            if tuple(value_parts[index : index + window]) != term_parts:
+                continue
+            preceding_parts = tuple(value_parts[max(0, index - 4) : index])
+            if not preceding_parts:
+                return False
+            if preceding_parts[-1] in VISUAL_IDENTITY_NEGATION_TERMS:
+                return True
+            bridge_parts = tuple(
+                part
+                for part in preceding_parts
+                if part not in VISUAL_IDENTITY_NEGATION_BRIDGE_TERMS
+            )
+            return bool(
+                bridge_parts and bridge_parts[-1] in VISUAL_IDENTITY_NEGATION_TERMS
+            )
+
+        return False
+
+    @staticmethod
+    def _identity_parts(value: str) -> tuple[str, ...]:
+        """Return normalized identity parts for safe support checks."""
+        return tuple(
+            part
+            for part in re.split(r"[^a-z0-9]+", value.lower())
+            if part
         )
 
     @staticmethod

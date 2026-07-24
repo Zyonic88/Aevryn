@@ -396,6 +396,53 @@ def test_canon_prompt_builder_tracks_known_and_unknown_visual_identity_traits() 
     )
 
 
+def test_canon_prompt_builder_does_not_mark_negated_race_as_known_visual_identity() -> None:
+    """Prompt visual identity coverage should not treat denied race as known."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_evidence(
+        Evidence(
+            evidence_id="evidence_negated_race",
+            source_id="source_demo",
+            chapter_id="source_demo_chapter_002",
+            scene_id="source_demo_chapter_002_scene_001",
+            paragraph_index=1,
+            sentence_index=1,
+            quote="Mark is not a Half-Beastman recruit.",
+            confidence=1.0,
+        )
+    )
+    database.store_fact(
+        Fact(
+            fact_id="fact_mark_negated_race",
+            entity_id="character_mark",
+            attribute="race",
+            value="Half-Beastman",
+            evidence_id="evidence_negated_race",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_mark_negated_race",
+            fact_id="fact_mark_negated_race",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "- Race: Half-Beastman" not in prompt
+    assert "- Mark: known none. Missing age,build,clothing,eyes,other; neutral." in prompt
+
+
 def test_canon_prompt_builder_carries_visual_identity_guard_into_narration() -> None:
     """Narration prompts should preserve known and missing visual identity boundaries."""
     imported_source = build_imported_source()
