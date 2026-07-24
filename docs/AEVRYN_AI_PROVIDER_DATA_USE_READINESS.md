@@ -62,6 +62,9 @@ data-controls material and recorded the current review boundary in
 `docs/AEVRYN_AI_PROVIDER_REVIEW.md` and
 `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`.
 
+The production account/project verification record is tracked in
+`docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`.
+
 Current verified posture:
 
 * OpenAI API inputs and outputs are not used for model training by default
@@ -257,6 +260,7 @@ docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md records the selected public-beta 
 `aevryn provider-config-check` verifies provider configuration metadata, including `request_storage=disabled` and `responses_store=false`, without printing provider keys.
 OpenAI official data-use and API data-controls review was recorded on 2026-07-24.
 docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md records official source links, reviewed facts, technical posture, disclosure candidate, and production account verification requirements.
+docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md records the non-secret checklist for verifying the actual production OpenAI organization/project posture.
 Aevryn's Responses API extraction adapter now sends store=false.
 Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17.
 OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.

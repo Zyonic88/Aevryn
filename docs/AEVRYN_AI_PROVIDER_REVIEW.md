@@ -54,6 +54,7 @@ The current provider review was updated on 2026-07-24 against official OpenAI
 data-use and API data-controls material. The dated review record is:
 
 * `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`
+* `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`
 
 Reviewed facts:
 

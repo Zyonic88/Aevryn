@@ -243,6 +243,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
         "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
         "docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md",
+        "docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md",
         "GitHub Branch Protection And Hosted Security Controls",
         "Production Provider And Data-Use Review",
         "Backup, Retention, Restore, And Audit",
@@ -261,6 +262,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Public-beta backup retention wording candidate selected for owner/legal review.",
         "Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`.",
         "Official OpenAI source review was recorded on 2026-07-24",
+        "production account/project verification checklist exists",
         "Production OpenAI account/project data-control verification",
         "backup/provider verification",
         "Local production config contract passed.",
@@ -467,6 +469,7 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "Final bounded hosted observability review: passed",
         "Restore/audit drill: passed",
         "OpenAI official source review: recorded on 2026-07-24",
+        "OpenAI production account verification checklist: recorded, not complete",
         "OpenAI provider config check: passed with metadata-only output on 2026-07-17",
         "Remaining Blocking Reviews",
         "Attorney review: open",
@@ -1181,6 +1184,7 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "Public beta: Blocked",
         "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
         "Users must know when story content leaves Aevryn-owned systems.",
+        "docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md",
         "provider name",
         "model family or model configuration",
         "data retention terms",
@@ -1213,6 +1217,7 @@ def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None
         "Provider output is never Canon, and provider data use is never hidden.",
         "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
         "docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md",
+        "docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md",
         "Provider: OpenAI",
         "Status: Internal alpha candidate only",
         "Public beta approval: Not approved",
@@ -1309,6 +1314,47 @@ def test_dated_openai_provider_review_records_official_source_findings() -> None
         "data-sharing controls are not opted in for API inputs/outputs",
         "Modified Abuse Monitoring or Zero Data Retention",
         "Provider-backed extraction must remain disabled for public beta",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_openai_production_account_verification_keeps_provider_beta_blocked() -> None:
+    """Production OpenAI verification should require real account evidence."""
+    document = read_doc("docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md")
+
+    required_terms = (
+        "Verification: OpenAI production organization and project data controls",
+        "Status: Not started",
+        "Public beta: Blocked",
+        "Verify the actual production account, not the intended policy.",
+        "docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md",
+        "Non-Secret Evidence Rules",
+        "Forbidden evidence",
+        "OpenAI API keys",
+        "provider request payloads",
+        "source prose from user manuscripts",
+        "Production OpenAI organization identified",
+        "Production OpenAI project identified",
+        "Final model configuration recorded",
+        "API inputs/outputs data sharing not opted in",
+        "feedback/evaluation/fine-tuning data sharing disabled unless explicitly disclosed",
+        "Responses API extraction sends `store=false`",
+        "background mode disabled for extraction",
+        "Modified Abuse Monitoring state recorded",
+        "Zero Data Retention state recorded",
+        "data residency state recorded",
+        "python -m aevryn.cli provider-config-check",
+        "request_storage=disabled",
+        "responses_store=false",
+        "secrets_printed=0",
+        "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
+        "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
+        "docs/PRIVACY_POLICY.md",
+        "OpenAI production account verification: Blocked",
+        "Provider-backed extraction for public beta: Blocked",
+        "Fallback: Disable provider-backed extraction for public beta",
     )
 
     for term in required_terms:
