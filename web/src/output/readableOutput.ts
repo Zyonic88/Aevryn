@@ -1,8 +1,18 @@
 const SOURCE_BACKED_PLACEHOLDER = "Source-backed detail available through evidence controls.";
+const INTERNAL_OUTPUT_PATTERNS = [
+  /^(scene|source|import|project|story|chapter) id\s*:/iu,
+  /^evidence anchor\s*:/iu,
+  /\baevryn_import_bundle\b/iu,
+  /\bimport_[a-z0-9][a-z0-9_]*\b/iu,
+  /\bsource_[a-z0-9][a-z0-9_]*_chapter_\d{3}_scene_\d{3}\b/iu,
+  /\b[a-z0-9]+_chapter_\d{3}_scene_\d{3}\b/iu,
+  /\bchapter_\d{3}_scene_\d{3}_paragraph_\d{3}_sentence_\d{3}_anchor\b/iu,
+  /\b[a-z0-9][a-z0-9_]*_anchor(?:_\d+)?\b/iu,
+];
 
 export function readableOutputItems(items: string[]): string[] {
   const readableItems = items
-    .filter((item) => !isInternalOutputPlaceholder(item))
+    .filter((item) => !isInternalOutputItem(item))
     .map(readableOutputItem)
     .filter((item) => item.length > 0)
     .filter((item, index, allItems) => allItems.indexOf(item) === index);
@@ -13,7 +23,7 @@ export function readableOutputItems(items: string[]): string[] {
 }
 
 export function readableOutputItem(item: string): string {
-  if (isInternalOutputPlaceholder(item)) {
+  if (isInternalOutputItem(item)) {
     return "";
   }
   const withoutAnchorPrefix = item.replace(/^aevryn_import_bundle_chapter_\d{3}:\s*/i, "");
@@ -94,6 +104,14 @@ export function isInternalOutputPlaceholder(value: string): boolean {
   return value.trim() === SOURCE_BACKED_PLACEHOLDER;
 }
 
+function isInternalOutputItem(value: string): boolean {
+  const trimmed = value.trim();
+  return (
+    isInternalOutputPlaceholder(trimmed) ||
+    INTERNAL_OUTPUT_PATTERNS.some((pattern) => pattern.test(trimmed))
+  );
+}
+
 function toSentence(value: string): string {
   const trimmed = value.trim();
   if (/[\d).!?]$/u.test(trimmed)) {
@@ -104,7 +122,7 @@ function toSentence(value: string): string {
 
 function readableEntity(value: string): string {
   const kindMatch = value.match(
-    /^(character|entity|location|organization|building|item|skill|vehicle)_(.+)$/i,
+    /^(armor|building|character|creature|entity|item|location|organization|skill|system|timeline_event|vehicle|weapon)_(.+)$/i,
   );
   if (!kindMatch) {
     return readableValue(value);
@@ -153,7 +171,10 @@ function readableLabel(value: string): string {
 
 function readableValue(value: string): string {
   return value
-    .replace(/\b(entity|character|location|organization|building|item|skill|vehicle)_/gi, "")
+    .replace(
+      /\b(armor|building|character|creature|entity|item|location|organization|skill|system|timeline_event|vehicle|weapon)_/gi,
+      "",
+    )
     .replace(/_/g, " ")
     .replace(/\b\w/g, (character) => character.toUpperCase())
     .replace(/'([A-Z])/g, (_, character: string) => `'${character.toLowerCase()}`);

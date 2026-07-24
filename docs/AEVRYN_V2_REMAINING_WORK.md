@@ -241,13 +241,48 @@ In progress
 
 Remaining hardening:
 
-* run hosted browser validation against the current prompt-pack output
-* confirm prompts include enough scene-specific action, setting, character, and object context
-* ensure prompts do not include raw manuscript prose
-* ensure prompts do not expose evidence anchors, import bundle IDs, source IDs, or internal placeholders
-* keep prompt bodies collapsed by default
-* make copy/export affordances obvious
-* keep production-batching out of V2 unless explicitly re-scoped
+* ~~run hosted browser validation against the current prompt-pack output~~
+* ~~confirm prompts include enough scene-specific action, setting, character, and object context~~
+* ~~ensure normal prompt-pack presentation does not include raw manuscript prose~~
+* ~~ensure normal prompt-pack presentation does not expose evidence anchors, import bundle IDs, source IDs, or internal placeholders~~
+* ~~keep prompt bodies collapsed by default~~
+* ~~make copy/export affordances obvious~~
+* ~~keep production-batching out of V2 unless explicitly re-scoped~~
+
+Verified hardening:
+
+* production prompts include compact accepted character-card identity references
+  such as aliases, titles, roles, professions, and descriptions when Canon has them
+* identity references are treated as identity aids only and explicitly must not create
+  extra characters
+* verified with prompt-builder, prompt-engine, scene-context, presentation, and
+  project-runner tests
+* prompt sections expose visible copy and local text-download actions for each
+  prompt body without calling a backend export path
+* verified with prompt-download unit tests, focused prompt workspace test, full
+  frontend test suite, lint, and production build
+* prompt bodies are collapsed by default and expose bounded previews before expansion
+* verified with focused prompt scene-picker test and prompt-download/readable-output
+  unit tests
+* browser-facing snapshot prompt items exclude exact imported sentences, source IDs,
+  chapter/scene ID fragments, evidence-anchor labels, and short provider entity IDs
+* verified with background-worker presentation payload tests and presentation-engine tests
+* prompt-builder regression coverage requires every prompt type to preserve scene
+  production brief, current action beats, character presence, setting, and
+  scene-relevant object/world context when Canon provides it
+* prompt workspace regression coverage verifies V2 does not expose batch-generation,
+  credits, subscription, or paid production controls in Prompt Packs
+* narration prompts now carry the same per-character known/missing visual identity
+  boundary as visual prompt types, keeping cross-prompt character appearance
+  handling Canon-bounded instead of inferred
+* frontend prompt rendering filters internal source IDs, import IDs, evidence
+  anchors, bundle IDs, and chapter/scene machine tokens before display, copy,
+  or local text download while preserving human Canon prompt details
+* verified with readable-output unit tests and focused Prompt Packs workspace
+  tests
+* hosted browser sweep verified current Prompt Packs output exposes collapsed,
+  copyable prompt bodies without source text, source IDs, evidence anchors,
+  import bundle IDs, machine chapter/scene fragments, or placeholder noise
 
 Acceptance:
 
@@ -260,16 +295,38 @@ Prompt Packs are useful for beta without promising one-click perfect image/video
 Status:
 
 ```text
-In progress
+Improved; final browser validation remains
 ```
+
+Verified evidence:
+
+* collapsed scene summaries now include the first visible change before detail expansion
+* normal output uses "retained canon" instead of "still known" wording
+* continuity details remain collapsed and paginated
+* normal continuity output hides source IDs, chapter/scene ID fragments,
+  evidence-anchor IDs, fact record IDs, and raw source identifiers
+* verified with the frontend alpha smoke test across workspace surfaces
 
 Remaining hardening:
 
-* keep scene-level continuity highlights scannable
-* keep large buckets collapsed
-* reduce repeated or low-value "still known" noise
-* verify no raw IDs appear in normal user view
+* ~~keep scene-level continuity highlights scannable~~
+* keep large buckets collapsed during hosted browser validation
+* continue reducing repeated or low-value retained-canon noise when new examples appear
+* ~~verify no raw IDs appear in normal user view~~
 * verify continuity remains Canon-backed and does not invent explanations
+
+Verified hardening:
+
+* normal continuity output shows scene-level summaries with the first visible
+  new/changed Canon highlight before expansion
+* continuity preview keeps full change buckets collapsed and retained-canon
+  detail nested, while retained-canon Markdown examples remain bounded
+* processed-output and preview continuity buckets cap retained-record detail
+  lists and show hidden-record counts, so large projects stay readable without
+  pretending overflow does not exist
+* continuity buckets filter internal-only records before choosing visible rows,
+  so hidden source IDs do not consume the visible detail budget or render as
+  `Unknown` noise
 
 Acceptance:
 
@@ -282,17 +339,62 @@ Continuity answers "What changed?" without forcing users to read machine-like li
 Status:
 
 ```text
-In progress
+Improved; final browser validation remains
 ```
+
+Verified evidence:
+
+* character card bodies remain collapsed with neutral placeholder portraits
+* Recent Changes no longer repeats identity/profile facts already represented in card sections
+* identity/profile facts remain visible in their dedicated sections instead of being hidden
 
 Remaining hardening:
 
 * continue reducing duplicate character cards caused by aliases/titles/descriptions
 * keep ambiguous identity references visible for review instead of force-merging
 * ensure race/gender remain Canon-truthful and not story-specific guesses
-* keep character card sections collapsed and readable
-* ensure character portraits remain neutral placeholders until a real portrait/reference system exists
-* verify no source-backed placeholder text leaks into user output
+* ~~keep character card sections collapsed and readable~~
+* ~~ensure character portraits remain neutral placeholders until a real portrait/reference system exists~~
+* ~~verify no source-backed placeholder text leaks into user output~~
+
+Verified hardening:
+
+* processed character panels hide the source-backed evidence placeholder from
+  normal user output
+* identity review hides evidence anchors and raw scene IDs while keeping ambiguous
+  and unresolved references visible for review
+* character cards and developer-preview cards use neutral initials placeholders
+  without rendering fake portrait images before a real portrait/reference system
+  exists
+* extraction rejects plural race/gender group phrases as character cards while
+  preserving singular unnamed character candidates when evidence supports them
+* entity resolution keeps pronouns, shared honorifics, near-tied matches, and
+  low-confidence descriptions ambiguous instead of force-merging identities
+* entity resolution and project-runner tests resolve title-plus-name references
+  such as General Charlotte to the existing Canon identity when the title/name
+  support is explicit, while keeping shared titles ambiguous
+* project-runner identity profiles preserve explicit relationship labels such as
+  "sister of Zhao Chen," allowing possessive references like "Zhao Chen's sister"
+  to resolve to an existing identity without creating duplicate character cards
+* project-runner gender-support terms recognize accented fiancee/fiance
+  spellings the same way as unaccented spellings, so translated or polished
+  prose does not lose conservative pronoun support
+* project-runner gender-support terms ignore explicitly negated gender phrases
+  with short descriptive bridges such as "not a young woman," "not an adult man,"
+  and "without any male heir," so pronoun resolution does not infer gender from
+  denied identity language
+* character-sheet presentation recognizes accented fiancee/fiance spellings in
+  evidence-linked gender support, so accepted direct gender facts do not display
+  as Unknown only because prose used diacritics
+* character profiles and stored snapshot API output hide contradictory
+  Human-plus-non-human race/species values instead of displaying both as Canon
+* character profiles reject explicitly negated race/species support such as
+  "not a Half-Beastman" and "without any human ancestry," while preserving the
+  surrounding context as readable relationship/origin information
+* prompt packs omit negated visual identity facts from character detail lines
+  and visual identity coverage, preventing denied race/species/gender evidence
+  from becoming positive image or narration guidance
+* verified with the focused processed-character-panel frontend test
 
 Acceptance:
 
@@ -312,9 +414,64 @@ Remaining hardening:
 
 * reduce incorrect item/skill/location/organization categorization where evidence supports a better class
 * avoid tailoring classification to one novel
-* preserve uncertain classifications as reviewable instead of pretending certainty
-* use sentence-level meaning signals as routing metadata without making them Canon truth
-* keep world cards collapsed and searchable/scannable
+* ~~preserve uncertain classifications as reviewable instead of pretending certainty~~
+* ~~use sentence-level meaning signals as routing metadata without making them Canon truth~~
+* ~~keep world cards collapsed and searchable/scannable~~
+
+Verified hardening:
+
+* deterministic extraction guard rejects quests, rewards, points, ranks, titles, roles,
+  professions, and similar non-capability story concepts when they are incorrectly
+  proposed as skills without explicit ability language
+* verified with extraction, evidence-bounded extraction, world, and project-runner tests
+* frontend readable-output formatter strips every supported Canon entity-type prefix
+  from relationship and accepted-entity text, including system, weapon, armor,
+  creature, vehicle, and timeline-event IDs
+* normal World output is searchable, keeps world cards collapsed, and hides raw
+  source IDs, entity IDs, chapter-scene fragments, and evidence anchors in the
+  frontend alpha smoke path
+* verified with readable-output frontend unit test, lint, and production build
+* sentence understanding routes item, skill, system, location, and organization
+  cues as metadata-only guidance; mixed or ambiguous cues remain reviewable
+  instead of becoming Canon truth
+* sentence understanding flags genre power-system/body terms such as dantian,
+  meridian, qi, and spiritual root as translation-review metadata without
+  turning them into skills, items, or Canon facts
+* system reward, mission, quest, and points language is treated as system context
+  rather than a usable skill unless the evidence explicitly describes an ability
+* system UI plus skill/ability cues are marked reviewable instead of being treated
+  as settled meaning
+* system-created physical objects such as technical blueprints remain item
+  candidates when evidence supports a concrete object classification
+* physical skill-source phrases such as skill book, spell book, skill manual, and
+  technique manual route as item context instead of automatically becoming usable
+  skills, while separate skill cues in the same sentence remain reviewable
+* system-resource phrases such as skill points and experience points route as
+  system context rather than usable skills, while separate ability cues in the
+  same sentence remain visible and reviewable
+* physical skill-source scrolls route as item context rather than automatically
+  becoming usable skills
+* physical knowledge/resource containers such as jade slips, cultivation manuals,
+  ability crystals, skill crystals, and source crystals route as item context,
+  while obvious AI attempts to classify crystals or slips as usable skills are
+  rejected by deterministic extraction guards
+* the evidence-bounded AI extraction prompt tells the provider that manuals,
+  scrolls, jade slips, and crystals are physical item containers unless evidence
+  explicitly states a usable ability
+* deterministic extraction guards reject obvious place or institution heads such
+  as academy, department, empire, room, and station when a provider tries to
+  classify them as physical items or usable skills
+* deterministic extraction guards reject obvious physical-object heads such as
+  blueprint, sword, uniform, crystal, and manual when a provider tries to
+  classify them as places or organizations
+* deterministic extraction guards reject obvious role/title concepts such as
+  captain commander and chief engineer when a provider tries to classify them
+  as places or organizations, while preserving actual place/organization heads
+* regression tests verify role-bearing real place/organization names such as
+  Captain Department and Officer Training Room remain accepted, preventing
+  over-hardening from erasing valid world structure
+* verified with sentence-understanding, extraction, and evidence-bounded AI
+  extraction tests
 
 Acceptance:
 
@@ -332,12 +489,32 @@ Mostly hardened
 
 Remaining hardening:
 
-* verify multi-file import remains stable with 10-chapter and larger imports
-* verify duplicate processing submissions are blocked
-* verify stuck jobs do not block future imports forever
-* keep progress stepper accurate and API-provided
-* avoid fake percentages when exact progress is unavailable
-* keep import warnings human-readable
+* ~~verify multi-file import remains stable with 10-chapter and larger imports~~
+* ~~verify duplicate processing submissions are blocked~~
+* ~~verify stuck jobs do not block future imports forever~~
+* ~~keep progress stepper accurate and API-provided~~
+* ~~avoid fake percentages when exact progress is unavailable~~
+* ~~keep import warnings human-readable~~
+
+Verified hardening:
+
+* hosted browser sessions submit processing to the API and do not drain worker
+  jobs locally
+* saved import processing state remains scoped to the submitted import row, so
+  one stuck/submitting import does not make every saved import look active
+* missing or stale queue jobs are marked failed with retryable, human-readable
+  summaries instead of leaving durable runs pending forever
+* active processing displays API-backed states such as Queued, Processing,
+  Snapshot, and Output ready without fake percentages
+* deferred source formats, source-format API failures, oversized pasted imports,
+  and failed re-inspection paths show user-facing explanations and avoid stale
+  import-structure output
+* synthetic 10-chapter browser-style import bundles inspect and persist
+  metadata counts and stored source bytes without leaking source sentences in
+  the inspect response
+* uploaded filenames are normalized to basename-only across temp import paths,
+  saved import metadata, and workflow log metadata so user machine paths do not
+  survive into hosted import logs
 
 Acceptance:
 
@@ -357,9 +534,21 @@ Remaining hardening:
 
 * hosted browser validation for password recovery
 * hosted browser validation for expired-session recovery
-* ensure recovery errors remain human-readable
-* ensure token/session details are never displayed
-* verify login always lands on Dashboard
+* ~~ensure recovery errors remain human-readable~~
+* ~~ensure token/session details are never displayed~~
+* ~~verify login always lands on Dashboard~~
+
+Verified hardening:
+
+* password-recovery completion returns users to Login with a human-readable success
+  message, clears any stored session, and does not render the recovery token
+* verified with focused recovery UI test, managed-identity auth tests, session tests,
+  full App test suite, lint, and production build
+* expired sessions from deep project routes return to Login and then land on
+  Dashboard after successful login instead of reopening the stale route
+* invalid authenticated API sessions show a human-readable expired-session message
+  and clear stored session data without displaying token/JWT internals
+* verified with focused session-recovery frontend tests
 
 Acceptance:
 
@@ -372,15 +561,31 @@ Users can recover from expired sessions and forgotten passwords without CLI inte
 Status:
 
 ```text
-Minimal for V2
+Verified for V2
 ```
 
 Remaining hardening:
 
-* keep project settings separate from personal profile settings conceptually
-* do not build broad profile personalization unless re-scoped
-* ensure current Settings page does not imply nonexistent controls
-* document which settings are V2 and which are V3+
+* ~~project settings remain the only editable V2 settings surface~~
+* ~~workspace, account, privacy, and diagnostics sections are read-only/contextual in V2~~
+* ~~broad profile personalization remains V3+ unless explicitly re-scoped~~
+* ~~current Settings page must not imply nonexistent personalization or workflow controls~~
+* ~~run hosted browser validation against the current Settings page~~
+
+Verified hardening:
+
+* Settings page separates editable project defaults from read-only workspace,
+  account, privacy, and diagnostics context
+* Account settings identify the managed identity provider and keep broad profile
+  editing on the finished website account surface
+* Privacy settings state that uploaded stories remain creator-owned and AI
+  training is off by default with no live training pipeline active
+* diagnostics remain collapsed and token/session details are not rendered
+* verified with focused Settings workspace test, lint, and production build
+* hosted Settings page validation confirmed Dashboard login destination,
+  managed identity wording, support-owned account deletion language,
+  collapsed diagnostics, and no visible or hidden token/session/storage/internal
+  strings in normal page output
 
 Acceptance:
 
@@ -393,16 +598,43 @@ Settings are honest, useful, and not misleading for beta.
 Status:
 
 ```text
-Functional baseline
+Baseline verified; final pass remains
 ```
+
+Verified evidence:
+
+* hosted snapshot export creation passed in `docs/AEVRYN_RELEASE_CANDIDATE_RUN_RECORD.md`
+* owner export metadata visibility passed in `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
+* owner export download availability passed in `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
+* cross-user export access and download were denied in `docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`
+* export limitations are documented in `docs/AEVRYN_EXPORT_ENGINE.md`
+* API export creation/listing returns metadata only and does not expose
+  `storage_ref` or private storage paths
+* frontend stored-export cards display download availability while explicitly
+  hiding private storage references
+* export API and database tests keep metadata and download routes project-owner
+  scoped after the storage/database hardening
+* export creation normalizes submitted path-like filenames to basename-only
+  metadata before writing storage-backed exports, while storage still rejects
+  path-shaped filenames as a lower-level guard
+* export creation sanitizes quote, delimiter, control, and filesystem-reserved
+  filename characters before metadata is stored, preventing submitted filenames
+  from shaping storage paths or download headers
+* stored export creation appears in the Exports workspace immediately from the
+  API response while the export list refreshes in the background, so beta users
+  are not left wondering whether the export actually completed
+* hosted Exports pass created a Canon Snapshot / JSON export from the latest
+  accepted snapshot, showed it immediately with human filename/kind/size/date,
+  kept private storage references hidden, and the download action now confirms
+  the prepared file without exposing bytes or storage paths
 
 Remaining hardening:
 
-* verify export creation on hosted environment
-* verify export download authorization
-* verify export metadata is visible without exposing private storage references
-* verify exports remain project-owner scoped
-* document export limitations
+* ~~rerun export creation and download in the final hosted browser pass~~
+* ~~keep export metadata visible without exposing private storage references~~
+* ~~keep exports project-owner scoped after any storage or database changes~~
+* ~~keep export download requests authenticated and timestamped from the frontend client~~
+* ~~keep export filenames from shaping storage paths or download headers~~
 
 Acceptance:
 
@@ -475,6 +707,17 @@ Remaining hardening:
 * confirm app.aevryn.ai and api.aevryn.ai health
 * confirm CORS stays explicit
 * confirm frontend deploys from the intended branch
+
+Verified hardening:
+
+* production startup rejects wildcard, non-HTTPS, and non-origin-shaped CORS
+  values such as origins with trailing slashes, paths, query strings,
+  fragments, or credentials, so deployment mistakes fail closed before browser
+  testing.
+* production startup rejects non-origin-shaped public frontend/API base URLs
+  such as URLs with paths, query strings, fragments, or credentials, while
+  leaving provider-specific HTTPS URLs such as JWKS endpoints free to use
+  required paths.
 
 Acceptance:
 
@@ -563,7 +806,7 @@ Track future ideas in:
 
 4. Run hosted browser pass:
    * 10-chapter canonical beta path
-   * export/download
+   * confirm export/download still works
    * deletion
    * session recovery
 
@@ -609,5 +852,6 @@ Continue UX hardening on the processed-output surfaces, then commit each complet
 The next best target is:
 
 ```text
-Prompt Pack hosted validation and prompt readability polish.
+Full beta browser-path validation and remaining visible UI polish, starting
+with project/story deletion controls and any remaining public-facing noise.
 ```

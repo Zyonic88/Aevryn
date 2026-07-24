@@ -1136,6 +1136,7 @@ def _identity_profiles_from_extraction_results(
     aliases_by_id: dict[str, set[str]] = {}
     titles_by_id: dict[str, set[str]] = {}
     descriptions_by_id: dict[str, set[str]] = {}
+    relationship_labels_by_id: dict[str, set[str]] = {}
     pronouns_by_id: dict[str, set[str]] = {}
     evidence_by_id: dict[str, set[str]] = {}
 
@@ -1152,6 +1153,7 @@ def _identity_profiles_from_extraction_results(
                 aliases_by_id=aliases_by_id,
                 titles_by_id=titles_by_id,
                 descriptions_by_id=descriptions_by_id,
+                relationship_labels_by_id=relationship_labels_by_id,
                 pronouns_by_id=pronouns_by_id,
             )
 
@@ -1161,6 +1163,7 @@ def _identity_profiles_from_extraction_results(
             aliases=aliases_by_id.get(entity.entity_id, set()),
             titles=titles_by_id.get(entity.entity_id, set()),
             descriptions=descriptions_by_id.get(entity.entity_id, set()),
+            relationship_labels=relationship_labels_by_id.get(entity.entity_id, set()),
             pronouns=pronouns_by_id.get(entity.entity_id, set()),
             evidence_anchor_ids=evidence_by_id.get(entity.entity_id, set()),
         )
@@ -1309,6 +1312,7 @@ def _identity_profiles_from_accepted_extraction_result(
     aliases_by_id: dict[str, set[str]] = {}
     titles_by_id: dict[str, set[str]] = {}
     descriptions_by_id: dict[str, set[str]] = {}
+    relationship_labels_by_id: dict[str, set[str]] = {}
     pronouns_by_id: dict[str, set[str]] = {}
     evidence_by_id: dict[str, set[str]] = {
         entity_id: {entity.evidence_anchor_id}
@@ -1324,6 +1328,7 @@ def _identity_profiles_from_accepted_extraction_result(
             aliases_by_id=aliases_by_id,
             titles_by_id=titles_by_id,
             descriptions_by_id=descriptions_by_id,
+            relationship_labels_by_id=relationship_labels_by_id,
             pronouns_by_id=pronouns_by_id,
         )
 
@@ -1333,6 +1338,7 @@ def _identity_profiles_from_accepted_extraction_result(
             aliases=aliases_by_id.get(entity.entity_id, set()),
             titles=titles_by_id.get(entity.entity_id, set()),
             descriptions=descriptions_by_id.get(entity.entity_id, set()),
+            relationship_labels=relationship_labels_by_id.get(entity.entity_id, set()),
             pronouns=pronouns_by_id.get(entity.entity_id, set()),
             evidence_anchor_ids=evidence_by_id.get(entity.entity_id, set()),
         )
@@ -1360,6 +1366,9 @@ def _merged_identity_profiles(
             descriptions=_unique_identity_surfaces(
                 (*current.descriptions, *addition.descriptions)
             ),
+            relationship_labels=_unique_identity_surfaces(
+                (*current.relationship_labels, *addition.relationship_labels)
+            ),
             pronouns=_unique_identity_surfaces((*current.pronouns, *addition.pronouns)),
             evidence_anchor_ids=tuple(
                 sorted(
@@ -1378,6 +1387,7 @@ def _identity_profile_from_parts(
     aliases: set[str],
     titles: set[str],
     descriptions: set[str],
+    relationship_labels: set[str],
     pronouns: set[str],
     evidence_anchor_ids: set[str],
 ) -> EntityIdentityProfile:
@@ -1404,6 +1414,7 @@ def _identity_profile_from_parts(
         aliases=_unique_identity_surfaces(tuple(composite_aliases)),
         titles=_unique_identity_surfaces(tuple(titles)),
         descriptions=_unique_identity_surfaces(tuple(composite_descriptions)),
+        relationship_labels=_unique_identity_surfaces(tuple(relationship_labels)),
         pronouns=_unique_identity_surfaces(tuple(pronouns)),
         evidence_anchor_ids=tuple(sorted(evidence_anchor_ids)),
     )
@@ -1426,6 +1437,7 @@ def _add_identity_profile_fact(
     aliases_by_id: dict[str, set[str]],
     titles_by_id: dict[str, set[str]],
     descriptions_by_id: dict[str, set[str]],
+    relationship_labels_by_id: dict[str, set[str]],
     pronouns_by_id: dict[str, set[str]],
 ) -> None:
     """Route an accepted fact into identity-profile fields."""
@@ -1445,6 +1457,7 @@ def _add_identity_profile_fact(
         "kinship",
     }:
         descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+        relationship_labels_by_id.setdefault(fact.entity_id, set()).add(fact.value)
     pronouns = _pronouns_for_identity_fact_value(fact.value)
     if pronouns:
         pronouns_by_id.setdefault(fact.entity_id, set()).update(pronouns)
@@ -1498,6 +1511,10 @@ _FEMALE_IDENTITY_TERMS = {
     "daughters",
     "wife",
     "wives",
+    "fiancee",
+    "fiancees",
+    "fianc\u00e9e",
+    "fianc\u00e9es",
     "queen",
     "queens",
     "princess",
@@ -1517,12 +1534,25 @@ _MALE_IDENTITY_TERMS = {
     "sons",
     "husband",
     "husbands",
+    "fiance",
+    "fiances",
+    "fianc\u00e9",
+    "fianc\u00e9s",
     "king",
     "kings",
     "prince",
     "princes",
 }
 _GENDER_NEGATION_TERMS = {"not", "no", "non", "without"}
+_GENDER_NEGATION_BRIDGE_TERMS = {
+    "a",
+    "an",
+    "any",
+    "adult",
+    "elderly",
+    "old",
+    "young",
+}
 _TITLE_LIKE_STATUS_VALUES = {
     "admiral",
     "baron",
@@ -1562,8 +1592,17 @@ def _identity_surface_tokens(value: str) -> tuple[str, ...]:
 
 def _gender_token_is_negated(tokens: tuple[str, ...], index: int) -> bool:
     """Return whether a gendered token has a nearby explicit negation."""
-    start = max(0, index - 2)
-    return any(token in _GENDER_NEGATION_TERMS for token in tokens[start:index])
+    preceding_tokens = tokens[max(0, index - 4) : index]
+    if not preceding_tokens:
+        return False
+    if preceding_tokens[-1] in _GENDER_NEGATION_TERMS:
+        return True
+    bridge_tokens = tuple(
+        token
+        for token in preceding_tokens
+        if token not in _GENDER_NEGATION_BRIDGE_TERMS
+    )
+    return bool(bridge_tokens and bridge_tokens[-1] in _GENDER_NEGATION_TERMS)
 
 
 def _rewritten_fact_for_resolved_identity(

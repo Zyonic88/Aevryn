@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 
 import { apiClient, type ExportPreviewRequest } from "../api/client";
-import type { ExportPreview, ProjectExport } from "../api/schemas";
+import type { ExportPreview, ProjectExport, ProjectExportList } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
 import { formatDateTime } from "../formatting/display";
@@ -43,6 +43,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [previewResult, setPreviewResult] = useState<ExportPreview | null>(null);
   const [createdExportId, setCreatedExportId] = useState<string | null>(null);
+  const [downloadedExportName, setDownloadedExportName] = useState<string | null>(null);
 
   const activeExport = parseOptionValue(selectedExport);
   const statusQuery = useQuery({
@@ -83,6 +84,11 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
     },
     onSuccess(result) {
       setCreatedExportId(result.export_id);
+      setDownloadedExportName(null);
+      queryClient.setQueryData<ProjectExportList>(
+        projectExportsQueryKey(project.id, session?.session_token),
+        (current) => mergeProjectExportList(current, result),
+      );
       void queryClient.invalidateQueries({
         queryKey: projectExportsQueryKey(project.id, session?.session_token),
       });
@@ -94,6 +100,12 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
   const downloadExport = useMutation({
     mutationFn: (exportRecord: ProjectExport) =>
       downloadProjectExport(project.id, exportRecord, requireSessionToken(session)),
+    onMutate() {
+      setDownloadedExportName(null);
+    },
+    onSuccess(_result, exportRecord) {
+      setDownloadedExportName(exportRecord.filename);
+    },
   });
   const previewExport = useMutation({
     mutationFn: (payload: ExportPreviewRequest) => apiClient.previewExport(payload),
@@ -156,7 +168,9 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
         exports={exportsQuery.data?.exports ?? []}
         exportsError={exportsQuery.error}
         isCreatePending={createSnapshotExport.isPending}
-        isDownloadPending={downloadExport.isPending}
+        downloadingExportId={
+          downloadExport.isPending ? (downloadExport.variables?.export_id ?? null) : null
+        }
         isLoading={statusQuery.isLoading || exportsQuery.isLoading}
         latestSnapshotId={statusQuery.data?.snapshots.latest_snapshot_id ?? ""}
         mutationError={createSnapshotExport.error ?? downloadExport.error}
@@ -164,13 +178,14 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
         onDownload={(exportRecord) => downloadExport.mutate(exportRecord)}
         statusError={statusQuery.error}
         createdExportId={createdExportId}
+        downloadedExportName={downloadedExportName}
       />
 
       <DeveloperPreviewToggle>
         <section>
           <h2>Export Preview</h2>
           <p className="field-note">
-            Developer preview requires real source text and extraction JSON. It does not run with
+            Technical review requires real source text and extraction JSON. It does not run with
             simulated source, placeholder AI output, or empty success paths.
           </p>
           <form className="import-form" onSubmit={submit}>
@@ -267,7 +282,7 @@ function ProjectStoredExportsPanel({
   exports,
   exportsError,
   isCreatePending,
-  isDownloadPending,
+  downloadingExportId,
   isLoading,
   latestSnapshotId,
   mutationError,
@@ -275,11 +290,12 @@ function ProjectStoredExportsPanel({
   onDownload,
   statusError,
   createdExportId,
+  downloadedExportName,
 }: {
   exports: ProjectExport[];
   exportsError: Error | null;
   isCreatePending: boolean;
-  isDownloadPending: boolean;
+  downloadingExportId: string | null;
   isLoading: boolean;
   latestSnapshotId: string;
   mutationError: Error | null;
@@ -287,14 +303,23 @@ function ProjectStoredExportsPanel({
   onDownload: (exportRecord: ProjectExport) => void;
   statusError: Error | null;
   createdExportId: string | null;
+  downloadedExportName: string | null;
 }) {
+  const sortedExports = [...exports].sort((left, right) =>
+    right.created_at.localeCompare(left.created_at),
+  );
+  const isDownloadPending = downloadingExportId !== null;
+  const downloadingExport = exports.find(
+    (exportRecord) => exportRecord.export_id === downloadingExportId,
+  );
+
   return (
     <section className="project-panel" aria-label="Stored exports">
       <div className="panel-heading-row">
         <div>
           <h2>Stored Exports</h2>
           <p className="field-note">
-            Create a downloadable JSON export from the latest accepted canon snapshot.
+            Create a downloadable JSON export from the latest accepted Canon snapshot.
           </p>
         </div>
         <button
@@ -307,20 +332,52 @@ function ProjectStoredExportsPanel({
         </button>
       </div>
 
+      <dl className="settings-summary-list export-safety-summary" aria-label="Export behavior">
+        <div>
+          <dt>Snapshot source</dt>
+          <dd>
+            {latestSnapshotId ? "Latest accepted Canon snapshot" : "Waiting for processed Canon"}
+          </dd>
+        </div>
+        <div>
+          <dt>Beta export</dt>
+          <dd>Canon Snapshot / JSON</dd>
+        </div>
+        <div>
+          <dt>Access</dt>
+          <dd>Authenticated download only</dd>
+        </div>
+        <div>
+          <dt>Storage</dt>
+          <dd>Private storage reference hidden</dd>
+        </div>
+      </dl>
+
       {isLoading ? <LoadingMessage>Loading stored exports.</LoadingMessage> : null}
       {statusError ? <ErrorMessage>{statusError.message}</ErrorMessage> : null}
       {exportsError ? <ErrorMessage>{exportsError.message}</ErrorMessage> : null}
       {mutationError ? <ErrorMessage>{mutationError.message}</ErrorMessage> : null}
       {createdExportId ? <p className="success-note">Snapshot export created.</p> : null}
+      {isDownloadPending ? (
+        <p className="success-note" role="status">
+          Preparing authenticated download
+          {downloadingExport ? ` for ${downloadingExport.filename}` : ""}.
+        </p>
+      ) : null}
+      {downloadedExportName ? (
+        <p className="success-note" role="status">
+          Download prepared for {downloadedExportName}.
+        </p>
+      ) : null}
       {!latestSnapshotId && !isLoading ? (
         <EmptyState title="No snapshot ready">
           Process an import before creating a stored export.
         </EmptyState>
       ) : null}
 
-      {exports.length > 0 ? (
+      {sortedExports.length > 0 ? (
         <div className="export-list">
-          {exports.map((exportRecord) => (
+          {sortedExports.map((exportRecord) => (
             <article className="export-list-item" key={exportRecord.export_id}>
               <div>
                 <h3>{exportRecord.filename}</h3>
@@ -336,7 +393,7 @@ function ProjectStoredExportsPanel({
                 disabled={isDownloadPending}
                 onClick={() => onDownload(exportRecord)}
               >
-                Download
+                {downloadingExportId === exportRecord.export_id ? "Preparing" : "Download"}
               </button>
             </article>
           ))}
@@ -391,6 +448,19 @@ function parseOptionValue(value: string): { kind: string; format: string } {
 
 function projectExportsQueryKey(projectId: string, sessionToken: string | undefined) {
   return ["project-exports", projectId, sessionToken];
+}
+
+function mergeProjectExportList(
+  current: ProjectExportList | undefined,
+  createdExport: ProjectExport,
+): ProjectExportList {
+  const existingExports = current?.exports ?? [];
+  return {
+    exports: [
+      createdExport,
+      ...existingExports.filter((exportRecord) => exportRecord.export_id !== createdExport.export_id),
+    ],
+  };
 }
 
 function requireSessionToken(session: { session_token: string } | null): string {

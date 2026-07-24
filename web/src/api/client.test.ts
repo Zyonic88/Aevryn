@@ -646,6 +646,9 @@ describe("AevrynApiClient", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/exports/export_alpha/download`,
     );
+    const headers = fetchMock.mock.calls[0][1].headers as Headers;
+    expect(headers.get("Authorization")).toBe("Bearer session-token");
+    expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
     expect(result.filename).toBe("alpha-canon-snapshot.json");
     expect(result.contentType).toBe("application/json");
   });

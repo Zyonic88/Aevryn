@@ -688,6 +688,56 @@ def test_create_app_from_env_requires_production_https_edge_config() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "origin",
+    (
+        "https://app.aevryn.ai/",
+        "https://app.aevryn.ai/dashboard",
+        "https://app.aevryn.ai?preview=true",
+        "https://user@app.aevryn.ai",
+    ),
+)
+def test_create_app_from_env_rejects_non_origin_cors_values(origin: str) -> None:
+    """Production CORS entries must be exact browser origins, not URLs."""
+    with pytest.raises(ValueError, match="must be exact browser origins"):
+        create_app_from_env(
+            {
+                DEPLOYMENT_ENV: "production",
+                PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+                PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+                ALLOWED_ORIGINS_ENV: origin,
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    (
+        (PUBLIC_FRONTEND_BASE_URL_ENV, "https://app.aevryn.ai/dashboard"),
+        (PUBLIC_FRONTEND_BASE_URL_ENV, "https://app.aevryn.ai?preview=true"),
+        (PUBLIC_FRONTEND_BASE_URL_ENV, "https://user@app.aevryn.ai"),
+        (PUBLIC_API_BASE_URL_ENV, "https://api.aevryn.ai/v2"),
+        (PUBLIC_API_BASE_URL_ENV, "https://api.aevryn.ai#health"),
+        (PUBLIC_API_BASE_URL_ENV, "https://user@api.aevryn.ai"),
+    ),
+)
+def test_create_app_from_env_rejects_non_origin_public_base_urls(
+    key: str, value: str
+) -> None:
+    """Public Aevryn base URLs must be exact HTTPS origins."""
+    config = {
+        DEPLOYMENT_ENV: "production",
+        PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+        PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+        ALLOWED_ORIGINS_ENV: "https://app.aevryn.ai",
+        PUBLIC_FRONTEND_BASE_URL_ENV: "https://app.aevryn.ai",
+        PUBLIC_API_BASE_URL_ENV: "https://api.aevryn.ai",
+    }
+
+    with pytest.raises(ValueError, match="must be an exact HTTPS origin"):
+        create_app_from_env({**config, key: value})
+
+
 def test_create_app_from_env_fails_closed_for_incomplete_production_config(
     tmp_path: Path,
 ) -> None:
@@ -2102,7 +2152,7 @@ def test_import_inspect_endpoint_uses_fixed_temp_path_for_upload_filename() -> N
         "/v2/imports/inspect",
         json={
             "source_id": "api_demo",
-            "filename": "../../private/chapter.txt",
+            "filename": r"C:\Users\writer\private\chapter.txt",
             "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
         },
     )
@@ -2123,7 +2173,7 @@ def test_import_inspect_logs_duration_without_source_payload(
             "/v2/imports/inspect",
             json={
                 "source_id": "api_demo",
-                "filename": "chapter.txt",
+                "filename": r"C:\Users\writer\private\chapter.txt",
                 "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
             },
         )
@@ -2133,6 +2183,9 @@ def test_import_inspect_logs_duration_without_source_payload(
     _assert_duration_log(record)
     assert getattr(record, "scene_count", 0) == 1
     assert getattr(record, "evidence_anchor_count", 0) == 1
+    assert getattr(record, "source_filename", "") == "chapter.txt"
+    assert "\\" not in getattr(record, "source_filename", "")
+    assert "/" not in getattr(record, "source_filename", "")
     assert "Mark carried a rusty dagger" not in _caplog_record_text(caplog)
 
 

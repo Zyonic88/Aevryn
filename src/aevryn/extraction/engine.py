@@ -35,6 +35,7 @@ PHYSICAL_ENTITY_TERMS = frozenset(
         "coin",
         "credits",
         "cruiser",
+        "crystal",
         "dagger",
         "equipment",
         "facility",
@@ -47,6 +48,7 @@ PHYSICAL_ENTITY_TERMS = frozenset(
         "room",
         "ship",
         "shuttle",
+        "slip",
         "spaceship",
         "spear",
         "starship",
@@ -75,6 +77,72 @@ SYSTEM_ENTITY_TERMS = frozenset(
         "system",
     }
 )
+PHYSICAL_OBJECT_HEAD_TERMS = frozenset(
+    {
+        "armor",
+        "artifact",
+        "battlecruiser",
+        "blade",
+        "blueprint",
+        "book",
+        "car",
+        "coin",
+        "credits",
+        "cruiser",
+        "crystal",
+        "dagger",
+        "equipment",
+        "gun",
+        "jacket",
+        "manual",
+        "potion",
+        "rifle",
+        "ship",
+        "shuttle",
+        "slip",
+        "spaceship",
+        "spear",
+        "starship",
+        "sword",
+        "token",
+        "uniform",
+        "vehicle",
+        "vessel",
+        "weapon",
+    }
+)
+PLACE_OR_ORGANIZATION_HEAD_TERMS = frozenset(
+    {
+        "academy",
+        "army",
+        "base",
+        "building",
+        "camp",
+        "city",
+        "clan",
+        "classroom",
+        "company",
+        "courtyard",
+        "department",
+        "empire",
+        "faction",
+        "fleet",
+        "forest",
+        "fortress",
+        "guild",
+        "hall",
+        "hangar",
+        "kingdom",
+        "planet",
+        "region",
+        "room",
+        "sect",
+        "sector",
+        "station",
+        "territory",
+        "world",
+    }
+)
 ROLE_OR_TITLE_ENTITY_TERMS = frozenset(
     {
         "admiral",
@@ -92,6 +160,24 @@ ROLE_OR_TITLE_ENTITY_TERMS = frozenset(
         "soldier",
         "student",
         "teacher",
+    }
+)
+NON_CAPABILITY_SKILL_TERMS = frozenset(
+    {
+        "credit",
+        "credits",
+        "currency",
+        "department",
+        "mission",
+        "point",
+        "points",
+        "profession",
+        "quest",
+        "rank",
+        "reward",
+        "role",
+        "task",
+        "title",
     }
 )
 ANONYMOUS_GROUP_CHARACTER_TERMS = frozenset(
@@ -508,10 +594,16 @@ class EntityExtractionEngine:
             )
 
         classification_terms = EntityExtractionEngine._classification_terms(entity)
+        head_term = EntityExtractionEngine._classification_head_term(entity)
         physical_terms = classification_terms & PHYSICAL_ENTITY_TERMS
         skill_terms = classification_terms & SKILL_ENTITY_TERMS
         system_terms = classification_terms & SYSTEM_ENTITY_TERMS
+        physical_object_head = head_term in PHYSICAL_OBJECT_HEAD_TERMS
+        place_or_organization_head = head_term in PLACE_OR_ORGANIZATION_HEAD_TERMS
         role_or_title_terms = classification_terms & ROLE_OR_TITLE_ENTITY_TERMS
+        non_capability_skill_terms = (
+            classification_terms & NON_CAPABILITY_SKILL_TERMS
+        )
         anonymous_group_terms = classification_terms & ANONYMOUS_GROUP_CHARACTER_TERMS
         singular_reference_terms = (
             classification_terms & SINGULAR_CHARACTER_REFERENCE_TERMS
@@ -525,6 +617,15 @@ class EntityExtractionEngine:
                 "Entity classification conflict: anonymous group phrase cannot be "
                 f"character: {entity.display_name}."
             )
+        if (
+            entity.entity_type == "skill"
+            and place_or_organization_head
+            and not skill_terms
+        ):
+            return (
+                "Entity classification conflict: place or organization cannot be skill: "
+                f"{entity.display_name}."
+            )
         if entity.entity_type == "skill" and physical_terms and not skill_terms:
             return (
                 "Entity classification conflict: physical object cannot be skill: "
@@ -535,10 +636,44 @@ class EntityExtractionEngine:
                 "Entity classification conflict: rank or profession cannot be skill: "
                 f"{entity.display_name}."
             )
+        if (
+            entity.entity_type == "skill"
+            and non_capability_skill_terms
+            and not skill_terms
+        ):
+            return (
+                "Entity classification conflict: non-capability story concept cannot "
+                f"be skill: {entity.display_name}."
+            )
         if entity.entity_type == "system" and physical_terms and not system_terms:
             return (
                 "Entity classification conflict: physical object cannot be system: "
                 f"{entity.display_name}."
+            )
+        if (
+            entity.entity_type in {"item", "weapon", "armor", "vehicle"}
+            and place_or_organization_head
+        ):
+            return (
+                "Entity classification conflict: place or organization cannot be "
+                f"physical item: {entity.display_name}."
+            )
+        if (
+            entity.entity_type in {"location", "organization"}
+            and physical_object_head
+        ):
+            return (
+                "Entity classification conflict: physical object cannot be place "
+                f"or organization: {entity.display_name}."
+            )
+        if (
+            entity.entity_type in {"location", "organization"}
+            and role_or_title_terms
+            and not place_or_organization_head
+        ):
+            return (
+                "Entity classification conflict: rank or profession cannot be place "
+                f"or organization: {entity.display_name}."
             )
         if (
             entity.entity_type in {"item", "weapon", "armor", "vehicle"}
@@ -583,6 +718,21 @@ class EntityExtractionEngine:
         if "star" in tokens and "ship" in tokens:
             tokens.add("starship")
         return tokens
+
+    @staticmethod
+    def _classification_head_term(entity: ExtractedEntity) -> str | None:
+        """Return the final normalized word in a display name."""
+        tokens = [
+            token
+            for token in "".join(
+                character.lower() if character.isalnum() else " "
+                for character in entity.display_name
+            ).split()
+            if token
+        ]
+        if not tokens:
+            return None
+        return tokens[-1]
 
     @staticmethod
     def _validate_relationship(

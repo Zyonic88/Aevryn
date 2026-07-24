@@ -7,7 +7,7 @@ import re
 import textwrap
 from collections.abc import Iterable
 
-from aevryn.characters import CanonCharacterCard
+from aevryn.characters import CanonCharacterCard, CanonCharacterFact
 from aevryn.core import Fact, Relationship
 from aevryn.prompts.models import ProductionPack, PromptBundle
 from aevryn.scenes import CanonSceneContext, SceneAnalysis, SceneAnalyzer
@@ -61,6 +61,24 @@ VISUAL_IDENTITY_ATTRIBUTE_GROUPS = {
     "pose": frozenset({"expression", "posture"}),
     "race/species": frozenset({"race", "species"}),
 }
+VISUAL_IDENTITY_NEGATION_ATTRIBUTES = frozenset({"gender", "race", "sex", "species"})
+VISUAL_IDENTITY_NEGATION_TERMS = frozenset({"never", "no", "non", "not", "without"})
+VISUAL_IDENTITY_NEGATION_BRIDGE_TERMS = frozenset(
+    {"a", "an", "any", "confirmed", "half", "known", "the"}
+)
+IDENTITY_REFERENCE_ATTRIBUTE_PARTS = frozenset(
+    {
+        "alias",
+        "description",
+        "family",
+        "identity",
+        "name",
+        "profession",
+        "relationship",
+        "role",
+        "title",
+    }
+)
 
 SCENE_VISUAL_ANCHOR_TERMS = frozenset(
     {
@@ -224,8 +242,10 @@ class CanonPromptBuilder:
                 self._scene_visual_anchor_section(context),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
+                self._character_identity_reference_section(context),
                 self._image_subject_section(context),
                 self._visual_identity_known_unknown_section(context),
+                self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
                 self._image_setting_section(analysis),
                 self._visual_direction_section(analysis),
@@ -259,7 +279,9 @@ class CanonPromptBuilder:
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._narration_direction_section(analysis),
+                self._character_identity_reference_section(context),
                 self._character_section(context),
+                self._visual_identity_known_unknown_section(context),
                 self._world_context_section(context),
                 self._continuity_guard_section(analysis),
             )
@@ -287,8 +309,10 @@ class CanonPromptBuilder:
                 self._composition_section(context, analysis),
                 self._camera_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
+                self._character_identity_reference_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
+                self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
                 self._visual_direction_section(analysis),
                 self._lighting_section(analysis),
@@ -317,8 +341,10 @@ class CanonPromptBuilder:
                 self._scene_directive_section(analysis),
                 self._animation_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
+                self._character_identity_reference_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
+                self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
                 self._visual_direction_section(analysis),
                 self._do_not_include_section(context, analysis),
@@ -332,7 +358,6 @@ class CanonPromptBuilder:
         """Return scene identity section."""
         return (
             f"Scene: {context.scene.title}\n"
-            f"Scene ID: {context.scene.scene_id}\n"
             f"Source Summary: {CanonPromptBuilder._source_summary(context)}"
         )
 
@@ -355,7 +380,6 @@ class CanonPromptBuilder:
         """Return scene analysis section."""
         return "\n".join(
             [
-                f"Scene ID: {analysis.scene_id}",
                 f"Scene Summary: {CanonPromptBuilder._shorten(analysis.summary)}",
                 f"Purpose: {CanonPromptBuilder._shorten(analysis.purpose)}",
                 f"Conflict: {CanonPromptBuilder._shorten(analysis.conflict)}",
@@ -370,7 +394,6 @@ class CanonPromptBuilder:
         return "\n".join(
             [
                 f"Scene Summary: {CanonPromptBuilder._shorten(analysis.summary, width=220)}",
-                f"Scene ID: {analysis.scene_id}",
                 f"Purpose: {CanonPromptBuilder._shorten(analysis.purpose)}",
                 f"Conflict: {CanonPromptBuilder._shorten(analysis.conflict)}",
                 f"Mood and tone: {CanonPromptBuilder._shorten(analysis.mood)}",
@@ -407,6 +430,26 @@ class CanonPromptBuilder:
         if len(lines) == 1:
             lines.append("- Unknown subjects.")
 
+        return "\n".join(lines)
+
+    def _character_identity_reference_section(self, context: CanonSceneContext) -> str:
+        """Return stable identity references from accepted character-card facts."""
+        if not context.character_cards:
+            return ""
+
+        lines = ["Character identity references:"]
+        for card in context.character_cards:
+            identity_lines = self._character_identity_lines(card)[:4]
+            if identity_lines:
+                lines.append(f"- {card.display_name}: " + "; ".join(identity_lines))
+
+        if len(lines) == 1:
+            return ""
+
+        lines.append(
+            "- Treat aliases, titles, roles, and descriptions as identity aids only; "
+            "do not create extra characters from them."
+        )
         return "\n".join(lines)
 
     def _visual_identity_known_unknown_section(self, context: CanonSceneContext) -> str:
@@ -616,6 +659,48 @@ class CanonPromptBuilder:
             lines.append("- No scene-specific world details accepted yet.")
 
         return "\n".join(lines)
+
+    def _visual_reference_requirements_section(self, context: CanonSceneContext) -> str:
+        """Return mandatory visual references when Canon provides concrete details."""
+        display_names = self._entity_display_names(context)
+        scene_fact_keys = self._scene_fact_keys(context.active_facts)
+        lines: list[str] = []
+        scene_anchors = self._scene_visual_anchors(context)
+        if scene_anchors:
+            lines.append("Setting anchors: " + "; ".join(scene_anchors[:3]))
+        for card in context.character_cards:
+            appearance_lines = [
+                line.removeprefix("- ")
+                for line in self._character_fact_lines(
+                    card=card,
+                    scene_fact_keys=scene_fact_keys,
+                )
+                if self._is_appearance_attribute(line)
+            ][:4]
+            if appearance_lines:
+                lines.append(
+                    f"{card.display_name} appearance: " + "; ".join(appearance_lines)
+                )
+
+        character_ids = {card.character_id for card in context.character_cards}
+        world_visual_lines = [
+            self._world_fact_line(fact, display_names=display_names)
+            for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
+            if fact.entity_id not in character_ids
+            and self._is_visual_production_attribute(fact.attribute)
+        ][:4]
+        lines.extend(world_visual_lines)
+        unique_lines = self._unique_values(lines)
+        if not unique_lines:
+            return ""
+
+        return "\n".join(
+            [
+                "Visual reference requirements:",
+                *[f"- {self._shorten(line, width=150)}" for line in unique_lines],
+                "- Treat these as required references; keep unspecified traits neutral.",
+            ]
+        )
 
     @staticmethod
     def _composition_section(
@@ -924,6 +1009,19 @@ class CanonPromptBuilder:
                 or CanonPromptBuilder._is_appearance_attribute(fact.attribute)
             )
             and not CanonPromptBuilder._is_prompt_metadata_attribute(fact.attribute)
+            and not CanonPromptBuilder._is_negated_visual_identity_fact(fact)
+        )
+        return CanonPromptBuilder._unique_values(lines)
+
+    @staticmethod
+    def _character_identity_lines(card: CanonCharacterCard) -> list[str]:
+        """Return stable identity facts that prevent character-reference drift."""
+        lines = (
+            f"{CanonPromptBuilder._attribute_label(fact.attribute)}: "
+            f"{CanonPromptBuilder._shorten(fact.value)}"
+            for fact in sorted(card.facts, key=lambda fact: fact.attribute)
+            if CanonPromptBuilder._is_identity_reference_attribute(fact.attribute)
+            and not CanonPromptBuilder._is_prompt_metadata_attribute(fact.attribute)
         )
         return CanonPromptBuilder._unique_values(lines)
 
@@ -942,12 +1040,69 @@ class CanonPromptBuilder:
         )
 
     @staticmethod
+    def _is_identity_reference_attribute(attribute: str) -> bool:
+        """Return whether a character fact stabilizes reference identity."""
+        normalized_attribute = attribute.lower()
+        return any(
+            part in normalized_attribute
+            for part in IDENTITY_REFERENCE_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
     def _is_prompt_metadata_attribute(attribute: str) -> bool:
         """Return whether an attribute is mechanical metadata for prompt details."""
         normalized_attribute = attribute.lower()
         return any(
             part in normalized_attribute
             for part in PROMPT_METADATA_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
+    def _is_negated_visual_identity_fact(fact: CanonCharacterFact) -> bool:
+        """Return whether evidence explicitly denies a visual identity fact."""
+        normalized_attribute = fact.attribute.lower()
+        if normalized_attribute not in VISUAL_IDENTITY_NEGATION_ATTRIBUTES:
+            return False
+        return CanonPromptBuilder._identity_term_is_negated(
+            fact.evidence.quote,
+            fact.value,
+        )
+
+    @staticmethod
+    def _identity_term_is_negated(value: str, term: str) -> bool:
+        """Return whether an identity term is explicitly denied nearby."""
+        value_parts = CanonPromptBuilder._identity_parts(value)
+        term_parts = CanonPromptBuilder._identity_parts(term)
+        if not value_parts or not term_parts:
+            return False
+
+        window = len(term_parts)
+        for index in range(0, len(value_parts) - window + 1):
+            if tuple(value_parts[index : index + window]) != term_parts:
+                continue
+            preceding_parts = tuple(value_parts[max(0, index - 4) : index])
+            if not preceding_parts:
+                return False
+            if preceding_parts[-1] in VISUAL_IDENTITY_NEGATION_TERMS:
+                return True
+            bridge_parts = tuple(
+                part
+                for part in preceding_parts
+                if part not in VISUAL_IDENTITY_NEGATION_BRIDGE_TERMS
+            )
+            return bool(
+                bridge_parts and bridge_parts[-1] in VISUAL_IDENTITY_NEGATION_TERMS
+            )
+
+        return False
+
+    @staticmethod
+    def _identity_parts(value: str) -> tuple[str, ...]:
+        """Return normalized identity parts for safe support checks."""
+        return tuple(
+            part
+            for part in re.split(r"[^a-z0-9]+", value.lower())
+            if part
         )
 
     @staticmethod

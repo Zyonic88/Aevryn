@@ -109,6 +109,7 @@ _EVIDENCE_GENDER_TERMS = (
             "daughter",
             "wife",
             "fiancee",
+            "fianc\u00e9e",
             "princess",
             "empress",
         ),
@@ -124,6 +125,7 @@ _EVIDENCE_GENDER_TERMS = (
             "son",
             "husband",
             "fiance",
+            "fianc\u00e9",
             "prince",
             "emperor",
         ),
@@ -139,7 +141,23 @@ _EXPLICIT_RACE_TERMS = (
     ("Dragon", ("dragon",)),
     ("Vampire", ("vampire",)),
 )
+_IDENTITY_NEGATION_TERMS = frozenset({"never", "no", "non", "not", "without"})
+_IDENTITY_NEGATION_BRIDGE_TERMS = frozenset(
+    {"a", "an", "any", "confirmed", "half", "known", "the"}
+)
 _MAX_PROMPT_PRESENTATION_LINES = 48
+_INTERNAL_PROMPT_LINE_PATTERNS = (
+    re.compile(r"^(scene|source|import|project|story|chapter) id\s*:", re.IGNORECASE),
+    re.compile(r"^evidence anchor\s*:", re.IGNORECASE),
+    re.compile(r"\baevryn_import_bundle\b", re.IGNORECASE),
+    re.compile(r"\bimport_[a-z0-9][a-z0-9_]*\b", re.IGNORECASE),
+    re.compile(r"\b[a-z0-9]+_chapter_\d{3}_scene_\d{3}\b", re.IGNORECASE),
+    re.compile(
+        r"\bchapter_\d{3}_scene_\d{3}_paragraph_\d{3}_sentence_\d{3}_anchor\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b[a-z0-9][a-z0-9_]*_anchor(?:_\d+)?\b", re.IGNORECASE),
+)
 
 
 class PresentationEngine:
@@ -399,6 +417,8 @@ class PresentationEngine:
             support_haystacks=support_haystacks,
             term_groups=term_groups,
         )
+        if title == "Race":
+            direct_items = PresentationEngine._resolved_race_items(direct_items)
         if title == "Gender":
             direct_items = PresentationEngine._resolved_gender_items(direct_items)
         return PresentationSection(
@@ -584,6 +604,10 @@ class PresentationEngine:
         """Return whether a direct identity value appears in self-describing text."""
         return any(
             PresentationEngine._contains_identity_term(haystack, normalized_value)
+            and not PresentationEngine._identity_term_is_negated(
+                haystack,
+                normalized_value,
+            )
             for haystack in support_haystacks
         )
 
@@ -631,6 +655,8 @@ class PresentationEngine:
     ) -> bool:
         """Return whether an identity term in a quote can support a character."""
         if not PresentationEngine._contains_identity_term(quote, term):
+            return False
+        if PresentationEngine._identity_term_is_negated(quote, term):
             return False
         if not is_gender_term:
             return True
@@ -684,6 +710,18 @@ class PresentationEngine:
         return unique_items
 
     @staticmethod
+    def _resolved_race_items(items: Iterable[str]) -> tuple[str, ...]:
+        """Return race/species only when supported values do not conflict."""
+        unique_items = tuple(PresentationEngine._unique_values(items))
+        normalized_items = {item.lower() for item in unique_items}
+        if "human" in normalized_items and any(
+            item != "human" for item in normalized_items
+        ):
+            return ()
+
+        return unique_items
+
+    @staticmethod
     def _explicit_identity_items(
         haystacks: tuple[str, ...],
         term_groups: tuple[tuple[str, tuple[str, ...]], ...],
@@ -694,6 +732,10 @@ class PresentationEngine:
             for label, terms in term_groups:
                 if any(
                     PresentationEngine._contains_identity_term(haystack, term)
+                    and not PresentationEngine._identity_term_is_negated(
+                        haystack,
+                        term,
+                    )
                     for term in terms
                 ):
                     labels.append(label)
@@ -705,6 +747,43 @@ class PresentationEngine:
         """Return whether value contains a standalone identity term."""
         escaped_term = re.escape(term).replace(r"\ ", r"[\s_-]+")
         return re.search(rf"(?<![a-z0-9]){escaped_term}(?![a-z0-9])", value) is not None
+
+    @staticmethod
+    def _identity_term_is_negated(value: str, term: str) -> bool:
+        """Return whether an identity term is explicitly denied nearby."""
+        value_parts = PresentationEngine._identity_parts(value)
+        term_parts = PresentationEngine._identity_parts(term)
+        if not value_parts or not term_parts:
+            return False
+
+        window = len(term_parts)
+        for index in range(0, len(value_parts) - window + 1):
+            if tuple(value_parts[index : index + window]) != term_parts:
+                continue
+            preceding_parts = tuple(value_parts[max(0, index - 4) : index])
+            if not preceding_parts:
+                return False
+            if preceding_parts[-1] in _IDENTITY_NEGATION_TERMS:
+                return True
+            bridge_parts = tuple(
+                part
+                for part in preceding_parts
+                if part not in _IDENTITY_NEGATION_BRIDGE_TERMS
+            )
+            return bool(
+                bridge_parts and bridge_parts[-1] in _IDENTITY_NEGATION_TERMS
+            )
+
+        return False
+
+    @staticmethod
+    def _identity_parts(value: str) -> tuple[str, ...]:
+        """Return normalized identity parts for safe support checks."""
+        return tuple(
+            part
+            for part in re.split(r"[^a-z0-9]+", value.lower())
+            if part
+        )
 
     @staticmethod
     def _evidence_summary(facts: tuple[CanonCharacterFact, ...]) -> str:
@@ -771,8 +850,18 @@ class PresentationEngine:
         stripped_line = PresentationEngine._strip_markdown_bullet(line.strip())
         if not stripped_line or stripped_line == "Unknown" or stripped_line.endswith(":"):
             return None
+        if PresentationEngine._is_internal_prompt_line(stripped_line):
+            return None
 
         return PresentationEngine._shorten(stripped_line)
+
+    @staticmethod
+    def _is_internal_prompt_line(line: str) -> bool:
+        """Return whether a prompt line exposes internal IDs or evidence plumbing."""
+        return any(
+            pattern.search(line)
+            for pattern in _INTERNAL_PROMPT_LINE_PATTERNS
+        )
 
     @staticmethod
     def _is_prompt_safeguard_line(line: str) -> bool:

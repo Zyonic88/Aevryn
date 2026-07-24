@@ -79,6 +79,23 @@ def test_canon_prompt_builder_builds_bundle() -> None:
     assert bundle.animation_prompt
 
 
+def test_canon_prompt_builder_keeps_machine_scene_ids_out_of_prompt_text() -> None:
+    """Prompt text should not expose internal scene identifiers."""
+    context = build_context()
+    bundle = CanonPromptBuilder().build_bundle(context)
+    prompt_text = "\n".join(
+        (
+            bundle.image_prompt,
+            bundle.narration_prompt,
+            bundle.camera_prompt,
+            bundle.animation_prompt,
+        )
+    )
+
+    assert context.scene.scene_id not in prompt_text
+    assert "Scene ID:" not in prompt_text
+
+
 def test_canon_prompt_builder_does_not_dump_full_scene_text() -> None:
     """Prompt builder keeps source text concise."""
     prompt = CanonPromptBuilder().build_image_prompt(build_context())
@@ -265,6 +282,11 @@ def test_canon_prompt_builder_includes_scene_world_context_and_exclusions() -> N
     prompt = CanonPromptBuilder().build_image_prompt(context)
 
     assert "Scene production brief:" in prompt
+    assert "Visual reference requirements:" in prompt
+    assert (
+        "Iron Sword Visual Design: Chipped iron blade with a plain leather grip"
+        in prompt
+    )
     assert "World and scene object context:" in prompt
     assert (
         "Iron Sword Visual Design: Chipped iron blade with a plain leather grip"
@@ -372,6 +394,142 @@ def test_canon_prompt_builder_tracks_known_and_unknown_visual_identity_traits() 
     assert (
         "Do not guess missing visual traits." in prompt
     )
+
+
+def test_canon_prompt_builder_does_not_mark_negated_race_as_known_visual_identity() -> None:
+    """Prompt visual identity coverage should not treat denied race as known."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_evidence(
+        Evidence(
+            evidence_id="evidence_negated_race",
+            source_id="source_demo",
+            chapter_id="source_demo_chapter_002",
+            scene_id="source_demo_chapter_002_scene_001",
+            paragraph_index=1,
+            sentence_index=1,
+            quote="Mark is not a Half-Beastman recruit.",
+            confidence=1.0,
+        )
+    )
+    database.store_fact(
+        Fact(
+            fact_id="fact_mark_negated_race",
+            entity_id="character_mark",
+            attribute="race",
+            value="Half-Beastman",
+            evidence_id="evidence_negated_race",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_mark_negated_race",
+            fact_id="fact_mark_negated_race",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+
+    assert "- Race: Half-Beastman" not in prompt
+    assert "- Mark: known none. Missing age,build,clothing,eyes,other; neutral." in prompt
+
+
+def test_canon_prompt_builder_carries_visual_identity_guard_into_narration() -> None:
+    """Narration prompts should preserve known and missing visual identity boundaries."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("gender", "Male"),
+        ("race", "Human"),
+        ("hair_color", "Black"),
+    ):
+        fact_id = f"fact_mark_narration_visual_identity_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_008",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_mark_narration_visual_identity_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_008_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_narration_prompt(context)
+
+    assert "Visual ID:" in prompt
+    assert "- Mark: known gender,hair,race/species." in prompt
+    assert "Missing" in prompt
+    assert "Do not guess missing visual traits." in prompt
+    assert "Narrate using only accepted canon facts." in prompt
+
+
+def test_canon_prompt_builder_adds_visual_requirements_to_visual_prompt_types() -> None:
+    """Image, camera, and animation prompts carry mandatory canon visual references."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("hair_color", "Silver"),
+        ("eye_color", "Blue"),
+    ):
+        fact_id = f"fact_mark_required_visual_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_001",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_mark_required_visual_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_001_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+    builder = CanonPromptBuilder()
+
+    image_prompt = builder.build_image_prompt(context)
+    camera_prompt = builder.build_camera_prompt(context)
+    animation_prompt = builder.build_animation_prompt(context)
+
+    for prompt in (image_prompt, camera_prompt, animation_prompt):
+        assert "Visual reference requirements:" in prompt
+        assert "Mark appearance: Eye Color: Blue; Hair Color: Silver" in prompt
+        assert "keep unspecified traits neutral" in prompt
 
 
 def test_canon_prompt_builder_marks_missing_visual_identity_neutral() -> None:
@@ -516,6 +674,60 @@ def test_canon_prompt_builder_carries_stable_character_appearance_from_cards() -
     assert "- Eye Color: Blue" in animation_prompt
 
 
+def test_canon_prompt_builder_carries_stable_identity_references_from_cards() -> None:
+    """Production prompts preserve accepted aliases, titles, and descriptions."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("alias", "General Mark"),
+        ("title", "Commander"),
+        ("description", "White-haired academy officer"),
+        ("school_year", "First Year"),
+    ):
+        fact_id = f"fact_001_identity_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_001",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_001_identity_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_001_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+    builder = CanonPromptBuilder()
+
+    prompts = (
+        builder.build_image_prompt(context),
+        builder.build_narration_prompt(context),
+        builder.build_camera_prompt(context),
+        builder.build_animation_prompt(context),
+    )
+
+    for prompt in prompts:
+        assert "Character identity references:" in prompt
+        assert (
+            "- Mark: Alias: General Mark; Description: White-haired academy "
+            "officer; Title: Commander"
+        ) in prompt
+        assert "do not create extra characters from them" in prompt
+        assert "School Year: First Year" not in prompt
+
+
 def test_canon_prompt_builder_omits_mechanical_metadata_from_character_details() -> None:
     """Prompt character details omit task math that belongs in audit views."""
     imported_source = build_imported_source()
@@ -566,6 +778,63 @@ def test_canon_prompt_builder_omits_mechanical_metadata_from_character_details()
     assert "Active Task: Win the contest" in prompt
     assert "active_task_reward" not in prompt
     assert "One contest point" not in prompt
+
+
+def test_canon_prompt_builder_keeps_generation_context_in_every_prompt_type() -> None:
+    """Production prompts preserve scene action, setting, character, and object context."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_fact(
+        Fact(
+            fact_id="fact_iron_sword_visual_material",
+            entity_id="item_iron_sword",
+            attribute="visual_material",
+            value="Dull iron blade with a worn leather grip",
+            evidence_id="evidence_relationship",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_iron_sword_visual_material",
+            fact_id="fact_iron_sword_visual_material",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    bundle = CanonPromptBuilder().build_bundle(context)
+    prompts = (
+        bundle.image_prompt,
+        bundle.narration_prompt,
+        bundle.camera_prompt,
+        bundle.animation_prompt,
+    )
+
+    for prompt in prompts:
+        assert "Scene production brief:" in prompt
+        assert "Current scene action beats:" in prompt
+        assert "Character: Mark" in prompt
+        assert "World and scene object context:" in prompt
+        assert "Iron Sword" in prompt
+        assert "Dull iron blade with a worn leather grip" in prompt
+        assert "Primary setting:" in prompt
+
+    for visual_prompt in (
+        bundle.image_prompt,
+        bundle.camera_prompt,
+        bundle.animation_prompt,
+    ):
+        assert "Visual reference requirements:" in visual_prompt
+        assert "Iron Sword Visual Material: Dull iron blade with a worn leather grip" in (
+            visual_prompt
+        )
 
 
 def test_canon_prompt_builder_rejects_duplicate_analysis_bullets() -> None:

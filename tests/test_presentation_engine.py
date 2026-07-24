@@ -311,12 +311,81 @@ def test_presentation_engine_uses_explicit_identity_language() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("identity_value", "support_value"),
+    (
+        ("Half-Beastman", "Not a Half-Beastman recruit from the frontier"),
+        ("Human", "Without any human ancestry"),
+    ),
+)
+def test_presentation_engine_rejects_negated_race_support(
+    identity_value: str,
+    support_value: str,
+) -> None:
+    """Negated race/species language should not become positive identity support."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = card.facts[0].evidence
+    identity_card = replace(
+        card,
+        facts=(
+            CanonCharacterFact(
+                attribute="origin_context",
+                value=support_value,
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="race",
+                value=identity_value,
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.race.items == ("Unknown",)
+    assert profile.relationships.items == (support_value,)
+
+
 def test_presentation_engine_uses_character_linked_gender_evidence() -> None:
     """Direct gender facts can be shown when the evidence quote names the character."""
     card, _context, _analysis, _pack = build_outputs()
     evidence = replace(
         card.facts[0].evidence,
         quote="Jiang Shasha is Zhao Chen's fiancee and treats him coldly.",
+    )
+    identity_card = replace(
+        card,
+        display_name="Jiang Shasha",
+        facts=(
+            CanonCharacterFact(
+                attribute="gender",
+                value="Female",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.gender.items == ("Female",)
+
+
+def test_presentation_engine_uses_accented_relationship_gender_evidence() -> None:
+    """Accented relationship terms should support direct gender facts."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = replace(
+        card.facts[0].evidence,
+        quote="Jiang Shasha is Zhao Chen's fianc\u00e9e and treats him coldly.",
     )
     identity_card = replace(
         card,
@@ -429,6 +498,45 @@ def test_presentation_engine_hides_conflicting_gender_values() -> None:
     profile = PresentationEngine().character_profile(identity_card)
 
     assert profile.gender.items == ("Unknown",)
+
+
+def test_presentation_engine_hides_conflicting_race_values() -> None:
+    """Character profiles should not display Human beside a non-human species."""
+    card, _context, _analysis, _pack = build_outputs()
+    human_evidence = replace(
+        card.facts[0].evidence,
+        quote="Zhao Chen is a human student in the captaincy department.",
+    )
+    half_beastman_evidence = replace(
+        card.facts[0].evidence,
+        quote="Zhao Chen is called a Half-Beastman by mistake.",
+    )
+    identity_card = replace(
+        card,
+        display_name="Zhao Chen",
+        facts=(
+            CanonCharacterFact(
+                attribute="race",
+                value="Human",
+                previous_value=None,
+                evidence=human_evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="race",
+                value="Half-Beastman",
+                previous_value=None,
+                evidence=half_beastman_evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.race.items == ("Unknown",)
 
 
 def test_presentation_engine_builds_scene_sheet() -> None:
@@ -560,7 +668,7 @@ def test_presentation_engine_preserves_prompt_safeguards_when_prompt_is_long() -
 
 
 def test_presentation_engine_removes_prompt_structural_placeholders() -> None:
-    """Prompt presentation should not expose raw prompt section placeholders."""
+    """Prompt presentation should not expose structural or internal placeholders."""
     _card, context, analysis, pack = build_outputs()
     prompt_bundle = PromptBundle(
         image_prompt="\n".join(
@@ -569,6 +677,13 @@ def test_presentation_engine_removes_prompt_structural_placeholders() -> None:
                 "- Unknown",
                 "- Iron Sword",
                 "Scene ID: source_demo_chapter_002_scene_001",
+                "Source ID: aevryn_import_bundle",
+                (
+                    "Evidence anchor: "
+                    "aevryn_import_bundle_chapter_010_scene_001_paragraph_023_"
+                    "sentence_002_anchor"
+                ),
+                "Import ID: import_7d8de6b4_a531_4f4e_b22e_b5c18acd4dbf",
             ]
         ),
         narration_prompt=pack.prompt_bundle.narration_prompt,
@@ -581,10 +696,7 @@ def test_presentation_engine_removes_prompt_structural_placeholders() -> None:
 
     view = engine.production_pack(pack=compact_pack, scene=scene)
 
-    assert view.image_prompt.items == (
-        "Iron Sword",
-        "Scene ID: source_demo_chapter_002_scene_001",
-    )
+    assert view.image_prompt.items == ("Iron Sword",)
 
 
 def test_export_engine_writes_presentation_views() -> None:

@@ -116,3 +116,38 @@ The Prompt Engine provides prompt bundles.
 The Export Engine serializes those objects into external formats.
 
 Future file-writing behavior should be handled explicitly and separately.
+
+## V2 Beta Stored Export Limits
+
+The V2 beta stored-export surface is intentionally narrow.
+
+Supported stored export:
+
+* Latest accepted Canon snapshot
+* JSON format
+* Authenticated project-owner download
+* Private object storage behind the API
+
+The frontend may display export metadata such as filename, format, size,
+checksum, and creation time. It must not display storage references, bucket
+paths, private object URLs, credentials, or serialized export bytes in the
+stored-export list.
+
+Developer export previews may still show explicit preview content behind a
+collapsed disclosure control because the user deliberately requested a preview.
+Stored exports are different: they are downloaded through the authenticated API
+boundary and are not rendered into the workspace by default.
+
+Not included in the V2 beta stored-export surface unless explicitly re-scoped:
+
+* batch exports
+* production-pack file generation
+* character-sheet file generation
+* prompt-bundle file generation
+* generated media assets
+* public or shared export links
+* signed URL handoff to the frontend
+
+The public beta acceptance target is that users can create and download the
+allowed Canon Snapshot JSON export without exposing private storage references
+or crossing project-owner authorization boundaries.

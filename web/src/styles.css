@@ -482,6 +482,7 @@ input:focus {
 }
 
 .icon-button {
+  position: relative;
   display: inline-grid;
   place-items: center;
   width: 32px;
@@ -494,6 +495,24 @@ input:focus {
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
+}
+
+.icon-button::before,
+.icon-button::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.icon-button::before {
+  transform: rotate(45deg);
+}
+
+.icon-button::after {
+  transform: rotate(-45deg);
 }
 
 .icon-button:hover:not(:disabled),
@@ -691,6 +710,7 @@ input:focus {
 
   .dashboard-grid,
   .diagnostics-grid,
+  .export-safety-summary,
   .metric-grid,
   .monitoring-detail-grid,
   .monitoring-event-row,
@@ -1034,6 +1054,11 @@ select:focus {
 
 .settings-scope-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.export-safety-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 0 16px;
 }
 
 .settings-scope-grid a,
@@ -1522,6 +1547,44 @@ select:focus {
 
 .prompt-pack-detail {
   min-width: 0;
+}
+
+.prompt-canon-inputs {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 16px;
+  padding: 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.prompt-canon-inputs > strong {
+  color: #172033;
+}
+
+.prompt-canon-inputs dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.prompt-canon-inputs div {
+  min-width: 0;
+}
+
+.prompt-canon-inputs dt {
+  color: #52647c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.prompt-canon-inputs dd {
+  margin: 2px 0 0;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .prompt-section li {

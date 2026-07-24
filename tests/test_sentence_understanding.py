@@ -63,6 +63,77 @@ def test_sentence_understanding_detects_system_ui_phrases() -> None:
     assert "quest reward" in understanding.cue_terms
 
 
+def test_sentence_understanding_keeps_system_rewards_out_of_skill_context() -> None:
+    """Quest, mission, points, and reward language are system context, not abilities."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_system_rewards",
+        title="Sentence System Rewards",
+        text="Chapter 1\nThe mission reward gave Zhao Chen 100 system points.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "mission reward" in understanding.cue_terms
+    assert "points" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
+def test_sentence_understanding_keeps_skill_points_out_of_skill_context() -> None:
+    """Skill points are system-resource context, not a usable ability."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_points",
+        title="Sentence Skill Points",
+        text="Chapter 1\nThe status panel awarded Zhao Chen 10 skill points.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "skill points" in understanding.cue_terms
+    assert "status panel" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_keeps_real_skill_after_skill_points_reviewable() -> None:
+    """System resources and a separate ability cue should both remain visible."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_points_and_skill",
+        title="Sentence Skill Points And Skill",
+        text=(
+            "Chapter 1\n"
+            "The status panel spent 10 skill points to unlock Shadow Step skill."
+        ),
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "skill points" in understanding.cue_terms
+    assert "skill" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
+def test_sentence_understanding_keeps_system_skill_context_reviewable() -> None:
+    """System UI listing a skill should be reviewed instead of treated as settled meaning."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_system_skill_review",
+        title="Sentence System Skill Review",
+        text="Chapter 1\nThe status panel listed Sword Technique as a reward.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "status panel" in understanding.cue_terms
+    assert "sword technique" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_treats_skill_phrase_as_skill_context() -> None:
     """An item-like word inside a skill phrase should not become a separate item."""
     imported = StoryImporter().import_text(
@@ -77,6 +148,90 @@ def test_sentence_understanding_treats_skill_phrase_as_skill_context() -> None:
     assert "sword technique" in understanding.cue_terms
     assert "item_reference" not in understanding.signals
     assert understanding.review_required is False
+
+
+def test_sentence_understanding_treats_skill_book_as_item_context() -> None:
+    """A physical skill book is item context, not automatically a usable ability."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_book",
+        title="Sentence Skill Book",
+        text="Chapter 1\nCharlotte opened a skill book on the table.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "skill book" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_treats_spell_scroll_as_item_context() -> None:
+    """A physical spell scroll is item context, not automatically a usable ability."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_spell_scroll",
+        title="Sentence Spell Scroll",
+        text="Chapter 1\nCharlotte placed the spell scroll into her bag.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "spell scroll" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_treats_jade_slip_as_item_context() -> None:
+    """A jade slip is a physical knowledge container, not a skill by itself."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_jade_slip",
+        title="Sentence Jade Slip",
+        text="Chapter 1\nCharlotte placed the jade slip beside the cultivation manual.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "cultivation manual" in understanding.cue_terms
+    assert "jade slip" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_treats_ability_crystal_as_item_context() -> None:
+    """A physical ability crystal should not become a usable ability automatically."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_ability_crystal",
+        title="Sentence Ability Crystal",
+        text="Chapter 1\nThe system placed an ability crystal in Zhao Chen's hand.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "ability crystal" in understanding.cue_terms
+    assert understanding.review_required is True
+    assert "system" in understanding.ambiguity_terms
+
+
+def test_sentence_understanding_keeps_manual_and_separate_skill_reviewable() -> None:
+    """A technique manual can be an item while a separate skill cue still routes to review."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_manual_and_skill",
+        title="Sentence Manual And Skill",
+        text="Chapter 1\nThe technique manual recorded the Shadow Step skill.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "technique manual" in understanding.cue_terms
+    assert "skill" in understanding.cue_terms
+    assert understanding.review_required is True
 
 
 def test_sentence_understanding_keeps_separate_item_and_skill_reviewable() -> None:
@@ -135,6 +290,31 @@ def test_sentence_understanding_flags_translation_ambiguous_terms() -> None:
     assert "translation_ambiguity" in understanding.signals
     assert understanding.ambiguity_terms == ("core", "dao", "qi", "vessel")
     assert understanding.review_required is True
+
+
+def test_sentence_understanding_flags_cultivation_body_terms_for_translation_review() -> None:
+    """Genre power-system terms should be review metadata, not settled Canon."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_cultivation_terms",
+        title="Sentence Cultivation Terms",
+        text=(
+            "Chapter 1\n"
+            "Charlotte felt qi move through her dantian, meridian, and spiritual root."
+        ),
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "translation_ambiguity" in understanding.signals
+    assert understanding.ambiguity_terms == (
+        "dantian",
+        "meridian",
+        "qi",
+        "spiritual root",
+    )
+    assert understanding.review_required is True
+    assert "skill_reference" not in understanding.signals
+    assert "item_reference" not in understanding.signals
 
 
 def test_sentence_understanding_detects_relationship_language() -> None:

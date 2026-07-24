@@ -33,6 +33,7 @@ import {
   readablePromptSummary,
   readablePromptText,
 } from "./readableOutput";
+import { downloadPromptText } from "./promptDownload";
 
 type OutputSurface =
   "characters" | "world" | "timeline" | "scenes" | "continuity" | "prompts" | "exports";
@@ -44,6 +45,14 @@ const WORLD_CARD_PAGE_SIZE = 48;
 const TIMELINE_GROUP_PAGE_SIZE = 60;
 const SCENE_CARD_PAGE_SIZE = 48;
 const CONTINUITY_SCENE_PAGE_SIZE = 24;
+const CHARACTER_RECENT_CHANGE_PROFILE_LABELS = new Set([
+  "alias",
+  "description",
+  "gender",
+  "name",
+  "race",
+  "title",
+]);
 
 export function ProjectOutputSummaryPanel({
   project,
@@ -82,7 +91,7 @@ export function ProjectOutputSummaryPanel({
 export function DeveloperPreviewToggle({ children }: { children: ReactNode }) {
   return (
     <details className="project-panel">
-      <summary>Developer preview</summary>
+      <summary>Technical review</summary>
       <div className="workspace-view-stack developer-preview-stack">{children}</div>
     </details>
   );
@@ -173,6 +182,12 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
     identityReviewCount > 0
       ? `${reviewItemCountLabel(identityReviewCount)} need character review`
       : "No character review items";
+  const reviewStatus =
+    summary.translation_review_count > 0 && identityReviewCount > 0
+      ? `${translationStatus}; ${identityReviewStatus}`
+      : summary.translation_review_count > 0
+        ? translationStatus
+        : identityReviewStatus;
   return (
     <div
       className="compact-list language-identity-status"
@@ -192,9 +207,7 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
       </div>
       <div className="compact-row">
         <strong>Review</strong>
-        <span>
-          {translationStatus}; {identityReviewStatus}
-        </span>
+        <span>{reviewStatus}</span>
       </div>
     </div>
   );
@@ -446,13 +459,69 @@ function evidenceFactCount(summary: string): number {
 }
 
 function characterRecentChanges(profile: CharacterProfile): OutputSection {
+  const representedValues = representedCharacterProfileValues(profile);
   return {
     title: profile.recent_changes.title,
     items: readableOutputItems(profile.recent_changes.items).filter(
-      (item) =>
-        !item.startsWith("Name: ") && !item.startsWith("Race: ") && !item.startsWith("Gender: "),
+      (item) => !isRepresentedCharacterProfileChange(item, representedValues),
     ),
   };
+}
+
+function representedCharacterProfileValues(profile: CharacterProfile): Set<string> {
+  const representedSections = [
+    profile.aliases,
+    profile.titles,
+    profile.descriptions,
+    profile.race,
+    profile.gender,
+    profile.status,
+    profile.current_goal,
+    profile.current_equipment,
+    profile.current_abilities,
+    profile.current_assets,
+    profile.territory,
+    profile.relationships,
+    profile.current_limitations,
+  ];
+  return new Set(
+    [
+      readableCharacterName(profile.display_name),
+      readableCharacterSubtitle(profile.subtitle),
+      ...representedSections.flatMap((section) => readableOutputItems(section.items)),
+    ]
+      .flatMap((item) => [item, profileChangeValue(item)])
+      .map(normalizedProfileComparisonValue)
+      .filter(Boolean),
+  );
+}
+
+function isRepresentedCharacterProfileChange(
+  item: string,
+  representedValues: Set<string>,
+): boolean {
+  const label = normalizedProfileComparisonValue(profileChangeLabel(item));
+  const normalizedItem = normalizedProfileComparisonValue(item);
+  const normalizedValue = normalizedProfileComparisonValue(profileChangeValue(item));
+  return (
+    CHARACTER_RECENT_CHANGE_PROFILE_LABELS.has(label) ||
+    representedValues.has(normalizedItem) ||
+    representedValues.has(normalizedValue)
+  );
+}
+
+function profileChangeLabel(item: string): string {
+  const labelMatch = item.match(/^([^:]+):\s*.+$/u);
+  return labelMatch ? labelMatch[1] : "";
+}
+
+function profileChangeValue(item: string): string {
+  const valueMatch = item.match(/^[^:]+:\s*(.+)$/u);
+  return valueMatch ? valueMatch[1] : item;
+}
+
+function normalizedProfileComparisonValue(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function readableCharacterSubtitle(subtitle: string): string {
@@ -475,14 +544,7 @@ function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
   const normalizedQuery = query.trim().toLowerCase();
   const filteredProfiles = normalizedQuery
     ? profiles.filter((profile) =>
-        [
-          readableCharacterName(profile.display_name),
-          readableCharacterSubtitle(profile.subtitle),
-          profile.evidence_summary,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery),
+        searchableCharacterText(profile).toLowerCase().includes(normalizedQuery),
       )
     : profiles;
   const visibleProfiles = filteredProfiles.slice(0, visibleCount);
@@ -531,30 +593,88 @@ function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
   );
 }
 
+function searchableCharacterText(profile: CharacterProfile): string {
+  const sections = [
+    profile.aliases,
+    profile.titles,
+    profile.descriptions,
+    profile.race,
+    profile.gender,
+    profile.status,
+    profile.current_goal,
+    profile.current_equipment,
+    profile.current_abilities,
+    profile.current_assets,
+    profile.territory,
+    profile.relationships,
+    profile.current_limitations,
+    characterRecentChanges(profile),
+  ];
+  return [
+    readableCharacterName(profile.display_name),
+    readableCharacterSubtitle(profile.subtitle),
+    profile.evidence_summary,
+    ...sections.flatMap((section) => readableOutputItems(section.items)),
+  ].join(" ");
+}
+
 function WorldPanel({ world }: { world: WorldSheet }) {
+  const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(WORLD_CARD_PAGE_SIZE);
-  const visibleSections = world.entity_sections.slice(0, visibleCount);
-  const hiddenCount = Math.max(world.entity_sections.length - visibleSections.length, 0);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredSections = normalizedQuery
+    ? world.entity_sections.filter((section) =>
+        searchableWorldSectionText(section).toLowerCase().includes(normalizedQuery),
+      )
+    : world.entity_sections;
+  const visibleSections = filteredSections.slice(0, visibleCount);
+  const hiddenCount = Math.max(filteredSections.length - visibleSections.length, 0);
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setVisibleCount(WORLD_CARD_PAGE_SIZE);
+  }
+
   return (
     <div className="large-output-stack">
+      <div className="large-output-controls">
+        <label>
+          Search world
+          <input
+            value={query}
+            onChange={(event) => updateQuery(event.target.value)}
+            placeholder="Name, type, ownership, condition"
+          />
+        </label>
+        <p>
+          Showing {visibleSections.length.toLocaleString()} of{" "}
+          {filteredSections.length.toLocaleString()} world sections.
+        </p>
+      </div>
       <LimitedResultsNote
         shown={visibleSections.length}
-        total={world.entity_sections.length}
+        total={filteredSections.length}
         label="world sections"
       />
-      <div className="profile-grid" aria-label="World sheets">
-        {visibleSections.map((section) => (
-          <article className="profile-card" key={section.title}>
-            <header>
-              <h3>{section.title}</h3>
-            </header>
-            <details className="profile-disclosure">
-              <summary>World details</summary>
-              <WorldSection section={section} />
-            </details>
-          </article>
-        ))}
-      </div>
+      {visibleSections.length > 0 ? (
+        <div className="profile-grid" aria-label="World sheets">
+          {visibleSections.map((section) => (
+            <article className="profile-card" key={section.title}>
+              <header>
+                <h3>{section.title}</h3>
+              </header>
+              <details className="profile-disclosure">
+                <summary>World details</summary>
+                <WorldSection section={section} />
+              </details>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState title="No matching world entries">
+          No world sections match the current search.
+        </EmptyState>
+      )}
       <LoadMoreButton
         hiddenCount={hiddenCount}
         pageSize={WORLD_CARD_PAGE_SIZE}
@@ -563,6 +683,10 @@ function WorldPanel({ world }: { world: WorldSheet }) {
       <p className="evidence-note">{world.evidence_summary}</p>
     </div>
   );
+}
+
+function searchableWorldSectionText(section: OutputSection): string {
+  return [section.title, ...readableOutputItems(section.items)].join(" ");
 }
 
 function TimelinePanel({ changes }: { changes: ProjectTimelineChange[] }) {
@@ -691,14 +815,14 @@ function ContinuityPanel({ report }: { report: ContinuityReport }) {
           </summary>
           <ContinuityScenePreview scene={scene} />
           <div className="continuity-change-grid">
-            <ContinuityBucket title="New" records={scene.new} />
-            <ContinuityBucket title="Updated" records={scene.updated} />
-            <ContinuityBucket title="Invalidated" records={scene.invalidated} />
+            <ContinuityBucket title="New Canon" records={scene.new} />
+            <ContinuityBucket title="Changed Canon" records={scene.updated} />
+            <ContinuityBucket title="No Longer Current" records={scene.invalidated} />
           </div>
           {scene.still_known.length > 0 ? (
             <details className="nested-disclosure">
-              <summary>{`${scene.still_known.length.toLocaleString()} still known`}</summary>
-              <ContinuityBucket title="Still Known" records={scene.still_known} />
+              <summary>{`${scene.still_known.length.toLocaleString()} retained canon`}</summary>
+              <ContinuityBucket title="Retained Canon" records={scene.still_known} />
             </details>
           ) : null}
         </details>
@@ -738,16 +862,32 @@ function ContinuityBucket({
   if (records.length === 0) {
     return null;
   }
+  const readableRecords = records
+    .map((record) => ({
+      record,
+      description: readableOutputItems([record.description])[0] ?? "",
+    }))
+    .filter(({ description }) => description && description !== "Unknown");
+  if (readableRecords.length === 0) {
+    return null;
+  }
+  const visibleRecords = readableRecords.slice(0, 8);
+  const hiddenCount = readableRecords.length - visibleRecords.length;
   return (
     <div>
       <strong>{title}</strong>
       <ul>
-        {records.slice(0, 8).map((record) => (
+        {visibleRecords.map(({ record, description }) => (
           <li key={record.record_id}>
-            <span>{readableOutputItems([record.description])[0] ?? "Unknown"}</span>
+            <span>{description}</span>
           </li>
         ))}
       </ul>
+      {hiddenCount > 0 ? (
+        <p className="field-note">
+          {hiddenCount.toLocaleString()} additional {title.toLowerCase()} records hidden.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -790,6 +930,7 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
             <h3>{selectedPack.scene.title}</h3>
             <p>{selectedPack.scene.chapter_label}</p>
           </header>
+          <PromptCanonInputs pack={selectedPack} />
           <div className="profile-section-grid prompt-scene-context">
             <PanelSection section={selectedPack.scene.characters_present} />
             <PanelSection section={selectedPack.scene.location} />
@@ -811,19 +952,88 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
   );
 }
 
+function PromptCanonInputs({ pack }: { pack: ProductionPack }) {
+  const guardrailCount = promptGuardrailCount(pack);
+  const inputs = [
+    promptInputStatus("Characters", pack.scene.characters_present),
+    promptInputStatus("Setting", pack.scene.location, pack.scene.environment),
+    promptInputStatus("Visual details", pack.scene.visual_highlights),
+    promptInputStatus("Continuity", pack.scene.continuity_changes),
+    {
+      label: "Constraints",
+      value:
+        guardrailCount > 0
+          ? `${guardrailCount.toLocaleString()} canon guardrail${
+              guardrailCount === 1 ? "" : "s"
+            }`
+          : "No explicit guardrails",
+    },
+  ];
+  return (
+    <div className="prompt-canon-inputs" aria-label="Prompt canon inputs">
+      <strong>Canon inputs</strong>
+      <dl>
+        {inputs.map((input) => (
+          <div key={input.label}>
+            <dt>{input.label}</dt>
+            <dd>{input.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+function promptInputStatus(label: string, ...sections: OutputSection[]): { label: string; value: string } {
+  const count = sections.reduce(
+    (total, section) => total + knownSectionItems(section).length,
+    0,
+  );
+  return {
+    label,
+    value:
+      count > 0 ? `${count.toLocaleString()} known detail${count === 1 ? "" : "s"}` : "Unknown",
+  };
+}
+
+function knownSectionItems(section: OutputSection): string[] {
+  return readableOutputItems(section.items).filter((item) => item !== "Unknown");
+}
+
+function promptGuardrailCount(pack: ProductionPack): number {
+  const guardrailPatterns = [
+    /\bonly accepted\b/iu,
+    /\bwithout inventing\b/iu,
+    /\bunsupported\b/iu,
+    /\bforbidden\b/iu,
+    /\bdo not\b/iu,
+    /\bmust not\b/iu,
+  ];
+  return readableOutputItems([
+    ...pack.image_prompt.items,
+    ...pack.narration_prompt.items,
+    ...pack.camera_prompt.items,
+    ...pack.animation_prompt.items,
+  ]).filter((item) => guardrailPatterns.some((pattern) => pattern.test(item))).length;
+}
+
 function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): string {
   const changeCount = continuityChangeCount(scene);
   const stableCount = scene.still_known.length;
   const changeLabel = `${changeCount.toLocaleString()} change${changeCount === 1 ? "" : "s"}`;
-  const stableLabel = `${stableCount.toLocaleString()} still known`;
-  return `${changeLabel}; ${stableLabel}`;
+  const stableLabel = `${stableCount.toLocaleString()} retained canon`;
+  const firstChange = continuityPreviewItems(scene)[0];
+  if (!firstChange) {
+    return `${changeLabel}; ${stableLabel}`;
+  }
+  return `${changeLabel}: ${firstChange}; ${stableLabel}`;
 }
 
 function continuityPreviewItems(scene: ContinuityReport["scenes"][number]): string[] {
   const records = [
-    ...scene.new.map((record) => ({ ...record, bucket: "New" })),
-    ...scene.updated.map((record) => ({ ...record, bucket: "Updated" })),
-    ...scene.invalidated.map((record) => ({ ...record, bucket: "Invalidated" })),
+    ...scene.new.map((record) => ({ ...record, bucket: "New canon" })),
+    ...scene.updated.map((record) => ({ ...record, bucket: "Changed canon" })),
+    ...scene.invalidated.map((record) => ({ ...record, bucket: "No longer current" })),
   ];
   return records.slice(0, 2).map((record) => {
     const description = readableOutputItems([record.description])[0] ?? "Unknown";
@@ -985,6 +1195,14 @@ function PromptTextSection({ section, full = false }: { section: OutputSection; 
             onClick={() => void copyPrompt()}
           >
             Copy
+          </button>
+          <button
+            type="button"
+            className="text-button"
+            aria-label={`Download ${section.title}`}
+            onClick={() => downloadPromptText(section, promptText)}
+          >
+            Download
           </button>
         </div>
       </div>

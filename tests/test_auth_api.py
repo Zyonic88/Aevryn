@@ -726,6 +726,75 @@ def test_story_imports_api_rejects_oversized_uploads_before_storage() -> None:
     assert repository.list_imports_for_story("user_owner", "story_alpha") == ()
 
 
+def test_story_imports_api_persists_ten_chapter_bundle_metadata_and_bytes() -> None:
+    """Saved multi-file browser bundles should retain structure and source bytes."""
+    repository = InMemoryProjectRepository()
+    content_store = InMemoryImportContentStore()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            import_content_store=content_store,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    create_project_and_story(client)
+    source_text = ten_chapter_bundle_text()
+
+    inspected = client.post(
+        "/v2/imports/inspect",
+        headers=auth_headers("token_001"),
+        json={
+            "source_id": "source_bundle",
+            "filename": "selected_chapters.txt",
+            "title": "Ten Chapter Test",
+            "content_base64": import_content_base64(source_text),
+        },
+    )
+    saved = client.post(
+        "/v2/projects/project_alpha/stories/story_alpha/imports",
+        headers=auth_headers("token_001"),
+        json={
+            "source_id": "source_bundle",
+            "filename": "selected_chapters.txt",
+            "title": "Ten Chapter Test",
+            "content_base64": import_content_base64(source_text),
+            "import_id": "import_bundle",
+            "now": NOW,
+        },
+    )
+
+    assert inspected.status_code == 200
+    assert inspected.json()["chapters"] == 10
+    assert inspected.json()["scenes"] == 10
+    assert inspected.json()["evidence_anchors"] == 10
+    assert inspected.json()["chapter_ids"][0] == "source_bundle_chapter_001"
+    assert inspected.json()["chapter_ids"][-1] == "source_bundle_chapter_010"
+    assert inspected.json()["scene_map"][-1] == {
+        "chapter_id": "source_bundle_chapter_010",
+        "chapter_index": 10,
+        "scene_id": "source_bundle_chapter_010_scene_001",
+        "scene_index": 1,
+        "title": "Scene 1",
+    }
+    assert "Aurelia calibrated relay 10." not in inspected.text
+
+    assert saved.status_code == 200
+    assert saved.json()["chapter_count"] == 10
+    assert saved.json()["scene_count"] == 10
+    assert saved.json()["evidence_anchor_count"] == 10
+    import_record = repository.get_import(
+        user_id="user_owner",
+        import_id="import_bundle",
+    )
+    assert import_record.chapter_count == 10
+    assert import_record.scene_count == 10
+    assert import_record.evidence_anchor_count == 10
+    assert content_store.read_import_content(import_record.storage_ref) == (
+        source_text.encode("utf-8")
+    )
+
+
 def test_import_runs_api_submits_and_lists_pending_runs() -> None:
     """Import run API should persist pending run metadata and enqueue jobs."""
     repository = InMemoryProjectRepository()
@@ -2573,6 +2642,69 @@ def test_project_outputs_hide_persisted_conflicting_gender_values() -> None:
     assert '"items":["Male","Female"]' not in response.text
 
 
+def test_project_outputs_hide_persisted_conflicting_race_values() -> None:
+    """Stored profile payloads should never display contradictory race/species values."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    snapshot_payload = _legacy_machine_id_snapshot_payload()
+    characters = snapshot_payload["presentation"]["characters"]  # type: ignore[index]
+    assert isinstance(characters, list)
+    characters[0]["race"] = {"title": "Race", "items": ["Human", "Half-Beastman"]}
+    repository.record_import(
+        ImportRecord(
+            import_id="import_alpha",
+            story_id="story_alpha",
+            source_id="source_alpha",
+            filename="chapter_001.txt",
+            source_format="txt",
+            storage_ref="storage://projects/project_alpha/imports/import_alpha/source.txt",
+            chapter_count=1,
+            scene_count=1,
+            evidence_anchor_count=1,
+            created_at=NOW,
+        )
+    )
+    repository.record_engine_run(
+        EngineRunRecord(
+            run_id="run_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            import_id="import_alpha",
+            status="succeeded",
+            engine_version="aevryn_v1",
+            started_at=NOW,
+            status_updated_at=SOON,
+            finished_at=SOON,
+        )
+    )
+    repository.store_snapshot(
+        SnapshotRecord(
+            snapshot_id="snapshot_alpha",
+            project_id="project_alpha",
+            story_id="story_alpha",
+            run_id="run_alpha",
+            snapshot_kind="canon",
+            content_type="application/json",
+            serialized_output=json.dumps(snapshot_payload),
+            created_at=SOON,
+        )
+    )
+
+    response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
+    assert '"items":["Human","Half-Beastman"]' not in response.text
+
+
 def test_worker_process_api_fails_when_import_content_is_missing() -> None:
     """Worker processing should not fabricate snapshots without source bytes."""
     repository = InMemoryProjectRepository()
@@ -2829,6 +2961,87 @@ def test_project_export_api_creates_lists_and_downloads_storage_backed_export(
     assert downloaded.headers["content-type"] == "application/json"
     assert downloaded.headers["content-disposition"] == (
         'attachment; filename="canon.json"'
+    )
+
+
+def test_project_export_api_normalizes_path_like_filenames(tmp_path: Path) -> None:
+    """Submitted export filenames should become basename-only metadata."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository),
+            project_repository=repository,
+            storage_service=LocalFilesystemStorage(tmp_path / "storage"),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    _store_succeeded_snapshot(repository)
+
+    created = client.post(
+        "/v2/projects/project_alpha/exports",
+        headers=auth_headers("token_001"),
+        json={
+            "export_id": "export_alpha",
+            "snapshot_id": "snapshot_alpha",
+            "export_format": "json",
+            "filename": r"..\private\canon.json",
+            "now": SOON,
+        },
+    )
+
+    assert created.status_code == 200
+    payload = created.json()
+    assert payload["filename"] == "canon.json"
+    assert "storage_ref" not in payload
+    assert ".." not in created.text
+    downloaded = client.get(
+        "/v2/projects/project_alpha/exports/export_alpha/download",
+        headers=auth_headers("token_001"),
+    )
+    assert downloaded.status_code == 200
+    assert downloaded.headers["content-disposition"] == (
+        'attachment; filename="canon.json"'
+    )
+
+
+def test_project_export_api_sanitizes_header_unsafe_filenames(tmp_path: Path) -> None:
+    """Submitted export filenames should not shape download headers."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository),
+            project_repository=repository,
+            storage_service=LocalFilesystemStorage(tmp_path / "storage"),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    _store_succeeded_snapshot(repository)
+
+    created = client.post(
+        "/v2/projects/project_alpha/exports",
+        headers=auth_headers("token_001"),
+        json={
+            "export_id": "export_alpha",
+            "snapshot_id": "snapshot_alpha",
+            "export_format": "json",
+            "filename": 'canon"final;draft.json',
+            "now": SOON,
+        },
+    )
+
+    assert created.status_code == 200
+    payload = created.json()
+    assert payload["filename"] == "canon_final_draft.json"
+    assert "storage_ref" not in created.text
+    downloaded = client.get(
+        "/v2/projects/project_alpha/exports/export_alpha/download",
+        headers=auth_headers("token_001"),
+    )
+    assert downloaded.status_code == 200
+    assert downloaded.headers["content-disposition"] == (
+        'attachment; filename="canon_final_draft.json"'
     )
 
 
@@ -3429,6 +3642,15 @@ class FailingAuditLedger(AuditLedger):
 def import_content_base64(text: str) -> str:
     """Return base64-encoded import source for API tests."""
     return base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+
+def ten_chapter_bundle_text() -> str:
+    """Return synthetic ten-chapter source text for stable import tests."""
+    chapters = [
+        f"Chapter {index}\nAurelia calibrated relay {index}."
+        for index in range(1, 11)
+    ]
+    return "\n\n".join(chapters)
 
 
 def _expected_audit_reference(value: str) -> str:

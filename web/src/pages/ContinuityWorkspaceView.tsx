@@ -23,7 +23,7 @@ const DEFAULT_AI_RESPONSE =
 const bucketLabels = {
   new: "New",
   updated: "Updated",
-  still_known: "Still Known",
+  still_known: "Retained Canon",
   invalidated: "Invalidated",
 } as const;
 
@@ -156,8 +156,7 @@ function ContinuityPreviewResult({ result }: { result: ContinuityPreview }) {
     <section className="project-panel" aria-label="Continuity preview result">
       <h2>Continuity Report</h2>
       <p className="result-summary">
-        {scenes.length.toLocaleString()} scene{scenes.length === 1 ? "" : "s"} for{" "}
-        {result.continuity_report.source_id}.
+        {scenes.length.toLocaleString()} continuity scene{scenes.length === 1 ? "" : "s"} ready.
       </p>
       {scenes.length > 0 ? (
         <div className="continuity-scene-list">
@@ -198,7 +197,7 @@ function ContinuitySceneCard({ scene }: { scene: ContinuityScene }) {
         </div>
         {scene.still_known.length > 0 ? (
           <details className="nested-disclosure">
-            <summary>{`${scene.still_known.length.toLocaleString()} still known`}</summary>
+            <summary>{`${scene.still_known.length.toLocaleString()} retained canon`}</summary>
             <ContinuityBucket title={bucketLabels.still_known} records={scene.still_known} />
           </details>
         ) : null}
@@ -208,21 +207,38 @@ function ContinuitySceneCard({ scene }: { scene: ContinuityScene }) {
 }
 
 function ContinuityBucket({ title, records }: { title: string; records: ContinuityRecord[] }) {
+  const readableRecords = records
+    .map((record) => ({
+      record,
+      description: readableOutputItems([record.description])[0] ?? "",
+    }))
+    .filter(({ description }) => description && description !== "Unknown");
+  const visibleRecords = readableRecords.slice(0, 8);
+  const hiddenCount = readableRecords.length - visibleRecords.length;
   return (
     <section className="profile-section">
       <h4>{title}</h4>
-      {records.length > 0 ? (
-        <ul>
-          {records.map((record) => (
-            <li key={record.record_id}>
-              <strong>{record.record_type}</strong>:{" "}
-              {readableOutputItems([record.description])[0] ?? "Unknown"}
-              <span className="continuity-evidence">
-                Evidence from {formatEvidenceScope(record)}
-              </span>
-            </li>
-          ))}
-        </ul>
+      {readableRecords.length > 0 ? (
+        <>
+          <ul>
+            {visibleRecords.map(({ record, description }) => (
+              <li key={record.record_id}>
+                <strong>{readableRecordType(record.record_type)}</strong>:{" "}
+                {description}
+                <span className="continuity-evidence">
+                  Evidence from {formatEvidenceScope(record)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {hiddenCount > 0 ? (
+            <p className="field-note">
+              {hiddenCount.toLocaleString()} additional {title.toLowerCase()} records hidden.
+            </p>
+          ) : null}
+        </>
+      ) : records.length > 0 ? (
+        <p>No user-facing continuity details.</p>
       ) : (
         <p>Unknown</p>
       )}
@@ -236,4 +252,12 @@ function bucketKeys(): ContinuityBucketKey[] {
 
 function changeBucketKeys(): ContinuityBucketKey[] {
   return ["new", "updated", "invalidated"];
+}
+
+function readableRecordType(value: string): string {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+    .join(" ");
 }

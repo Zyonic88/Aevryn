@@ -266,6 +266,25 @@ class MisclassifiedSkillExtractor:
         )
 
 
+class MisclassifiedPhysicalContainerSkillExtractor:
+    """Extractor that labels a physical knowledge/resource container as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious physical-container/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_source_crystal",
+                    entity_type="skill",
+                    display_name="Source Crystal",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.94,
+                ),
+            ),
+        )
+
+
 class ValidSkillExtractor:
     """Extractor that labels a named ability as a skill."""
 
@@ -299,6 +318,177 @@ class MisclassifiedProfessionSkillExtractor:
                     display_name="Chief Engineer",
                     evidence_anchor_id=scene.evidence_anchor_ids[0],
                     confidence=0.92,
+                ),
+            ),
+        )
+
+
+class MisclassifiedQuestRewardSkillExtractor:
+    """Extractor that labels a story-management concept as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious non-capability/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_quarterly_task_reward",
+                    entity_type="skill",
+                    display_name="Quarterly task reward",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.92,
+                ),
+            ),
+        )
+
+
+class MisclassifiedOrganizationItemExtractor:
+    """Extractor that labels an institution as a physical item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious organization/item classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_north_star_academy",
+                    entity_type="item",
+                    display_name="North Star Starship Military Academy",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
+class MisclassifiedLocationSkillExtractor:
+    """Extractor that labels a place as a usable skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious location/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_training_room",
+                    entity_type="skill",
+                    display_name="Training Room",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
+class MisclassifiedPhysicalOrganizationExtractor:
+    """Extractor that labels a physical object as an organization."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious physical-object/organization classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="organization_t3_blueprint",
+                    entity_type="organization",
+                    display_name="T3 Blizzard technical blueprint",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
+class MisclassifiedPhysicalLocationExtractor:
+    """Extractor that labels a physical object as a location."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious physical-object/location classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="location_iron_sword",
+                    entity_type="location",
+                    display_name="Iron Sword",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.89,
+                ),
+            ),
+        )
+
+
+class MisclassifiedRoleOrganizationExtractor:
+    """Extractor that labels a role or title as an organization."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious role/organization classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="organization_captain_commander",
+                    entity_type="organization",
+                    display_name="Captain Commander",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.89,
+                ),
+            ),
+        )
+
+
+class MisclassifiedTitleLocationExtractor:
+    """Extractor that labels a title as a location."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious title/location classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="location_chief_engineer",
+                    entity_type="location",
+                    display_name="Chief Engineer",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.88,
+                ),
+            ),
+        )
+
+
+class ValidRoleOrganizationHeadExtractor:
+    """Extractor that labels a role-bearing department as an organization."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid organization with a role term and organization head."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="organization_captain_department",
+                    entity_type="organization",
+                    display_name="Captain Department",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.88,
+                ),
+            ),
+        )
+
+
+class ValidRoleLocationHeadExtractor:
+    """Extractor that labels a role-bearing room as a location."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid location with a role term and place head."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="location_officer_training_room",
+                    entity_type="location",
+                    display_name="Officer Training Room",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.87,
                 ),
             ),
         )
@@ -373,6 +563,46 @@ class AnonymousGroupCharacterExtractor:
                     entity_id="character_female_soldiers",
                     entity_type="character",
                     display_name="Female Soldiers",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
+class ValidSystemCreatedItemExtractor:
+    """Extractor that labels a system-created physical object as an item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a physical item that was produced by a story system."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_t3_blizzard_blueprint",
+                    entity_type="item",
+                    display_name=(
+                        "T3 Blizzard-class Light Interstellar Battlecruiser technical blueprint"
+                    ),
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
+class RaceGenderGroupCharacterExtractor:
+    """Extractor that labels a plural race/gender group as one character."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a plural group that should stay out of character cards."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="character_female_half_beastman_slaves",
+                    entity_type="character",
+                    display_name="Female Half-Beastman Slaves",
                     evidence_anchor_id=scene.evidence_anchor_ids[0],
                     confidence=0.9,
                 ),
@@ -628,6 +858,19 @@ def test_extraction_rejects_obvious_physical_object_as_skill() -> None:
         engine.extract_imported_source(imported)
 
 
+def test_extraction_rejects_physical_containers_as_skills() -> None:
+    """Physical crystals and slips must not be accepted as usable skills."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedPhysicalContainerSkillExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
 def test_extraction_accepts_explicit_skill_terms() -> None:
     """Named techniques remain valid skill entities."""
     imported = StoryImporter().import_text(
@@ -653,6 +896,127 @@ def test_extraction_rejects_obvious_profession_as_skill() -> None:
 
     with pytest.raises(ValueError, match="rank or profession cannot be skill"):
         engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_story_management_concepts_as_skills() -> None:
+    """Quests, rewards, and similar concepts must not become skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedQuestRewardSkillExtractor())
+
+    with pytest.raises(ValueError, match="non-capability story concept cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_organization_as_physical_item() -> None:
+    """Institutions must not be accepted as physical item entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedOrganizationItemExtractor())
+
+    with pytest.raises(ValueError, match="place or organization cannot be physical item"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_location_as_skill() -> None:
+    """Places must not be accepted as usable skill entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedLocationSkillExtractor())
+
+    with pytest.raises(ValueError, match="place or organization cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_physical_object_as_organization() -> None:
+    """Physical objects must not be accepted as organization entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedPhysicalOrganizationExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be place or organization"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_physical_object_as_location() -> None:
+    """Physical objects must not be accepted as location entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedPhysicalLocationExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be place or organization"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_role_as_organization() -> None:
+    """Roles and titles must not be accepted as organization entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedRoleOrganizationExtractor())
+
+    with pytest.raises(ValueError, match="rank or profession cannot be place"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_title_as_location() -> None:
+    """Roles and titles must not be accepted as location entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedTitleLocationExtractor())
+
+    with pytest.raises(ValueError, match="rank or profession cannot be place"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_role_bearing_organization_head() -> None:
+    """Role terms are allowed when the entity has a real organization head."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidRoleOrganizationHeadExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_type == "organization"
+    assert result.entities[0].display_name == "Captain Department"
+
+
+def test_extraction_accepts_role_bearing_location_head() -> None:
+    """Role terms are allowed when the entity has a real place head."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidRoleLocationHeadExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_type == "location"
+    assert result.entities[0].display_name == "Officer Training Room"
 
 
 def test_extraction_rejects_obvious_physical_object_as_system() -> None:
@@ -695,6 +1059,23 @@ def test_extraction_accepts_explicit_system_terms() -> None:
     assert result.entities[0].entity_id == "system_super_starfleet"
 
 
+def test_extraction_accepts_system_created_physical_items() -> None:
+    """A system-created object should remain an item when it is physically concrete."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidSystemCreatedItemExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_type == "item"
+    assert result.entities[0].display_name == (
+        "T3 Blizzard-class Light Interstellar Battlecruiser technical blueprint"
+    )
+
+
 def test_extraction_rejects_anonymous_group_phrase_as_character() -> None:
     """Anonymous plural groups must not become character cards."""
     imported = StoryImporter().import_text(
@@ -703,6 +1084,19 @@ def test_extraction_rejects_anonymous_group_phrase_as_character() -> None:
         text=imported_source_text(),
     )
     engine = EntityExtractionEngine(extractor=AnonymousGroupCharacterExtractor())
+
+    with pytest.raises(ValueError, match="anonymous group phrase cannot be character"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_plural_race_gender_group_as_character() -> None:
+    """Plural race/gender groups must not become a single character card."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=RaceGenderGroupCharacterExtractor())
 
     with pytest.raises(ValueError, match="anonymous group phrase cannot be character"):
         engine.extract_imported_source(imported)

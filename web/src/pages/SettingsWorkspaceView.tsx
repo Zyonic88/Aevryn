@@ -56,8 +56,8 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
         <p className="eyebrow">Settings</p>
         <h2>Settings</h2>
         <p className="field-note">
-          Project behavior, workspace preferences, account context, privacy controls, and diagnostics
-          live here without changing Canon truth.
+          V2 settings separate editable project defaults from read-only account, privacy,
+          workspace, and diagnostic context. None of these settings can change Canon truth.
         </p>
       </div>
 
@@ -72,9 +72,9 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
           />
           <SettingsAreaCard
             href="#workspace-preferences"
-            status="Active"
+            status="Read-only"
             title="Workspace"
-            description="How Aevryn opens, organizes, and reveals tools."
+            description="How Aevryn currently opens, organizes, and reveals tools."
           />
           <SettingsAreaCard
             href="#account-settings"
@@ -84,13 +84,13 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
           />
           <SettingsAreaCard
             href="#privacy-data-settings"
-            status="Protected"
+            status="Policy"
             title="Privacy & Data"
             description="Ownership, deletion, and AI-training boundaries."
           />
           <SettingsAreaCard
             href="#diagnostics-settings"
-            status="Hidden"
+            status="Collapsed"
             title="Diagnostics"
             description="Support metadata only, never source prose or secrets."
           />
@@ -142,7 +142,7 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
             <dd>Collapsed by default where the content is long</dd>
           </div>
           <div>
-            <dt>Developer previews</dt>
+            <dt>Technical review panels</dt>
             <dd>Collapsed behind review controls</dd>
           </div>
         </dl>

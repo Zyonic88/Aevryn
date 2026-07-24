@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NavLink, Navigate, useParams } from "react-router-dom";
 
 import { ApiError, apiClient } from "../api/client";
+import type { ProjectList } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
 import { projectSummaryFromApiProject } from "../projects/projectMapping";
@@ -41,26 +42,36 @@ const visibleWorkspaceTabs = workspaceTabs.filter((tab) => tab.id !== "monitorin
 export function ProjectWorkspacePage() {
   const { session } = useAuth();
   const { projectId, tabId = "overview" } = useParams();
+  const queryClient = useQueryClient();
   const projectQuery = useQuery({
     queryKey: ["project", projectId, session?.session_token],
     queryFn: () =>
       apiClient.getProject(requireProjectId(projectId), requireSessionToken(session), new Date().toISOString()),
     enabled: session !== null && projectId !== undefined,
   });
+  const cachedProject = findCachedProject(
+    queryClient.getQueryData<ProjectList>(["projects", session?.session_token]),
+    projectId,
+  );
   if (projectId === undefined) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const project = projectQuery.data ? projectSummaryFromApiProject(projectQuery.data) : null;
+  if (projectQuery.error instanceof ApiError && projectQuery.error.status === 404) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const project = projectQuery.data
+    ? projectSummaryFromApiProject(projectQuery.data)
+    : cachedProject
+      ? projectSummaryFromApiProject(cachedProject)
+      : null;
 
   if (projectQuery.isLoading && project === null) {
     return <LoadingMessage>Loading project.</LoadingMessage>;
   }
 
   if (projectQuery.error && project === null) {
-    if (projectQuery.error instanceof ApiError && projectQuery.error.status === 404) {
-      return <Navigate to="/dashboard" replace />;
-    }
     return <ErrorMessage>{projectQuery.error.message}</ErrorMessage>;
   }
 
@@ -96,6 +107,16 @@ export function ProjectWorkspacePage() {
       </section>
     </div>
   );
+}
+
+function findCachedProject(
+  projectList: ProjectList | undefined,
+  projectId: string | undefined,
+): ProjectList["projects"][number] | null {
+  if (!projectList || !projectId) {
+    return null;
+  }
+  return projectList.projects.find((project) => project.project_id === projectId) ?? null;
 }
 
 function WorkspaceTabContent({

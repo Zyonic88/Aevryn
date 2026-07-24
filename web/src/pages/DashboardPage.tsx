@@ -114,7 +114,7 @@ export function DashboardPage() {
     if (!window.confirm(`Delete project ${projectTitle}?`)) {
       return;
     }
-    if (!window.confirm("Project data will be lost forever, are you sure?")) {
+    if (!window.confirm("Story data will be lost forever, are you sure?")) {
       return;
     }
     deleteProjectMutation.mutate(projectId);
@@ -202,9 +202,7 @@ export function DashboardPage() {
                       title={`Delete project ${project.name}`}
                       disabled={deleteProjectMutation.isPending}
                       onClick={() => requestProjectDeletion(project.id, project.name)}
-                    >
-                      <span aria-hidden="true">x</span>
-                    </button>
+                    />
                   </>
                 )}
               </div>

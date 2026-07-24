@@ -15,8 +15,9 @@ import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, cast
+from urllib.parse import urlsplit
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -2204,7 +2205,7 @@ def _decode_base64(value: str) -> bytes:
 def _api_upload_source_path(directory: str, filename: str) -> tuple[Path, str]:
     """Return a fixed temporary source path for API-uploaded content."""
     source_format = SourceFileTextExtractor.source_format_for_path(
-        Path(Path(filename).name)
+        Path(_uploaded_filename_basename(filename))
     )
     suffix = _API_IMPORT_SUFFIX_BY_FORMAT[source_format]
     return Path(directory) / f"source{suffix}", source_format
@@ -2262,10 +2263,24 @@ def _worker_api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
 def _require_https_origins(environ: Mapping[str, str]) -> None:
     """Require production CORS origins to use HTTPS."""
     for origin in _allowed_origins_from_env(environ):
-        if not origin.startswith("https://"):
+        parsed_origin = urlsplit(origin)
+        if parsed_origin.scheme != "https":
             raise ValueError(
                 "AEVRYN_API_ALLOWED_ORIGINS must contain only https:// origins when "
                 "AEVRYN_DEPLOYMENT_ENV=production."
+            )
+        if (
+            not parsed_origin.netloc
+            or parsed_origin.username is not None
+            or parsed_origin.password is not None
+            or parsed_origin.path
+            or parsed_origin.query
+            or parsed_origin.fragment
+        ):
+            raise ValueError(
+                "AEVRYN_API_ALLOWED_ORIGINS must be exact browser origins such as "
+                "https://app.aevryn.ai, without paths, query strings, fragments, "
+                "or credentials."
             )
 
 
@@ -2276,6 +2291,24 @@ def _require_https_url(environ: Mapping[str, str], key: str) -> None:
         raise ValueError(f"{key} is required when AEVRYN_DEPLOYMENT_ENV=production.")
     if not value.startswith("https://"):
         raise ValueError(f"{key} must use https:// in production.")
+
+
+def _require_https_origin_url(environ: Mapping[str, str], key: str) -> None:
+    """Require one production URL to be an exact HTTPS browser origin."""
+    _require_https_url(environ, key)
+    parsed_value = urlsplit(environ.get(key, "").strip())
+    if (
+        not parsed_value.netloc
+        or parsed_value.username is not None
+        or parsed_value.password is not None
+        or parsed_value.path
+        or parsed_value.query
+        or parsed_value.fragment
+    ):
+        raise ValueError(
+            f"{key} must be an exact HTTPS origin such as https://app.aevryn.ai, "
+            "without paths, query strings, fragments, or credentials."
+        )
 
 
 def _require_true_flag(environ: Mapping[str, str], key: str) -> None:
@@ -2320,8 +2353,8 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_DEPLOYMENT_ENV=production."
         )
     _require_https_origins(environ)
-    _require_https_url(environ, PUBLIC_FRONTEND_BASE_URL_ENV)
-    _require_https_url(environ, PUBLIC_API_BASE_URL_ENV)
+    _require_https_origin_url(environ, PUBLIC_FRONTEND_BASE_URL_ENV)
+    _require_https_origin_url(environ, PUBLIC_API_BASE_URL_ENV)
     _require_true_flag(environ, HTTPS_ONLY_ENV)
     _require_true_flag(environ, HSTS_ENABLED_ENV)
     if not _api_keys_from_env(environ):
@@ -4079,8 +4112,18 @@ def _snapshot_section_or_unknown(
         section = _section_from_payload(section_payload, display_names=display_names)
     except (ValueError, ValidationError):
         return OutputSection(title=title, items=("Unknown",))
+    if key == "race":
+        return _resolved_snapshot_race_section(section)
     if key == "gender":
         return _resolved_snapshot_gender_section(section)
+    return section
+
+
+def _resolved_snapshot_race_section(section: OutputSection) -> OutputSection:
+    """Hide contradictory persisted race/species values from human profile output."""
+    normalized_items = {item.lower() for item in section.items}
+    if "human" in normalized_items and any(item != "human" for item in normalized_items):
+        return OutputSection(title=section.title, items=("Unknown",))
     return section
 
 
@@ -4612,8 +4655,28 @@ def _snapshot_export_filename(
 ) -> str:
     """Return a safe filename for one snapshot export."""
     if filename is not None and filename.strip():
-        return filename.strip()
+        return _export_metadata_filename(filename)
     return f"{snapshot.snapshot_kind}_{snapshot.snapshot_id}.json"
+
+
+def _export_metadata_filename(value: str) -> str:
+    """Return basename-only export metadata from a submitted filename."""
+    name = Path(PureWindowsPath(value.strip()).name).name.strip()
+    name = "".join(
+        character if _is_safe_export_filename_character(character) else "_"
+        for character in name
+    )
+    name = re.sub(r"_+", "_", name).strip(" ._")
+    if not name or name in {".", ".."}:
+        return "aevryn-export.json"
+    return name
+
+
+def _is_safe_export_filename_character(character: str) -> bool:
+    """Return whether one export filename character is safe for storage and headers."""
+    if ord(character) < 32 or ord(character) == 127:
+        return False
+    return character not in {'"', ";", "<", ">", ":", "|", "?", "*", "/", "\\"}
 
 
 def _snapshot_kind_filter(value: str | None) -> SnapshotKind | None:
@@ -4865,7 +4928,12 @@ def _import_run_already_active_detail(run: EngineRunRecord) -> str:
 
 def _import_metadata_filename(value: str) -> str:
     """Return basename-only import metadata from a submitted filename."""
-    return Path(value.replace("\\", "/")).name
+    return _uploaded_filename_basename(value)
+
+
+def _uploaded_filename_basename(value: str) -> str:
+    """Return a basename-only upload filename across Windows and POSIX paths."""
+    return Path(PureWindowsPath(value.strip()).name).name.strip()
 
 
 class _MetadataOnlyBackgroundJobHandler:
@@ -5425,7 +5493,7 @@ def _workflow_request_extra(
         "error_code": error_code,
         "source_id": request.source_id,
         "source_format": source_format,
-        "source_filename": Path(request.filename).name,
+        "source_filename": _uploaded_filename_basename(request.filename),
         "scene_id": getattr(request, "scene_id", "") or "",
     }
 
