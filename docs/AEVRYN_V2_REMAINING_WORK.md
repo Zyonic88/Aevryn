@@ -463,6 +463,9 @@ Verified hardening:
 * synthetic 10-chapter browser-style import bundles inspect and persist
   metadata counts and stored source bytes without leaking source sentences in
   the inspect response
+* uploaded filenames are normalized to basename-only across temp import paths,
+  saved import metadata, and workflow log metadata so user machine paths do not
+  survive into hosted import logs
 
 Acceptance:
 

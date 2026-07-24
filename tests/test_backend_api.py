@@ -2102,7 +2102,7 @@ def test_import_inspect_endpoint_uses_fixed_temp_path_for_upload_filename() -> N
         "/v2/imports/inspect",
         json={
             "source_id": "api_demo",
-            "filename": "../../private/chapter.txt",
+            "filename": r"C:\Users\writer\private\chapter.txt",
             "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
         },
     )
@@ -2123,7 +2123,7 @@ def test_import_inspect_logs_duration_without_source_payload(
             "/v2/imports/inspect",
             json={
                 "source_id": "api_demo",
-                "filename": "chapter.txt",
+                "filename": r"C:\Users\writer\private\chapter.txt",
                 "content_base64": _b64("Chapter 1\nMark carried a rusty dagger."),
             },
         )
@@ -2133,6 +2133,9 @@ def test_import_inspect_logs_duration_without_source_payload(
     _assert_duration_log(record)
     assert getattr(record, "scene_count", 0) == 1
     assert getattr(record, "evidence_anchor_count", 0) == 1
+    assert getattr(record, "source_filename", "") == "chapter.txt"
+    assert "\\" not in getattr(record, "source_filename", "")
+    assert "/" not in getattr(record, "source_filename", "")
     assert "Mark carried a rusty dagger" not in _caplog_record_text(caplog)
 
 

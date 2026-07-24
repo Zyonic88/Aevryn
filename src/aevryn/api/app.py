@@ -2204,7 +2204,7 @@ def _decode_base64(value: str) -> bytes:
 def _api_upload_source_path(directory: str, filename: str) -> tuple[Path, str]:
     """Return a fixed temporary source path for API-uploaded content."""
     source_format = SourceFileTextExtractor.source_format_for_path(
-        Path(Path(filename).name)
+        Path(_uploaded_filename_basename(filename))
     )
     suffix = _API_IMPORT_SUFFIX_BY_FORMAT[source_format]
     return Path(directory) / f"source{suffix}", source_format
@@ -4883,7 +4883,12 @@ def _import_run_already_active_detail(run: EngineRunRecord) -> str:
 
 def _import_metadata_filename(value: str) -> str:
     """Return basename-only import metadata from a submitted filename."""
-    return Path(value.replace("\\", "/")).name
+    return _uploaded_filename_basename(value)
+
+
+def _uploaded_filename_basename(value: str) -> str:
+    """Return a basename-only upload filename across Windows and POSIX paths."""
+    return Path(PureWindowsPath(value.strip()).name).name.strip()
 
 
 class _MetadataOnlyBackgroundJobHandler:
@@ -5443,7 +5448,7 @@ def _workflow_request_extra(
         "error_code": error_code,
         "source_id": request.source_id,
         "source_format": source_format,
-        "source_filename": Path(request.filename).name,
+        "source_filename": _uploaded_filename_basename(request.filename),
         "scene_id": getattr(request, "scene_id", "") or "",
     }
 
