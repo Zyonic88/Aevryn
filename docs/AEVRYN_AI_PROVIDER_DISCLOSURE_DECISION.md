@@ -55,6 +55,8 @@ Provider output is not Canon. Aevryn validates provider output against evidence 
 
 Aetherra Labs does not train on user stories without explicit opt-in. The current OpenAI review records that OpenAI API inputs and outputs are not used for model training by default unless an organization explicitly opts in, and that Aevryn's Responses API extraction requests set `store=false`.
 
+The current OpenAI review also records that OpenAI abuse-monitoring logs may contain prompts and responses and are retained for up to 30 days by default unless a different approved retention control applies or law requires longer retention. Aevryn must disclose this if provider-backed extraction is enabled for public beta.
+
 Provider-backed extraction must remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, no-training posture, production account data-control settings, and final model configuration are reviewed, documented, and disclosed accurately.
 ```
 
@@ -123,6 +125,8 @@ Before public beta, Aetherra Labs must verify and record:
 * whether Responses API requests remain `store=false`
 * whether production organization/project settings preserve no-training by
   default
+* whether Modified Abuse Monitoring, Zero Data Retention, or data residency
+  controls are unavailable, unapproved, approved, or enabled
 
 If this behavior cannot be verified and disclosed accurately, provider-backed extraction must remain disabled for public beta.
 
@@ -158,6 +162,7 @@ Public beta remains blocked until:
 * provider terms are reviewed
 * provider retention behavior is documented
 * provider training behavior is documented
+* abuse-monitoring retention behavior is disclosed accurately
 * no-training posture is preserved or provider-backed extraction is disabled
 * provider disclosure is published in public privacy/trust material
 * provider failure logging remains metadata-only in release-candidate smoke

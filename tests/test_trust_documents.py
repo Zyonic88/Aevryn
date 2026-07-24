@@ -242,6 +242,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "docs/AEVRYN_REPLY_IDENTITY_SETUP.md",
         "docs/AEVRYN_SECURITY_ALERT_ROUTING.md",
         "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
+        "docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md",
         "GitHub Branch Protection And Hosted Security Controls",
         "Production Provider And Data-Use Review",
         "Backup, Retention, Restore, And Audit",
@@ -259,6 +260,8 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Support procedure owner review remains open.",
         "Public-beta backup retention wording candidate selected for owner/legal review.",
         "Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`.",
+        "Official OpenAI source review was recorded on 2026-07-24",
+        "Production OpenAI account/project data-control verification",
         "backup/provider verification",
         "Local production config contract passed.",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
@@ -463,9 +466,12 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "Current Verified Evidence",
         "Final bounded hosted observability review: passed",
         "Restore/audit drill: passed",
+        "OpenAI official source review: recorded on 2026-07-24",
+        "OpenAI provider config check: passed with metadata-only output on 2026-07-17",
         "Remaining Blocking Reviews",
         "Attorney review: open",
         "Provider terms and data-use review: open",
+        "OpenAI production account/project data-control verification: open",
         "Backup retention public wording owner/legal review: open",
         "Support procedure owner review: open",
         "Stop Conditions",
@@ -1183,7 +1189,10 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "Provider output is not Canon.",
         "selected public-beta disclosure candidate",
         "metadata-only",
-        "OpenAI official data-use and API data-controls review was recorded on 2026-07-16.",
+        "OpenAI official data-use and API data-controls review was recorded on 2026-07-24.",
+        "docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md",
+        "OpenAI abuse-monitoring logs may contain prompts and responses",
+        "Modified Abuse Monitoring, Zero Data Retention, and data residency posture",
         "provider configuration gate passed on 2026-07-17",
         "Responses API extraction adapter now sends store=false",
         "request_storage=disabled",
@@ -1203,6 +1212,7 @@ def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None
     required_terms = (
         "Provider output is never Canon, and provider data use is never hidden.",
         "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
+        "docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md",
         "Provider: OpenAI",
         "Status: Internal alpha candidate only",
         "Public beta approval: Not approved",
@@ -1215,7 +1225,9 @@ def test_ai_provider_review_document_tracks_provider_data_use_contract() -> None
         "data-use and API data-controls material",
         "not used for model training by",
         "abuse-monitoring retention listed as 30 days",
+        "abuse-monitoring logs",
         "application state retention is 30 days by default or when `store=true`",
+        "Monitoring require approval and additional requirements",
         "data retention terms",
         "training behavior",
         "selected scene text required for extraction",
@@ -1249,11 +1261,54 @@ def test_ai_provider_disclosure_decision_records_public_beta_candidate() -> None
         "Provider output is not Canon.",
         "No training on user stories without explicit opt-in.",
         "Responses API extraction requests set `store=false`",
+        "OpenAI abuse-monitoring logs may contain prompts and responses",
+        "up to 30 days by default",
+        "abuse-monitoring retention behavior is disclosed accurately",
         "production account data-control settings",
         "provider-backed extraction must remain disabled for public beta",
         "full provider prompts",
         "full provider responses",
         "final model configuration is recorded",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_dated_openai_provider_review_records_official_source_findings() -> None:
+    """Dated OpenAI review should preserve official source facts without approval drift."""
+    document = read_doc("docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md")
+
+    required_terms = (
+        "Review: OpenAI provider data-use review",
+        "Date: 2026-07-24",
+        "Status: Terms reviewed; production account verification still required",
+        "Public beta: Blocked",
+        "Provider-backed extraction must be disclosed, bounded, and fail-closed.",
+        "Official Sources Reviewed",
+        "https://platform.openai.com/docs/models/default-usage-policies-by-endpoint",
+        "https://platform.openai.com/docs/api-reference/introduction",
+        (
+            "https://help.openai.com/en/articles/10306912-sharing-feedback-"
+            "evaluation-and-fine-tuning-data-and-api-inputs-and-outputs-with-openai"
+        ),
+        (
+            "API inputs and outputs are not used to train or improve OpenAI models "
+            "unless the organization explicitly opts in"
+        ),
+        "abuse-monitoring logs may contain prompts and responses",
+        "retained for up to 30 days by default",
+        "`/v1/responses` as not used for training",
+        "the Responses API stores application state for 30 days by default or when `store=true`",
+        "Modified Abuse Monitoring and Zero Data Retention as controls that require approval",
+        "OpenAI API keys stay server-side only.",
+        "Responses API extraction requests keep `store=false`.",
+        "Provider-backed extraction must not send",
+        "Public Disclosure Candidate",
+        "Required Production Account Verification",
+        "data-sharing controls are not opted in for API inputs/outputs",
+        "Modified Abuse Monitoring or Zero Data Retention",
+        "Provider-backed extraction must remain disabled for public beta",
     )
 
     for term in required_terms:

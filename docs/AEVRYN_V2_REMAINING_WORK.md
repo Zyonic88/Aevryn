@@ -124,9 +124,9 @@ Open
 Required:
 
 * verify final model configuration
-* verify provider data-retention behavior
-* verify provider training behavior
-* verify abuse-monitoring behavior
+* verify provider data-retention behavior - official OpenAI source review recorded; production account posture still open
+* verify provider training behavior - official OpenAI source review recorded; production account opt-in status still open
+* verify abuse-monitoring behavior - official OpenAI source review recorded; public disclosure and account controls still open
 * verify response-storage/request-storage posture
 * confirm no-training-by-default public language
 * rerun provider config check after final provider settings
@@ -136,6 +136,7 @@ Tracking:
 * `docs/AEVRYN_AI_PROVIDER_REVIEW.md`
 * `docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md`
 * `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`
+* `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`
 
 Acceptance:
 
