@@ -17,6 +17,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path, PureWindowsPath
 from typing import Any, cast
+from urllib.parse import urlsplit
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -2262,10 +2263,24 @@ def _worker_api_keys_from_env(environ: Mapping[str, str]) -> tuple[str, ...]:
 def _require_https_origins(environ: Mapping[str, str]) -> None:
     """Require production CORS origins to use HTTPS."""
     for origin in _allowed_origins_from_env(environ):
-        if not origin.startswith("https://"):
+        parsed_origin = urlsplit(origin)
+        if parsed_origin.scheme != "https":
             raise ValueError(
                 "AEVRYN_API_ALLOWED_ORIGINS must contain only https:// origins when "
                 "AEVRYN_DEPLOYMENT_ENV=production."
+            )
+        if (
+            not parsed_origin.netloc
+            or parsed_origin.username is not None
+            or parsed_origin.password is not None
+            or parsed_origin.path
+            or parsed_origin.query
+            or parsed_origin.fragment
+        ):
+            raise ValueError(
+                "AEVRYN_API_ALLOWED_ORIGINS must be exact browser origins such as "
+                "https://app.aevryn.ai, without paths, query strings, fragments, "
+                "or credentials."
             )
 
 

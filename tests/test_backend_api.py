@@ -688,6 +688,28 @@ def test_create_app_from_env_requires_production_https_edge_config() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "origin",
+    (
+        "https://app.aevryn.ai/",
+        "https://app.aevryn.ai/dashboard",
+        "https://app.aevryn.ai?preview=true",
+        "https://user@app.aevryn.ai",
+    ),
+)
+def test_create_app_from_env_rejects_non_origin_cors_values(origin: str) -> None:
+    """Production CORS entries must be exact browser origins, not URLs."""
+    with pytest.raises(ValueError, match="must be exact browser origins"):
+        create_app_from_env(
+            {
+                DEPLOYMENT_ENV: "production",
+                PROJECT_DATABASE_ADAPTER_ENV: "postgresql",
+                PROJECT_DATABASE_URL_ENV: "postgresql://aevryn.example/project",
+                ALLOWED_ORIGINS_ENV: origin,
+            }
+        )
+
+
 def test_create_app_from_env_fails_closed_for_incomplete_production_config(
     tmp_path: Path,
 ) -> None:

@@ -691,6 +691,13 @@ Remaining hardening:
 * confirm CORS stays explicit
 * confirm frontend deploys from the intended branch
 
+Verified hardening:
+
+* production startup rejects wildcard, non-HTTPS, and non-origin-shaped CORS
+  values such as origins with trailing slashes, paths, query strings,
+  fragments, or credentials, so deployment mistakes fail closed before browser
+  testing.
+
 Acceptance:
 
 ```text
