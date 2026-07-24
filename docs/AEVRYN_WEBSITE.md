@@ -196,7 +196,7 @@ Before a canon snapshot exists, these views should explain whether output is una
 
 After a canon snapshot exists, these views should summarize the API-provided output without exposing full source prose or raw snapshot payloads.
 
-Developer previews may remain behind explicit disclosure controls while alpha hardening continues.
+Technical review panels may remain behind explicit disclosure controls while alpha hardening continues.
 
 ---
 

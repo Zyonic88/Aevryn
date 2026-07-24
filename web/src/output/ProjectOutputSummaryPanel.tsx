@@ -91,7 +91,7 @@ export function ProjectOutputSummaryPanel({
 export function DeveloperPreviewToggle({ children }: { children: ReactNode }) {
   return (
     <details className="project-panel">
-      <summary>Developer preview</summary>
+      <summary>Technical review</summary>
       <div className="workspace-view-stack developer-preview-stack">{children}</div>
     </details>
   );
@@ -182,6 +182,12 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
     identityReviewCount > 0
       ? `${reviewItemCountLabel(identityReviewCount)} need character review`
       : "No character review items";
+  const reviewStatus =
+    summary.translation_review_count > 0 && identityReviewCount > 0
+      ? `${translationStatus}; ${identityReviewStatus}`
+      : summary.translation_review_count > 0
+        ? translationStatus
+        : identityReviewStatus;
   return (
     <div
       className="compact-list language-identity-status"
@@ -201,9 +207,7 @@ function LanguageIdentityStatus({ outputs }: { outputs: ProjectOutputs }) {
       </div>
       <div className="compact-row">
         <strong>Review</strong>
-        <span>
-          {translationStatus}; {identityReviewStatus}
-        </span>
+        <span>{reviewStatus}</span>
       </div>
     </div>
   );

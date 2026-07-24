@@ -176,7 +176,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
         <section>
           <h2>Export Preview</h2>
           <p className="field-note">
-            Developer preview requires real source text and extraction JSON. It does not run with
+            Technical review requires real source text and extraction JSON. It does not run with
             simulated source, placeholder AI output, or empty success paths.
           </p>
           <form className="import-form" onSubmit={submit}>
