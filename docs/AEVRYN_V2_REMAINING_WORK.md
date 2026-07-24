@@ -721,7 +721,6 @@ Repository status is understandable, current, and mergeable.
 
 Remaining hardening:
 
-* confirm latest API revision is serving intended image
 * confirm Cloudflare Pages environment variables are correct
 * ~~confirm app.aevryn.ai and api.aevryn.ai health~~
 * ~~confirm CORS stays explicit~~
@@ -733,6 +732,11 @@ Verified hardening:
   public API health endpoint returns `ok`, CORS allows the configured frontend
   origin explicitly instead of using a wildcard, `X-Request-ID` is present, and
   the command prints metadata only
+* `cloud-run-deployment-check` verifies that the latest ready Cloud Run API
+  revision is serving 100 percent of traffic and that the serving container
+  image matches the expected release-candidate image without printing project
+  IDs, image URLs, secrets, storage references, source prose, or provider
+  payloads
 * hosted deployment smoke coverage rejects non-HTTPS/non-origin frontend values
   and wildcard API CORS responses before public-beta signoff
 * production startup rejects wildcard, non-HTTPS, and non-origin-shaped CORS

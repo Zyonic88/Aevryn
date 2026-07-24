@@ -890,6 +890,43 @@ OPEN for hosted retention and final bounded-log verification against `docs/AEVRY
 
 ---
 
+# Attempt 2026-07-24 - Cloud Run Serving Image Contract
+
+Execution surface: Google Cloud Run service metadata through `gcloud`.
+
+Command:
+
+```powershell
+$env:PYTHONPATH="src"
+$env:AEVRYN_CLOUD_RUN_EXPECTED_IMAGE="us-central1-docker.pkg.dev/aevryn/aevryn-api/aevryn-api:rc"
+python -m aevryn.cli cloud-run-deployment-check `
+  --gcloud-path "C:\Users\enigm\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd" `
+  --service aevryn-api `
+  --region us-central1
+```
+
+Result:
+
+```text
+service=aevryn-api
+region=us-central1
+latest_ready_revision=present
+latest_ready_revision_traffic_percent=100
+image_matches_expected=true
+secrets_printed=0
+ok=cloud_run_deployment_contract_checked
+```
+
+Interpretation:
+
+```text
+PASSED for latest ready Cloud Run revision serving all API traffic.
+PASSED for serving container image matching the expected release-candidate image.
+PASSED for metadata-only command output.
+```
+
+---
+
 # Required Successful Smoke
 
 A successful production-like smoke must record:
@@ -902,6 +939,7 @@ A successful production-like smoke must record:
 | PostgreSQL smoke | create/read/delete synthetic metadata record succeeds | Passed locally |
 | R2 storage smoke | write/read/delete tiny synthetic private object succeeds | Passed locally |
 | API startup | production app starts with local-only adapters rejected | Passed on Cloud Run |
+| Cloud Run serving image | latest ready revision serves 100 percent of traffic and image matches expected RC image | Passed with metadata-only Cloud Run deployment check |
 | HTTPS/CORS | public origins are explicit and HTTPS-only | Health endpoint passed on Cloud Run and api.aevryn.ai; app.aevryn.ai frontend header smoke and API CORS origin check passed |
 | Managed identity | protected routes require managed identity tokens | Passed for unauthenticated redirects/API 401 and hosted Supabase login completion |
 | Worker processing | import processing completes through production-safe worker posture | Passed for hosted ten-chapter smoke retry |
@@ -953,7 +991,7 @@ Then record the final result in a dated release-candidate run record.
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, final provider review, final bounded hosted observability review, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, Cloud Run serving image contract, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, final provider review, final bounded hosted observability review, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
 Previously recorded smoke success remains: hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, and internal release-candidate signoff have passed.
 Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support publication, final provider review, final bounded hosted observability review, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
 ```

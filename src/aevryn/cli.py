@@ -186,6 +186,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "hosted-deployment-smoke":
             _handle_hosted_deployment_smoke(args)
             return 0
+        if command == "cloud-run-deployment-check":
+            _handle_cloud_run_deployment_check(args)
+            return 0
         if command == "worker-drain":
             _handle_worker_drain(args)
             return 0
@@ -690,6 +693,46 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=20.0,
         help="HTTP timeout for each hosted deployment request.",
+    )
+
+    cloud_run_deployment_parser = subcommands.add_parser(
+        "cloud-run-deployment-check",
+        help="Check the Cloud Run API revision/image contract without printing secrets.",
+        description=(
+            "Check the Cloud Run API revision/image contract without printing secrets. "
+            "The command reads Cloud Run service metadata through gcloud, confirms "
+            "the latest ready revision is serving all traffic, and confirms the "
+            "deployed container image matches the expected image value. It prints "
+            "metadata only, not project IDs, image URLs, secrets, storage refs, or "
+            "source content."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    cloud_run_deployment_parser.add_argument(
+        "--service",
+        default="aevryn-api",
+        help="Cloud Run service name to inspect.",
+    )
+    cloud_run_deployment_parser.add_argument(
+        "--region",
+        default=os.environ.get("AEVRYN_CLOUD_RUN_REGION", "us-central1"),
+        help="Cloud Run region containing the service.",
+    )
+    cloud_run_deployment_parser.add_argument(
+        "--expected-image-env",
+        default="AEVRYN_CLOUD_RUN_EXPECTED_IMAGE",
+        help="Process environment variable containing the expected container image.",
+    )
+    cloud_run_deployment_parser.add_argument(
+        "--gcloud-path",
+        default="gcloud",
+        help="Path to the gcloud executable.",
+    )
+    cloud_run_deployment_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=30.0,
+        help="Timeout for the gcloud metadata request.",
     )
 
     worker_drain_parser = subcommands.add_parser(
@@ -1479,6 +1522,35 @@ def _handle_hosted_deployment_smoke(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_cloud_run_deployment_check(args: argparse.Namespace) -> None:
+    """Handle the cloud-run-deployment-check command."""
+    service = cast(str, args.service).strip()
+    region = cast(str, args.region).strip()
+    expected_image_env = cast(str, args.expected_image_env).strip()
+    gcloud_path = cast(str, args.gcloud_path).strip()
+    timeout_seconds = cast(float, args.timeout_seconds)
+    if not service:
+        raise ValueError("--service cannot be blank.")
+    if not region:
+        raise ValueError("--region cannot be blank.")
+    if not expected_image_env:
+        raise ValueError("--expected-image-env cannot be blank.")
+    if not gcloud_path:
+        raise ValueError("--gcloud-path cannot be blank.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+
+    summary = _run_cloud_run_deployment_check(
+        service=service,
+        region=region,
+        expected_image=_required_process_env_value(expected_image_env),
+        gcloud_path=gcloud_path,
+        timeout_seconds=timeout_seconds,
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_worker_drain(args: argparse.Namespace) -> None:
     """Handle the worker-drain command."""
     api_url_env = cast(str, args.api_url_env).strip()
@@ -1878,6 +1950,157 @@ def _run_hosted_deployment_smoke(
         "secrets_printed": 0,
         "ok": "hosted_deployment_smoke_passed",
     }
+
+
+def _run_cloud_run_deployment_check(
+    *,
+    service: str,
+    region: str,
+    expected_image: str,
+    gcloud_path: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Verify Cloud Run serves the expected ready revision/image metadata only."""
+    normalized_service = service.strip()
+    normalized_region = region.strip()
+    normalized_expected_image = expected_image.strip()
+    normalized_gcloud_path = gcloud_path.strip()
+    if not normalized_service:
+        raise ValueError("Cloud Run service cannot be blank.")
+    if not normalized_region:
+        raise ValueError("Cloud Run region cannot be blank.")
+    if not normalized_expected_image:
+        raise ValueError("Expected Cloud Run image cannot be blank.")
+    if not normalized_gcloud_path:
+        raise ValueError("gcloud path cannot be blank.")
+    if timeout_seconds <= 0:
+        raise ValueError("Cloud Run deployment check timeout must be positive.")
+
+    payload = _run_gcloud_cloud_run_service_describe(
+        service=normalized_service,
+        region=normalized_region,
+        gcloud_path=normalized_gcloud_path,
+        timeout_seconds=timeout_seconds,
+    )
+    status = payload.get("status")
+    status_payload = status if isinstance(status, dict) else {}
+    latest_ready_revision = str(status_payload.get("latestReadyRevisionName") or "")
+    if not latest_ready_revision:
+        raise ValueError("Cloud Run service has no latest ready revision.")
+
+    traffic_percent = _cloud_run_latest_ready_traffic_percent(
+        status_payload,
+        latest_ready_revision=latest_ready_revision,
+    )
+    if traffic_percent != 100:
+        raise ValueError("Cloud Run latest ready revision is not serving all traffic.")
+
+    actual_image = _cloud_run_container_image(payload)
+    if actual_image != normalized_expected_image:
+        raise ValueError("Cloud Run deployed image does not match expected image.")
+
+    return {
+        "service": normalized_service,
+        "region": normalized_region,
+        "latest_ready_revision": "present",
+        "latest_ready_revision_traffic_percent": traffic_percent,
+        "image_matches_expected": "true",
+        "secrets_printed": 0,
+        "ok": "cloud_run_deployment_contract_checked",
+    }
+
+
+def _run_gcloud_cloud_run_service_describe(
+    *,
+    service: str,
+    region: str,
+    gcloud_path: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Return Cloud Run service metadata from gcloud as JSON."""
+    try:
+        result = subprocess.run(  # nosec B603
+            [
+                gcloud_path,
+                "run",
+                "services",
+                "describe",
+                service,
+                "--region",
+                region,
+                "--format=json",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except FileNotFoundError as error:
+        raise ValueError("gcloud is required for cloud-run-deployment-check.") from error
+    except subprocess.TimeoutExpired as error:
+        raise ValueError("Cloud Run deployment metadata request timed out.") from error
+
+    if result.returncode != 0:
+        raise ValueError("Cloud Run deployment metadata request failed.")
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise ValueError("Cloud Run deployment metadata was not valid JSON.") from error
+    if not isinstance(payload, dict):
+        raise ValueError("Cloud Run deployment metadata was not an object.")
+    return cast(dict[str, object], payload)
+
+
+def _cloud_run_latest_ready_traffic_percent(
+    status_payload: dict[str, object],
+    *,
+    latest_ready_revision: str,
+) -> int:
+    """Return the traffic percent assigned to the latest ready revision."""
+    traffic_payload = status_payload.get("traffic")
+    traffic_entries = traffic_payload if isinstance(traffic_payload, list) else []
+    total_percent = 0
+    for entry in traffic_entries:
+        if not isinstance(entry, dict):
+            continue
+        revision_name = str(entry.get("revisionName") or "")
+        latest_revision = entry.get("latestRevision") is True
+        percent = _safe_int(entry.get("percent"))
+        if revision_name == latest_ready_revision or latest_revision:
+            total_percent += percent
+    return total_percent
+
+
+def _cloud_run_container_image(payload: dict[str, object]) -> str:
+    """Return the first Cloud Run container image from service metadata."""
+    spec = payload.get("spec")
+    spec_payload = spec if isinstance(spec, dict) else {}
+    template = spec_payload.get("template")
+    template_payload = template if isinstance(template, dict) else {}
+    template_spec = template_payload.get("spec")
+    template_spec_payload = template_spec if isinstance(template_spec, dict) else {}
+    containers = template_spec_payload.get("containers")
+    container_entries = containers if isinstance(containers, list) else []
+    for container in container_entries:
+        if isinstance(container, dict):
+            image = str(container.get("image") or "").strip()
+            if image:
+                return image
+    raise ValueError("Cloud Run service metadata is missing a container image.")
+
+
+def _safe_int(value: object) -> int:
+    """Return an integer value from provider metadata or zero."""
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
 
 
 def _run_audit_ledger_verify(*, database_url: str) -> dict[str, object]:
