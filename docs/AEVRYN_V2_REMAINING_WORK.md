@@ -448,6 +448,9 @@ Verified hardening:
 * deterministic extraction guards reject obvious place or institution heads such
   as academy, department, empire, room, and station when a provider tries to
   classify them as physical items or usable skills
+* deterministic extraction guards reject obvious physical-object heads such as
+  blueprint, sword, uniform, crystal, and manual when a provider tries to
+  classify them as places or organizations
 * verified with sentence-understanding, extraction, and evidence-bounded AI
   extraction tests
 

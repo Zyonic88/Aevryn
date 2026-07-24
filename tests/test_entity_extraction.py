@@ -380,6 +380,44 @@ class MisclassifiedLocationSkillExtractor:
         )
 
 
+class MisclassifiedPhysicalOrganizationExtractor:
+    """Extractor that labels a physical object as an organization."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious physical-object/organization classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="organization_t3_blueprint",
+                    entity_type="organization",
+                    display_name="T3 Blizzard technical blueprint",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.9,
+                ),
+            ),
+        )
+
+
+class MisclassifiedPhysicalLocationExtractor:
+    """Extractor that labels a physical object as a location."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious physical-object/location classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="location_iron_sword",
+                    entity_type="location",
+                    display_name="Iron Sword",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.89,
+                ),
+            ),
+        )
+
+
 class MisclassifiedSystemExtractor:
     """Extractor that labels a concrete object as a system."""
 
@@ -820,6 +858,32 @@ def test_extraction_rejects_location_as_skill() -> None:
     engine = EntityExtractionEngine(extractor=MisclassifiedLocationSkillExtractor())
 
     with pytest.raises(ValueError, match="place or organization cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_physical_object_as_organization() -> None:
+    """Physical objects must not be accepted as organization entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedPhysicalOrganizationExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be place or organization"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_physical_object_as_location() -> None:
+    """Physical objects must not be accepted as location entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedPhysicalLocationExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be place or organization"):
         engine.extract_imported_source(imported)
 
 

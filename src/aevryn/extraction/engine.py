@@ -77,6 +77,40 @@ SYSTEM_ENTITY_TERMS = frozenset(
         "system",
     }
 )
+PHYSICAL_OBJECT_HEAD_TERMS = frozenset(
+    {
+        "armor",
+        "artifact",
+        "battlecruiser",
+        "blade",
+        "blueprint",
+        "book",
+        "car",
+        "coin",
+        "credits",
+        "cruiser",
+        "crystal",
+        "dagger",
+        "equipment",
+        "gun",
+        "jacket",
+        "manual",
+        "potion",
+        "rifle",
+        "ship",
+        "shuttle",
+        "slip",
+        "spaceship",
+        "spear",
+        "starship",
+        "sword",
+        "token",
+        "uniform",
+        "vehicle",
+        "vessel",
+        "weapon",
+    }
+)
 PLACE_OR_ORGANIZATION_HEAD_TERMS = frozenset(
     {
         "academy",
@@ -564,6 +598,7 @@ class EntityExtractionEngine:
         physical_terms = classification_terms & PHYSICAL_ENTITY_TERMS
         skill_terms = classification_terms & SKILL_ENTITY_TERMS
         system_terms = classification_terms & SYSTEM_ENTITY_TERMS
+        physical_object_head = head_term in PHYSICAL_OBJECT_HEAD_TERMS
         place_or_organization_head = head_term in PLACE_OR_ORGANIZATION_HEAD_TERMS
         role_or_title_terms = classification_terms & ROLE_OR_TITLE_ENTITY_TERMS
         non_capability_skill_terms = (
@@ -622,6 +657,14 @@ class EntityExtractionEngine:
             return (
                 "Entity classification conflict: place or organization cannot be "
                 f"physical item: {entity.display_name}."
+            )
+        if (
+            entity.entity_type in {"location", "organization"}
+            and physical_object_head
+        ):
+            return (
+                "Entity classification conflict: physical object cannot be place "
+                f"or organization: {entity.display_name}."
             )
         if (
             entity.entity_type in {"item", "weapon", "armor", "vehicle"}
