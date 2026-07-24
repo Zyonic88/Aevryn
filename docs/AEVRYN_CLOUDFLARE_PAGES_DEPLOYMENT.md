@@ -203,6 +203,32 @@ curl.exe -I https://app.aevryn.ai
 curl.exe -I https://api.aevryn.ai/v2/health
 ```
 
+Preferred metadata-only smoke:
+
+```powershell
+$env:PYTHONPATH = "src"
+$env:AEVRYN_PUBLIC_FRONTEND_BASE_URL = "https://app.aevryn.ai"
+$env:AEVRYN_PUBLIC_API_BASE_URL = "https://api.aevryn.ai"
+python -m aevryn.cli hosted-deployment-smoke
+```
+
+Expected result:
+
+```text
+frontend_status=200
+frontend_bytes_present=true
+frontend_security_header=true
+api_status=200
+api_version=v2
+api_engine=Aevryn
+api_cors_origin=explicit
+api_request_id=present
+project_storage=configured
+import_content_storage=configured
+secrets_printed=0
+ok=hosted_deployment_smoke_passed
+```
+
 Then use a browser to verify:
 
 * login/register page loads
