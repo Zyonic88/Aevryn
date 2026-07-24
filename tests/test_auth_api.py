@@ -3005,6 +3005,46 @@ def test_project_export_api_normalizes_path_like_filenames(tmp_path: Path) -> No
     )
 
 
+def test_project_export_api_sanitizes_header_unsafe_filenames(tmp_path: Path) -> None:
+    """Submitted export filenames should not shape download headers."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository),
+            project_repository=repository,
+            storage_service=LocalFilesystemStorage(tmp_path / "storage"),
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    create_project_and_story(client)
+    _store_succeeded_snapshot(repository)
+
+    created = client.post(
+        "/v2/projects/project_alpha/exports",
+        headers=auth_headers("token_001"),
+        json={
+            "export_id": "export_alpha",
+            "snapshot_id": "snapshot_alpha",
+            "export_format": "json",
+            "filename": 'canon"final;draft.json',
+            "now": SOON,
+        },
+    )
+
+    assert created.status_code == 200
+    payload = created.json()
+    assert payload["filename"] == "canon_final_draft.json"
+    assert "storage_ref" not in created.text
+    downloaded = client.get(
+        "/v2/projects/project_alpha/exports/export_alpha/download",
+        headers=auth_headers("token_001"),
+    )
+    assert downloaded.status_code == 200
+    assert downloaded.headers["content-disposition"] == (
+        'attachment; filename="canon_final_draft.json"'
+    )
+
+
 def test_project_export_api_rejects_cross_user_reads(tmp_path: Path) -> None:
     """Export metadata and bytes must stay inside project ownership boundaries."""
     repository = InMemoryProjectRepository()

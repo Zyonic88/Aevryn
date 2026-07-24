@@ -610,6 +610,9 @@ Verified evidence:
 * export creation normalizes submitted path-like filenames to basename-only
   metadata before writing storage-backed exports, while storage still rejects
   path-shaped filenames as a lower-level guard
+* export creation sanitizes quote, delimiter, control, and filesystem-reserved
+  filename characters before metadata is stored, preventing submitted filenames
+  from shaping storage paths or download headers
 
 Remaining hardening:
 

@@ -4662,9 +4662,21 @@ def _snapshot_export_filename(
 def _export_metadata_filename(value: str) -> str:
     """Return basename-only export metadata from a submitted filename."""
     name = Path(PureWindowsPath(value.strip()).name).name.strip()
+    name = "".join(
+        character if _is_safe_export_filename_character(character) else "_"
+        for character in name
+    )
+    name = re.sub(r"_+", "_", name).strip(" ._")
     if not name or name in {".", ".."}:
         return "aevryn-export.json"
     return name
+
+
+def _is_safe_export_filename_character(character: str) -> bool:
+    """Return whether one export filename character is safe for storage and headers."""
+    if ord(character) < 32 or ord(character) == 127:
+        return False
+    return character not in {'"', ";", "<", ">", ":", "|", "?", "*", "/", "\\"}
 
 
 def _snapshot_kind_filter(value: str | None) -> SnapshotKind | None:
