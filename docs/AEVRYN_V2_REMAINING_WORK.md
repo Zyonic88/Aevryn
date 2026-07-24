@@ -461,6 +461,9 @@ Verified hardening:
 * deterministic extraction guards reject obvious physical-object heads such as
   blueprint, sword, uniform, crystal, and manual when a provider tries to
   classify them as places or organizations
+* deterministic extraction guards reject obvious role/title concepts such as
+  captain commander and chief engineer when a provider tries to classify them
+  as places or organizations, while preserving actual place/organization heads
 * verified with sentence-understanding, extraction, and evidence-bounded AI
   extraction tests
 

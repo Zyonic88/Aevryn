@@ -418,6 +418,44 @@ class MisclassifiedPhysicalLocationExtractor:
         )
 
 
+class MisclassifiedRoleOrganizationExtractor:
+    """Extractor that labels a role or title as an organization."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious role/organization classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="organization_captain_commander",
+                    entity_type="organization",
+                    display_name="Captain Commander",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.89,
+                ),
+            ),
+        )
+
+
+class MisclassifiedTitleLocationExtractor:
+    """Extractor that labels a title as a location."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious title/location classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="location_chief_engineer",
+                    entity_type="location",
+                    display_name="Chief Engineer",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.88,
+                ),
+            ),
+        )
+
+
 class MisclassifiedSystemExtractor:
     """Extractor that labels a concrete object as a system."""
 
@@ -884,6 +922,32 @@ def test_extraction_rejects_physical_object_as_location() -> None:
     engine = EntityExtractionEngine(extractor=MisclassifiedPhysicalLocationExtractor())
 
     with pytest.raises(ValueError, match="physical object cannot be place or organization"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_role_as_organization() -> None:
+    """Roles and titles must not be accepted as organization entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedRoleOrganizationExtractor())
+
+    with pytest.raises(ValueError, match="rank or profession cannot be place"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_title_as_location() -> None:
+    """Roles and titles must not be accepted as location entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedTitleLocationExtractor())
+
+    with pytest.raises(ValueError, match="rank or profession cannot be place"):
         engine.extract_imported_source(imported)
 
 

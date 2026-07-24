@@ -667,6 +667,15 @@ class EntityExtractionEngine:
                 f"or organization: {entity.display_name}."
             )
         if (
+            entity.entity_type in {"location", "organization"}
+            and role_or_title_terms
+            and not place_or_organization_head
+        ):
+            return (
+                "Entity classification conflict: rank or profession cannot be place "
+                f"or organization: {entity.display_name}."
+            )
+        if (
             entity.entity_type in {"item", "weapon", "armor", "vehicle"}
             and system_terms
             and not physical_terms
