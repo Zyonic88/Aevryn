@@ -561,7 +561,7 @@ Users can recover from expired sessions and forgotten passwords without CLI inte
 Status:
 
 ```text
-Verified for V2; hosted browser validation remains
+Verified for V2
 ```
 
 Remaining hardening:
@@ -570,7 +570,7 @@ Remaining hardening:
 * ~~workspace, account, privacy, and diagnostics sections are read-only/contextual in V2~~
 * ~~broad profile personalization remains V3+ unless explicitly re-scoped~~
 * ~~current Settings page must not imply nonexistent personalization or workflow controls~~
-* run hosted browser validation against the current Settings page
+* ~~run hosted browser validation against the current Settings page~~
 
 Verified hardening:
 
@@ -582,6 +582,10 @@ Verified hardening:
   training is off by default with no live training pipeline active
 * diagnostics remain collapsed and token/session details are not rendered
 * verified with focused Settings workspace test, lint, and production build
+* hosted Settings page validation confirmed Dashboard login destination,
+  managed identity wording, support-owned account deletion language,
+  collapsed diagnostics, and no visible or hidden token/session/storage/internal
+  strings in normal page output
 
 Acceptance:
 
