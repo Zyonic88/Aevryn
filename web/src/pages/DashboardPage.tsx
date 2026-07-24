@@ -202,9 +202,7 @@ export function DashboardPage() {
                       title={`Delete project ${project.name}`}
                       disabled={deleteProjectMutation.isPending}
                       onClick={() => requestProjectDeletion(project.id, project.name)}
-                    >
-                      <span aria-hidden="true">x</span>
-                    </button>
+                    />
                   </>
                 )}
               </div>

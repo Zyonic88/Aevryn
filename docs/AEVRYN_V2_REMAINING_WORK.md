@@ -241,7 +241,7 @@ In progress
 
 Remaining hardening:
 
-* run hosted browser validation against the current prompt-pack output
+* ~~run hosted browser validation against the current prompt-pack output~~
 * ~~confirm prompts include enough scene-specific action, setting, character, and object context~~
 * ~~ensure normal prompt-pack presentation does not include raw manuscript prose~~
 * ~~ensure normal prompt-pack presentation does not expose evidence anchors, import bundle IDs, source IDs, or internal placeholders~~
@@ -280,6 +280,9 @@ Verified hardening:
   or local text download while preserving human Canon prompt details
 * verified with readable-output unit tests and focused Prompt Packs workspace
   tests
+* hosted browser sweep verified current Prompt Packs output exposes collapsed,
+  copyable prompt bodies without source text, source IDs, evidence anchors,
+  import bundle IDs, machine chapter/scene fragments, or placeholder noise
 
 Acceptance:
 
@@ -841,5 +844,6 @@ Continue UX hardening on the processed-output surfaces, then commit each complet
 The next best target is:
 
 ```text
-Prompt Pack hosted validation and prompt readability polish.
+Full beta browser-path validation and remaining visible UI polish, starting
+with project/story deletion controls and any remaining public-facing noise.
 ```

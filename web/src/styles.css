@@ -482,6 +482,7 @@ input:focus {
 }
 
 .icon-button {
+  position: relative;
   display: inline-grid;
   place-items: center;
   width: 32px;
@@ -494,6 +495,24 @@ input:focus {
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
+}
+
+.icon-button::before,
+.icon-button::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.icon-button::before {
+  transform: rotate(45deg);
+}
+
+.icon-button::after {
+  transform: rotate(-45deg);
 }
 
 .icon-button:hover:not(:disabled),

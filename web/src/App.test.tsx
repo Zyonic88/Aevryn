@@ -2065,7 +2065,9 @@ describe("App shell routing", () => {
       "/projects/project_alpha",
     );
     expect(screen.getByText("Open workspace")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Delete project Alpha" }));
+    const deleteProjectButton = screen.getByRole("button", { name: "Delete project Alpha" });
+    expect(deleteProjectButton.textContent).toBe("");
+    await user.click(deleteProjectButton);
 
     await waitFor(() =>
       expect(screen.queryByRole("link", { name: /Alpha Updated/u })).not.toBeInTheDocument(),
@@ -5472,7 +5474,9 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: /Beta Story Select story/ }));
 
     expect(window.localStorage.getItem("aevryn.activeStory.project_alpha")).toBe("story_beta");
-    await user.click(screen.getByRole("button", { name: "Delete story Beta Story" }));
+    const deleteStoryButton = screen.getByRole("button", { name: "Delete story Beta Story" });
+    expect(deleteStoryButton.textContent).toBe("");
+    await user.click(deleteStoryButton);
 
     expect(confirmSpy).toHaveBeenNthCalledWith(1, "Delete story Beta Story?");
     expect(confirmSpy).toHaveBeenNthCalledWith(2, "Story data will be lost forever, are you sure?");
