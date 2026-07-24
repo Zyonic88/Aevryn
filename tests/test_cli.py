@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import urllib.error
 import urllib.request
 from io import BytesIO
@@ -17,6 +18,7 @@ from aevryn.cli import (
     _run_audit_access_report,
     _run_audit_access_verify,
     _run_audit_ledger_verify,
+    _run_cloud_run_deployment_check,
     _run_hosted_deployment_smoke,
     _run_observability_config_check,
     _run_production_config_check,
@@ -817,6 +819,232 @@ def test_hosted_deployment_smoke_rejects_wildcard_cors(
             expected_origin="https://app.aevryn.ai",
             timeout_seconds=12.0,
         )
+
+
+def test_cloud_run_deployment_check_help_describes_metadata_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Cloud Run deployment check help should describe the metadata-only contract."""
+    with pytest.raises(SystemExit) as error:
+        main(["cloud-run-deployment-check", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "Cloud Run API revision/image contract" in output
+    assert "latest ready revision is serving all traffic" in output
+    assert "metadata only" in output
+
+
+def test_cloud_run_deployment_check_cli_reports_metadata_only(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Cloud Run deployment check should not print the expected image value."""
+    expected_image = "us-central1-docker.pkg.dev/secret-project/repo/api:rc"
+    monkeypatch.setenv("AEVRYN_CLOUD_RUN_EXPECTED_IMAGE", expected_image)
+
+    def fake_check(
+        *,
+        service: str,
+        region: str,
+        expected_image: str,
+        gcloud_path: str,
+        timeout_seconds: float,
+    ) -> dict[str, object]:
+        assert service == "aevryn-api"
+        assert region == "us-central1"
+        assert expected_image == "us-central1-docker.pkg.dev/secret-project/repo/api:rc"
+        assert gcloud_path == "gcloud"
+        assert timeout_seconds == 30.0
+        return {
+            "service": service,
+            "region": region,
+            "latest_ready_revision": "present",
+            "latest_ready_revision_traffic_percent": 100,
+            "image_matches_expected": "true",
+            "secrets_printed": 0,
+            "ok": "cloud_run_deployment_contract_checked",
+        }
+
+    monkeypatch.setattr("aevryn.cli._run_cloud_run_deployment_check", fake_check)
+
+    exit_code = main(["cloud-run-deployment-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "service=aevryn-api" in captured.out
+    assert "latest_ready_revision=present" in captured.out
+    assert "latest_ready_revision_traffic_percent=100" in captured.out
+    assert "image_matches_expected=true" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=cloud_run_deployment_contract_checked" in captured.out
+    assert expected_image not in captured.out
+    assert expected_image not in captured.err
+
+
+def test_cloud_run_deployment_check_verifies_revision_traffic_and_image(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Cloud Run deployment check should accept only the intended ready image."""
+    expected_image = "us-central1-docker.pkg.dev/project/repo/api:rc"
+
+    def fake_run(
+        args: list[str],
+        *,
+        check: bool,
+        capture_output: bool,
+        text: bool,
+        timeout: float,
+    ) -> subprocess.CompletedProcess[str]:
+        assert args == [
+            "gcloud",
+            "run",
+            "services",
+            "describe",
+            "aevryn-api",
+            "--region",
+            "us-central1",
+            "--format=json",
+        ]
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30.0
+        payload = {
+            "status": {
+                "latestReadyRevisionName": "aevryn-api-00037-ready",
+                "traffic": [
+                    {
+                        "revisionName": "aevryn-api-00037-ready",
+                        "percent": 100,
+                    }
+                ],
+            },
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": [
+                            {"image": expected_image},
+                        ],
+                    }
+                }
+            },
+        }
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout=json.dumps(payload))
+
+    monkeypatch.setattr("aevryn.cli.subprocess.run", fake_run)
+
+    summary = _run_cloud_run_deployment_check(
+        service="aevryn-api",
+        region="us-central1",
+        expected_image=expected_image,
+        gcloud_path="gcloud",
+        timeout_seconds=30.0,
+    )
+
+    assert summary == {
+        "service": "aevryn-api",
+        "region": "us-central1",
+        "latest_ready_revision": "present",
+        "latest_ready_revision_traffic_percent": 100,
+        "image_matches_expected": "true",
+        "secrets_printed": 0,
+        "ok": "cloud_run_deployment_contract_checked",
+    }
+
+
+def test_cloud_run_deployment_check_rejects_split_traffic(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Cloud Run deployment check should fail when the ready revision is partial."""
+    expected_image = "us-central1-docker.pkg.dev/project/repo/api:rc"
+
+    def fake_run(*args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        payload = {
+            "status": {
+                "latestReadyRevisionName": "aevryn-api-00037-ready",
+                "traffic": [
+                    {
+                        "revisionName": "aevryn-api-00037-ready",
+                        "percent": 90,
+                    }
+                ],
+            },
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": [
+                            {"image": expected_image},
+                        ],
+                    }
+                }
+            },
+        }
+        return subprocess.CompletedProcess(
+            args=cast(list[str], args[0]),
+            returncode=0,
+            stdout=json.dumps(payload),
+        )
+
+    monkeypatch.setattr("aevryn.cli.subprocess.run", fake_run)
+
+    with pytest.raises(ValueError, match="not serving all traffic"):
+        _run_cloud_run_deployment_check(
+            service="aevryn-api",
+            region="us-central1",
+            expected_image=expected_image,
+            gcloud_path="gcloud",
+            timeout_seconds=30.0,
+        )
+
+
+def test_cloud_run_deployment_check_rejects_image_mismatch_without_leaking_images(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Cloud Run deployment image mismatch should not print image values."""
+    expected_image = "us-central1-docker.pkg.dev/private-project/repo/api:expected"
+    actual_image = "us-central1-docker.pkg.dev/private-project/repo/api:actual"
+    monkeypatch.setenv("AEVRYN_CLOUD_RUN_EXPECTED_IMAGE", expected_image)
+
+    def fake_run(*args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        payload = {
+            "status": {
+                "latestReadyRevisionName": "aevryn-api-00037-ready",
+                "traffic": [
+                    {
+                        "revisionName": "aevryn-api-00037-ready",
+                        "percent": 100,
+                    }
+                ],
+            },
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": [
+                            {"image": actual_image},
+                        ],
+                    }
+                }
+            },
+        }
+        return subprocess.CompletedProcess(
+            args=cast(list[str], args[0]),
+            returncode=0,
+            stdout=json.dumps(payload),
+        )
+
+    monkeypatch.setattr("aevryn.cli.subprocess.run", fake_run)
+
+    exit_code = main(["cloud-run-deployment-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "deployed image does not match expected image" in captured.err
+    assert expected_image not in captured.out
+    assert expected_image not in captured.err
+    assert actual_image not in captured.out
+    assert actual_image not in captured.err
 
 
 def test_worker_drain_help_describes_managed_runner(

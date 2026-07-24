@@ -322,10 +322,37 @@ storage.import_content_storage=configured
 
 Then run the browser/API smoke through `https://api.aevryn.ai` after the custom domain is mapped.
 
+Confirm the serving revision/image contract:
+
+```powershell
+$env:PYTHONPATH="src"
+$env:AEVRYN_CLOUD_RUN_EXPECTED_IMAGE="us-central1-docker.pkg.dev/aevryn/aevryn-api/aevryn-api:rc"
+python -m aevryn.cli cloud-run-deployment-check `
+  --service aevryn-api `
+  --region us-central1
+```
+
+Expected result:
+
+```text
+service=aevryn-api
+region=us-central1
+latest_ready_revision=present
+latest_ready_revision_traffic_percent=100
+image_matches_expected=true
+secrets_printed=0
+ok=cloud_run_deployment_contract_checked
+```
+
+The command must not print project IDs, full image URLs, credentials, private
+storage references, source prose, or provider payloads.
+
 The hosted smoke must verify:
 
 * `/v2/health` works over HTTPS
 * CORS allows only `https://app.aevryn.ai`
+* the latest ready Cloud Run revision serves all API traffic
+* the serving container image matches the expected release-candidate image
 * protected routes still require managed identity
 * workflow errors remain metadata-only
 * logs do not contain manuscripts, credentials, tokens, private URLs, hostnames, usernames, or machine-local paths
