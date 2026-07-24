@@ -295,7 +295,7 @@ Prompt Packs are useful for beta without promising one-click perfect image/video
 Status:
 
 ```text
-Improved; final browser validation remains
+Verified for V2
 ```
 
 Verified evidence:
@@ -310,10 +310,10 @@ Verified evidence:
 Remaining hardening:
 
 * ~~keep scene-level continuity highlights scannable~~
-* keep large buckets collapsed during hosted browser validation
+* ~~keep large buckets collapsed during hosted browser validation~~
 * continue reducing repeated or low-value retained-canon noise when new examples appear
 * ~~verify no raw IDs appear in normal user view~~
-* verify continuity remains Canon-backed and does not invent explanations
+* ~~verify continuity remains Canon-backed and does not invent explanations~~
 
 Verified hardening:
 
@@ -327,6 +327,14 @@ Verified hardening:
 * continuity buckets filter internal-only records before choosing visible rows,
   so hidden source IDs do not consume the visible detail budget or render as
   `Unknown` noise
+* hosted Continuity validation confirmed production `app.aevryn.ai` renders
+  "retained canon" wording, keeps all 38 continuity disclosures collapsed by
+  default, exposes compact scene-level change summaries, and does not expose
+  source IDs, evidence anchors, fact IDs, import bundle IDs, storage references,
+  token/JWT fragments, or placeholder values in normal output
+* production deployment alignment was verified after PR #120 merged to `master`;
+  `app.aevryn.ai` moved from the older Continuity bundle to the current
+  production bundle before final Continuity validation
 
 Acceptance:
 
@@ -686,11 +694,17 @@ The full beta path works in browser without CLI knowledge.
 
 Remaining hardening:
 
-* keep all open PR checks green
+* ~~keep all open PR checks green~~
 * keep branch protection enforceable without trapping owner-only PRs forever
 * keep Dependabot and CodeQL useful without noisy blockers
-* verify recent commits reach GitHub
+* ~~verify recent commits reach GitHub~~
 * avoid lingering unmerged branches where possible
+
+Verified hardening:
+
+* PR #120 was merged to `master` after all PR checks passed, local `master`
+  fast-forwarded to `origin/master`, and post-merge master CI, security, CodeQL,
+  and Cloudflare Pages deployment completed successfully
 
 Acceptance:
 
@@ -704,9 +718,9 @@ Remaining hardening:
 
 * confirm latest API revision is serving intended image
 * confirm Cloudflare Pages environment variables are correct
-* confirm app.aevryn.ai and api.aevryn.ai health
+* ~~confirm app.aevryn.ai and api.aevryn.ai health~~
 * confirm CORS stays explicit
-* confirm frontend deploys from the intended branch
+* ~~confirm frontend deploys from the intended branch~~
 
 Verified hardening:
 
@@ -718,6 +732,9 @@ Verified hardening:
   such as URLs with paths, query strings, fragments, or credentials, while
   leaving provider-specific HTTPS URLs such as JWKS endpoints free to use
   required paths.
+* `app.aevryn.ai` production deployment updated after PR #120 merged to
+  `master`, and hosted Continuity validation confirmed the production domain was
+  serving the current frontend bundle rather than the older pre-merge bundle
 
 Acceptance:
 
