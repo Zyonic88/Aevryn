@@ -1285,7 +1285,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Record type: Production-Like Smoke Attempt Log",
         "Status: Started",
         "Public beta: Blocked",
-        "Latest attempt: 2026-07-17 provider and observability config gates passed",
+        "Latest attempt: 2026-07-24 final bounded hosted observability review passed",
         "Production-like smoke proves configuration and workflow safety.",
         "Hosted Restricted Audit Role Verification",
         "Provider And Observability Config Gates",
@@ -1299,6 +1299,7 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "ok=observability_config_contract_checked",
         "PASSED for provider request storage disabled posture.",
         "PASSED for hosted observability configuration metadata.",
+        "Final bounded hosted observability review has passed.",
         "PASSED for least-privilege append-only audit access.",
         "python -m aevryn.cli production-config-check",
         "python -m aevryn.cli project-db-smoke",
@@ -1383,6 +1384,15 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         "Request logs did not include credentials, tokens, secret values",
         "PASSED for hosted log review of the checked import, monitoring, and export smoke window.",
         "PASSED for no source prose in sampled hosted logs.",
+        "Final Bounded Hosted Observability Review",
+        "Post-deletion sample deletion_summary=http=DELETE status=204",
+        "Forbidden-data scan:",
+        "PASSED for final bounded hosted observability review.",
+        "PASSED for project deletion observability as metadata only.",
+        (
+            "Project deletion succeeded, but the browser view required a refresh "
+            "or tab change before the deleted project state visibly refreshed."
+        ),
         "AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql",
         "AEVRYN_API_ALLOWED_ORIGINS",
         "Passed locally",
@@ -1393,9 +1403,9 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         ),
         (
             "Public beta remains blocked by public-facing legal/trust/support "
-            "publication, final provider review, final bounded hosted observability "
-            "review, backup/restore/audit readiness, "
-            "prompt-pack polish, and final public-beta approval."
+            "publication, final provider review, backup retention wording "
+            "owner/legal review, prompt-pack polish, deletion refresh UX "
+            "hardening, and final public-beta approval."
         ),
     )
 

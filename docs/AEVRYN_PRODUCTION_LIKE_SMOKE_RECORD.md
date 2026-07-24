@@ -14,7 +14,7 @@ It is separate from the final release-candidate run record because smoke attempt
 Record type: Production-Like Smoke Attempt Log
 Status: Started
 Public beta: Blocked
-Latest attempt: 2026-07-17 provider and observability config gates passed
+Latest attempt: 2026-07-24 final bounded hosted observability review passed
 ```
 
 Production-like smoke is partially complete.
@@ -37,7 +37,7 @@ Hosted restricted audit role verification has passed.
 
 Hosted provider and observability configuration gates have passed.
 
-Final release-candidate signoff is still not complete.
+Final bounded hosted observability review has passed.
 
 ---
 
@@ -890,6 +890,76 @@ OPEN for hosted retention and final bounded-log verification against `docs/AEVRY
 
 ---
 
+# Attempt 2026-07-24 - Final Bounded Hosted Observability Review
+
+Execution surface: Google Cloud Run bounded service-log samples.
+
+Scope:
+
+```text
+Service: aevryn-api
+Region: us-central1
+Samples: 300 recent 24-hour entries, 1000 recent 7-day entries, and 176 post-deletion entries
+Checked workflows: health, authenticated project reads, import metadata, project status, exports, auth-denial metadata, worker/job metadata, and project deletion
+```
+
+Observed bounded sample results:
+
+```text
+24-hour sample entries=300
+24-hour sample time_window_start=2026-07-24T02:30:25.337215Z
+24-hour sample time_window_end=2026-07-24T05:37:05.404813Z
+24-hour warning_entries=3
+24-hour warning_summary=http_request status=404 method=GET
+
+7-day sample entries=1000
+7-day sample time_window_start=2026-07-23T17:35:14.414909Z
+7-day sample time_window_end=2026-07-24T05:39:01.489461Z
+7-day workflow coverage included health, projects, imports, status, exports, auth denials, and worker/job metadata.
+
+Post-deletion sample entries=176
+Post-deletion sample time_window_start=2026-07-24T03:51:16.632650Z
+Post-deletion sample time_window_end=2026-07-24T05:48:30.706127Z
+Post-deletion sample deletion_entries=2
+Post-deletion sample deletion_summary=http=DELETE status=204
+```
+
+Forbidden-data scan:
+
+```text
+bearer_tokens=0
+jwt_like=0
+openai_keys=0
+cloudflare_tokens=0
+database_urls=0
+r2_credentials=0
+storage_refs=0
+signed_urls=0
+windows_paths=0
+provider_payload_terms=0
+source_terms=0
+secrets_printed=0
+```
+
+Known non-blocking finding:
+
+```text
+Project deletion succeeded, but the browser view required a refresh or tab change before the deleted project state visibly refreshed. This is a UX refresh hardening item, not a deletion failure.
+```
+
+Interpretation:
+
+```text
+PASSED for final bounded hosted observability review.
+PASSED for metadata-only hosted logs across the sampled production-like window.
+PASSED for no manuscript/source prose in sampled hosted logs.
+PASSED for no full AI provider payloads in sampled hosted logs.
+PASSED for no secrets, credentials, private URLs, local machine paths, or storage references in sampled hosted logs.
+PASSED for project deletion observability as metadata only.
+```
+
+---
+
 # Attempt 2026-07-24 - Cloud Run Serving Image Contract
 
 Execution surface: Google Cloud Run service metadata through `gcloud`.
@@ -973,7 +1043,7 @@ A successful production-like smoke must record:
 | --- | --- | --- |
 | Production config check | `startup_contract=ready`, `secrets_printed=0` | Passed locally |
 | Provider config check | explicit provider mode, key presence, model, timeout, response-size boundary, no provider keys printed | Passed with metadata-only output; provider review remains required |
-| Observability config check | hosted logs/monitoring, bounded retention, metadata-only logging, security alerts | Passed with metadata-only output; bounded hosted log review remains required |
+| Observability config check | hosted logs/monitoring, bounded retention, metadata-only logging, security alerts | Passed with metadata-only output; final bounded hosted log review passed on 2026-07-24 |
 | PostgreSQL smoke | create/read/delete synthetic metadata record succeeds | Passed locally |
 | R2 storage smoke | write/read/delete tiny synthetic private object succeeds | Passed locally |
 | API startup | production app starts with local-only adapters rejected | Passed on Cloud Run |
@@ -997,14 +1067,9 @@ A successful production-like smoke must record:
 Complete the remaining release-candidate readiness checks that are outside the browser smoke:
 
 ```text
-Verify hosted retention and bounded-log behavior against the production observability policy before public beta.
 Complete provider owner/legal review before provider-backed extraction is public-beta approved.
 Complete public-facing legal, trust, and support publication before public beta.
-Complete backup/restore/audit readiness before public beta.
-Run `docs/AEVRYN_BACKUP_RESTORE_RUNBOOK.md` in an isolated restore target and complete a dated restore/audit drill record.
-The 2026-07-17 restore source preflight is recorded in
-`docs/AEVRYN_RESTORE_AUDIT_DRILL_2026_07_17.md`; it does not close the restore
-gate because no isolated restore target has been verified.
+Complete backup retention wording owner/legal review before public beta.
 Continue prompt-pack and output UX polish before public beta positioning.
 ```
 
@@ -1030,7 +1095,7 @@ Then record the final result in a dated release-candidate run record.
 
 ```text
 Public beta: Blocked
-Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, Cloud Run serving image contract, Cloudflare Pages production config contract, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, final provider review, final bounded hosted observability review, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Reason: Local production-style config, PostgreSQL, R2, hosted Cloud Run API health smoke, Cloud Run serving image contract, Cloudflare Pages production config contract, custom-domain API health smoke, hosted frontend/API custom-domain header smoke, unauthenticated browser-route/API protection checks, managed-identity login completion, authenticated project create/read/list smoke, hosted import processing, monitoring workflow status, hosted export creation, final bounded hosted log review, smoke project cleanup, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, restore/audit drill, and internal release-candidate signoff have passed. Public beta remains blocked by public-facing legal/trust/support publication, final provider review, backup retention wording owner/legal review, prompt-pack polish, deletion refresh UX hardening, and final public-beta approval.
 Previously recorded smoke success remains: hosted import processing, monitoring workflow status, hosted export creation, bounded hosted log review, smoke project cleanup, and internal release-candidate signoff have passed.
-Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support publication, final provider review, final bounded hosted observability review, backup/restore/audit readiness, prompt-pack polish, and final public-beta approval.
+Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support publication, final provider review, backup retention wording owner/legal review, prompt-pack polish, deletion refresh UX hardening, and final public-beta approval.
 ```

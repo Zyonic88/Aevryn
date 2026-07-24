@@ -214,6 +214,16 @@ ok=observability_config_contract_checked
 This verifies configuration posture only. It does not replace the bounded hosted
 log review.
 
+The final bounded hosted observability review passed on 2026-07-24 against
+Google Cloud Run service-log samples for `aevryn-api` in `us-central1`.
+
+The sampled windows covered health checks, authenticated project reads, import
+metadata, workflow status, export metadata, auth-denial metadata, worker/job
+metadata, and project deletion metadata. The review found zero bearer tokens,
+JWT-like tokens, provider keys, Cloudflare tokens, database URLs, R2
+credentials, storage references, signed URLs, local machine paths, provider
+payload terms, or source-story terms.
+
 ---
 
 # Public-Beta Blockers
@@ -224,7 +234,7 @@ Public beta remains blocked until:
 * hosted log retention is configured or documented
 * hosted monitoring retention is configured or documented
 * security alert routing is confirmed
-* a bounded hosted log review passes after the final public-beta deployment
+* bounded hosted log review evidence remains current after the final public-beta deployment
 * application tests continue proving no source prose, full provider payloads, or secrets enter logs
 * support procedure remains aligned with metadata-only diagnostics
 

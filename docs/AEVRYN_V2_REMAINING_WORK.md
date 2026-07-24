@@ -146,16 +146,16 @@ Users can understand when story excerpts leave Aevryn-owned systems and what the
 Status:
 
 ```text
-Open
+Passed
 ```
 
 Required:
 
-* final bounded hosted log review
-* confirm metadata-only logs
-* confirm no manuscripts, chapters, AI payloads, tokens, private URLs, hostnames, usernames, or machine-local paths
-* confirm monitoring remains workflow-observation only
-* record final hosted evidence
+* final bounded hosted log review - complete
+* confirm metadata-only logs - complete
+* confirm no manuscripts, chapters, AI payloads, tokens, private URLs, hostnames, usernames, or machine-local paths - complete
+* confirm monitoring remains workflow-observation only - complete
+* record final hosted evidence - complete
 
 Tracking:
 
@@ -167,6 +167,14 @@ Acceptance:
 
 ```text
 Hosted logs and monitoring are metadata-only and safe for public-beta operations.
+```
+
+Final evidence:
+
+```text
+2026-07-24 final bounded hosted observability review passed against Google Cloud Run service-log samples.
+Samples covered health, project reads, import metadata, status, exports, auth-denial metadata, worker/job metadata, and project deletion metadata.
+Forbidden-data scans found zero bearer tokens, JWT-like tokens, provider keys, Cloudflare tokens, database URLs, R2 credentials, storage references, signed URLs, local machine paths, provider payload terms, or source-story terms.
 ```
 
 ## 5. Backup Retention Public Wording
@@ -870,7 +878,6 @@ Stop and do not approve public beta if any of the following are true:
 * cross-user project access succeeds
 * provider terms are not reviewed
 * public legal pages are not reviewed
-* hosted logs cannot be verified as metadata-only
 * the browser beta path requires CLI knowledge
 
 ---
@@ -888,4 +895,5 @@ The next best target is:
 ```text
 Full beta browser-path validation and remaining visible UI polish, starting
 with project/story deletion controls and any remaining public-facing noise.
+Known deletion UX finding: project deletion succeeds, but the dashboard/project list can require a refresh or tab change before the deletion is visibly reflected.
 ```
