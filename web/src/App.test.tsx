@@ -4454,6 +4454,19 @@ describe("App shell routing", () => {
       filename: "older-canon-snapshot.json",
       created_at: "2026-06-20T00:00:00.000Z",
     };
+    const createObjectURL = vi.fn(() => "blob:aevryn-export");
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+    const anchorClick = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined);
     let createdExport: typeof projectExportPayload | null = null;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -4471,6 +4484,22 @@ describe("App shell routing", () => {
       }
       if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
         return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+      }
+      if (
+        url.includes(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/exports/`) &&
+        url.endsWith("/download")
+      ) {
+        const exportId = url.split("/exports/").at(1)?.replace("/download", "");
+        const matchingExport =
+          createdExport && exportId === createdExport.export_id ? createdExport : olderExport;
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            headers: {
+              "Content-Disposition": `attachment; filename="${matchingExport.filename}"`,
+              "Content-Type": "application/json",
+            },
+          }),
+        );
       }
       if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/exports`)) {
         if (init?.method === "POST") {
@@ -4542,6 +4571,31 @@ describe("App shell routing", () => {
       "alpha-canon-snapshot.json",
       "older-canon-snapshot.json",
     ]);
+    const createdExportCard = screen
+      .getByRole("heading", { name: "alpha-canon-snapshot.json" })
+      .closest("article");
+    expect(createdExportCard).not.toBeNull();
+    await user.click(
+      within(createdExportCard as HTMLElement).getByRole("button", { name: "Download" }),
+    );
+    expect(
+      await screen.findByText("Download prepared for alpha-canon-snapshot.json."),
+    ).toBeInTheDocument();
+    expect(createObjectURL).toHaveBeenCalledWith(
+      expect.objectContaining({
+        size: 11,
+        type: "application/json",
+      }),
+    );
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:aevryn-export");
+    expect(anchorClick).toHaveBeenCalled();
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).endsWith(
+          `${API_PATHS.projects}/project_alpha/exports/${createdExport?.export_id}/download`,
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("clears stale export previews when local AI JSON validation fails", async () => {

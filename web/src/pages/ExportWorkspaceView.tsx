@@ -43,6 +43,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [previewResult, setPreviewResult] = useState<ExportPreview | null>(null);
   const [createdExportId, setCreatedExportId] = useState<string | null>(null);
+  const [downloadedExportName, setDownloadedExportName] = useState<string | null>(null);
 
   const activeExport = parseOptionValue(selectedExport);
   const statusQuery = useQuery({
@@ -83,6 +84,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
     },
     onSuccess(result) {
       setCreatedExportId(result.export_id);
+      setDownloadedExportName(null);
       queryClient.setQueryData<ProjectExportList>(
         projectExportsQueryKey(project.id, session?.session_token),
         (current) => mergeProjectExportList(current, result),
@@ -98,6 +100,12 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
   const downloadExport = useMutation({
     mutationFn: (exportRecord: ProjectExport) =>
       downloadProjectExport(project.id, exportRecord, requireSessionToken(session)),
+    onMutate() {
+      setDownloadedExportName(null);
+    },
+    onSuccess(_result, exportRecord) {
+      setDownloadedExportName(exportRecord.filename);
+    },
   });
   const previewExport = useMutation({
     mutationFn: (payload: ExportPreviewRequest) => apiClient.previewExport(payload),
@@ -170,6 +178,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
         onDownload={(exportRecord) => downloadExport.mutate(exportRecord)}
         statusError={statusQuery.error}
         createdExportId={createdExportId}
+        downloadedExportName={downloadedExportName}
       />
 
       <DeveloperPreviewToggle>
@@ -281,6 +290,7 @@ function ProjectStoredExportsPanel({
   onDownload,
   statusError,
   createdExportId,
+  downloadedExportName,
 }: {
   exports: ProjectExport[];
   exportsError: Error | null;
@@ -293,6 +303,7 @@ function ProjectStoredExportsPanel({
   onDownload: (exportRecord: ProjectExport) => void;
   statusError: Error | null;
   createdExportId: string | null;
+  downloadedExportName: string | null;
 }) {
   const sortedExports = [...exports].sort((left, right) =>
     right.created_at.localeCompare(left.created_at),
@@ -351,6 +362,11 @@ function ProjectStoredExportsPanel({
         <p className="success-note" role="status">
           Preparing authenticated download
           {downloadingExport ? ` for ${downloadingExport.filename}` : ""}.
+        </p>
+      ) : null}
+      {downloadedExportName ? (
+        <p className="success-note" role="status">
+          Download prepared for {downloadedExportName}.
         </p>
       ) : null}
       {!latestSnapshotId && !isLoading ? (

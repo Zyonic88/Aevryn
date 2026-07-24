@@ -619,10 +619,14 @@ Verified evidence:
 * stored export creation appears in the Exports workspace immediately from the
   API response while the export list refreshes in the background, so beta users
   are not left wondering whether the export actually completed
+* hosted Exports pass created a Canon Snapshot / JSON export from the latest
+  accepted snapshot, showed it immediately with human filename/kind/size/date,
+  kept private storage references hidden, and the download action now confirms
+  the prepared file without exposing bytes or storage paths
 
 Remaining hardening:
 
-* rerun export creation and download in the final hosted browser pass
+* ~~rerun export creation and download in the final hosted browser pass~~
 * ~~keep export metadata visible without exposing private storage references~~
 * ~~keep exports project-owner scoped after any storage or database changes~~
 * ~~keep export download requests authenticated and timestamped from the frontend client~~
