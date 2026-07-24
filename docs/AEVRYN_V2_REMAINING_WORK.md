@@ -365,6 +365,9 @@ Verified hardening:
 * project-runner identity profiles preserve explicit relationship labels such as
   "sister of Zhao Chen," allowing possessive references like "Zhao Chen's sister"
   to resolve to an existing identity without creating duplicate character cards
+* project-runner gender-support terms recognize accented fiancee/fiance
+  spellings the same way as unaccented spellings, so translated or polished
+  prose does not lose conservative pronoun support
 * character profiles and stored snapshot API output hide contradictory
   Human-plus-non-human race/species values instead of displaying both as Canon
 * verified with the focused processed-character-panel frontend test

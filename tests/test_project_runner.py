@@ -841,6 +841,80 @@ def test_runner_resolves_pronoun_from_explicit_family_role_support() -> None:
     )
 
 
+def test_runner_resolves_pronoun_from_accented_fiancee_support() -> None:
+    """Accented relationship words should support pronouns without guessing."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_jiang_shasha",
+                        "entity_type": "character",
+                        "display_name": "Jiang Shasha",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_jiang_shasha_relationship_fiancee",
+                        "entity_id": "character_jiang_shasha",
+                        "attribute": "relationship_context",
+                        "value": "fianc\u00e9e of Zhao Chen",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_002_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_she",
+                        "entity_type": "character",
+                        "display_name": "She",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_she_status_waiting",
+                        "entity_id": "character_she",
+                        "attribute": "status",
+                        "value": "Waiting",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_jiang_shasha"
+    assert result.database.retrieve_entity("character_she") is None
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_jiang_shasha"
+        and decision.reference.text == "She"
+        for decision in result.identity_resolutions
+    )
+
+
 def test_runner_resolves_possessive_relationship_label_to_existing_identity() -> None:
     """Explicit relationship labels should resolve possessive references without duplicates."""
     runner = AevrynProjectRunner()
