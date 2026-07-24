@@ -275,6 +275,11 @@ Verified hardening:
 * narration prompts now carry the same per-character known/missing visual identity
   boundary as visual prompt types, keeping cross-prompt character appearance
   handling Canon-bounded instead of inferred
+* frontend prompt rendering filters internal source IDs, import IDs, evidence
+  anchors, bundle IDs, and chapter/scene machine tokens before display, copy,
+  or local text download while preserving human Canon prompt details
+* verified with readable-output unit tests and focused Prompt Packs workspace
+  tests
 
 Acceptance:
 
