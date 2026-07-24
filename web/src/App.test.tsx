@@ -5427,6 +5427,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByText("Alpha Story")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("Ã");
     await user.click(screen.getByRole("button", { name: /Beta Story Select story/ }));
 
     expect(window.localStorage.getItem("aevryn.activeStory.project_alpha")).toBe("story_beta");

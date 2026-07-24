@@ -156,7 +156,7 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
                   disabled={deleteStory.isPending}
                   onClick={() => requestStoryDeletion(story.story_id, story.title)}
                 >
-                  <span aria-hidden="true">×</span>
+                  <span aria-hidden="true">x</span>
                 </button>
               </div>
             ))}
