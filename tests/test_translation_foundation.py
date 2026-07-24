@@ -565,6 +565,40 @@ def test_translation_uses_sentence_understanding_to_flag_ambiguity() -> None:
     assert "The dao core reacted." not in {issue.message for issue in result.issues}
 
 
+def test_translation_classifies_cultivation_body_ambiguity_as_power_system() -> None:
+    """Cultivation body terms should remain reviewable power-system metadata."""
+    result = TranslationEngine().normalize_unit(
+        TranslationUnit(
+            unit_id="unit_cultivation_body_ambiguity",
+            source_text="The dantian and spiritual root reacted.",
+            evidence_anchor_ids=("anchor_cultivation_body",),
+            sentence_understanding=(
+                TranslationSentenceUnderstanding(
+                    evidence_anchor_id="anchor_cultivation_body",
+                    signals=("translation_ambiguity",),
+                    ambiguity_terms=("dantian", "spiritual root"),
+                    review_required=True,
+                ),
+            ),
+        )
+    )
+
+    assert result.normalized_text == "The dantian and spiritual root reacted."
+    assert tuple(issue.source_term for issue in result.issues) == (
+        "dantian",
+        "spiritual root",
+    )
+    assert all(issue.term_kind == "power_system" for issue in result.issues)
+    assert all(
+        issue.evidence_anchor_ids == ("anchor_cultivation_body",)
+        for issue in result.issues
+    )
+    assert all(
+        "The dantian and spiritual root reacted." not in issue.message
+        for issue in result.issues
+    )
+
+
 def test_translation_sentence_ambiguity_deduplicates_glossary_review_terms() -> None:
     """Glossary review should not be duplicated by sentence ambiguity metadata."""
     result = TranslationEngine().normalize_unit(

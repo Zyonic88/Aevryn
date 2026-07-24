@@ -418,6 +418,9 @@ Verified hardening:
 * sentence understanding routes item, skill, system, location, and organization
   cues as metadata-only guidance; mixed or ambiguous cues remain reviewable
   instead of becoming Canon truth
+* sentence understanding flags genre power-system/body terms such as dantian,
+  meridian, qi, and spiritual root as translation-review metadata without
+  turning them into skills, items, or Canon facts
 * system reward, mission, quest, and points language is treated as system context
   rather than a usable skill unless the evidence explicitly describes an ability
 * system UI plus skill/ability cues are marked reviewable instead of being treated

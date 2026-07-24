@@ -219,6 +219,8 @@ TRANSLATION_AMBIGUITY_CUES = frozenset(
         "art",
         "core",
         "dao",
+        "dantian",
+        "meridian",
         "qi",
         "realm",
         "seal",
@@ -232,6 +234,7 @@ TRANSLATION_AMBIGUITY_PHRASE_CUES = frozenset(
         "cultivation realm",
         "dao seal",
         "spirit core",
+        "spiritual root",
         "system panel",
     }
 )

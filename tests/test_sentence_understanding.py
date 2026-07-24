@@ -292,6 +292,31 @@ def test_sentence_understanding_flags_translation_ambiguous_terms() -> None:
     assert understanding.review_required is True
 
 
+def test_sentence_understanding_flags_cultivation_body_terms_for_translation_review() -> None:
+    """Genre power-system terms should be review metadata, not settled Canon."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_cultivation_terms",
+        title="Sentence Cultivation Terms",
+        text=(
+            "Chapter 1\n"
+            "Charlotte felt qi move through her dantian, meridian, and spiritual root."
+        ),
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "translation_ambiguity" in understanding.signals
+    assert understanding.ambiguity_terms == (
+        "dantian",
+        "meridian",
+        "qi",
+        "spiritual root",
+    )
+    assert understanding.review_required is True
+    assert "skill_reference" not in understanding.signals
+    assert "item_reference" not in understanding.signals
+
+
 def test_sentence_understanding_detects_relationship_language() -> None:
     """Family, title, and social references should be visible before extraction."""
     imported = StoryImporter().import_text(

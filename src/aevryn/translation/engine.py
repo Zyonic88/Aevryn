@@ -171,6 +171,7 @@ def _sentence_ambiguity_term_kind(term: str) -> TranslationTermKind:
         "realm",
         "seal",
         "spirit",
+        "spiritual root",
         "system",
         "vessel",
     }:
