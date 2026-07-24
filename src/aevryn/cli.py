@@ -189,6 +189,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "cloud-run-deployment-check":
             _handle_cloud_run_deployment_check(args)
             return 0
+        if command == "cloudflare-pages-config-check":
+            _handle_cloudflare_pages_config_check(args)
+            return 0
         if command == "worker-drain":
             _handle_worker_drain(args)
             return 0
@@ -733,6 +736,52 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=30.0,
         help="Timeout for the gcloud metadata request.",
+    )
+
+    cloudflare_pages_config_parser = subcommands.add_parser(
+        "cloudflare-pages-config-check",
+        help="Check Cloudflare Pages production config without printing secrets.",
+        description=(
+            "Check Cloudflare Pages production config without printing secrets. "
+            "The command reads Pages project metadata through the Cloudflare API, "
+            "confirms the production branch and build settings, verifies the "
+            "browser-safe production variables, and confirms the Supabase anon "
+            "key is configured as a secret. It never prints account IDs, tokens, "
+            "secret values, environment variable values, source prose, or storage "
+            "references."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    cloudflare_pages_config_parser.add_argument(
+        "--account-id-env",
+        default="AEVRYN_CLOUDFLARE_ACCOUNT_ID",
+        help="Process environment variable containing the Cloudflare account ID.",
+    )
+    cloudflare_pages_config_parser.add_argument(
+        "--api-token-env",
+        default="CLOUDFLARE_API_TOKEN",
+        help="Process environment variable containing the Cloudflare API token.",
+    )
+    cloudflare_pages_config_parser.add_argument(
+        "--project-name",
+        default="aevryn-web",
+        help="Cloudflare Pages project name.",
+    )
+    cloudflare_pages_config_parser.add_argument(
+        "--expected-api-url-env",
+        default="AEVRYN_EXPECTED_PAGES_API_URL",
+        help="Process environment variable containing the expected API URL.",
+    )
+    cloudflare_pages_config_parser.add_argument(
+        "--expected-supabase-url-env",
+        default="AEVRYN_EXPECTED_PAGES_SUPABASE_URL",
+        help="Process environment variable containing the expected Supabase URL.",
+    )
+    cloudflare_pages_config_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=30.0,
+        help="HTTP timeout for the Cloudflare API request.",
     )
 
     worker_drain_parser = subcommands.add_parser(
@@ -1551,6 +1600,39 @@ def _handle_cloud_run_deployment_check(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_cloudflare_pages_config_check(args: argparse.Namespace) -> None:
+    """Handle the cloudflare-pages-config-check command."""
+    account_id_env = cast(str, args.account_id_env).strip()
+    api_token_env = cast(str, args.api_token_env).strip()
+    project_name = cast(str, args.project_name).strip()
+    expected_api_url_env = cast(str, args.expected_api_url_env).strip()
+    expected_supabase_url_env = cast(str, args.expected_supabase_url_env).strip()
+    timeout_seconds = cast(float, args.timeout_seconds)
+    if not account_id_env:
+        raise ValueError("--account-id-env cannot be blank.")
+    if not api_token_env:
+        raise ValueError("--api-token-env cannot be blank.")
+    if not project_name:
+        raise ValueError("--project-name cannot be blank.")
+    if not expected_api_url_env:
+        raise ValueError("--expected-api-url-env cannot be blank.")
+    if not expected_supabase_url_env:
+        raise ValueError("--expected-supabase-url-env cannot be blank.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+
+    summary = _run_cloudflare_pages_config_check(
+        account_id=_required_process_env_value(account_id_env),
+        cloudflare_credential=_required_process_env_value(api_token_env),
+        project_name=project_name,
+        expected_api_url=_required_process_env_value(expected_api_url_env),
+        expected_supabase_url=_required_process_env_value(expected_supabase_url_env),
+        timeout_seconds=timeout_seconds,
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_worker_drain(args: argparse.Namespace) -> None:
     """Handle the worker-drain command."""
     api_url_env = cast(str, args.api_url_env).strip()
@@ -2008,6 +2090,167 @@ def _run_cloud_run_deployment_check(
         "secrets_printed": 0,
         "ok": "cloud_run_deployment_contract_checked",
     }
+
+
+def _run_cloudflare_pages_config_check(
+    *,
+    account_id: str,
+    cloudflare_credential: str,
+    project_name: str,
+    expected_api_url: str,
+    expected_supabase_url: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Verify Cloudflare Pages production config and return metadata only."""
+    normalized_account_id = account_id.strip()
+    normalized_cloudflare_credential = cloudflare_credential.strip()
+    normalized_project_name = project_name.strip()
+    if not normalized_account_id:
+        raise ValueError("Cloudflare account ID cannot be blank.")
+    if not normalized_cloudflare_credential:
+        raise ValueError("Cloudflare API token cannot be blank.")
+    if not normalized_project_name:
+        raise ValueError("Cloudflare Pages project name cannot be blank.")
+    if timeout_seconds <= 0:
+        raise ValueError("Cloudflare Pages config timeout must be positive.")
+
+    normalized_expected_api_url = _validated_https_api_url(
+        expected_api_url,
+        purpose="cloudflare-pages-config-check API URL",
+    )
+    normalized_expected_supabase_url = _validated_https_origin_url(
+        expected_supabase_url,
+        key="VITE_SUPABASE_URL",
+        purpose="cloudflare-pages-config-check Supabase URL",
+    )
+
+    payload = _cloudflare_pages_project(
+        account_id=normalized_account_id,
+        cloudflare_credential=normalized_cloudflare_credential,
+        project_name=normalized_project_name,
+        timeout_seconds=timeout_seconds,
+    )
+    build_config = _object_payload(payload.get("build_config"))
+    source = _object_payload(payload.get("source"))
+    source_config = _object_payload(source.get("config"))
+    deployment_configs = _object_payload(payload.get("deployment_configs"))
+    production_config = _object_payload(deployment_configs.get("production"))
+    env_vars = _object_payload(production_config.get("env_vars"))
+
+    _require_equal_metadata(
+        str(payload.get("production_branch") or ""),
+        "master",
+        "Cloudflare Pages production branch is not master.",
+    )
+    _require_equal_metadata(
+        str(build_config.get("root_dir") or ""),
+        "web",
+        "Cloudflare Pages root directory is not web.",
+    )
+    _require_equal_metadata(
+        str(build_config.get("build_command") or ""),
+        "npm run build",
+        "Cloudflare Pages build command is not npm run build.",
+    )
+    _require_equal_metadata(
+        str(build_config.get("destination_dir") or ""),
+        "dist",
+        "Cloudflare Pages build output directory is not dist.",
+    )
+    if source_config.get("production_deployments_enabled") is False:
+        raise ValueError("Cloudflare Pages production branch deployments are disabled.")
+
+    _require_pages_plaintext_var(
+        env_vars,
+        name="VITE_AEVRYN_API_URL",
+        expected_value=normalized_expected_api_url,
+    )
+    _require_pages_plaintext_var(
+        env_vars,
+        name="VITE_SUPABASE_URL",
+        expected_value=normalized_expected_supabase_url,
+    )
+    _require_pages_secret_var(env_vars, name="VITE_SUPABASE_ANON_KEY")
+
+    return {
+        "project": normalized_project_name,
+        "production_branch": "master",
+        "root_directory": "verified",
+        "build_command": "verified",
+        "build_output": "verified",
+        "production_deployments": "enabled",
+        "api_url": "verified",
+        "supabase_url": "verified",
+        "supabase_anon_key": "secret_present",
+        "secrets_printed": 0,
+        "ok": "cloudflare_pages_config_contract_checked",
+    }
+
+
+def _cloudflare_pages_project(
+    *,
+    account_id: str,
+    cloudflare_credential: str,
+    project_name: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Fetch Cloudflare Pages project metadata."""
+    encoded_project_name = urllib.parse.quote(project_name, safe="")
+    url = (
+        "https://api.cloudflare.com/client/v4/accounts/"
+        f"{urllib.parse.quote(account_id, safe='')}/pages/projects/"
+        f"{encoded_project_name}"
+    )
+    status, _bytes_read, _headers, body = _hosted_json_get(
+        url=url,
+        headers={
+            "Accept": "application/json",
+            "Authorization": f"Bearer {cloudflare_credential}",
+            "User-Agent": "AevrynReleaseSmoke/1.0",
+        },
+        timeout_seconds=timeout_seconds,
+        purpose="cloudflare-pages-config-check",
+    )
+    if status != 200:
+        raise ValueError("Cloudflare Pages config request failed.")
+    if body.get("success") is not True:
+        raise ValueError("Cloudflare Pages config response was not successful.")
+    result = body.get("result")
+    return _object_payload(result)
+
+
+def _require_pages_plaintext_var(
+    env_vars: dict[str, object],
+    *,
+    name: str,
+    expected_value: str,
+) -> None:
+    """Require a Pages plaintext env var to match an expected value."""
+    variable = _object_payload(env_vars.get(name))
+    if variable.get("type") != "plain_text":
+        raise ValueError(f"Cloudflare Pages {name} is not configured as plaintext.")
+    if str(variable.get("value") or "").strip() != expected_value:
+        raise ValueError(f"Cloudflare Pages {name} does not match expected value.")
+
+
+def _require_pages_secret_var(env_vars: dict[str, object], *, name: str) -> None:
+    """Require a Pages env var to be present as an encrypted secret."""
+    variable = _object_payload(env_vars.get(name))
+    if variable.get("type") != "secret_text":
+        raise ValueError(f"Cloudflare Pages {name} is not configured as a secret.")
+
+
+def _require_equal_metadata(actual: str, expected: str, message: str) -> None:
+    """Require exact metadata equality with a stable error message."""
+    if actual.strip() != expected:
+        raise ValueError(message)
+
+
+def _object_payload(value: object) -> dict[str, object]:
+    """Return a dictionary payload or fail with a stable metadata error."""
+    if not isinstance(value, dict):
+        raise ValueError("Provider metadata response is missing required object data.")
+    return cast(dict[str, object], value)
 
 
 def _run_gcloud_cloud_run_service_describe(

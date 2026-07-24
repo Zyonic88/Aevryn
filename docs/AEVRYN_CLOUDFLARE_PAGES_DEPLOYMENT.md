@@ -116,6 +116,51 @@ npm.cmd run test
 
 ---
 
+# Hosted Pages Config Check
+
+Confirm the production Pages build and browser-safe environment contract:
+
+```powershell
+$env:PYTHONPATH="src"
+$env:AEVRYN_CLOUDFLARE_ACCOUNT_ID="<stored outside repo>"
+$env:CLOUDFLARE_API_TOKEN="<stored outside repo>"
+$env:AEVRYN_EXPECTED_PAGES_API_URL="https://api.aevryn.ai"
+$env:AEVRYN_EXPECTED_PAGES_SUPABASE_URL="https://<project-ref>.supabase.co"
+python -m aevryn.cli cloudflare-pages-config-check `
+  --project-name aevryn-web
+```
+
+Expected result:
+
+```text
+project=aevryn-web
+production_branch=master
+root_directory=verified
+build_command=verified
+build_output=verified
+production_deployments=enabled
+api_url=verified
+supabase_url=verified
+supabase_anon_key=secret_present
+secrets_printed=0
+ok=cloudflare_pages_config_contract_checked
+```
+
+The command verifies:
+
+* production branch is `master`
+* root directory is `web`
+* build command is `npm run build`
+* build output is `dist`
+* `VITE_AEVRYN_API_URL` matches `https://api.aevryn.ai`
+* `VITE_SUPABASE_URL` matches the expected Supabase project origin
+* `VITE_SUPABASE_ANON_KEY` exists as a secret variable
+
+It must not print Cloudflare account IDs, API tokens, Supabase keys, configured
+environment values, source prose, storage references, or provider payloads.
+
+---
+
 # Wrangler Direct Upload Path
 
 Use this path for the first release-candidate smoke if the Cloudflare Pages dashboard is not yet connected to GitHub.
