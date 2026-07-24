@@ -540,7 +540,7 @@ In progress
 
 Remaining hardening:
 
-* hosted browser validation for password recovery
+* hosted browser validation for password recovery email delivery and callback
 * hosted browser validation for expired-session recovery
 * ~~ensure recovery errors remain human-readable~~
 * ~~ensure token/session details are never displayed~~
@@ -548,10 +548,15 @@ Remaining hardening:
 
 Verified hardening:
 
+* password recovery request form accepts valid Aevryn-hosted email addresses and
+  shows an account-enumeration-safe confirmation even if the managed identity
+  provider rejects the reset request
+* managed identity provider password-recovery rejection text is not rendered to
+  users on the request form
 * password-recovery completion returns users to Login with a human-readable success
   message, clears any stored session, and does not render the recovery token
-* verified with focused recovery UI test, managed-identity auth tests, session tests,
-  full App test suite, lint, and production build
+* verified with focused recovery UI tests, managed-identity auth tests, session tests,
+  lint, and production build
 * expired sessions from deep project routes return to Login and then land on
   Dashboard after successful login instead of reopening the stale route
 * invalid authenticated API sessions show a human-readable expired-session message
