@@ -432,6 +432,10 @@ Verified hardening:
   same sentence remain visible and reviewable
 * physical skill-source scrolls route as item context rather than automatically
   becoming usable skills
+* physical knowledge/resource containers such as jade slips, cultivation manuals,
+  ability crystals, skill crystals, and source crystals route as item context,
+  while obvious AI attempts to classify crystals or slips as usable skills are
+  rejected by deterministic extraction guards
 * verified with sentence-understanding, extraction, and evidence-bounded AI
   extraction tests
 

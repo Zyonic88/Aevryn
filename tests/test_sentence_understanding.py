@@ -182,6 +182,41 @@ def test_sentence_understanding_treats_spell_scroll_as_item_context() -> None:
     assert understanding.review_required is False
 
 
+def test_sentence_understanding_treats_jade_slip_as_item_context() -> None:
+    """A jade slip is a physical knowledge container, not a skill by itself."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_jade_slip",
+        title="Sentence Jade Slip",
+        text="Chapter 1\nCharlotte placed the jade slip beside the cultivation manual.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "cultivation manual" in understanding.cue_terms
+    assert "jade slip" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_treats_ability_crystal_as_item_context() -> None:
+    """A physical ability crystal should not become a usable ability automatically."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_ability_crystal",
+        title="Sentence Ability Crystal",
+        text="Chapter 1\nThe system placed an ability crystal in Zhao Chen's hand.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "ability crystal" in understanding.cue_terms
+    assert understanding.review_required is True
+    assert "system" in understanding.ambiguity_terms
+
+
 def test_sentence_understanding_keeps_manual_and_separate_skill_reviewable() -> None:
     """A technique manual can be an item while a separate skill cue still routes to review."""
     imported = StoryImporter().import_text(

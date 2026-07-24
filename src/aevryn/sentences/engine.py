@@ -133,6 +133,7 @@ ITEM_CUES = frozenset(
         "book",
         "credits",
         "cruiser",
+        "crystal",
         "dagger",
         "equipment",
         "manual",
@@ -140,6 +141,7 @@ ITEM_CUES = frozenset(
         "rifle",
         "scroll",
         "ship",
+        "slip",
         "spear",
         "starship",
         "sword",
@@ -151,9 +153,13 @@ ITEM_CUES = frozenset(
 )
 ITEM_PHRASE_CUES = frozenset(
     {
+        "ability crystal",
         "battle cruiser",
+        "cultivation manual",
+        "jade slip",
         "source crystal",
         "skill book",
+        "skill crystal",
         "skill manual",
         "skill scroll",
         "spell book",
@@ -230,7 +236,7 @@ TRANSLATION_AMBIGUITY_PHRASE_CUES = frozenset(
     }
 )
 SKILL_PHRASE_ITEM_CONTEXT_TERMS = frozenset({"art", "blade", "sword"})
-ITEM_PHRASE_SKILL_CONTEXT_TERMS = frozenset({"skill", "spell", "technique"})
+ITEM_PHRASE_SKILL_CONTEXT_TERMS = frozenset({"ability", "skill", "spell", "technique"})
 SYSTEM_PHRASE_SKILL_CONTEXT_TERMS = frozenset({"skill"})
 DIALOGUE_PATTERN = re.compile(r'["\']|\b(said|asked|replied|shouted|whispered)\b', re.I)
 

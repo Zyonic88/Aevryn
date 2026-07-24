@@ -266,6 +266,25 @@ class MisclassifiedSkillExtractor:
         )
 
 
+class MisclassifiedPhysicalContainerSkillExtractor:
+    """Extractor that labels a physical knowledge/resource container as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious physical-container/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_source_crystal",
+                    entity_type="skill",
+                    display_name="Source Crystal",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.94,
+                ),
+            ),
+        )
+
+
 class ValidSkillExtractor:
     """Extractor that labels a named ability as a skill."""
 
@@ -682,6 +701,19 @@ def test_extraction_rejects_obvious_physical_object_as_skill() -> None:
         text=imported_source_text(),
     )
     engine = EntityExtractionEngine(extractor=MisclassifiedSkillExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_physical_containers_as_skills() -> None:
+    """Physical crystals and slips must not be accepted as usable skills."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedPhysicalContainerSkillExtractor())
 
     with pytest.raises(ValueError, match="physical object cannot be skill"):
         engine.extract_imported_source(imported)
