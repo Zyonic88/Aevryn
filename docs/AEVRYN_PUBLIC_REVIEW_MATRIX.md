@@ -50,7 +50,7 @@ One person may hold more than one role, but each role must still be reviewed exp
 | Public Page | Route | Source Docs | Required Review | Current State | Public-Beta Decision |
 | --- | --- | --- | --- | --- | --- |
 | Trust | `/trust` | `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`, `docs/AEVRYN_TRUST_MODEL.md` | Owner, Privacy, Security | Implemented and production-reachable; owner review pending | Blocked |
-| Privacy | `/privacy` | `docs/PRIVACY_POLICY.md`, `docs/AEVRYN_PRIVACY.md`, `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`, `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`, `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md` | Owner, Legal, Privacy, Provider Review | Implemented as draft; backup/provider wording candidates selected; OpenAI source review recorded; production account verification pending | Blocked |
+| Privacy | `/privacy` | `docs/PRIVACY_POLICY.md`, `docs/AEVRYN_PRIVACY.md`, `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`, `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`, `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`, `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md` | Owner, Legal, Privacy, Provider Review | Implemented as draft; backup/provider wording candidates selected; OpenAI source review recorded; production account verification checklist exists and remains pending | Blocked |
 | Security | `/security` | `docs/AEVRYN_SECURITY.md`, `docs/SECURITY_DISCLOSURE.md`, `docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md` | Owner, Security, Legal | Implemented as draft; hosted observability evidence passed | Blocked |
 | User Rights | `/user-rights` | `docs/AEVRYN_USER_RIGHTS.md`, `docs/AEVRYN_BACKUP_RETENTION_DECISION.md` | Owner, Legal, Privacy, Operations | Implemented with backup wording candidate | Blocked |
 | Content Classification | `/content` | `docs/AEVRYN_CONTENT_CLASSIFICATION.md`, `docs/ACCEPTABLE_USE_POLICY.md` | Owner, Legal, Provider Review | Implemented as draft; provider-policy review pending | Blocked |
@@ -92,6 +92,7 @@ Final bounded hosted observability review: passed
 Restore/audit drill: passed
 Hosted audit append-only access verification: passed
 OpenAI official source review: recorded on 2026-07-24
+OpenAI production account verification checklist: recorded, not complete
 OpenAI provider config check: passed with metadata-only output on 2026-07-17
 ```
 

@@ -130,11 +130,12 @@ Tracking docs:
 * `docs/AEVRYN_AI_PROVIDER_DATA_USE_READINESS.md`
 * `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`
 * `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`
+* `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`
 
 Status:
 
 ```text
-OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17, including `request_storage=disabled` and `responses_store=false`. Official OpenAI source review was recorded on 2026-07-24 in `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`. Production OpenAI account/project data-control verification, owner/legal review, final provider disclosure approval, and public-beta approval remain open.
+OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17, including `request_storage=disabled` and `responses_store=false`. Official OpenAI source review was recorded on 2026-07-24 in `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`. The production account/project verification checklist exists in `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`. Production OpenAI account/project data-control verification, owner/legal review, final provider disclosure approval, and public-beta approval remain open.
 ```
 
 ---
