@@ -251,6 +251,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Public Trust And Legal Publication",
         "Release Candidate Run And Signoff",
         "docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md",
+        "docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md",
         "Cloudflare routing rules created, inbound delivery passed",
         "Cloudflare inbound DNS/routing health passed",
         "Cloudflare/Gmail MFA verified.",
@@ -261,6 +262,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Support procedure owner review remains open.",
         "Public-beta backup retention wording candidate selected for owner/legal review.",
         "Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`.",
+        "Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`.",
         "Official OpenAI source review was recorded on 2026-07-24",
         "production account/project verification checklist exists",
         "Production OpenAI account/project data-control verification",
@@ -473,6 +475,7 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "OpenAI provider config check: passed with metadata-only output on 2026-07-17",
         "Remaining Blocking Reviews",
         "Attorney review: open",
+        "Public legal review packet: prepared",
         "Provider terms and data-use review: open",
         "OpenAI production account/project data-control verification: open",
         "Backup retention public wording owner/legal review: open",
@@ -510,6 +513,45 @@ def test_public_contacts_document_tracks_product_domain_aliases() -> None:
         "docs/AEVRYN_ALIAS_PROVISIONING_RECORD.md",
         "docs/AEVRYN_REPLY_IDENTITY_SETUP.md",
         "provisioned and tested before public beta",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_legal_review_packet_tracks_attorney_handoff_scope() -> None:
+    """Legal review packet should consolidate legal-sensitive public beta blockers."""
+    document = read_doc("docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md")
+
+    required_terms = (
+        "Review packet: Public legal review",
+        "Status: Prepared for owner and attorney review",
+        "Public beta: Blocked",
+        "Legal copy must match product behavior.",
+        "Documents Requiring Attorney Review",
+        "docs/TERMS_OF_SERVICE.md",
+        "docs/PRIVACY_POLICY.md",
+        "docs/ACCEPTABLE_USE_POLICY.md",
+        "docs/SECURITY_DISCLOSURE.md",
+        "Supporting Trust Documents",
+        "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
+        "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
+        "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
+        "docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md",
+        "Non-Negotiable Product Promises",
+        "uploaded stories belong to their creators",
+        "Aetherra Labs does not train on user stories without explicit opt-in",
+        "provider output is not Canon",
+        "support is metadata-first",
+        "backup retention must be disclosed accurately",
+        "Open Legal Decisions",
+        "governing_law=blocked",
+        "liability_limitation=blocked",
+        "privacy_processor_list=blocked",
+        "provider_disclosure=blocked",
+        "backup_retention_wording=blocked",
+        "public pages imply attorney review happened when it did not",
+        "owner and attorney can review one consolidated packet",
     )
 
     for term in required_terms:
