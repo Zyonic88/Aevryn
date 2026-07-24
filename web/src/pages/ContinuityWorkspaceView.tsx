@@ -207,18 +207,24 @@ function ContinuitySceneCard({ scene }: { scene: ContinuityScene }) {
 }
 
 function ContinuityBucket({ title, records }: { title: string; records: ContinuityRecord[] }) {
-  const visibleRecords = records.slice(0, 8);
-  const hiddenCount = records.length - visibleRecords.length;
+  const readableRecords = records
+    .map((record) => ({
+      record,
+      description: readableOutputItems([record.description])[0] ?? "",
+    }))
+    .filter(({ description }) => description && description !== "Unknown");
+  const visibleRecords = readableRecords.slice(0, 8);
+  const hiddenCount = readableRecords.length - visibleRecords.length;
   return (
     <section className="profile-section">
       <h4>{title}</h4>
-      {records.length > 0 ? (
+      {readableRecords.length > 0 ? (
         <>
           <ul>
-            {visibleRecords.map((record) => (
+            {visibleRecords.map(({ record, description }) => (
               <li key={record.record_id}>
                 <strong>{readableRecordType(record.record_type)}</strong>:{" "}
-                {readableOutputItems([record.description])[0] ?? "Unknown"}
+                {description}
                 <span className="continuity-evidence">
                   Evidence from {formatEvidenceScope(record)}
                 </span>
@@ -231,6 +237,8 @@ function ContinuityBucket({ title, records }: { title: string; records: Continui
             </p>
           ) : null}
         </>
+      ) : records.length > 0 ? (
+        <p>No user-facing continuity details.</p>
       ) : (
         <p>Unknown</p>
       )}

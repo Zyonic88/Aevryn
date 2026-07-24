@@ -4079,6 +4079,68 @@ describe("App shell routing", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hides internal-only continuity records before selecting visible rows", async () => {
+    const user = userEvent.setup();
+    storeAuthenticatedProject();
+    const continuityPreviewWithInternalRecord = {
+      ...continuityPreviewPayload,
+      continuity_report: {
+        ...continuityPreviewPayload.continuity_report,
+        scenes: [
+          {
+            ...continuityPreviewPayload.continuity_report.scenes[0],
+            new: [
+              {
+                record_id: "internal_record_1",
+                record_type: "fact",
+                description: "source_alpha_chapter_001_scene_001",
+                evidence_id: "source_alpha_anchor_900",
+                chapter_id: "source_alpha_chapter_001",
+                scene_id: "source_alpha_chapter_001_scene_001",
+              },
+              ...continuityPreviewPayload.continuity_report.scenes[0].new,
+            ],
+          },
+        ],
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(API_PATHS.continuityPreview)) {
+          return Promise.resolve(new Response(JSON.stringify(continuityPreviewWithInternalRecord)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/continuity"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("heading", { name: "Continuity" });
+    await user.click(screen.getByText("Developer preview"));
+    await user.click(screen.getByRole("button", { name: "Preview continuity" }));
+
+    expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
+    const newCanonSection = screen.getByRole("heading", { name: "New" }).closest("section");
+    expect(newCanonSection).not.toBeNull();
+    expect(within(newCanonSection as HTMLElement).getByText(/Current Weapon: Rusty Dagger/u))
+      .toBeInTheDocument();
+    expect(within(newCanonSection as HTMLElement).queryByText("Unknown")).not.toBeInTheDocument();
+    expect(within(newCanonSection as HTMLElement).queryByText(/source_alpha_chapter/u))
+      .not.toBeInTheDocument();
+  });
+
   it("previews production packs from the prompt packs workspace tab", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);

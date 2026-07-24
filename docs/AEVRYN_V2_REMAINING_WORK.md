@@ -321,6 +321,9 @@ Verified hardening:
 * processed-output and preview continuity buckets cap retained-record detail
   lists and show hidden-record counts, so large projects stay readable without
   pretending overflow does not exist
+* continuity buckets filter internal-only records before choosing visible rows,
+  so hidden source IDs do not consume the visible detail budget or render as
+  `Unknown` noise
 
 Acceptance:
 

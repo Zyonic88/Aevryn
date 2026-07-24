@@ -858,15 +858,24 @@ function ContinuityBucket({
   if (records.length === 0) {
     return null;
   }
-  const visibleRecords = records.slice(0, 8);
-  const hiddenCount = records.length - visibleRecords.length;
+  const readableRecords = records
+    .map((record) => ({
+      record,
+      description: readableOutputItems([record.description])[0] ?? "",
+    }))
+    .filter(({ description }) => description && description !== "Unknown");
+  if (readableRecords.length === 0) {
+    return null;
+  }
+  const visibleRecords = readableRecords.slice(0, 8);
+  const hiddenCount = readableRecords.length - visibleRecords.length;
   return (
     <div>
       <strong>{title}</strong>
       <ul>
-        {visibleRecords.map((record) => (
+        {visibleRecords.map(({ record, description }) => (
           <li key={record.record_id}>
-            <span>{readableOutputItems([record.description])[0] ?? "Unknown"}</span>
+            <span>{description}</span>
           </li>
         ))}
       </ul>
