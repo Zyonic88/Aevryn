@@ -992,7 +992,19 @@ def test_runner_resolves_possessive_relationship_label_to_existing_identity() ->
     )
 
 
-def test_runner_does_not_use_negated_gender_words_for_pronoun_support() -> None:
+@pytest.mark.parametrize(
+    ("description_value", "pronoun_text"),
+    (
+        ("not a female officer", "She"),
+        ("not a young woman", "She"),
+        ("not an adult man", "He"),
+        ("without any male heir", "He"),
+    ),
+)
+def test_runner_does_not_use_negated_gender_words_for_pronoun_support(
+    description_value: str,
+    pronoun_text: str,
+) -> None:
     """Negated gender words should not create unsafe pronoun support."""
     runner = AevrynProjectRunner()
     imported_source = runner.import_text_file(
@@ -1020,7 +1032,7 @@ def test_runner_does_not_use_negated_gender_words_for_pronoun_support() -> None:
                         "fact_id": "fact_character_unknown_description_not_female",
                         "entity_id": "character_unknown",
                         "attribute": "description",
-                        "value": "not a female officer",
+                        "value": description_value,
                         "evidence_anchor_id": first_anchor_id,
                         "confidence": 0.95,
                     }
@@ -1033,7 +1045,7 @@ def test_runner_does_not_use_negated_gender_words_for_pronoun_support() -> None:
                     {
                         "entity_id": "character_she",
                         "entity_type": "character",
-                        "display_name": "She",
+                        "display_name": pronoun_text,
                         "evidence_anchor_id": second_anchor_id,
                         "confidence": 0.9,
                     }
@@ -1060,7 +1072,7 @@ def test_runner_does_not_use_negated_gender_words_for_pronoun_support() -> None:
     assert result.database.retrieve_entity("character_she") is not None
     assert any(
         decision.status == "unresolved"
-        and decision.reference.text == "She"
+        and decision.reference.text == pronoun_text
         for decision in result.identity_resolutions
     )
 

@@ -376,6 +376,10 @@ Verified hardening:
 * project-runner gender-support terms recognize accented fiancee/fiance
   spellings the same way as unaccented spellings, so translated or polished
   prose does not lose conservative pronoun support
+* project-runner gender-support terms ignore explicitly negated gender phrases
+  with short descriptive bridges such as "not a young woman," "not an adult man,"
+  and "without any male heir," so pronoun resolution does not infer gender from
+  denied identity language
 * character-sheet presentation recognizes accented fiancee/fiance spellings in
   evidence-linked gender support, so accepted direct gender facts do not display
   as Unknown only because prose used diacritics

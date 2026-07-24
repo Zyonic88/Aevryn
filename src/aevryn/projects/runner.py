@@ -1544,6 +1544,15 @@ _MALE_IDENTITY_TERMS = {
     "princes",
 }
 _GENDER_NEGATION_TERMS = {"not", "no", "non", "without"}
+_GENDER_NEGATION_BRIDGE_TERMS = {
+    "a",
+    "an",
+    "any",
+    "adult",
+    "elderly",
+    "old",
+    "young",
+}
 _TITLE_LIKE_STATUS_VALUES = {
     "admiral",
     "baron",
@@ -1583,8 +1592,17 @@ def _identity_surface_tokens(value: str) -> tuple[str, ...]:
 
 def _gender_token_is_negated(tokens: tuple[str, ...], index: int) -> bool:
     """Return whether a gendered token has a nearby explicit negation."""
-    start = max(0, index - 2)
-    return any(token in _GENDER_NEGATION_TERMS for token in tokens[start:index])
+    preceding_tokens = tokens[max(0, index - 4) : index]
+    if not preceding_tokens:
+        return False
+    if preceding_tokens[-1] in _GENDER_NEGATION_TERMS:
+        return True
+    bridge_tokens = tuple(
+        token
+        for token in preceding_tokens
+        if token not in _GENDER_NEGATION_BRIDGE_TERMS
+    )
+    return bool(bridge_tokens and bridge_tokens[-1] in _GENDER_NEGATION_TERMS)
 
 
 def _rewritten_fact_for_resolved_identity(
