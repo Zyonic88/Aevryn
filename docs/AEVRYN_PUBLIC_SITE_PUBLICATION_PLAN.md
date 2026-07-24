@@ -6,6 +6,8 @@ This document turns Aevryn's public-facing trust, legal, privacy, support, and s
 
 It does not approve public beta.
 
+Page-level approval status is tracked in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`.
+
 ---
 
 # Status
@@ -43,6 +45,23 @@ Public copy must not convert internal intent into public promises.
 | Security Disclosure | `/security/disclosure` | `docs/SECURITY_DISCLOSURE.md` | Implemented as draft; safe-harbor review required |
 | Terms | `/terms` | `docs/TERMS_OF_SERVICE.md` | Implemented as draft; attorney review required |
 | Acceptable Use | `/acceptable-use` | `docs/ACCEPTABLE_USE_POLICY.md` | Implemented as draft; attorney review required |
+
+---
+
+# Review Matrix
+
+Before public beta, each route above must be reconciled against
+`docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`.
+
+The matrix records:
+
+* required review roles
+* source documents
+* current state
+* cross-page consistency checks
+* public-beta decision
+
+No public page is approved merely because it is implemented or reachable.
 
 ---
 
@@ -85,6 +104,7 @@ Public beta remains blocked until:
 * production backup retention wording is verified against final production backup behavior
 * AI provider data-use disclosure is completed against the selected public-beta disclosure candidate or provider-backed extraction is disabled for public beta
 * support procedure owner review confirms metadata-first triage and escalation handling
+* the public review matrix has no remaining blocked rows
 * final public-beta signoff explicitly approves publication
 
 ---

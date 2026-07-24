@@ -180,6 +180,7 @@ def test_v2_release_candidate_readiness_document_defines_public_beta_gates() -> 
         "docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md",
         "docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md",
         "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
+        "docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md",
         "Public beta blocked.",
     )
 
@@ -247,6 +248,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Production-Like Deployment Smoke",
         "Public Trust And Legal Publication",
         "Release Candidate Run And Signoff",
+        "docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md",
         "Cloudflare routing rules created, inbound delivery passed",
         "Cloudflare inbound DNS/routing health passed",
         "Cloudflare/Gmail MFA verified.",
@@ -256,6 +258,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Initial public support/trust/privacy pages are published.",
         "Support procedure owner review remains open.",
         "Public-beta backup retention wording candidate selected for owner/legal review.",
+        "Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`.",
         "backup/provider verification",
         "Local production config contract passed.",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
@@ -285,6 +288,8 @@ def test_public_trust_readiness_document_tracks_gate_one_blockers() -> None:
         "Contact paths verified. Public support page publication required.",
         "Plain-Language Requirements",
         "Truthfulness Requirements",
+        "public review matrix is not complete",
+        "docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md",
         "Not accepted.",
     )
 
@@ -407,11 +412,66 @@ def test_public_site_publication_plan_maps_pages_to_sources() -> None:
         "Implemented with verified contact details",
         "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
         "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
+        "docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md",
         "support procedure owner review",
+        "No public page is approved merely because it is implemented or reachable.",
+        "the public review matrix has no remaining blocked rows",
         "full manuscripts",
         "backup retention wording is verified",
         "AI provider data-use disclosure",
         "final public-beta signoff explicitly approves publication",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_public_review_matrix_tracks_page_level_approval_status() -> None:
+    """Public-facing pages should have one review matrix before public beta."""
+    document = read_doc("docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md")
+
+    required_terms = (
+        "Review: Public-facing legal, trust, support, provider, and backup wording",
+        "Status: Started",
+        "Public beta: Blocked",
+        "Public copy must be true before it is polished.",
+        "Required Review Roles",
+        "Owner",
+        "Legal",
+        "Security",
+        "Privacy",
+        "Operations",
+        "Provider Review",
+        "Page Review Matrix",
+        "/trust",
+        "/privacy",
+        "/security",
+        "/user-rights",
+        "/content",
+        "/support",
+        "/security/disclosure",
+        "/terms",
+        "/acceptable-use",
+        "Cross-Page Consistency Checks",
+        "support@aevryn.ai",
+        "privacy@aevryn.ai",
+        "security@aevryn.ai",
+        "abuse@aevryn.ai",
+        "no training on user stories without explicit opt-in",
+        "active-storage deletion versus backup retention boundaries",
+        "metadata-first support, monitoring, and observability",
+        "Current Verified Evidence",
+        "Final bounded hosted observability review: passed",
+        "Restore/audit drill: passed",
+        "Remaining Blocking Reviews",
+        "Attorney review: open",
+        "Provider terms and data-use review: open",
+        "Backup retention public wording owner/legal review: open",
+        "Support procedure owner review: open",
+        "Stop Conditions",
+        "legal-sensitive pages have not been owner-reviewed and attorney-reviewed",
+        "provider-backed extraction is enabled without verified and published provider disclosure",
+        "backup/deletion wording does not match production behavior",
     )
 
     for term in required_terms:

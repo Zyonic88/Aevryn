@@ -241,6 +241,7 @@ Tracking docs:
 * `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`
 * `docs/AEVRYN_PUBLIC_TRUST_READINESS.md`
 * `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`
+* `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`
 * `docs/TERMS_OF_SERVICE.md`
 * `docs/PRIVACY_POLICY.md`
 * `docs/ACCEPTABLE_USE_POLICY.md`
@@ -249,7 +250,7 @@ Tracking docs:
 Status:
 
 ```text
-Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Owner review, legal review, backup/provider verification, and final public-beta signoff remain open.
+Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`. Owner review, legal review, backup/provider verification, support procedure owner review, and final public-beta signoff remain open.
 ```
 
 ---
