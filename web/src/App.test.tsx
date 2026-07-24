@@ -4411,6 +4411,7 @@ describe("App shell routing", () => {
       filename: "older-canon-snapshot.json",
       created_at: "2026-06-20T00:00:00.000Z",
     };
+    let createdExport: typeof projectExportPayload | null = null;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith(API_PATHS.health)) {
@@ -4431,21 +4432,20 @@ describe("App shell routing", () => {
       if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/exports`)) {
         if (init?.method === "POST") {
           const body = JSON.parse(String(init.body));
+          createdExport = {
+            ...projectExportPayload,
+            export_id: body.export_id,
+            snapshot_id: body.snapshot_id,
+            export_format: body.export_format,
+            filename: body.filename,
+            created_at: body.now,
+          };
           return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                ...projectExportPayload,
-                export_id: body.export_id,
-                snapshot_id: body.snapshot_id,
-                export_format: body.export_format,
-                filename: body.filename,
-                created_at: body.now,
-              }),
-            ),
+            new Response(JSON.stringify(createdExport)),
           );
         }
         return Promise.resolve(
-          new Response(JSON.stringify({ exports: [olderExport, projectExportPayload] })),
+          new Response(JSON.stringify({ exports: createdExport ? [createdExport, olderExport] : [olderExport] })),
         );
       }
       return projectApiFallbackResponse(url);
@@ -4465,13 +4465,10 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(within(storedExports).getByText("Authenticated download only")).toBeInTheDocument();
     expect(within(storedExports).getByText("Private storage reference hidden")).toBeInTheDocument();
-    expect(await screen.findByText("alpha-canon-snapshot.json")).toBeInTheDocument();
+    expect(screen.queryByText("alpha-canon-snapshot.json")).not.toBeInTheDocument();
     const exportNames = within(storedExports).getAllByRole("heading", { level: 3 });
-    expect(exportNames.map((heading) => heading.textContent)).toEqual([
-      "alpha-canon-snapshot.json",
-      "older-canon-snapshot.json",
-    ]);
-    expect(screen.getAllByText(/Canon Snapshot \/ JSON \| 128 B \|/u)).toHaveLength(2);
+    expect(exportNames.map((heading) => heading.textContent)).toEqual(["older-canon-snapshot.json"]);
+    expect(screen.getAllByText(/Canon Snapshot \/ JSON \| 128 B \|/u)).toHaveLength(1);
     expect(screen.queryByText(/Â/u)).not.toBeInTheDocument();
     expect(document.body).not.toHaveTextContent("storage://");
     expect(document.body).not.toHaveTextContent("storage_ref");
@@ -4496,6 +4493,12 @@ describe("App shell routing", () => {
       ).toBe(true);
     });
     expect(await screen.findByText("Snapshot export created.")).toBeInTheDocument();
+    expect(await screen.findByText("alpha-canon-snapshot.json")).toBeInTheDocument();
+    const updatedExportNames = within(storedExports).getAllByRole("heading", { level: 3 });
+    expect(updatedExportNames.map((heading) => heading.textContent)).toEqual([
+      "alpha-canon-snapshot.json",
+      "older-canon-snapshot.json",
+    ]);
   });
 
   it("clears stale export previews when local AI JSON validation fails", async () => {

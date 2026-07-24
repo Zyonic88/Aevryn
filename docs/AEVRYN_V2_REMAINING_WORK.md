@@ -613,6 +613,9 @@ Verified evidence:
 * export creation sanitizes quote, delimiter, control, and filesystem-reserved
   filename characters before metadata is stored, preventing submitted filenames
   from shaping storage paths or download headers
+* stored export creation appears in the Exports workspace immediately from the
+  API response while the export list refreshes in the background, so beta users
+  are not left wondering whether the export actually completed
 
 Remaining hardening:
 

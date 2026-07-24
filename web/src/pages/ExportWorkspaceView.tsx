@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 
 import { apiClient, type ExportPreviewRequest } from "../api/client";
-import type { ExportPreview, ProjectExport } from "../api/schemas";
+import type { ExportPreview, ProjectExport, ProjectExportList } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
 import { formatDateTime } from "../formatting/display";
@@ -83,6 +83,10 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
     },
     onSuccess(result) {
       setCreatedExportId(result.export_id);
+      queryClient.setQueryData<ProjectExportList>(
+        projectExportsQueryKey(project.id, session?.session_token),
+        (current) => mergeProjectExportList(current, result),
+      );
       void queryClient.invalidateQueries({
         queryKey: projectExportsQueryKey(project.id, session?.session_token),
       });
@@ -428,6 +432,19 @@ function parseOptionValue(value: string): { kind: string; format: string } {
 
 function projectExportsQueryKey(projectId: string, sessionToken: string | undefined) {
   return ["project-exports", projectId, sessionToken];
+}
+
+function mergeProjectExportList(
+  current: ProjectExportList | undefined,
+  createdExport: ProjectExport,
+): ProjectExportList {
+  const existingExports = current?.exports ?? [];
+  return {
+    exports: [
+      createdExport,
+      ...existingExports.filter((exportRecord) => exportRecord.export_id !== createdExport.export_id),
+    ],
+  };
 }
 
 function requireSessionToken(session: { session_token: string } | null): string {
