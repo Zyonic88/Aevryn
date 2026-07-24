@@ -456,6 +456,44 @@ class MisclassifiedTitleLocationExtractor:
         )
 
 
+class ValidRoleOrganizationHeadExtractor:
+    """Extractor that labels a role-bearing department as an organization."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid organization with a role term and organization head."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="organization_captain_department",
+                    entity_type="organization",
+                    display_name="Captain Department",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.88,
+                ),
+            ),
+        )
+
+
+class ValidRoleLocationHeadExtractor:
+    """Extractor that labels a role-bearing room as a location."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid location with a role term and place head."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="location_officer_training_room",
+                    entity_type="location",
+                    display_name="Officer Training Room",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.87,
+                ),
+            ),
+        )
+
+
 class MisclassifiedSystemExtractor:
     """Extractor that labels a concrete object as a system."""
 
@@ -949,6 +987,36 @@ def test_extraction_rejects_title_as_location() -> None:
 
     with pytest.raises(ValueError, match="rank or profession cannot be place"):
         engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_role_bearing_organization_head() -> None:
+    """Role terms are allowed when the entity has a real organization head."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidRoleOrganizationHeadExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_type == "organization"
+    assert result.entities[0].display_name == "Captain Department"
+
+
+def test_extraction_accepts_role_bearing_location_head() -> None:
+    """Role terms are allowed when the entity has a real place head."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidRoleLocationHeadExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_type == "location"
+    assert result.entities[0].display_name == "Officer Training Room"
 
 
 def test_extraction_rejects_obvious_physical_object_as_system() -> None:

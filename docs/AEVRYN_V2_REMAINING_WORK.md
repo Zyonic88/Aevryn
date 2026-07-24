@@ -464,6 +464,9 @@ Verified hardening:
 * deterministic extraction guards reject obvious role/title concepts such as
   captain commander and chief engineer when a provider tries to classify them
   as places or organizations, while preserving actual place/organization heads
+* regression tests verify role-bearing real place/organization names such as
+  Captain Department and Officer Training Room remain accepted, preventing
+  over-hardening from erasing valid world structure
 * verified with sentence-understanding, extraction, and evidence-bounded AI
   extraction tests
 
