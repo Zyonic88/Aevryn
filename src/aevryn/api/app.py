@@ -2293,6 +2293,24 @@ def _require_https_url(environ: Mapping[str, str], key: str) -> None:
         raise ValueError(f"{key} must use https:// in production.")
 
 
+def _require_https_origin_url(environ: Mapping[str, str], key: str) -> None:
+    """Require one production URL to be an exact HTTPS browser origin."""
+    _require_https_url(environ, key)
+    parsed_value = urlsplit(environ.get(key, "").strip())
+    if (
+        not parsed_value.netloc
+        or parsed_value.username is not None
+        or parsed_value.password is not None
+        or parsed_value.path
+        or parsed_value.query
+        or parsed_value.fragment
+    ):
+        raise ValueError(
+            f"{key} must be an exact HTTPS origin such as https://app.aevryn.ai, "
+            "without paths, query strings, fragments, or credentials."
+        )
+
+
 def _require_true_flag(environ: Mapping[str, str], key: str) -> None:
     """Require a boolean production flag to be explicitly enabled."""
     value = environ.get(key, "").strip().lower()
@@ -2335,8 +2353,8 @@ def _require_production_security_config(environ: Mapping[str, str]) -> None:
             "AEVRYN_DEPLOYMENT_ENV=production."
         )
     _require_https_origins(environ)
-    _require_https_url(environ, PUBLIC_FRONTEND_BASE_URL_ENV)
-    _require_https_url(environ, PUBLIC_API_BASE_URL_ENV)
+    _require_https_origin_url(environ, PUBLIC_FRONTEND_BASE_URL_ENV)
+    _require_https_origin_url(environ, PUBLIC_API_BASE_URL_ENV)
     _require_true_flag(environ, HTTPS_ONLY_ENV)
     _require_true_flag(environ, HSTS_ENABLED_ENV)
     if not _api_keys_from_env(environ):

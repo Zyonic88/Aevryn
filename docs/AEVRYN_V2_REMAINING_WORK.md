@@ -697,6 +697,10 @@ Verified hardening:
   values such as origins with trailing slashes, paths, query strings,
   fragments, or credentials, so deployment mistakes fail closed before browser
   testing.
+* production startup rejects non-origin-shaped public frontend/API base URLs
+  such as URLs with paths, query strings, fragments, or credentials, while
+  leaving provider-specific HTTPS URLs such as JWKS endpoints free to use
+  required paths.
 
 Acceptance:
 
