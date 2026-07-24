@@ -222,7 +222,7 @@ Settings and broader user profile preferences remain intentionally minimal.
 Initial public trust/legal/support pages are published; owner/legal review and final public-beta approval remain incomplete.
 Production observability policy candidate is selected, and hosted
 `observability-config-check` passed with metadata-only output on 2026-07-17.
-Final bounded hosted log review remains incomplete before public beta.
+Final bounded hosted log review passed with metadata-only evidence on 2026-07-24.
 AI provider disclosure candidate is selected, but provider terms, final model configuration, and public-beta provider verification remain incomplete.
 ```
 
@@ -237,7 +237,7 @@ Public beta may proceed only if each residual risk is explicit and accepted by t
 | Prompt richness still needs hosted validation | Generated image/video prompts may need user editing if the browser output does not reflect the new current-scene action beat hardening clearly | Run hosted prompt-pack browser validation before beta marketing claims | Accepted for internal RC only; blocks public-beta positioning until validated |
 | Output UX polish remains alpha-grade in some tabs | Users may find repeated summaries or dense cards tiring | Continue UX hardening before broad public beta | Accepted for internal RC only |
 | Public legal/trust/support pages need owner and legal review | Public users may see draft wording that is not public-beta approved | Review public-facing site/legal docs before public beta | Blocks public beta |
-| Production observability policy needs final bounded log review | Hosted logging and monitoring configuration passed, but final log review still needs public-beta verification | Complete final bounded hosted log review against the selected production observability policy | Blocks public beta |
+| Production observability policy final bounded log review passed | Hosted logging and monitoring configuration passed, and final bounded Cloud Run log review found metadata-only output | Maintain policy and rerun bounded review before material observability changes | Accepted for public-beta readiness |
 | Backup retention wording needs production verification | Users need accurate deletion and backup expectations | Verify the selected public-beta backup wording against final production backup behavior | Blocks public beta |
 | AI provider disclosure needs provider verification | Users need accurate expectations for when story excerpts leave Aevryn-owned systems | Verify provider terms, retention, training behavior, abuse monitoring, and final model configuration against the selected disclosure candidate | Blocks public beta |
 | Restore/audit drill passed | Recovery evidence is no longer the blocker | Maintain the dated restore/audit drill record and rerun before material infrastructure changes | Accepted for Gate 5 |
@@ -252,10 +252,10 @@ If a risk touches story privacy, deletion, account security, provider training, 
 | Responsibility | Decision | Signoff | Date |
 | --- | --- | --- | --- |
 | Product | Accepted for internal V2 release-candidate checkpoint; public beta blocked by listed product polish and public-surface work | Aetherra Labs project owner | 2026-07-14 |
-| Security | Accepted for internal V2 release-candidate checkpoint; public beta blocked by hosted observability verification and operations policy | Aetherra Labs project owner | 2026-07-14 |
+| Security | Accepted for internal V2 release-candidate checkpoint; hosted observability verification passed, public beta still blocked by remaining trust/legal/provider items | Aetherra Labs project owner | 2026-07-14 |
 | Privacy | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public trust/legal/support review is complete | Aetherra Labs project owner | 2026-07-14 |
 | Legal | Not approved for public beta; legal documents require owner and attorney review before public launch | Aetherra Labs project owner | 2026-07-14 |
-| Operations | Accepted for internal V2 release-candidate checkpoint; public beta blocked by backup verification, restore/audit, and hosted observability follow-up | Aetherra Labs project owner | 2026-07-14 |
+| Operations | Accepted for internal V2 release-candidate checkpoint; restore/audit and hosted observability follow-up passed, public beta still blocked by backup wording and final approval | Aetherra Labs project owner | 2026-07-14 |
 | Support | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public support procedure owner review is complete | Aetherra Labs project owner | 2026-07-14 |
 
 If one person holds multiple responsibilities, each responsibility must still be explicitly accepted.
@@ -267,8 +267,8 @@ If one person holds multiple responsibilities, each responsibility must still be
 ```text
 Internal V2 release candidate: Signed off
 Public beta: Blocked
-Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, bounded log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, initial public page publication, and dated restore/audit drill passed. Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, and final public-beta approval.
-Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support review, final bounded hosted observability review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, and final public-beta approval.
+Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, final bounded hosted log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, initial public page publication, and dated restore/audit drill passed. Public beta remains blocked by public-facing legal/trust/support review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, deletion refresh UX hardening, and final public-beta approval.
+Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, deletion refresh UX hardening, and final public-beta approval.
 ```
 
 ---
