@@ -1213,6 +1213,31 @@ describe("App shell routing", () => {
     );
   });
 
+  it("shows neutral password recovery confirmation when the managed provider rejects a valid email", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(managedIdentityAuth, "requestConfiguredPasswordRecovery").mockRejectedValue(
+      new Error('Email address "test@aevryn.ai" is invalid'),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/password-recovery"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText("Email"), "test@aevryn.ai");
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "If an account exists for that email, Aevryn will send a password reset link.",
+    );
+    expect(document.body).not.toHaveTextContent('Email address "test@aevryn.ai" is invalid');
+    expect(managedIdentityAuth.requestConfiguredPasswordRecovery).toHaveBeenCalledWith({
+      email: "test@aevryn.ai",
+      redirectTo: "http://localhost:3000/password-recovery",
+    });
+  });
+
   it("renders the new-password form from a managed recovery callback", async () => {
     render(
       <MemoryRouter

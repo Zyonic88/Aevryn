@@ -34,6 +34,9 @@ export function PasswordRecoveryPage() {
     onSuccess() {
       setRequestSent(true);
     },
+    onError() {
+      setRequestSent(true);
+    },
   });
   const completeRecovery = useMutation({
     mutationFn: (payload: { accessToken: string; password: string }) =>
@@ -127,7 +130,6 @@ export function PasswordRecoveryPage() {
               />
             </label>
             {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
-            {requestRecovery.error ? <ErrorMessage>{requestRecovery.error.message}</ErrorMessage> : null}
             {requestSent ? (
               <p className="success-note" role="status">
                 {RECOVERY_SENT_MESSAGE}
