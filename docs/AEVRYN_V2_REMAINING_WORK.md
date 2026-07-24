@@ -373,6 +373,9 @@ Verified hardening:
 * project-runner gender-support terms recognize accented fiancee/fiance
   spellings the same way as unaccented spellings, so translated or polished
   prose does not lose conservative pronoun support
+* character-sheet presentation recognizes accented fiancee/fiance spellings in
+  evidence-linked gender support, so accepted direct gender facts do not display
+  as Unknown only because prose used diacritics
 * character profiles and stored snapshot API output hide contradictory
   Human-plus-non-human race/species values instead of displaying both as Canon
 * verified with the focused processed-character-panel frontend test

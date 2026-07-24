@@ -338,6 +338,33 @@ def test_presentation_engine_uses_character_linked_gender_evidence() -> None:
     assert profile.gender.items == ("Female",)
 
 
+def test_presentation_engine_uses_accented_relationship_gender_evidence() -> None:
+    """Accented relationship terms should support direct gender facts."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = replace(
+        card.facts[0].evidence,
+        quote="Jiang Shasha is Zhao Chen's fianc\u00e9e and treats him coldly.",
+    )
+    identity_card = replace(
+        card,
+        display_name="Jiang Shasha",
+        facts=(
+            CanonCharacterFact(
+                attribute="gender",
+                value="Female",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_002",
+                valid_from_scene_id="source_demo_chapter_002_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.gender.items == ("Female",)
+
+
 def test_presentation_engine_rejects_borrowed_group_gender_evidence() -> None:
     """A nearby gendered group should not assign gender to another character."""
     card, _context, _analysis, _pack = build_outputs()
