@@ -385,6 +385,9 @@ Verified hardening:
   as Unknown only because prose used diacritics
 * character profiles and stored snapshot API output hide contradictory
   Human-plus-non-human race/species values instead of displaying both as Canon
+* character profiles reject explicitly negated race/species support such as
+  "not a Half-Beastman" and "without any human ancestry," while preserving the
+  surrounding context as readable relationship/origin information
 * verified with the focused processed-character-panel frontend test
 
 Acceptance:

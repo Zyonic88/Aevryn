@@ -141,6 +141,10 @@ _EXPLICIT_RACE_TERMS = (
     ("Dragon", ("dragon",)),
     ("Vampire", ("vampire",)),
 )
+_IDENTITY_NEGATION_TERMS = frozenset({"never", "no", "non", "not", "without"})
+_IDENTITY_NEGATION_BRIDGE_TERMS = frozenset(
+    {"a", "an", "any", "confirmed", "half", "known", "the"}
+)
 _MAX_PROMPT_PRESENTATION_LINES = 48
 _INTERNAL_PROMPT_LINE_PATTERNS = (
     re.compile(r"^(scene|source|import|project|story|chapter) id\s*:", re.IGNORECASE),
@@ -600,6 +604,10 @@ class PresentationEngine:
         """Return whether a direct identity value appears in self-describing text."""
         return any(
             PresentationEngine._contains_identity_term(haystack, normalized_value)
+            and not PresentationEngine._identity_term_is_negated(
+                haystack,
+                normalized_value,
+            )
             for haystack in support_haystacks
         )
 
@@ -647,6 +655,8 @@ class PresentationEngine:
     ) -> bool:
         """Return whether an identity term in a quote can support a character."""
         if not PresentationEngine._contains_identity_term(quote, term):
+            return False
+        if PresentationEngine._identity_term_is_negated(quote, term):
             return False
         if not is_gender_term:
             return True
@@ -722,6 +732,10 @@ class PresentationEngine:
             for label, terms in term_groups:
                 if any(
                     PresentationEngine._contains_identity_term(haystack, term)
+                    and not PresentationEngine._identity_term_is_negated(
+                        haystack,
+                        term,
+                    )
                     for term in terms
                 ):
                     labels.append(label)
@@ -733,6 +747,43 @@ class PresentationEngine:
         """Return whether value contains a standalone identity term."""
         escaped_term = re.escape(term).replace(r"\ ", r"[\s_-]+")
         return re.search(rf"(?<![a-z0-9]){escaped_term}(?![a-z0-9])", value) is not None
+
+    @staticmethod
+    def _identity_term_is_negated(value: str, term: str) -> bool:
+        """Return whether an identity term is explicitly denied nearby."""
+        value_parts = PresentationEngine._identity_parts(value)
+        term_parts = PresentationEngine._identity_parts(term)
+        if not value_parts or not term_parts:
+            return False
+
+        window = len(term_parts)
+        for index in range(0, len(value_parts) - window + 1):
+            if tuple(value_parts[index : index + window]) != term_parts:
+                continue
+            preceding_parts = tuple(value_parts[max(0, index - 4) : index])
+            if not preceding_parts:
+                return False
+            if preceding_parts[-1] in _IDENTITY_NEGATION_TERMS:
+                return True
+            bridge_parts = tuple(
+                part
+                for part in preceding_parts
+                if part not in _IDENTITY_NEGATION_BRIDGE_TERMS
+            )
+            return bool(
+                bridge_parts and bridge_parts[-1] in _IDENTITY_NEGATION_TERMS
+            )
+
+        return False
+
+    @staticmethod
+    def _identity_parts(value: str) -> tuple[str, ...]:
+        """Return normalized identity parts for safe support checks."""
+        return tuple(
+            part
+            for part in re.split(r"[^a-z0-9]+", value.lower())
+            if part
+        )
 
     @staticmethod
     def _evidence_summary(facts: tuple[CanonCharacterFact, ...]) -> str:

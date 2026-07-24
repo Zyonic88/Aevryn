@@ -311,6 +311,48 @@ def test_presentation_engine_uses_explicit_identity_language() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("identity_value", "support_value"),
+    (
+        ("Half-Beastman", "Not a Half-Beastman recruit from the frontier"),
+        ("Human", "Without any human ancestry"),
+    ),
+)
+def test_presentation_engine_rejects_negated_race_support(
+    identity_value: str,
+    support_value: str,
+) -> None:
+    """Negated race/species language should not become positive identity support."""
+    card, _context, _analysis, _pack = build_outputs()
+    evidence = card.facts[0].evidence
+    identity_card = replace(
+        card,
+        facts=(
+            CanonCharacterFact(
+                attribute="origin_context",
+                value=support_value,
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
+                attribute="race",
+                value=identity_value,
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+        ),
+    )
+
+    profile = PresentationEngine().character_profile(identity_card)
+
+    assert profile.race.items == ("Unknown",)
+    assert profile.relationships.items == (support_value,)
+
+
 def test_presentation_engine_uses_character_linked_gender_evidence() -> None:
     """Direct gender facts can be shown when the evidence quote names the character."""
     card, _context, _analysis, _pack = build_outputs()
