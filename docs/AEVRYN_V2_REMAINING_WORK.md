@@ -523,6 +523,9 @@ Verified hardening:
 
 * hosted browser sessions submit processing to the API and do not drain worker
   jobs locally
+* dashboard project deletion removes the deleted project from the visible project
+  list immediately after the confirmed API delete succeeds, even if a follow-up
+  project-list refetch briefly returns stale data
 * saved import processing state remains scoped to the submitted import row, so
   one stuck/submitting import does not make every saved import look active
 * missing or stale queue jobs are marked failed with retryable, human-readable
@@ -901,6 +904,6 @@ The next best target is:
 
 ```text
 Full beta browser-path validation and remaining visible UI polish, starting
-with project/story deletion controls and any remaining public-facing noise.
-Known deletion UX finding: project deletion succeeds, but the dashboard/project list can require a refresh or tab change before the deletion is visibly reflected.
+with any remaining public-facing noise and hosted browser validation of the
+latest deletion/dashboard behavior.
 ```
