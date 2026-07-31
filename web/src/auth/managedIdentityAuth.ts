@@ -164,7 +164,7 @@ async function supabasePasswordAuth({
     if (error instanceof Error && error.message) {
       throw error;
     }
-    throw new Error("Managed identity provider is unreachable.");
+    throw new Error("Managed identity provider is unreachable.", { cause: error });
   }
 }
 
