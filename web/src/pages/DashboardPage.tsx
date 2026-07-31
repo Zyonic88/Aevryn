@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { countAuthRoutes } from "../api/capabilitySelectors";
 import { apiClient } from "../api/client";
+import type { ProjectList } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
 import { EmptyState, ErrorMessage, LoadingMessage, StatusPanel } from "../components/Feedback";
 import { formatDateTime } from "../formatting/display";
@@ -22,6 +23,7 @@ export function DashboardPage() {
   const [projectName, setProjectName] = useState(defaultProjectName());
   const [projectError, setProjectError] = useState<string | null>(null);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [deletedProjectIds, setDeletedProjectIds] = useState<ReadonlySet<string>>(() => new Set());
   const health = useQuery({ queryKey: ["api-health"], queryFn: () => apiClient.health() });
   const capabilities = useQuery({
     queryKey: ["api-capabilities"],
@@ -65,12 +67,18 @@ export function DashboardPage() {
         new Date().toISOString(),
       ),
     onSuccess(_result, projectId) {
-      queryClient.setQueryData(["projects", session?.session_token], {
-        projects: (projectsQuery.data?.projects ?? []).filter(
-          (project) => project.project_id !== projectId,
-        ),
+      setDeletedProjectIds((currentIds) => new Set(currentIds).add(projectId));
+      const projectListQueryKey = ["projects", session?.session_token];
+      queryClient.setQueryData<ProjectList>(projectListQueryKey, (currentProjects) => {
+        const projects = currentProjects?.projects ?? [];
+        return {
+          projects: projects.filter((project) => project.project_id !== projectId),
+        };
       });
       queryClient.removeQueries({ queryKey: ["project", projectId] });
+      queryClient.removeQueries({ queryKey: ["project-status", projectId] });
+      queryClient.removeQueries({ queryKey: ["project-outputs", projectId] });
+      void queryClient.invalidateQueries({ queryKey: projectListQueryKey });
     },
   });
 
@@ -87,6 +95,7 @@ export function DashboardPage() {
     () => {
       const confirmedProjects = (projectsQuery.data?.projects ?? [])
         .map(projectSummaryFromApiProject)
+        .filter((project) => !deletedProjectIds.has(project.id))
         .sort(compareProjectActivity);
       const pendingProject = createProjectMutation.variables;
       if (
@@ -101,6 +110,7 @@ export function DashboardPage() {
     [
       createProjectMutation.isPending,
       createProjectMutation.variables,
+      deletedProjectIds,
       projectsQuery.data?.projects,
     ],
   );
