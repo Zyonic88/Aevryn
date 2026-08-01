@@ -86,17 +86,18 @@ Public legal pages are owner-reviewed and attorney-reviewed, or public beta rema
 Status:
 
 ```text
-Open
+Owner-controlled public posture recorded; public beta still blocked by
+legal-sensitive wording, provider disclosure, backup wording, and final signoff
 ```
 
 Required:
 
-* confirm public trust page wording
-* confirm privacy/user-rights wording
-* confirm support procedure
-* confirm source-prose redaction guidance
-* confirm abuse-report path
-* confirm account/project deletion support language
+* ~~confirm public trust page wording~~
+* ~~confirm privacy/user-rights wording~~
+* ~~confirm support procedure~~
+* ~~confirm source-prose redaction guidance~~
+* ~~confirm abuse-report path~~
+* ~~confirm account/project deletion support language~~
 * verify contact aliases still work
 
 Tracking:
@@ -115,6 +116,17 @@ Acceptance:
 ```text
 Users can understand their rights, get help, report abuse, and contact Aetherra Labs without exposing manuscripts unnecessarily.
 ```
+
+Verified evidence:
+
+* `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` records owner-controlled
+  decisions approving Aetherra Labs as operator, `aevryn.ai` as the product
+  domain, support/privacy/security/abuse aliases, "Your work belongs to you,"
+  user ownership posture, no-training-without-opt-in posture, metadata-first
+  support, and General/Teen/Mature/Explicit content classification.
+* Public beta remains blocked until legal-sensitive wording, provider
+  disclosure, backup wording, and final public-beta signoff are completed or
+  explicitly accepted in the release-candidate record.
 
 ## 3. AI Provider Review
 

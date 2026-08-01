@@ -16,7 +16,7 @@ It does not approve public beta by itself.
 ```text
 Review: Owner public-facing review
 Date: 2026-07-24
-Status: Prepared; owner decisions pending
+Status: Owner-controlled decisions recorded
 Public beta: Blocked
 ```
 
@@ -80,18 +80,18 @@ because the page exists, deploys, or reads well.
 
 | Area | Question | Current Decision | Required Follow-Up |
 | --- | --- | --- | --- |
-| Operator identity | Should public pages identify Aetherra Labs as the operator? | blocked_needs_owner_decision | Owner decision required |
-| Product domain | Should `aevryn.ai` be the primary public product domain? | blocked_needs_owner_decision | Owner decision required |
-| Contact aliases | Are `support@aevryn.ai`, `privacy@aevryn.ai`, `security@aevryn.ai`, and `abuse@aevryn.ai` correct for public pages? | blocked_needs_owner_decision | Owner decision required |
-| Trust promise | Is "Your work belongs to you" acceptable as a public promise? | blocked_needs_owner_decision | Owner decision required |
-| Story ownership | Should public pages state that uploaded stories, Canon, generated outputs, and exports belong to users? | blocked_needs_owner_decision | Owner decision required |
-| AI training posture | Should public pages state that Aetherra Labs does not train on user stories without explicit opt-in? | blocked_needs_owner_decision | Owner decision required |
+| Operator identity | Should public pages identify Aetherra Labs as the operator? | approved_by_owner | Public pages should identify Aetherra Labs as Aevryn's operator. |
+| Product domain | Should `aevryn.ai` be the primary public product domain? | approved_by_owner | `aevryn.ai` is approved as the primary Aevryn product domain. |
+| Contact aliases | Are `support@aevryn.ai`, `privacy@aevryn.ai`, `security@aevryn.ai`, and `abuse@aevryn.ai` correct for public pages? | approved_by_owner | These aliases are approved for public pages; provisioning and send/receive verification are recorded elsewhere. |
+| Trust promise | Is "Your work belongs to you" acceptable as a public promise? | approved_by_owner | Approved as Aevryn's public trust posture. |
+| Story ownership | Should public pages state that uploaded stories, Canon, generated outputs, and exports belong to users? | approved_by_owner | Approved as product posture; legal-sensitive wording still needs attorney review. |
+| AI training posture | Should public pages state that Aetherra Labs does not train on user stories without explicit opt-in? | approved_by_owner | Approved as public posture and product rule. |
 | Provider disclosure | Does the OpenAI provider disclosure candidate match owner intent? | blocked_needs_provider_verification | Complete production OpenAI account verification before approval |
 | Backup/deletion wording | Does the backup/deletion wording match owner intent? | blocked_needs_backup_verification | Owner/legal review and production backup behavior verification required |
-| Support procedure | Is metadata-first support with source-prose redaction guidance acceptable? | blocked_needs_owner_decision | Owner decision required |
-| Content classification | Is General/Teen/Mature/Explicit classification acceptable as public posture? | blocked_needs_owner_decision | Owner decision required |
-| Legal drafts | Are Terms, Privacy, AUP, and Security Disclosure ready for attorney review? | blocked_needs_attorney | Attorney review required before public beta |
-| Public beta readiness | Are remaining public beta blockers acceptable or resolved? | blocked_needs_owner_decision | Final signoff required |
+| Support procedure | Is metadata-first support with source-prose redaction guidance acceptable? | approved_by_owner | Approved as public-beta support posture; support copy must continue to avoid requesting full manuscripts by default. |
+| Content classification | Is General/Teen/Mature/Explicit classification acceptable as public posture? | approved_by_owner | Approved as content-aware, not content-opinionated public posture. |
+| Legal drafts | Are Terms, Privacy, AUP, and Security Disclosure ready for attorney review? | blocked_needs_attorney | Owner agrees these are the correct documents to send for attorney review; attorney review is still required before public beta. |
+| Public beta readiness | Are remaining public beta blockers acceptable or resolved? | blocked_needs_owner_decision | Final public-beta signoff is not granted in this worksheet. |
 
 ---
 
@@ -108,6 +108,10 @@ Implementation-backed evidence already recorded elsewhere:
 * official OpenAI source review is recorded
 * OpenAI production account verification is not complete
 * legal-sensitive pages remain drafts pending attorney review
+* owner-controlled public-facing product posture decisions have now been
+  recorded for operator identity, product domain, contact aliases, trust
+  promise, story ownership, AI training posture, support procedure, and content
+  classification
 
 ---
 
@@ -115,10 +119,10 @@ Implementation-backed evidence already recorded elsewhere:
 
 Do not mark this owner review complete if:
 
-* any row remains `blocked_needs_owner_decision`
 * provider disclosure remains `blocked_needs_provider_verification`
 * backup/deletion wording remains `blocked_needs_backup_verification`
 * legal drafts remain `blocked_needs_attorney`
+* public beta readiness remains `blocked_needs_owner_decision`
 * public pages imply attorney review, provider verification, or backup
   verification happened when it did not
 * owner approval would cause public beta to look approved before final signoff
@@ -128,9 +132,10 @@ Do not mark this owner review complete if:
 # Public-Beta Decision
 
 ```text
-Owner public-facing review: Not complete
+Owner public-facing review: Owner-controlled decisions recorded
 Public beta: Blocked
-Reason: Owner decisions have not been recorded, attorney review remains open,
+Reason: Owner-controlled public-facing product posture decisions have been
+recorded. Public beta remains blocked because attorney review remains open,
 provider production account verification remains open, backup/deletion wording
 verification remains open, and final public-beta signoff remains open.
 ```
@@ -142,7 +147,8 @@ verification remains open, and final public-beta signoff remains open.
 This dated owner review is accepted when:
 
 ```text
-Every row has an explicit owner decision, legal/provider/backup dependencies
-remain blocked unless actually verified, and the final release-candidate record
-can cite this worksheet without implying attorney approval.
+Owner-controlled rows have explicit owner decisions, legal/provider/backup
+dependencies remain blocked unless actually verified, and the final
+release-candidate record can cite this worksheet without implying attorney
+approval or public-beta signoff.
 ```
