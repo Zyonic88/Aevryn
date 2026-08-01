@@ -265,7 +265,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Public-beta backup retention wording candidate selected for owner/legal review.",
         "Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`.",
         "Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.",
-        "dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` prepared",
+        "dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` now records",
         "Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`.",
         "Official OpenAI source review was recorded on 2026-07-24",
         "production account/project verification checklist exists",
@@ -481,14 +481,15 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "OpenAI production account verification checklist: recorded, not complete",
         "OpenAI provider config check: passed with metadata-only output on 2026-07-17",
         "Remaining Blocking Reviews",
-        "Owner public review record: created, not complete",
-        "Owner dated review worksheet: prepared, decisions pending",
+        "Owner review: owner-controlled public-facing product posture decisions recorded",
+        "Owner public review record: updated",
+        "Owner dated review worksheet: updated",
         "Attorney review: open",
         "Public legal review packet: prepared",
         "Provider terms and data-use review: open",
         "OpenAI production account/project data-control verification: open",
         "Backup retention public wording owner/legal review: open",
-        "Support procedure owner review: open",
+        "Support procedure owner review: recorded for metadata-first support posture",
         "Stop Conditions",
         "legal-sensitive pages have not been owner-reviewed and attorney-reviewed",
         "provider-backed extraction is enabled without verified and published provider disclosure",
@@ -574,7 +575,7 @@ def test_owner_public_review_record_tracks_product_truth_decisions() -> None:
 
     required_terms = (
         "Review: Owner public-facing review",
-        "Status: Not started",
+        "Status: Owner-controlled decisions recorded",
         "Public beta: Blocked",
         "The owner approves product truth; counsel approves legal language.",
         "Attorney review still controls legal approval",
@@ -604,7 +605,7 @@ def test_owner_public_review_record_tracks_product_truth_decisions() -> None:
         "provider-backed extraction is enabled without verified provider disclosure",
         "deletion wording ignores backup retention",
         "support procedures invite users to send full manuscripts by default",
-        "Every owner-controlled public-facing promise has an explicit owner decision",
+        "Owner-controlled public-facing promises have explicit owner decisions",
         "The current dated worksheet is:",
     )
 
@@ -612,14 +613,14 @@ def test_owner_public_review_record_tracks_product_truth_decisions() -> None:
         assert term in document
 
 
-def test_dated_owner_public_review_keeps_decisions_pending_until_owner_acts() -> None:
-    """Dated owner review should not approve public beta before decisions exist."""
+def test_dated_owner_public_review_records_owner_decisions_without_beta_approval() -> None:
+    """Dated owner review should record owner decisions without approving public beta."""
     document = read_doc("docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md")
 
     required_terms = (
         "Review: Owner public-facing review",
         "Date: 2026-07-24",
-        "Status: Prepared; owner decisions pending",
+        "Status: Owner-controlled decisions recorded",
         "Public beta: Blocked",
         "Approve only what is true today.",
         "Owner review must not approve legal language",
@@ -650,10 +651,11 @@ def test_dated_owner_public_review_keeps_decisions_pending_until_owner_acts() ->
         "OpenAI production account verification is not complete",
         "legal-sensitive pages remain drafts pending attorney review",
         "Do not mark this owner review complete",
-        "Owner public-facing review: Not complete",
+        "owner-controlled public-facing product posture decisions have now been",
+        "Owner public-facing review: Owner-controlled decisions recorded",
         "Public beta: Blocked",
-        "Every row has an explicit owner decision",
-        "without implying attorney approval",
+        "Owner-controlled rows have explicit owner decisions",
+        "approval or public-beta signoff",
     )
 
     for term in required_terms:
