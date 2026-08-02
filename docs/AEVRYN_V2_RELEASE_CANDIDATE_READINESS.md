@@ -129,6 +129,8 @@ Required before public beta:
 * public contact information added
 * governing law selected
 * liability and warranty language finalized
+* V2 public beta 18+ eligibility language approved
+* restricted explicit sexual content processing gate approved or disabled
 
 Source drafts:
 

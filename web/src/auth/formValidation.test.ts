@@ -41,13 +41,26 @@ describe("auth form validation", () => {
         displayName: "  Demo   User ",
         email: "Demo.User@example.com",
         password: "StrongPass123",
+        betaEligibilityConfirmed: true,
       }),
     ).toEqual({
       userId: "user_demo_user",
       displayName: "Demo User",
       email: "demo.user@example.com",
       password: "StrongPass123",
+      beta_eligibility_confirmed: true,
     });
+  });
+
+  it("requires public beta eligibility confirmation for registration", () => {
+    expect(() =>
+      buildRegisterPayload({
+        displayName: "Demo User",
+        email: "demo@example.com",
+        password: "StrongPass123",
+        betaEligibilityConfirmed: false,
+      }),
+    ).toThrow("Aevryn public beta is 18+ only.");
   });
 
   it("rejects weak new passwords", () => {

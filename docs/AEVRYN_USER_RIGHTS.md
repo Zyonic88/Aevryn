@@ -54,7 +54,11 @@ Aetherra Labs does not train on user stories without explicit opt-in.
 
 Provider-backed extraction must be disclosed before public beta.
 
-The current AI provider disclosure candidate names OpenAI as the internal-alpha provider candidate and requires provider-backed extraction to remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, and no-training posture are reviewed, documented, and disclosed accurately.
+The current AI provider disclosure names OpenAI as the provider candidate.
+Owner product-truth provider wording approval is recorded in
+`docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`.
+Provider-backed extraction must remain disabled for public beta until
+legal-sensitive provider wording and final public-beta signoff are complete.
 
 ---
 

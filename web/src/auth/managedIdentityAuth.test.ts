@@ -129,6 +129,39 @@ describe("managed identity auth routing", () => {
           data: {
             display_name: "Managed User",
             full_name: "Managed User",
+            aevryn_public_beta_18_plus_confirmed: false,
+          },
+        }),
+      }),
+    );
+  });
+
+  it("passes public beta eligibility acknowledgement to Supabase metadata", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "public-anon-key");
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(supabaseSession)));
+
+    const { registerWithConfiguredAuth } = await import("./managedIdentityAuth");
+    await registerWithConfiguredAuth({
+      user_id: "ignored_local_user_id",
+      display_name: "Managed User",
+      email: "managed@example.com",
+      password: "StrongPass123",
+      beta_eligibility_confirmed: true,
+      now: "2026-07-01T00:00:00.000Z",
+    });
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      "https://project.supabase.co/auth/v1/signup",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          email: "managed@example.com",
+          password: "StrongPass123",
+          data: {
+            display_name: "Managed User",
+            full_name: "Managed User",
+            aevryn_public_beta_18_plus_confirmed: true,
           },
         }),
       }),

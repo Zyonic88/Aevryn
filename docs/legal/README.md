@@ -8,3 +8,8 @@ These documents require attorney review before public launch:
 * `docs/PRIVACY_POLICY.md`
 * `docs/ACCEPTABLE_USE_POLICY.md`
 * `docs/SECURITY_DISCLOSURE.md`
+
+Supporting attorney-review packet:
+
+* `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`
+* `docs/AEVRYN_LEGAL_REVIEW_FINDINGS_2026_08_02.md`

@@ -12,11 +12,17 @@ It does not approve public beta.
 
 ```text
 Decision: Backup retention wording candidate
-Status: Selected for owner/legal review
+Status: Provider source rechecked - owner/legal wording review pending
 Public beta: Blocked
 ```
 
-This decision gives Aevryn a truthful public wording target before beta. It must still be verified against the final production backup provider, restore process, and legal review.
+This decision gives Aevryn a truthful public wording target before beta. It must still be verified against the final production backup provider, final production storage lifecycle, and legal review.
+
+The dated owner/legal review packet is recorded in
+`docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`.
+
+The production configuration verification path is recorded in
+`docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md`.
 
 ---
 
@@ -45,6 +51,39 @@ After backup expiration, deleted story data ages out of backup storage according
 The 30-day window is a maximum public-beta candidate, not a minimum retention requirement.
 
 If production backup tooling supports shorter retention safely, Aevryn may choose a shorter disclosed window before public beta.
+
+---
+
+# Provider Source Recheck
+
+Official provider source review was rechecked on 2026-08-02.
+
+Supabase managed PostgreSQL backup facts were rechecked against official Supabase backup documentation:
+
+* daily database backup retention depends on plan
+* Pro retention is 7 days
+* Team retention is 14 days
+* Enterprise retention is up to 30 days
+* point-in-time recovery is a separate add-on
+* database backups do not include Supabase Storage API objects
+
+Cloudflare R2 object retention and deletion facts were rechecked against official Cloudflare R2 documentation:
+
+* lifecycle rules can define object retention and expiration
+* object deletion is irreversible
+* lifecycle-managed expiration is typically processed within 24 hours of the configured expiration time
+* lifecycle changes can take longer to affect existing objects
+
+These source checks support the selected maximum-window candidate, but they do not complete owner/legal approval.
+
+Production verification tooling now exists:
+
+```powershell
+python -m aevryn.cli backup-retention-config-check
+```
+
+The command verifies declared production Supabase plan/window metadata and R2
+deletion/lifecycle metadata without printing secrets.
 
 ---
 
@@ -115,7 +154,8 @@ Legal-sensitive versions of this wording must be reviewed before public beta.
 
 Public beta remains blocked until:
 
-* production backup provider behavior supports the selected window
+* production Supabase plan retention is verified against the selected maximum window
+* production R2 lifecycle/deletion policy is verified against the selected wording
 * production backup encryption is verified
 * restore access control is documented
 * restore validation procedure is tested or explicitly accepted as a residual risk
