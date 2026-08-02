@@ -150,8 +150,8 @@ def test_backup_retention_owner_review_records_source_recheck_without_beta_appro
         "Review: Backup retention owner/legal review",
         "Date: 2026-08-02",
         (
-            "Status: Provider source rechecked - production verification tooling "
-            "implemented; owner/legal wording review pending"
+            "Status: Provider source rechecked - production retention values "
+            "verified; legal wording review pending"
         ),
         "Public beta: Blocked",
         "Deletion removes active product data. Backups expire on a disclosed schedule.",
@@ -168,6 +168,10 @@ def test_backup_retention_owner_review_records_source_recheck_without_beta_appro
         "docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md",
         "python -m aevryn.cli backup-retention-config-check",
         "Production verification tooling",
+        "production_supabase_plan=pro",
+        "production_supabase_backup_retention_days=7",
+        "production_r2_deletion_policy=direct_delete",
+        "production_r2_lifecycle_expiration_days=not_applicable",
         "isolated restore drill passed",
         "Production Supabase plan retention",
         "Production R2 lifecycle/deletion policy",
@@ -188,7 +192,7 @@ def test_backup_retention_production_verification_records_fail_closed_contract()
 
     required_terms = (
         "Verification: Production backup retention configuration",
-        "Status: Verification tooling implemented - owner production values pending",
+        "Status: Owner production values verified",
         "Public beta: Blocked",
         "Deletion removes active product data. Backups expire on a disclosed schedule.",
         "python -m aevryn.cli backup-retention-config-check",
@@ -201,8 +205,12 @@ def test_backup_retention_production_verification_records_fail_closed_contract()
         "declared Supabase retention exceeds the public maximum",
         "lifecycle expiration mode has no enabled lifecycle expiration rule",
         "object keys, source prose",
-        "production_supabase_plan_retention=blocked_pending_owner_verification",
-        "production_r2_lifecycle_policy=blocked_pending_owner_verification",
+        "production_supabase_plan=pro",
+        "production_supabase_backup_retention_days=7",
+        "production_r2_deletion_policy=direct_delete",
+        "production_r2_lifecycle_expiration_days=not_applicable",
+        "production_supabase_plan_retention=verified",
+        "production_r2_lifecycle_policy=verified",
         "backup_retention_legal_review=blocked",
     )
 
