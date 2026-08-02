@@ -87,13 +87,13 @@ export function ProjectWorkspacePage() {
 
   return (
     <div className="workspace-shell">
-      <div className="workspace-rail" aria-label="Workspace quick map">
+      <div className="workspace-rail" aria-hidden="true">
         <img src="/assets/favicon-64.png" alt="" />
         {visibleWorkspaceTabs.slice(0, 7).map((tab) => (
           <NavLink
             key={tab.id}
             to={`/projects/${project.id}/${tab.id}`}
-            aria-label={tab.label}
+            tabIndex={-1}
             title={tab.label}
           >
             {tab.shortLabel}

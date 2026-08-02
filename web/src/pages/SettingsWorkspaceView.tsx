@@ -158,8 +158,8 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
             <dd>Collapsed by default where the content is long</dd>
           </div>
           <div>
-            <dt>Technical review panels</dt>
-            <dd>Collapsed behind review controls</dd>
+            <dt>Advanced preview panels</dt>
+            <dd>Collapsed until explicitly opened</dd>
           </div>
         </dl>
       </section>

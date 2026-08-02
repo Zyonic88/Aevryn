@@ -91,7 +91,7 @@ export function ProjectOutputSummaryPanel({
 export function DeveloperPreviewToggle({ children }: { children: ReactNode }) {
   return (
     <details className="project-panel">
-      <summary>Technical review</summary>
+      <summary>Advanced preview</summary>
       <div className="workspace-view-stack developer-preview-stack">{children}</div>
     </details>
   );
