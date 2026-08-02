@@ -71,11 +71,6 @@ export function WorldWorkspaceView({ project }: { project: ProjectSummary }) {
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">World</p>
-        <h2>World</h2>
-      </div>
-
       <ProjectOutputSummaryPanel project={project} surface="world" />
 
       <DeveloperPreviewToggle>

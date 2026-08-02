@@ -72,11 +72,6 @@ export function SceneWorkspaceView({ project }: { project: ProjectSummary }) {
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Scenes</p>
-        <h2>Scenes</h2>
-      </div>
-
       <ProjectOutputSummaryPanel project={project} surface="scenes" />
 
       <DeveloperPreviewToggle>

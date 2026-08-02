@@ -26,11 +26,6 @@ export function OverviewWorkspaceView({ project }: { project: ProjectSummary }) 
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Overview</p>
-        <h2>Overview</h2>
-      </div>
-
       {outputsQuery.isLoading ? <LoadingMessage>Loading project overview.</LoadingMessage> : null}
       {outputsQuery.error ? (
         <EmptyState title="Overview unavailable">

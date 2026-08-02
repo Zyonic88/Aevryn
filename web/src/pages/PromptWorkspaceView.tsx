@@ -80,11 +80,6 @@ export function PromptWorkspaceView({ project }: { project: ProjectSummary }) {
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Prompt Packs</p>
-        <h2>Prompt Packs</h2>
-      </div>
-
       <ProjectOutputSummaryPanel project={project} surface="prompts" />
 
       <DeveloperPreviewToggle>

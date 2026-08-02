@@ -157,11 +157,6 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Exports</p>
-        <h2>Exports</h2>
-      </div>
-
       <ProjectOutputSummaryPanel project={project} surface="exports" />
 
       <ProjectStoredExportsPanel

@@ -72,11 +72,6 @@ export function TimelineWorkspaceView({ project }: { project: ProjectSummary }) 
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Timeline</p>
-        <h2>Timeline</h2>
-      </div>
-
       <ProjectOutputSummaryPanel project={project} surface="timeline" />
 
       <DeveloperPreviewToggle>
