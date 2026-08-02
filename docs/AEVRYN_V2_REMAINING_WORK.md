@@ -245,8 +245,25 @@ Tracking:
 
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
+* `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`
 * `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`
 * `docs/DATA_RETENTION_POLICY.md`
+
+Verified evidence:
+
+* isolated restore drill passed
+* deleted story absence from product surfaces passed
+* restored source and export boundaries remained owner-scoped
+* audit ledger integrity passed after restore
+* hosted restore logs remained metadata-only
+* official Supabase and Cloudflare R2 source facts were rechecked on 2026-08-02
+
+Remaining blockers:
+
+* production Supabase plan retention owner verification
+* production R2 lifecycle/deletion policy owner verification
+* final public wording consistency review
+* owner/legal approval
 
 Acceptance:
 
