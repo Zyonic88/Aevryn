@@ -38,10 +38,6 @@ const workspaceTabs = [
 type WorkspaceTabId = (typeof workspaceTabs)[number]["id"];
 
 const visibleWorkspaceTabs = workspaceTabs.filter((tab) => tab.id !== "monitoring");
-const futureWorkspaceTools = [
-  { label: "Images", status: "Locked" },
-  { label: "Video", status: "Locked" },
-] as const;
 
 export function ProjectWorkspacePage() {
   const { session } = useAuth();
@@ -100,21 +96,6 @@ export function ProjectWorkspacePage() {
           </NavLink>
         ))}
       </nav>
-      <aside className="workspace-sidebar">
-        <div className="workspace-project">
-          <p className="eyebrow">Project</p>
-          <h1>{project.name}</h1>
-          <span>Canon workspace</span>
-        </div>
-        <div className="workspace-locked-tools" aria-label="Future production tools">
-          {futureWorkspaceTools.map((tool) => (
-            <span key={tool.label} className="workspace-locked-link">
-              <span>{tool.label}</span>
-              <small>{tool.status}</small>
-            </span>
-          ))}
-        </div>
-      </aside>
       <section className="workspace-content">
         {activeTab ? (
           <WorkspaceTabContent tabId={activeTab.id} label={activeTab.label} project={project} />
