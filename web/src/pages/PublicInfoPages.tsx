@@ -129,8 +129,12 @@ export function PrivacyPage() {
           body: [
             "When provider-backed extraction is enabled, Aevryn may send selected story excerpts, scene context, evidence anchors, extraction instructions, and structured-output requirements to a reviewed AI provider.",
             "The current provider candidate is OpenAI.",
+            "Aetherra Labs has verified that API input/output sharing and evaluation/fine-tuning sharing are disabled for the production OpenAI project, and Aevryn's extraction requests set store=false.",
+            "OpenAI API inputs and outputs are not used for model training by default unless the organization opts in. Aetherra Labs does not train on user stories without explicit opt-in.",
+            "OpenAI abuse-monitoring logs may contain prompts and responses for up to 30 days by default unless a different approved retention control applies or law requires longer retention.",
+            "Aevryn does not represent Modified Abuse Monitoring, Zero Data Retention, or data residency controls as enabled.",
             "Provider output is not Canon. Aevryn validates provider output against story evidence before accepting anything into project state.",
-            "Provider-backed extraction must remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, and no-training posture are reviewed, documented, and disclosed accurately.",
+            "Provider-backed extraction must remain disabled for public beta until legal-sensitive wording and final public-beta signoff are complete.",
           ],
         },
         {

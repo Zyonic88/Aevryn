@@ -50,6 +50,7 @@ Reviewed source documents:
 * `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`
 * `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`
 * `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`
+* `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`
 * `docs/PRIVACY_POLICY.md`
 * `docs/AEVRYN_USER_RIGHTS.md`
 * `web/src/pages/PublicInfoPages.tsx`
@@ -65,7 +66,7 @@ Reviewed source documents:
 | Contact aliases | Support, privacy, security, and abuse aliases are the public product contacts. | passed |
 | Story ownership | Uploaded stories, Canon, prompt packs, and exports remain user-owned. | passed |
 | AI training posture | Aetherra Labs does not train on user stories without explicit opt-in. | passed |
-| Provider-backed extraction | Public copy states provider output is not Canon and provider-backed extraction remains review-gated. | passed_with_blocker |
+| Provider-backed extraction | Public copy states provider output is not Canon; owner product-truth provider wording approval is recorded; attorney review and final signoff remain blocked. | passed_with_blocker |
 | Backup/deletion wording | Public copy separates active deletion from bounded backup retention. | passed_with_blocker |
 | Support privacy | Support copy tells users not to send full manuscripts, chapters, provider responses, credentials, tokens, private URLs, or private-story screenshots by default. | passed |
 | Employee access | Public copy avoids claiming employees can never access data under any circumstance. | passed |
@@ -98,7 +99,7 @@ plain-language messages:
 This review does not close:
 
 * attorney review of legal-sensitive pages
-* final provider disclosure wording approval
+* provider disclosure legal review
 * production Supabase plan retention verification
 * production R2 lifecycle/deletion policy verification
 * backup retention owner/legal wording approval
@@ -111,8 +112,8 @@ This review does not close:
 Do not approve public beta if:
 
 * public pages imply attorney review happened when it did not
-* public pages imply provider-backed extraction is approved without final
-  provider disclosure wording approval
+* public pages imply provider-backed extraction is approved without attorney
+  provider disclosure review and final public-beta signoff
 * public pages imply deleted data disappears instantly from every backup
 * public support copy asks users to send full manuscripts by default
 * public copy claims employees can never access user data under any
@@ -128,7 +129,8 @@ This consistency review is accepted when:
 ```text
 public_wording_consistency_review=passed
 legal_sensitive_wording=blocked_until_attorney_review
-provider_disclosure_wording=blocked_until_final_approval
+provider_disclosure_product_truth=approved
+provider_disclosure_legal_review=blocked_until_attorney_review
 backup_retention_wording=blocked_until_owner_legal_approval
 public_beta=blocked_until_final_signoff
 ```

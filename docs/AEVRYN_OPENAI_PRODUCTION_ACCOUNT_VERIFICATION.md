@@ -15,7 +15,7 @@ It does not contain secrets.
 
 ```text
 Verification: OpenAI production organization and project data controls
-Status: In progress - official sources, Aevryn technical controls, and owner dashboard review verified; legal/final signoff pending
+Status: Official sources, Aevryn technical controls, owner dashboard review, and owner product-truth provider wording approved; legal/final signoff pending
 Public beta: Blocked
 ```
 
@@ -89,6 +89,13 @@ The owner could not locate Modified Abuse Monitoring, Zero Data Retention, or
 data residency controls in the dashboard. Those controls are recorded as
 not found by owner review and must not be represented publicly as enabled.
 
+On 2026-08-02, final owner product-truth wording approval for provider
+disclosure was recorded in:
+
+* `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`
+
+This approval does not replace attorney review and does not approve public beta.
+
 ---
 
 # Non-Secret Evidence Rules
@@ -146,8 +153,8 @@ not_applicable
 | Modified Abuse Monitoring state recorded | verified, not_approved, or not_available | not_available | Owner could not locate MAM controls in dashboard on 2026-08-02; do not disclose as enabled. |
 | Zero Data Retention state recorded | verified, not_approved, or not_available | not_available | Owner could not locate ZDR controls in dashboard on 2026-08-02; do not disclose as enabled. |
 | data residency state recorded | verified, not_approved, or not_available | not_available | Owner could not locate data residency controls in dashboard on 2026-08-02; do not disclose as enabled. |
-| public Privacy Policy matches verified account/project posture | verified | blocked | Not recorded yet |
-| public Trust/User Rights pages match verified account/project posture | verified | blocked | Not recorded yet |
+| public Privacy Policy matches verified account/project posture | verified | blocked | Owner product-truth wording approved on 2026-08-02; attorney review still blocked. |
+| public Trust/User Rights pages match verified account/project posture | verified | verified | Public wording consistency review passed on 2026-08-02 and owner product-truth provider wording approval is recorded. |
 
 ---
 
@@ -230,7 +237,7 @@ changes it.
 # Public-Beta Decision
 
 ```text
-OpenAI production account verification: Dashboard verified; legal/final signoff pending
+OpenAI production account verification: Dashboard and owner product-truth wording verified; legal/final signoff pending
 Provider-backed extraction for public beta: Blocked
 Fallback: Disable provider-backed extraction for public beta
 ```

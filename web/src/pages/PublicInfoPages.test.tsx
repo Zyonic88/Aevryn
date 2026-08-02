@@ -49,6 +49,10 @@ describe("public information pages", () => {
     expect(screen.getByText(/Backups are not used for AI training, analytics/u)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI Providers" })).toBeInTheDocument();
     expect(screen.getByText(/The current provider candidate is OpenAI/u)).toBeInTheDocument();
+    expect(screen.getByText(/extraction requests set store=false/u)).toBeInTheDocument();
+    expect(screen.getByText(/OpenAI API inputs and outputs are not used for model training by default/u)).toBeInTheDocument();
+    expect(screen.getByText(/abuse-monitoring logs may contain prompts and responses/u)).toBeInTheDocument();
+    expect(screen.getByText(/does not represent Modified Abuse Monitoring/u)).toBeInTheDocument();
     expect(screen.getByText(/Provider output is not Canon/u)).toBeInTheDocument();
   });
 

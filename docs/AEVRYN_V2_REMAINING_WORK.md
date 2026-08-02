@@ -186,10 +186,13 @@ Verified evidence:
   and production model `gpt-5.4-mini`.
 * Modified Abuse Monitoring, Zero Data Retention, and data residency controls
   were not found by owner review and must not be represented as enabled.
+* Final owner product-truth provider disclosure wording approval was recorded
+  on 2026-08-02 in
+  `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`.
 
 Remaining blockers:
 
-* owner/legal approval of public provider wording
+* attorney review of legal-sensitive provider wording
 * final release-candidate provider approval or explicit provider-disable
   decision
 
