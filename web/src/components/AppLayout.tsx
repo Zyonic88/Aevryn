@@ -28,7 +28,9 @@ export function AppLayout() {
     <div className="app-frame">
       <header className="topbar">
         <Link to="/" className="brand" aria-label="Aevryn dashboard">
-          <span className="brand-mark">A</span>
+          <span className="brand-mark">
+            <img src="/assets/favicon-64.png" srcSet="/assets/favicon-256.png 2x" alt="" />
+          </span>
           <span>
             <strong>Aevryn</strong>
             <small>Evidence in. Canon out.</small>
