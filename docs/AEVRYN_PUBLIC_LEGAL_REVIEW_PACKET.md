@@ -48,6 +48,7 @@ provider terms, or operations practice.
 
 Counsel and owner review should also cross-check:
 
+* `docs/AEVRYN_LEGAL_REVIEW_FINDINGS_2026_08_02.md`
 * `docs/AEVRYN_SECURITY.md`
 * `docs/AEVRYN_PRIVACY.md`
 * `docs/AEVRYN_USER_RIGHTS.md`
@@ -100,6 +101,11 @@ mature_content_policy=blocked
 security_safe_harbor=blocked
 provider_disclosure=blocked
 backup_retention_wording=blocked
+dmca_agent_and_process=blocked
+children_privacy_language=blocked
+sensitive_data_language=blocked
+mature_explicit_content_policy=blocked
+researcher_response_commitments=blocked
 ```
 
 ---

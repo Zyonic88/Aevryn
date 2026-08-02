@@ -84,8 +84,11 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
             "User Responsibilities",
             "Payments",
             "Intellectual Property",
+            "AI And Canon Boundaries",
+            "Copyright And Repeat Infringer Draft",
             "Warranty Disclaimer",
             "Liability Limitation",
+            "Dispute Resolution",
             "Governing Law",
         ),
         "docs/PRIVACY_POLICY.md": (
@@ -93,16 +96,23 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
             "Information Collected",
             "Cookies",
             "Analytics",
-            "Uploaded Files",
+            "User Ownership And AI Training",
+            "Uploaded, Pasted, And Imported Content",
             "Third-Party Processors",
+            "Data Retention",
             "User Rights",
+            "Sensitive Data",
+            "Children's Privacy",
             "Contact Information",
         ),
         "docs/ACCEPTABLE_USE_POLICY.md": (
             "attorney review",
             "Allowed Uses",
-            "Not Allowed",
-            "Mature Fiction",
+            "Prohibited Uses",
+            "Platform Abuse",
+            "Mature And Explicit Fiction",
+            "Copyright, Rights, And Repeat Infringers",
+            "Enforcement",
             "copyright infringement",
             "malware",
             "spam",
@@ -110,10 +120,13 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
         "docs/SECURITY_DISCLOSURE.md": (
             "Responsible disclosure",
             "Reporting Vulnerabilities",
-            "Safe Harbor Intent",
-            "Response Process",
+            "Initial In-Scope Systems",
+            "Out Of Scope Unless Approved",
+            "Safe Harbor Draft",
+            "Response Targets",
+            "Coordinated Disclosure",
             "security@aevryn.ai",
-            "Public contact information must be published accurately before launch.",
+            "Attorney review must approve final timelines",
         ),
     }
 
@@ -582,6 +595,7 @@ def test_public_legal_review_packet_tracks_attorney_handoff_scope() -> None:
         "docs/ACCEPTABLE_USE_POLICY.md",
         "docs/SECURITY_DISCLOSURE.md",
         "Supporting Trust Documents",
+        "docs/AEVRYN_LEGAL_REVIEW_FINDINGS_2026_08_02.md",
         "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
         "docs/AEVRYN_BACKUP_RETENTION_DECISION.md",
         "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
@@ -599,8 +613,40 @@ def test_public_legal_review_packet_tracks_attorney_handoff_scope() -> None:
         "privacy_processor_list=blocked",
         "provider_disclosure=blocked",
         "backup_retention_wording=blocked",
+        "dmca_agent_and_process=blocked",
+        "children_privacy_language=blocked",
+        "security_safe_harbor=blocked",
         "public pages imply attorney review happened when it did not",
         "owner-controlled product-truth decisions tracked separately",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_legal_review_findings_record_non_attorney_triage() -> None:
+    """Compliance triage findings should improve drafts without approving beta."""
+    document = read_doc("docs/AEVRYN_LEGAL_REVIEW_FINDINGS_2026_08_02.md")
+
+    required_terms = (
+        "Review source: Justee.ai compliance review",
+        "Review type: Non-attorney draft triage",
+        "draft_hardening_applied=true",
+        "attorney_review_complete=false",
+        "public_beta=blocked",
+        "Compliance triage can improve drafts. It cannot approve legal launch.",
+        "Terms Of Service",
+        "Privacy Policy",
+        "Acceptable Use Policy",
+        "Security Disclosure",
+        "limitation of liability was missing",
+        "user rights process was incomplete",
+        "platform abuse was undefined",
+        "safe harbor was aspirational",
+        "dmca_agent_and_process=blocked",
+        "privacy_rights_jurisdiction_language=blocked",
+        "children_privacy_language=blocked",
+        "security_safe_harbor=blocked",
     )
 
     for term in required_terms:
