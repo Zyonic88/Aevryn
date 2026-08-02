@@ -75,6 +75,8 @@ Backups must not become:
 
 The selected public-beta wording candidate is recorded in `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`.
 
+The dated owner/legal review packet is recorded in `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`.
+
 Candidate posture:
 
 ```text
@@ -85,6 +87,8 @@ Backups are not used for AI training, analytics, support browsing, or product ex
 ```
 
 This candidate must be verified against final production backup provider behavior before public beta.
+
+Official Supabase and Cloudflare R2 source facts were rechecked on 2026-08-02. That recheck supports the selected public-beta maximum-window candidate, but owner verification of the production Supabase plan retention and production R2 lifecycle/deletion policy remains required.
 
 ---
 

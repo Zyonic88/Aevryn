@@ -48,6 +48,7 @@ Owner review must check:
 * `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`
 * `docs/AEVRYN_PUBLIC_CONTACTS.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
+* `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`
 * `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`
 * `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`
 * `docs/TERMS_OF_SERVICE.md`
@@ -83,7 +84,7 @@ not_applicable
 | Story ownership | uploaded stories, Canon, generated outputs, and exports belong to users | approved_by_owner | Approved as product posture; legal-sensitive wording still needs attorney review. |
 | AI training posture | no training on user stories without explicit opt-in | approved_by_owner | Approved as product posture and public promise. |
 | Provider disclosure | OpenAI provider wording matches owner intent | blocked_needs_provider_verification | Production account verification remains open |
-| Backup/deletion wording | active deletion and backup retention language matches owner intent | blocked_needs_backup_verification | Owner/legal review remains open |
+| Backup/deletion wording | active deletion and backup retention language matches owner intent | blocked_needs_backup_verification | Provider source rechecked; production Supabase plan retention, production R2 lifecycle/deletion policy, and owner/legal wording review remain open. |
 | Support procedure | metadata-first support and source-prose redaction guidance are acceptable | approved_by_owner | Approved as public-beta support posture; full manuscripts remain out of default support flow. |
 | Content classification | General/Teen/Mature/Explicit posture matches product intent | approved_by_owner | Approved as content-aware, not content-opinionated posture. |
 | Legal drafts | Terms/Privacy/AUP/Security Disclosure are ready for attorney review | blocked_needs_attorney | Owner agrees these are the correct legal drafts to send for attorney review; attorney must approve. |

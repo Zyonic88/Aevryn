@@ -112,8 +112,14 @@ def test_backup_retention_decision_records_public_beta_candidate() -> None:
 
     required_terms = (
         "Decision: Backup retention wording candidate",
-        "Status: Selected for owner/legal review",
+        "Status: Provider source rechecked - owner/legal wording review pending",
         "Public beta: Blocked",
+        "docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md",
+        "Official provider source review was rechecked on 2026-08-02.",
+        "daily database backup retention depends on plan",
+        "Cloudflare R2 object retention and deletion facts were rechecked",
+        "production Supabase plan retention is verified against the selected maximum window",
+        "production R2 lifecycle/deletion policy is verified against the selected wording",
         "Deletion removes active product data. Backups expire on a disclosed schedule.",
         "Encrypted production backups may retain deleted data for up to 30 days.",
         "Backups are used only for authorized disaster recovery and service restoration.",
@@ -126,6 +132,40 @@ def test_backup_retention_decision_records_public_beta_candidate() -> None:
         "be used only for recovery and restore validation",
         "be used to bypass a user's deletion decision outside authorized disaster recovery",
         "Aevryn can truthfully tell users what deletion removes immediately",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_backup_retention_owner_review_records_source_recheck_without_beta_approval() -> None:
+    """Backup retention review should narrow evidence without approving beta."""
+    document = (
+        ROOT / "docs" / "AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md"
+    ).read_text(encoding="utf-8")
+
+    required_terms = (
+        "Review: Backup retention owner/legal review",
+        "Date: 2026-08-02",
+        "Status: Provider source rechecked - owner/legal wording review pending",
+        "Public beta: Blocked",
+        "Deletion removes active product data. Backups expire on a disclosed schedule.",
+        "This is a maximum-window candidate",
+        "Official provider source review was rechecked on 2026-08-02.",
+        "https://supabase.com/docs/guides/platform/backups",
+        "Pro 7 days",
+        "Team 14 days",
+        "Enterprise up to 30 days",
+        "Database backups do not include Supabase Storage API objects.",
+        "https://developers.cloudflare.com/r2/buckets/object-lifecycles/",
+        "https://developers.cloudflare.com/r2/objects/delete-objects/",
+        "Object deletion through supported R2 tools is irreversible.",
+        "isolated restore drill passed",
+        "Production Supabase plan retention",
+        "Production R2 lifecycle/deletion policy",
+        "Attorney review",
+        "owner_legal_backup_wording_review=complete",
+        "public_beta_backup_wording=approved",
     )
 
     for term in required_terms:
