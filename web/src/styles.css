@@ -2274,6 +2274,12 @@ textarea::placeholder {
   justify-self: start;
 }
 
+.import-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .advanced-fields {
   border-color: rgba(127, 178, 255, 0.18);
   background: rgba(5, 8, 14, 0.58);
