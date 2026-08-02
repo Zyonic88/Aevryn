@@ -1726,3 +1726,416 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/* Aevryn public-site visual alignment. */
+:root {
+  --app-bg: #05070c;
+  --app-bg-soft: #080d15;
+  --app-panel: #0d1420;
+  --app-panel-2: #111b2b;
+  --app-panel-3: #070b12;
+  --app-line: rgba(127, 178, 255, 0.18);
+  --app-line-strong: rgba(127, 178, 255, 0.28);
+  --app-text: #edf4ff;
+  --app-muted: #9cadc6;
+  --app-muted-2: #71839e;
+  --app-blue: #7fb2ff;
+  --app-blue-2: #b9d7ff;
+  --app-focus: #f7d77a;
+  --app-danger: #ff8f8f;
+  --app-danger-bg: rgba(255, 143, 143, 0.1);
+  --app-success: #8edaa6;
+  --app-success-bg: rgba(142, 218, 166, 0.1);
+  --app-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+  color: var(--app-text);
+  background: var(--app-bg);
+}
+
+body,
+.app-frame,
+.auth-screen,
+.public-page {
+  color: var(--app-text);
+  background:
+    linear-gradient(rgba(127, 178, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127, 178, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(180deg, var(--app-bg) 0%, var(--app-bg-soft) 55%, var(--app-bg) 100%);
+  background-size: 100% 100%, 44px 44px, 100% 100%;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 3px;
+}
+
+.topbar,
+.public-topbar {
+  border-bottom: 1px solid var(--app-line);
+  background: rgba(5, 8, 14, 0.82);
+  backdrop-filter: blur(18px);
+}
+
+.brand,
+.topnav a,
+.public-nav a,
+.public-footer a,
+.auth-links a,
+.auth-switch a {
+  color: var(--app-blue-2);
+}
+
+.brand strong {
+  color: var(--app-text);
+}
+
+.brand small,
+.account-chip,
+.topnav a:not(.active) {
+  color: var(--app-muted);
+}
+
+.brand-mark {
+  border: 1px solid var(--app-line-strong);
+  color: var(--app-blue-2);
+  background:
+    linear-gradient(135deg, rgba(127, 178, 255, 0.2), rgba(8, 13, 21, 0.92)),
+    var(--app-panel);
+  box-shadow: 0 0 28px rgba(127, 178, 255, 0.24);
+}
+
+.topnav a.active {
+  color: var(--app-text);
+}
+
+.main-surface {
+  padding: 28px;
+}
+
+.auth-panel,
+.status-panel,
+.project-panel,
+.placeholder-panel,
+.diagnostics-panel,
+.workspace-shell,
+.public-card,
+.public-status,
+.project-row,
+.export-list-item,
+.metric-grid div,
+.format-column,
+.compact-row,
+.monitoring-detail-grid div,
+.monitoring-event-row,
+.quick-action-grid a,
+.settings-scope-grid a,
+.settings-summary-list div,
+.profile-card,
+.identity-review-panel,
+.profile-section,
+.timeline-row,
+.nested-disclosure,
+.prompt-canon-inputs,
+.prompt-scene-button,
+.prompt-disclosure,
+.profile-disclosure,
+.empty-state,
+.editor-card,
+.beta-card {
+  border-color: var(--app-line);
+  color: var(--app-text);
+  background: rgba(13, 20, 32, 0.78);
+  box-shadow: none;
+}
+
+.auth-panel,
+.project-panel,
+.status-panel,
+.placeholder-panel,
+.diagnostics-panel,
+.workspace-shell,
+.profile-card {
+  box-shadow: var(--app-shadow);
+}
+
+.page-heading h1,
+.workspace-project h1,
+.auth-panel h1,
+.public-hero h1,
+.status-panel h2,
+.project-panel h2,
+.workspace-content h2,
+.placeholder-panel h3,
+.export-list-item h3,
+.profile-card h3,
+.identity-review-heading h3,
+.quick-action-grid strong,
+.public-card h2 {
+  color: var(--app-text);
+}
+
+.eyebrow,
+.project-select-link small,
+.workflow-list span,
+.code-line span {
+  color: var(--app-blue);
+}
+
+.field-note,
+.empty-state,
+.placeholder-panel p,
+.project-row span,
+.export-list-item p,
+.public-hero > p:not(.eyebrow):not(.public-status),
+.public-card p,
+.profile-card header p:last-child,
+.identity-review-heading p,
+.monitoring-note,
+.overview-next-step p,
+.quick-action-grid span,
+.settings-scope-grid span,
+.settings-summary-list dd,
+.profile-section li,
+.profile-section p,
+.world-item-list li,
+.timeline-row span,
+.timeline-row p,
+.continuity-preview-list,
+.prompt-preview-list,
+.prompt-preview-overflow,
+.prompt-canon-inputs dt,
+.prompt-canon-inputs dd,
+.prompt-text-section p,
+.form-note,
+.detail-disclosure summary,
+.profile-disclosure summary,
+.prompt-disclosure summary,
+.nested-disclosure summary,
+.diagnostics-panel summary {
+  color: var(--app-muted);
+}
+
+label,
+.checkbox-field {
+  color: var(--app-blue-2);
+}
+
+input,
+textarea,
+select {
+  border-color: var(--app-line-strong);
+  color: var(--app-text);
+  background: rgba(5, 8, 14, 0.88);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--app-muted-2);
+}
+
+.primary-button {
+  color: #07101d;
+  background: linear-gradient(135deg, #dce5f0, var(--app-blue));
+  box-shadow: 0 18px 50px rgba(127, 178, 255, 0.22);
+}
+
+.primary-button:disabled {
+  color: rgba(237, 244, 255, 0.58);
+  background: rgba(127, 178, 255, 0.18);
+  box-shadow: none;
+}
+
+.ghost-button,
+.secondary-button {
+  border: 1px solid var(--app-line);
+  color: var(--app-blue-2);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ghost-button:hover,
+.secondary-button:hover,
+.project-select-link:hover strong,
+.topnav a:hover,
+.public-nav a:hover,
+.public-footer a:hover,
+.auth-links a:hover,
+.auth-switch a:hover {
+  color: var(--app-text);
+}
+
+.workspace-sidebar {
+  border-right: 1px solid var(--app-line);
+  background: rgba(7, 11, 18, 0.92);
+}
+
+.workspace-content {
+  background: rgba(8, 13, 21, 0.76);
+}
+
+.workspace-nav a {
+  color: var(--app-muted);
+}
+
+.workspace-nav a.active {
+  color: #07101d;
+  background: var(--app-blue);
+}
+
+.workspace-nav a:hover:not(.active) {
+  color: var(--app-text);
+  background: rgba(127, 178, 255, 0.1);
+}
+
+.project-row,
+.format-column,
+.compact-row,
+.quick-action-grid a,
+.settings-scope-grid a,
+.settings-summary-list div,
+.monitoring-detail-grid div,
+.monitoring-event-row,
+.timeline-row,
+.prompt-scene-button,
+.profile-section,
+.export-list-item {
+  background: rgba(8, 13, 21, 0.68);
+}
+
+.project-row-pending,
+.empty-state {
+  border-style: dashed;
+}
+
+.icon-button {
+  border-color: var(--app-line-strong);
+  color: var(--app-blue-2);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.icon-button:hover:not(:disabled),
+.icon-button:focus-visible:not(:disabled) {
+  border-color: var(--app-blue);
+  background: rgba(127, 178, 255, 0.12);
+}
+
+.danger-button {
+  border-color: rgba(255, 143, 143, 0.45);
+  color: var(--app-danger);
+}
+
+.danger-button:hover:not(:disabled),
+.danger-button:focus-visible:not(:disabled) {
+  border-color: var(--app-danger);
+  color: #ffc6c6;
+  background: var(--app-danger-bg);
+}
+
+.form-error,
+.field-note-error,
+.processing-step-failed {
+  color: var(--app-danger);
+}
+
+.success-note,
+.processing-step-done {
+  color: var(--app-success);
+}
+
+.processing-step span,
+.processing-step-active span,
+.processing-step-done span,
+.processing-step-failed span,
+.settings-area-status,
+.character-portrait,
+.segmented-control,
+.profile-disclosure,
+.prompt-disclosure,
+.nested-disclosure {
+  border-color: var(--app-line);
+  color: var(--app-muted);
+  background: rgba(5, 8, 14, 0.78);
+}
+
+.processing-step-active,
+.processing-step-active span {
+  color: var(--app-blue);
+}
+
+.processing-step-done span {
+  border-color: rgba(142, 218, 166, 0.45);
+  background: var(--app-success-bg);
+}
+
+.processing-step-failed span {
+  border-color: rgba(255, 143, 143, 0.45);
+  background: var(--app-danger-bg);
+}
+
+.segmented-control button {
+  color: var(--app-muted);
+}
+
+.segmented-control button[aria-pressed="true"] {
+  color: #07101d;
+  background: var(--app-blue);
+}
+
+.character-portrait {
+  color: var(--app-blue-2);
+  background:
+    linear-gradient(135deg, rgba(127, 178, 255, 0.2), rgba(8, 13, 21, 0.92)),
+    var(--app-panel);
+}
+
+.timeline-row-current,
+.prompt-scene-button[aria-pressed="true"] {
+  border-color: var(--app-blue);
+  background: rgba(127, 178, 255, 0.12);
+}
+
+.timeline-current-label {
+  color: #07101d !important;
+  background: var(--app-blue);
+}
+
+.metric-grid dt,
+.monitoring-detail-grid dt,
+.profile-section h4,
+.settings-scope-grid strong,
+.settings-summary-list dt,
+.prompt-canon-inputs > strong {
+  color: var(--app-blue-2);
+}
+
+.metric-grid dd,
+.monitoring-detail-grid dd,
+.settings-area-status {
+  color: var(--app-text) !important;
+}
+
+.export-preview-content,
+.prompt-disclosure p {
+  border-color: var(--app-line);
+  color: var(--app-text);
+  background: rgba(5, 8, 14, 0.86);
+}
+
+.format-column li {
+  color: var(--app-blue-2);
+  background: rgba(127, 178, 255, 0.12);
+}
+
+.public-footer {
+  border-top-color: var(--app-line);
+}
+
+@media (max-width: 820px) {
+  .workspace-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--app-line);
+  }
+}
