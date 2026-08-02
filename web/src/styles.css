@@ -822,6 +822,28 @@ select:focus {
   background: #f8fafc;
 }
 
+.advanced-fields {
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  background: #fbfcfe;
+}
+
+.advanced-fields summary {
+  padding: 10px 12px;
+  color: #40516a;
+  font-weight: 800;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.advanced-fields[open] summary {
+  border-bottom: 1px solid #dbe3ec;
+}
+
+.advanced-fields .form-row-grid {
+  padding: 12px;
+}
+
 .format-column h3,
 .format-column p,
 .format-column ul {
@@ -870,6 +892,11 @@ select:focus {
 .processing-stepper {
   display: grid;
   gap: 10px;
+  grid-column: 1 / -1;
+  padding: 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #f8fafc;
 }
 
 .processing-stepper p {
@@ -2288,6 +2315,92 @@ textarea::placeholder {
 .prompt-disclosure p {
   max-height: 420px;
   overflow: auto;
+}
+
+.import-form {
+  padding: 14px;
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: rgba(5, 8, 14, 0.46);
+}
+
+.import-form .secondary-button,
+.import-form .primary-button {
+  justify-self: start;
+}
+
+.advanced-fields {
+  border-color: rgba(127, 178, 255, 0.18);
+  background: rgba(5, 8, 14, 0.58);
+}
+
+.advanced-fields summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--app-muted);
+}
+
+.advanced-fields summary::after {
+  content: "+";
+  color: var(--app-blue-2);
+  font-weight: 900;
+}
+
+.advanced-fields[open] summary {
+  border-bottom-color: rgba(127, 178, 255, 0.16);
+}
+
+.advanced-fields[open] summary::after {
+  content: "-";
+}
+
+.compact-list {
+  gap: 10px;
+}
+
+.compact-row {
+  align-items: center;
+  border-color: rgba(127, 178, 255, 0.16);
+  background:
+    linear-gradient(180deg, rgba(127, 178, 255, 0.045), transparent),
+    rgba(5, 8, 14, 0.58);
+}
+
+.compact-row .secondary-button {
+  justify-self: start;
+}
+
+.story-select-button {
+  padding: 8px 0;
+}
+
+.story-select-button[aria-pressed="true"] {
+  color: var(--app-blue);
+}
+
+.story-select-button[aria-pressed="true"] strong {
+  color: var(--app-blue-2);
+}
+
+.processing-stepper {
+  border-color: rgba(127, 178, 255, 0.18);
+  background: rgba(5, 8, 14, 0.62);
+}
+
+.processing-step {
+  grid-template-columns: 30px minmax(0, 1fr);
+}
+
+.processing-step span {
+  width: 30px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.processing-stepper p {
+  color: var(--app-muted);
 }
 
 .project-row,

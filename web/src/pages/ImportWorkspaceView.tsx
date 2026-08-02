@@ -954,26 +954,27 @@ function processingSteps(
 ): Array<{ label: string; state: "done" | "active" | "waiting" | "failed"; marker: string }> {
   const failed = run.status === "failed";
   const succeeded = run.status === "succeeded";
+  const doneMarker = "ok";
   return [
     {
       label: "Queued",
       state: failed || succeeded || run.status === "running" ? "done" : "active",
-      marker: failed || succeeded || run.status === "running" ? "✓" : "1",
+      marker: failed || succeeded || run.status === "running" ? doneMarker : "1",
     },
     {
       label: "Processing",
       state: failed ? "failed" : succeeded ? "done" : run.status === "running" ? "active" : "waiting",
-      marker: failed ? "!" : succeeded ? "✓" : "2",
+      marker: failed ? "!" : succeeded ? doneMarker : "2",
     },
     {
       label: "Snapshot",
       state: failed ? "failed" : snapshot ? "done" : succeeded ? "active" : "waiting",
-      marker: failed ? "!" : snapshot ? "✓" : "3",
+      marker: failed ? "!" : snapshot ? doneMarker : "3",
     },
     {
       label: "Output ready",
       state: failed ? "failed" : snapshot ? "done" : "waiting",
-      marker: failed ? "!" : snapshot ? "✓" : "4",
+      marker: failed ? "!" : snapshot ? doneMarker : "4",
     },
   ];
 }
