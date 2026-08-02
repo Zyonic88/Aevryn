@@ -16,7 +16,7 @@ It does not approve public beta.
 
 ```text
 Verification: Production backup retention configuration
-Status: Verification tooling implemented - owner production values pending
+Status: Owner production values verified
 Public beta: Blocked
 ```
 
@@ -103,13 +103,19 @@ The source and implementation posture is ready:
 * Active product deletion and restore boundaries passed the restore/audit drill.
 * `aevryn backup-retention-config-check` is implemented and covered by tests.
 
-The production owner still must record:
+The production owner verified the following metadata-only values on
+2026-08-02:
 
 ```text
-production_supabase_plan=<blocked_pending_owner_value>
-production_supabase_backup_retention_days=<blocked_pending_owner_value>
-production_r2_deletion_policy=<blocked_pending_owner_value>
-production_r2_lifecycle_expiration_days=<blocked_pending_owner_value_or_not_applicable>
+backup_retention_max_days=30
+production_supabase_plan=pro
+production_supabase_backup_retention_days=7
+production_supabase_retention_within_public_window=True
+production_r2_deletion_policy=direct_delete
+production_r2_lifecycle_rules_checked=0
+production_r2_lifecycle_expiration_days=not_applicable
+secrets_printed=0
+ok=backup_retention_config_contract_checked
 ```
 
 ---
@@ -136,10 +142,13 @@ or when any lifecycle-backed temporary retention is no longer than 30 days.
 
 # Remaining Blockers
 
-This verification path does not close:
+This verification path closes:
 
 * owner production Supabase plan/window verification
 * owner production R2 deletion/lifecycle verification
+
+This verification path does not close:
+
 * attorney review of legal-sensitive backup/deletion wording
 * final public-beta signoff
 
@@ -149,8 +158,8 @@ This verification path does not close:
 
 ```text
 backup_retention_verifier=implemented
-production_supabase_plan_retention=blocked_pending_owner_verification
-production_r2_lifecycle_policy=blocked_pending_owner_verification
+production_supabase_plan_retention=verified
+production_r2_lifecycle_policy=verified
 backup_retention_legal_review=blocked
 public_beta=blocked_until_final_signoff
 ```

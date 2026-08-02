@@ -16,7 +16,7 @@ It does not approve public beta.
 ```text
 Review: Backup retention owner/legal review
 Date: 2026-08-02
-Status: Provider source rechecked - production verification tooling implemented; owner/legal wording review pending
+Status: Provider source rechecked - production retention values verified; legal wording review pending
 Public beta: Blocked
 ```
 
@@ -72,10 +72,12 @@ Relevant source facts:
   passwords may need to be reset after restore.
 * Database backups do not include Supabase Storage API objects.
 
-Owner verification still required:
+Owner production verification was recorded on 2026-08-02:
 
 ```text
-production_supabase_plan_retention=blocked_pending_owner_verification
+production_supabase_plan=pro
+production_supabase_backup_retention_days=7
+production_supabase_plan_retention=verified
 ```
 
 ## Cloudflare R2
@@ -94,10 +96,12 @@ Relevant source facts:
 * Lifecycle configuration is bucket-level and requires storage write
   permission.
 
-Owner verification still required:
+Owner production verification was recorded on 2026-08-02:
 
 ```text
-production_r2_lifecycle_policy=blocked_pending_owner_verification
+production_r2_deletion_policy=direct_delete
+production_r2_lifecycle_expiration_days=not_applicable
+production_r2_lifecycle_policy=verified
 ```
 
 Production verification tooling is recorded in:
@@ -175,8 +179,8 @@ Before public beta, attorney review must confirm:
 | Supabase source recheck | verified | official source rechecked 2026-08-02 |
 | Cloudflare R2 source recheck | verified | official source rechecked 2026-08-02 |
 | Production verification tooling | verified | `aevryn backup-retention-config-check` implemented |
-| Production Supabase plan retention | blocked | owner verification required |
-| Production R2 lifecycle/deletion policy | blocked | owner verification required |
+| Production Supabase plan retention | verified | `pro`, 7-day daily backup retention |
+| Production R2 lifecycle/deletion policy | verified | `direct_delete`, lifecycle expiration not applicable |
 | Final public wording consistency | blocked | owner/legal review required |
 | Attorney review | blocked | counsel review required |
 

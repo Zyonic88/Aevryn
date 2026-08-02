@@ -267,11 +267,13 @@ Verified evidence:
 * official Supabase and Cloudflare R2 source facts were rechecked on 2026-08-02
 * production backup retention verification tooling is implemented through
   `aevryn backup-retention-config-check`
+* production Supabase backup retention was verified on 2026-08-02 as Pro with
+  a 7-day daily backup window
+* production R2 deletion behavior was verified on 2026-08-02 as direct delete,
+  with lifecycle expiration not applicable
 
 Remaining blockers:
 
-* run and record production Supabase plan retention verification
-* run and record production R2 lifecycle/deletion policy verification
 * backup retention owner/legal approval
 
 Acceptance:

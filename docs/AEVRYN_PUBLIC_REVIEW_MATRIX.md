@@ -105,6 +105,8 @@ Provider disclosure product-truth wording approval: recorded on 2026-08-02
 OpenAI provider config check: passed with metadata-only output on 2026-07-17
 Backup retention provider source review: recorded on 2026-08-02
 Backup retention production verifier: implemented
+Production Supabase backup retention: verified as Pro / 7 days on 2026-08-02
+Production R2 deletion policy: verified as direct_delete on 2026-08-02
 Public wording consistency review: passed on 2026-08-02
 ```
 
@@ -121,9 +123,9 @@ Attorney review: open
 Public legal review packet: prepared
 Provider terms and data-use review: open
 Provider disclosure legal review: open
-Backup retention public wording owner/legal review: open after source recheck
-Production Supabase plan retention verification: open - run and record production verifier
-Production R2 lifecycle/deletion policy verification: open - run and record production verifier
+Backup retention public wording owner/legal review: open after source recheck and production verification
+Production Supabase plan retention verification: verified
+Production R2 lifecycle/deletion policy verification: verified
 Support procedure owner review: recorded for metadata-first support posture
 Final public-beta approval: open
 ```

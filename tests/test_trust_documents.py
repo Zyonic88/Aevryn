@@ -509,6 +509,8 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "OpenAI provider config check: passed with metadata-only output on 2026-07-17",
         "Backup retention provider source review: recorded on 2026-08-02",
         "Backup retention production verifier: implemented",
+        "Production Supabase backup retention: verified as Pro / 7 days on 2026-08-02",
+        "Production R2 deletion policy: verified as direct_delete on 2026-08-02",
         "Public wording consistency review: passed on 2026-08-02",
         "Remaining Blocking Reviews",
         "Owner review: owner-controlled public-facing product posture decisions recorded",
@@ -519,15 +521,12 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "Public legal review packet: prepared",
         "Provider terms and data-use review: open",
         "Provider disclosure legal review: open",
-        "Backup retention public wording owner/legal review: open after source recheck",
         (
-            "Production Supabase plan retention verification: open - run and "
-            "record production verifier"
+            "Backup retention public wording owner/legal review: open after "
+            "source recheck and production verification"
         ),
-        (
-            "Production R2 lifecycle/deletion policy verification: open - run "
-            "and record production verifier"
-        ),
+        "Production Supabase plan retention verification: verified",
+        "Production R2 lifecycle/deletion policy verification: verified",
         "Support procedure owner review: recorded for metadata-first support posture",
         "Stop Conditions",
         "legal-sensitive pages have not been owner-reviewed and attorney-reviewed",
