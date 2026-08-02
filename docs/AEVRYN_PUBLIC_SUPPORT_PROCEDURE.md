@@ -12,11 +12,13 @@ It does not approve public beta.
 
 ```text
 Procedure: Public support operations
-Status: Draft operational procedure
+Status: Owner posture recorded - legal-sensitive wording still blocked
 Public beta: Blocked
 ```
 
-The contact aliases are provisioned and tested. The first public support page is live. Public beta still requires owner review of this procedure and any legal-sensitive support wording.
+The contact aliases are provisioned and tested. The first public support page is live. Owner posture for metadata-first support is recorded in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`, and public wording consistency was reviewed in `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md`.
+
+Public beta still requires legal-sensitive support wording review and final signoff.
 
 ---
 
@@ -126,7 +128,7 @@ This is an operational target, not a guaranteed service-level agreement.
 This procedure is ready for public-beta support only when:
 
 * public support copy links to verified contact paths
-* support procedure owner review confirms metadata-first triage
+* support procedure owner posture confirms metadata-first triage
 * support operators review the no-full-manuscripts-by-default rule
 * support, privacy, security, and abuse aliases remain deliverable
 * outbound replies send from the intended product identity

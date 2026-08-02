@@ -109,6 +109,7 @@ export type LoginRequest = {
 export type RegisterRequest = LoginRequest & {
   user_id: string;
   display_name: string;
+  beta_eligibility_confirmed?: true;
 };
 
 export type ProjectCreateRequest = {

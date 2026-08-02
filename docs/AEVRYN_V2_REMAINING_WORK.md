@@ -86,17 +86,18 @@ Public legal pages are owner-reviewed and attorney-reviewed, or public beta rema
 Status:
 
 ```text
-Open
+Public wording consistency review passed; public beta still blocked by
+legal-sensitive wording, provider disclosure, backup wording, and final signoff
 ```
 
 Required:
 
-* confirm public trust page wording
-* confirm privacy/user-rights wording
-* confirm support procedure
-* confirm source-prose redaction guidance
-* confirm abuse-report path
-* confirm account/project deletion support language
+* ~~confirm public trust page wording~~
+* ~~confirm privacy/user-rights wording~~
+* ~~confirm support procedure~~
+* ~~confirm source-prose redaction guidance~~
+* ~~confirm abuse-report path~~
+* ~~confirm account/project deletion support language~~
 * verify contact aliases still work
 
 Tracking:
@@ -107,6 +108,7 @@ Tracking:
 * `docs/AEVRYN_PUBLIC_CONTACTS.md`
 * `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`
 * `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md`
+* `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md`
 * `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`
 * `docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md`
 
@@ -116,21 +118,39 @@ Acceptance:
 Users can understand their rights, get help, report abuse, and contact Aetherra Labs without exposing manuscripts unnecessarily.
 ```
 
+Verified evidence:
+
+* `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` records owner-controlled
+  decisions approving Aetherra Labs as operator, `aevryn.ai` as the product
+  domain, support/privacy/security/abuse aliases, "Your work belongs to you,"
+  user ownership posture, no-training-without-opt-in posture, metadata-first
+  support, and General/Teen/Mature/Explicit content classification.
+* Public beta remains blocked until legal-sensitive wording, provider
+  disclosure, backup wording, and final public-beta signoff are completed or
+  explicitly accepted in the release-candidate record.
+* `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md` records that
+  public wording consistency passed without approving legal-sensitive wording
+  or public beta.
+
 ## 3. AI Provider Review
 
 Status:
 
 ```text
-Open
+Aevryn technical/source posture and owner dashboard review verified;
+legal-sensitive wording and final public-beta approval remain open
 ```
 
 Required:
 
-* verify final model configuration
-* verify provider data-retention behavior - official OpenAI source review recorded; production account posture still open
-* verify provider training behavior - official OpenAI source review recorded; production account opt-in status still open
+* ~~verify final model configuration~~
+* verify provider data-retention behavior - official OpenAI source review
+  recorded and rechecked; owner dashboard review completed
+* verify provider training behavior - official OpenAI source review recorded
+  and rechecked; owner confirmed API input/output and evaluation/fine-tuning
+  sharing are disabled
 * verify abuse-monitoring behavior - official OpenAI source review recorded; public disclosure and account controls still open
-* verify response-storage/request-storage posture
+* ~~verify response-storage/request-storage posture~~
 * confirm no-training-by-default public language
 * rerun provider config check after final provider settings
 
@@ -147,6 +167,34 @@ Acceptance:
 ```text
 Users can understand when story excerpts leave Aevryn-owned systems and what the selected provider may do with them.
 ```
+
+Verified evidence:
+
+* Hosted production-like `aevryn provider-config-check` passed on 2026-07-17
+  with `model=gpt-5.4-mini`, `request_storage=disabled`,
+  `responses_store=false`, and `secrets_printed=0`.
+* Official OpenAI source posture was rechecked on 2026-08-01 against API data
+  controls, API authentication, and data-sharing controls; the current source
+  boundary still supports Aevryn's disclosure candidate.
+* Aevryn-side technical controls for model, Responses API scope, `store=false`,
+  no background mode, and out-of-scope provider endpoints are verified for the
+  current public-beta candidate.
+* Owner verified the production OpenAI organization/project dashboard posture
+  on 2026-08-02: production org confirmed, production project confirmed,
+  project-scoped key confirmed, API input/output sharing disabled,
+  evaluation/fine-tuning sharing disabled, no default training on user stories,
+  and production model `gpt-5.4-mini`.
+* Modified Abuse Monitoring, Zero Data Retention, and data residency controls
+  were not found by owner review and must not be represented as enabled.
+* Final owner product-truth provider disclosure wording approval was recorded
+  on 2026-08-02 in
+  `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`.
+
+Remaining blockers:
+
+* attorney review of legal-sensitive provider wording
+* final release-candidate provider approval or explicit provider-disable
+  decision
 
 ## 4. Hosted Observability Review
 
@@ -204,8 +252,29 @@ Tracking:
 
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
+* `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`
+* `docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md`
 * `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`
 * `docs/DATA_RETENTION_POLICY.md`
+
+Verified evidence:
+
+* isolated restore drill passed
+* deleted story absence from product surfaces passed
+* restored source and export boundaries remained owner-scoped
+* audit ledger integrity passed after restore
+* hosted restore logs remained metadata-only
+* official Supabase and Cloudflare R2 source facts were rechecked on 2026-08-02
+* production backup retention verification tooling is implemented through
+  `aevryn backup-retention-config-check`
+* production Supabase backup retention was verified on 2026-08-02 as Pro with
+  a 7-day daily backup window
+* production R2 deletion behavior was verified on 2026-08-02 as direct delete,
+  with lifecycle expiration not applicable
+
+Remaining blockers:
+
+* backup retention owner/legal approval
 
 Acceptance:
 

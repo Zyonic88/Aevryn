@@ -14,6 +14,7 @@ export function RegisterPage() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [betaEligibilityConfirmed, setBetaEligibilityConfirmed] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const register = useMutation({
@@ -27,13 +28,19 @@ export function RegisterPage() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      const payload = buildRegisterPayload({ displayName, email, password });
+      const payload = buildRegisterPayload({
+        displayName,
+        email,
+        password,
+        betaEligibilityConfirmed,
+      });
       setFormError(null);
       register.mutate({
         user_id: payload.userId,
         display_name: payload.displayName,
         email: payload.email,
         password: payload.password,
+        beta_eligibility_confirmed: payload.beta_eligibility_confirmed,
         now: new Date().toISOString(),
       });
     } catch (error) {
@@ -74,6 +81,14 @@ export function RegisterPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
+          </label>
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={betaEligibilityConfirmed}
+              onChange={(event) => setBetaEligibilityConfirmed(event.target.checked)}
+            />
+            <span>Aevryn public beta is 18+ only. I confirm I am eligible to create an account.</span>
           </label>
           {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
           {register.error ? <ErrorMessage>{register.error.message}</ErrorMessage> : null}

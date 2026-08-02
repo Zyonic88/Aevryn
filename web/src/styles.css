@@ -99,6 +99,22 @@ input:focus {
   outline-offset: 1px;
 }
 
+.checkbox-field {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: start;
+  gap: 10px;
+  color: #313846;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.checkbox-field input {
+  width: 18px;
+  min-height: 18px;
+  margin: 2px 0 0;
+}
+
 .primary-button,
 .ghost-button,
 .secondary-button {

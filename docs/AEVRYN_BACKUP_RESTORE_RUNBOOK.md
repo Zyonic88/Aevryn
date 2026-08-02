@@ -92,6 +92,15 @@ Cloudflare R2 object lifecycle:
 These provider facts must be checked against current provider documentation
 again before public beta signoff.
 
+The production metadata check is:
+
+```powershell
+python -m aevryn.cli backup-retention-config-check
+```
+
+The command validates declared Supabase plan/window metadata and R2
+deletion/lifecycle metadata without printing secrets.
+
 ---
 
 # Required Public-Beta Backup Posture

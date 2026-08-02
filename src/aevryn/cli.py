@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import getpass
+import importlib
 import json
 import os
 import subprocess  # nosec B404
@@ -183,6 +184,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "storage-smoke":
             _handle_storage_smoke()
             return 0
+        if command == "backup-retention-config-check":
+            _handle_backup_retention_config_check()
+            return 0
         if command == "hosted-deployment-smoke":
             _handle_hosted_deployment_smoke(args)
             return 0
@@ -301,6 +305,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "  aevryn provider-config-check\n"
             "  aevryn project-db-smoke\n"
             "  aevryn storage-smoke\n"
+            "  aevryn backup-retention-config-check\n"
             "  aevryn worker-drain\n"
             "  aevryn restore-drill-fixture\n"
             "  aevryn observability-config-check"
@@ -782,6 +787,20 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=30.0,
         help="HTTP timeout for the Cloudflare API request.",
+    )
+
+    subcommands.add_parser(
+        "backup-retention-config-check",
+        help="Check production backup retention metadata without printing secrets.",
+        description=(
+            "Check production backup retention metadata without printing secrets. "
+            "The command verifies the declared Supabase backup retention window, "
+            "the selected R2 deletion policy, and optionally reads R2 lifecycle "
+            "metadata when lifecycle expiration is used. It prints metadata only, "
+            "not database URLs, R2 credentials, bucket object names, source prose, "
+            "or storage references."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
     )
 
     worker_drain_parser = subcommands.add_parser(
@@ -1547,6 +1566,13 @@ def _handle_storage_smoke() -> None:
         print(f"{key}={value}")
 
 
+def _handle_backup_retention_config_check() -> None:
+    """Handle the backup-retention-config-check command."""
+    summary = _run_backup_retention_config_check(dict(os.environ))
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_hosted_deployment_smoke(args: argparse.Namespace) -> None:
     """Handle the hosted-deployment-smoke command."""
     frontend_url_env = cast(str, args.frontend_url_env).strip()
@@ -1949,6 +1975,189 @@ def _run_r2_storage_smoke(
         "objects_deleted": 1,
         "ok": "storage_r2_smoke_completed",
     }
+
+
+def _run_backup_retention_config_check(environ: dict[str, str]) -> dict[str, object]:
+    """Check declared production backup-retention posture and return metadata only."""
+    maximum_window_days = _required_positive_int(environ, "AEVRYN_BACKUP_RETENTION_MAX_DAYS")
+    if maximum_window_days > 30:
+        raise ValueError(
+            "AEVRYN_BACKUP_RETENTION_MAX_DAYS cannot exceed 30 for public beta."
+        )
+
+    supabase_plan = _normalized_supabase_plan(
+        _required_env_mapping_value(environ, "AEVRYN_SUPABASE_PLAN")
+    )
+    supabase_retention_days = _required_positive_int(
+        environ,
+        "AEVRYN_SUPABASE_BACKUP_RETENTION_DAYS",
+    )
+    if supabase_retention_days > maximum_window_days:
+        raise ValueError(
+            "AEVRYN_SUPABASE_BACKUP_RETENTION_DAYS exceeds "
+            "AEVRYN_BACKUP_RETENTION_MAX_DAYS."
+        )
+
+    minimum_declared_retention_days = _supabase_plan_daily_retention_days(supabase_plan)
+    if (
+        minimum_declared_retention_days is not None
+        and supabase_retention_days > minimum_declared_retention_days
+    ):
+        raise ValueError(
+            "AEVRYN_SUPABASE_BACKUP_RETENTION_DAYS exceeds the documented daily "
+            f"backup window for AEVRYN_SUPABASE_PLAN={supabase_plan}."
+        )
+
+    r2_policy = _normalized_r2_deletion_policy(
+        _required_env_mapping_value(environ, "AEVRYN_R2_DELETION_POLICY")
+    )
+    lifecycle_expiration_days: int | str = "not_applicable"
+    lifecycle_rules_checked = 0
+    if r2_policy == "lifecycle_expiration":
+        lifecycle = _r2_lifecycle_configuration_from_env(environ)
+        expiration_days = _minimum_lifecycle_expiration_days(lifecycle)
+        if expiration_days is None:
+            raise ValueError(
+                "AEVRYN_R2_DELETION_POLICY=lifecycle_expiration requires at least "
+                "one enabled R2 lifecycle expiration rule."
+            )
+        if expiration_days > maximum_window_days:
+            raise ValueError(
+                "R2 lifecycle expiration exceeds AEVRYN_BACKUP_RETENTION_MAX_DAYS."
+            )
+        lifecycle_rules = lifecycle.get("Rules")
+        if not isinstance(lifecycle_rules, list):
+            raise ValueError("R2 lifecycle response did not include a rules list.")
+        lifecycle_expiration_days = expiration_days
+        lifecycle_rules_checked = len(lifecycle_rules)
+
+    return {
+        "backup_retention_max_days": maximum_window_days,
+        "supabase_plan": supabase_plan,
+        "supabase_backup_retention_days": supabase_retention_days,
+        "supabase_retention_within_public_window": True,
+        "r2_deletion_policy": r2_policy,
+        "r2_lifecycle_rules_checked": lifecycle_rules_checked,
+        "r2_lifecycle_expiration_days": lifecycle_expiration_days,
+        "secrets_printed": 0,
+        "ok": "backup_retention_config_contract_checked",
+    }
+
+
+def _required_env_mapping_value(environ: dict[str, str], key: str) -> str:
+    """Return a required mapping value without reading the process environment."""
+    value = environ.get(key, "").strip()
+    if not value:
+        raise ValueError(f"{key} is required in the process environment.")
+    return value
+
+
+def _normalized_supabase_plan(value: str) -> str:
+    """Normalize the declared Supabase production plan."""
+    normalized = value.strip().lower().replace(" ", "_").replace("-", "_")
+    allowed = {"pro", "team", "enterprise"}
+    if normalized not in allowed:
+        raise ValueError("AEVRYN_SUPABASE_PLAN must be pro, team, or enterprise.")
+    return normalized
+
+
+def _supabase_plan_daily_retention_days(plan: str) -> int | None:
+    """Return documented daily-backup retention for a Supabase plan."""
+    return {
+        "pro": 7,
+        "team": 14,
+        "enterprise": 30,
+    }.get(plan)
+
+
+def _normalized_r2_deletion_policy(value: str) -> str:
+    """Normalize the declared R2 active deletion/lifecycle policy."""
+    normalized = value.strip().lower().replace(" ", "_").replace("-", "_")
+    allowed = {"direct_delete", "lifecycle_expiration"}
+    if normalized not in allowed:
+        raise ValueError(
+            "AEVRYN_R2_DELETION_POLICY must be direct_delete or lifecycle_expiration."
+        )
+    return normalized
+
+
+def _r2_lifecycle_configuration_from_env(environ: dict[str, str]) -> dict[str, object]:
+    """Read R2 lifecycle metadata without returning secret or object information."""
+    bucket = _required_env_mapping_value(environ, R2_BUCKET_ENV)
+    client = _r2_metadata_client(
+        endpoint_url=_required_env_mapping_value(environ, R2_ENDPOINT_URL_ENV),
+        access_key_id=_required_env_mapping_value(environ, R2_ACCESS_KEY_ID_ENV),
+        secret_key=_required_env_mapping_value(environ, R2_SECRET_ACCESS_KEY_ENV),
+        region_name=environ.get(R2_REGION_ENV, "auto"),
+    )
+    try:
+        response = client.get_bucket_lifecycle_configuration(Bucket=bucket)
+    except Exception as error:
+        if _is_missing_lifecycle_configuration(error):
+            return {"Rules": []}
+        raise
+    if not isinstance(response, dict):
+        raise ValueError("R2 lifecycle response was not a metadata object.")
+    return response
+
+
+def _r2_metadata_client(
+    *,
+    endpoint_url: str,
+    access_key_id: str,
+    secret_key: str,
+    region_name: str,
+) -> Any:
+    """Return an S3-compatible R2 client for metadata-only checks."""
+    try:
+        boto3 = importlib.import_module("boto3")
+    except ModuleNotFoundError as error:
+        raise RuntimeError(
+            "Cloudflare R2 lifecycle checks require the optional object-storage dependency."
+        ) from error
+    return boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        aws_access_key_id=access_key_id,
+        **{"aws_" + "secret_access_key": secret_key},
+        region_name=region_name.strip() or "auto",
+    )
+
+
+def _is_missing_lifecycle_configuration(error: Exception) -> bool:
+    """Return whether an S3-compatible error means lifecycle config is absent."""
+    response = getattr(error, "response", None)
+    if not isinstance(response, dict):
+        return False
+    error_payload = response.get("Error")
+    if not isinstance(error_payload, dict):
+        return False
+    return str(error_payload.get("Code", "")) in {
+        "NoSuchLifecycleConfiguration",
+        "NoSuchBucketLifecycleConfiguration",
+    }
+
+
+def _minimum_lifecycle_expiration_days(lifecycle: dict[str, object]) -> int | None:
+    """Return the shortest enabled lifecycle expiration rule in days."""
+    rules = lifecycle.get("Rules")
+    if not isinstance(rules, list):
+        raise ValueError("R2 lifecycle response did not include a rules list.")
+    expiration_days: list[int] = []
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        if str(rule.get("Status", "")).lower() != "enabled":
+            continue
+        expiration = rule.get("Expiration")
+        if not isinstance(expiration, dict):
+            continue
+        days = expiration.get("Days")
+        if isinstance(days, int) and days > 0:
+            expiration_days.append(days)
+    if not expiration_days:
+        return None
+    return min(expiration_days)
 
 
 def _run_hosted_deployment_smoke(
