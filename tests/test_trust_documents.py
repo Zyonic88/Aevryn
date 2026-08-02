@@ -1477,7 +1477,10 @@ def test_openai_production_account_verification_keeps_provider_beta_blocked() ->
 
     required_terms = (
         "Verification: OpenAI production organization and project data controls",
-        "Status: In progress - official sources and Aevryn technical controls verified; production dashboard controls pending",
+        (
+            "Status: In progress - official sources and Aevryn technical controls "
+            "verified; production dashboard controls pending"
+        ),
         "Public beta: Blocked",
         "Verify the actual production account, not the intended policy.",
         "docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md",
