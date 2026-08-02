@@ -49,7 +49,40 @@ describe("public information pages", () => {
     expect(screen.getByText(/Backups are not used for AI training, analytics/u)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI Providers" })).toBeInTheDocument();
     expect(screen.getByText(/The current provider candidate is OpenAI/u)).toBeInTheDocument();
+    expect(screen.getByText(/extraction requests set store=false/u)).toBeInTheDocument();
+    expect(screen.getByText(/OpenAI API inputs and outputs are not used for model training by default/u)).toBeInTheDocument();
+    expect(screen.getByText(/abuse-monitoring logs may contain prompts and responses/u)).toBeInTheDocument();
+    expect(screen.getByText(/does not represent Modified Abuse Monitoring/u)).toBeInTheDocument();
     expect(screen.getByText(/Provider output is not Canon/u)).toBeInTheDocument();
+  });
+
+  it("shows deletion and backup boundaries on the user rights page", () => {
+    render(
+      <MemoryRouter initialEntries={["/user-rights"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Deletion And Backups" })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Deletion removes active Aevryn-owned project and story storage/u),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/up to 30 days for authorized disaster recovery only/u)).toBeInTheDocument();
+    expect(screen.getByText(/Backups are not used for AI training, analytics/u)).toBeInTheDocument();
+  });
+
+  it("publishes the 18 plus public beta and restricted explicit-content boundary", () => {
+    render(
+      <MemoryRouter initialEntries={["/content"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Public Beta" })).toBeInTheDocument();
+    expect(screen.getByText("Aevryn V2 public beta is 18+ only.")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Restricted explicit sexual content processing remains disabled/u),
+    ).toBeInTheDocument();
   });
 
   it("links public pages from the login screen", () => {
