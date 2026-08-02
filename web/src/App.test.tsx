@@ -1632,7 +1632,7 @@ describe("App shell routing", () => {
     expect(screen.getByText("Showing 1 of 1 character profiles.")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Search characters"));
     expect(screen.getByLabelText("Source text")).not.toBeVisible();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview characters" }));
     expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
 
@@ -1652,7 +1652,7 @@ describe("App shell routing", () => {
       /source_alpha|location_hangar|organization_|item_|character_mark|_chapter_\d{3}_scene_\d{3}|source_alpha_anchor/u,
     );
     expect(screen.getByLabelText("AI response JSON")).not.toBeVisible();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview world" }));
     expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
     const previewWorldDetails = screen.getAllByText("World details")[0].closest("details");
@@ -1676,7 +1676,7 @@ describe("App shell routing", () => {
       /Chapter 1, Scene 1\s+-\s+Chapter 1 \/ Scene 1; 1 change/u,
     );
     timelineDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview timeline" }));
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
 
@@ -1694,7 +1694,7 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Characters Present",
     );
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview scene" }));
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
     const previewSceneDetails = screen.getAllByText("Scene details")[0].closest("details");
@@ -1721,7 +1721,7 @@ describe("App shell routing", () => {
       /source_alpha|fact_character_mark|record_|_chapter_\d{3}_scene_\d{3}|source_alpha_anchor/u,
     );
     expect(continuityOutput).toHaveTextContent("1 retained canon");
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview continuity" }));
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
     const previewContinuityDetails = screen.getAllByText("Continuity details")[0].closest("details");
@@ -1738,7 +1738,7 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Image Prompt",
     );
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview prompt pack" }));
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
 
@@ -1752,7 +1752,7 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "MARKDOWN",
     );
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     fillExportDeveloperPreviewFields();
     await user.click(await screen.findByRole("button", { name: "Preview export" }));
     expect(
@@ -3510,7 +3510,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.clear(screen.getByLabelText("Character IDs"));
@@ -3846,7 +3846,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview characters" }));
     expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
 
@@ -3904,7 +3904,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Characters" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview characters" }));
 
     expect(
@@ -3951,7 +3951,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Characters" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview characters" }));
     expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
 
@@ -3983,7 +3983,7 @@ describe("App shell routing", () => {
     expect(
       screen.getByText("1 review item; 2 review items need character review"),
     ).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}The hangar was quiet.");
     await user.clear(screen.getByLabelText("World entity IDs"));
@@ -4014,7 +4014,7 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Timeline" })).toBeInTheDocument();
     expect(await screen.findByText("Chapter 1 / Scene 1; 1 change")).toBeInTheDocument();
     expect(await screen.findByText("Chapter 2 / Scene 1; 1 change")).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
@@ -4038,7 +4038,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Scenes" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.clear(screen.getByLabelText("Character IDs"));
@@ -4068,7 +4068,7 @@ describe("App shell routing", () => {
     expect(await screen.findByLabelText("Chapter 1, Scene 1 continuity details")).toBeInTheDocument();
     expect(await screen.findByLabelText("Chapter 2, Scene 1 continuity details")).toBeInTheDocument();
     expect(screen.queryByLabelText("Scene 1 continuity details")).not.toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
@@ -4156,7 +4156,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Continuity" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
@@ -4225,7 +4225,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Continuity" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
@@ -4291,7 +4291,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Prompt Packs" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.clear(screen.getByLabelText("Character IDs"));
@@ -4378,7 +4378,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Prompt Packs" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
@@ -4396,7 +4396,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Prompt Packs" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
 
@@ -4447,7 +4447,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Prompt Packs" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
 
@@ -4469,9 +4469,9 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Exports" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     expect(
-      screen.getByText(/Technical review requires real source text and extraction JSON/u),
+      screen.getByText(/Advanced preview requires real source text and extraction JSON/u),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Preview export" })).toBeDisabled();
     fillExportDeveloperPreviewFields();
@@ -4663,7 +4663,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Exports" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     fillExportDeveloperPreviewFields();
     await user.click(screen.getByRole("button", { name: "Preview export" }));
     expect(
@@ -4719,7 +4719,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Exports" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     fillExportDeveloperPreviewFields();
     await user.click(screen.getByRole("button", { name: "Preview export" }));
     expect(
@@ -4770,7 +4770,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Exports" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     fillExportDeveloperPreviewFields();
     await user.click(screen.getByRole("button", { name: "Preview export" }));
     expect(await screen.findByText("Export preview failed.")).toBeInTheDocument();
@@ -4820,7 +4820,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Continuity" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
     expect(
@@ -4839,7 +4839,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Continuity" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
 
@@ -4890,7 +4890,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Continuity" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
 
@@ -4912,7 +4912,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Scenes" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview scene" }));
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
 
@@ -4962,7 +4962,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Scenes" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview scene" }));
 
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
@@ -5008,7 +5008,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Scenes" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview scene" }));
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
 
@@ -5034,7 +5034,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Timeline" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
 
@@ -5081,7 +5081,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Timeline" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
 
     expect(await screen.findByRole("heading", { name: "No timeline scenes" })).toBeInTheDocument();
@@ -5127,7 +5127,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Timeline" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
 
@@ -5153,7 +5153,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "World" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview world" }));
     expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
 
@@ -5199,7 +5199,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "World" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview world" }));
 
     expect(await screen.findByRole("heading", { name: "No world entities" })).toBeInTheDocument();
@@ -5244,7 +5244,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "World" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview world" }));
     expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
 
