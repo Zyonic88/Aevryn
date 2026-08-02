@@ -26,6 +26,11 @@ Use: Evidence-bounded extraction
 Approval: Internal alpha only
 ```
 
+The official OpenAI source posture was rechecked on 2026-08-01. The candidate
+disclosure below still matches the current source-level boundary, but public
+beta remains blocked until the production OpenAI organization/project dashboard
+settings are verified and legal-sensitive wording is reviewed.
+
 ---
 
 # Core Rule
