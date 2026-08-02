@@ -61,8 +61,18 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
         </p>
       </div>
 
-      <section className="project-panel">
-        <h2>Settings Areas</h2>
+      <section className="project-panel settings-command-panel">
+        <header className="surface-heading">
+          <div>
+            <p className="eyebrow">Control Surface</p>
+            <h2>Settings Areas</h2>
+            <p className="result-summary">
+              Project defaults are editable. Account, privacy, and diagnostics are surfaced here
+              without changing Canon.
+            </p>
+          </div>
+          <span className="surface-count-badge">V2</span>
+        </header>
         <div className="settings-scope-grid" aria-label="Settings areas">
           <SettingsAreaCard
             href="#project-settings"
@@ -98,7 +108,10 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
       </section>
 
       <section className="project-panel" id="project-settings">
-        <h2>Project Settings</h2>
+        <div className="settings-section-heading">
+          <h2>Project Settings</h2>
+          <span>Editable</span>
+        </div>
         <p className="field-note">
           Project settings affect output preferences. They do not override extracted Canon, evidence
           controls, or engine truth rules.
@@ -127,7 +140,10 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
       </section>
 
       <section className="project-panel" id="workspace-preferences">
-        <h2>Workspace Preferences</h2>
+        <div className="settings-section-heading">
+          <h2>Workspace Preferences</h2>
+          <span>Read-only</span>
+        </div>
         <dl className="settings-summary-list">
           <div>
             <dt>Login destination</dt>
@@ -149,7 +165,10 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
       </section>
 
       <section className="project-panel" id="account-settings">
-        <h2>Account</h2>
+        <div className="settings-section-heading">
+          <h2>Account</h2>
+          <span>Managed</span>
+        </div>
         <dl className="settings-summary-list">
           <div>
             <dt>Signed in as</dt>
@@ -171,7 +190,10 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
       </section>
 
       <section className="project-panel" id="privacy-data-settings">
-        <h2>Privacy & Data</h2>
+        <div className="settings-section-heading">
+          <h2>Privacy & Data</h2>
+          <span>Policy</span>
+        </div>
         <dl className="settings-summary-list">
           <div>
             <dt>Story ownership</dt>

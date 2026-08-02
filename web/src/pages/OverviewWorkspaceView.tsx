@@ -58,12 +58,22 @@ function ProjectOverview({
 }) {
   const activeSurfaces = outputs.surfaces.filter((surface) => surface.item_count > 0);
   const nextStep = recommendedNextStep(project.id, outputs);
+  const projectStatus = formatRunStatus(outputs.status);
   return (
     <>
-      <section className="project-panel" aria-label="Project state overview">
-        <h2>{project.name}</h2>
+      <section className="project-panel overview-command-panel" aria-label="Project state overview">
+        <header className="surface-heading">
+          <div>
+            <p className="eyebrow">Command Center</p>
+            <h2>{project.name}</h2>
+            <p className="result-summary">
+              Latest Canon state, next action, and workspace readiness for this project.
+            </p>
+          </div>
+          <span className="surface-count-badge">{projectStatus}</span>
+        </header>
         <dl className="metric-grid">
-          <Metric label="State" value={formatRunStatus(outputs.status)} />
+          <Metric label="State" value={projectStatus} />
           <Metric
             label="Run"
             value={
@@ -100,7 +110,10 @@ function ProjectOverview({
         <div className="quick-action-grid">
           {overviewActions(project.id, outputs).map((action) => (
             <NavLink key={action.to} to={action.to} aria-label={`${action.title} ${action.detail}`}>
-              <strong>{action.title}</strong>
+              <span className="quick-action-header">
+                <strong>{action.title}</strong>
+                <small>{action.action}</small>
+              </span>
               <span>{action.detail}</span>
             </NavLink>
           ))}
