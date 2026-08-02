@@ -86,7 +86,7 @@ Public legal pages are owner-reviewed and attorney-reviewed, or public beta rema
 Status:
 
 ```text
-Owner-controlled public posture recorded; public beta still blocked by
+Public wording consistency review passed; public beta still blocked by
 legal-sensitive wording, provider disclosure, backup wording, and final signoff
 ```
 
@@ -108,6 +108,7 @@ Tracking:
 * `docs/AEVRYN_PUBLIC_CONTACTS.md`
 * `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`
 * `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md`
+* `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md`
 * `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`
 * `docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md`
 
@@ -127,6 +128,9 @@ Verified evidence:
 * Public beta remains blocked until legal-sensitive wording, provider
   disclosure, backup wording, and final public-beta signoff are completed or
   explicitly accepted in the release-candidate record.
+* `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md` records that
+  public wording consistency passed without approving legal-sensitive wording
+  or public beta.
 
 ## 3. AI Provider Review
 

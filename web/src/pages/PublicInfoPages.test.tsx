@@ -52,6 +52,21 @@ describe("public information pages", () => {
     expect(screen.getByText(/Provider output is not Canon/u)).toBeInTheDocument();
   });
 
+  it("shows deletion and backup boundaries on the user rights page", () => {
+    render(
+      <MemoryRouter initialEntries={["/user-rights"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Deletion And Backups" })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Deletion removes active Aevryn-owned project and story storage/u),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/up to 30 days for authorized disaster recovery only/u)).toBeInTheDocument();
+    expect(screen.getByText(/Backups are not used for AI training, analytics/u)).toBeInTheDocument();
+  });
+
   it("links public pages from the login screen", () => {
     render(
       <MemoryRouter initialEntries={["/login"]}>

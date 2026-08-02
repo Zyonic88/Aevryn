@@ -196,6 +196,15 @@ export function UserRightsPage() {
           ],
         },
         {
+          title: "Deletion And Backups",
+          body: [
+            "You should be able to delete your projects.",
+            "Deletion removes active Aevryn-owned project and story storage.",
+            "The current public-beta wording candidate says encrypted production backups may retain deleted project or story data for up to 30 days for authorized disaster recovery only.",
+            "Backups are not used for AI training, analytics, support browsing, or product exploration.",
+          ],
+        },
+        {
           title: "Access",
           body: [
             "Employees do not browse customer stories by default.",

@@ -253,6 +253,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md",
         "docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md",
         "docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md",
+        "docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md",
         "docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md",
         "Cloudflare routing rules created, inbound delivery passed",
         "Cloudflare inbound DNS/routing health passed",
@@ -261,7 +262,10 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "aliases to zyonic88@gmail.com.",
         "SPF/DKIM/DMARC received-message verification passed.",
         "Initial public support/trust/privacy pages are published.",
-        "Support procedure owner review remains open.",
+        (
+            "Support procedure owner posture is recorded for metadata-first "
+            "support, and legal-sensitive support wording review remains open."
+        ),
         (
             "Public-beta backup retention wording candidate selected for "
             "owner/legal review, and official Supabase and Cloudflare R2 source "
@@ -271,6 +275,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`.",
         "Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.",
         "dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` now records",
+        "Public wording consistency review passed on 2026-08-02",
         "Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`.",
         "Official OpenAI source review was recorded on 2026-07-24",
         (
@@ -354,10 +359,15 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
 
     required_terms = (
         "Gate: Public support and contact readiness",
-        "Status: Contact paths verified; public support page published; support procedure drafted",
+        (
+            "Status: Contact paths verified; public support page published; "
+            "support posture owner-recorded"
+        ),
         "Public beta: Blocked",
         "Users must be able to get help without exposing manuscripts unnecessarily.",
         "The required aliases are provisioned and tested",
+        "docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md",
+        "docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md",
         "docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md",
         "general support",
         "privacy questions",
@@ -371,7 +381,8 @@ def test_public_support_readiness_document_tracks_contact_paths() -> None:
         "source-prose redaction guidance",
         "Support should not ask for full source prose by default.",
         "Initial public support page is published at /support",
-        "support procedure owner review",
+        "Owner posture is recorded for metadata-first support",
+        "legal-sensitive support wording remains blocked until review",
     )
 
     for term in required_terms:
@@ -384,9 +395,11 @@ def test_public_support_procedure_defines_metadata_first_triage() -> None:
 
     required_terms = (
         "Procedure: Public support operations",
-        "Status: Draft operational procedure",
+        "Status: Owner posture recorded - legal-sensitive wording still blocked",
         "Public beta: Blocked",
         "Support solves the issue with metadata first.",
+        "docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md",
+        "docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md",
         "support@aevryn.ai",
         "privacy@aevryn.ai",
         "security@aevryn.ai",
@@ -399,6 +412,7 @@ def test_public_support_procedure_defines_metadata_first_triage() -> None:
         "Full manuscripts and full chapters are not valid default support artifacts.",
         "Initial human acknowledgment within 2 business days.",
         "metadata-first triage",
+        "support procedure owner posture confirms metadata-first triage",
         "Aevryn can triage user support requests through verified product-domain aliases",
     )
 
@@ -465,6 +479,7 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md",
         "docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md",
         "docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md",
+        "docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md",
         "Page Review Matrix",
         "/trust",
         "/privacy",
@@ -490,10 +505,12 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "OpenAI production account verification checklist: recorded with owner dashboard review",
         "OpenAI provider config check: passed with metadata-only output on 2026-07-17",
         "Backup retention provider source review: recorded on 2026-08-02",
+        "Public wording consistency review: passed on 2026-08-02",
         "Remaining Blocking Reviews",
         "Owner review: owner-controlled public-facing product posture decisions recorded",
         "Owner public review record: updated",
         "Owner dated review worksheet: updated",
+        "Public wording consistency review: passed",
         "Attorney review: open",
         "Public legal review packet: prepared",
         "Provider terms and data-use review: open",
