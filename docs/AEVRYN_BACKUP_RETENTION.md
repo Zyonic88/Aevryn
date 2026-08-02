@@ -77,6 +77,9 @@ The selected public-beta wording candidate is recorded in `docs/AEVRYN_BACKUP_RE
 
 The dated owner/legal review packet is recorded in `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`.
 
+The production verification command is recorded in
+`docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md`.
+
 Candidate posture:
 
 ```text
@@ -88,7 +91,11 @@ Backups are not used for AI training, analytics, support browsing, or product ex
 
 This candidate must be verified against final production backup provider behavior before public beta.
 
-Official Supabase and Cloudflare R2 source facts were rechecked on 2026-08-02. That recheck supports the selected public-beta maximum-window candidate, but owner verification of the production Supabase plan retention and production R2 lifecycle/deletion policy remains required.
+Official Supabase and Cloudflare R2 source facts were rechecked on 2026-08-02.
+That recheck supports the selected public-beta maximum-window candidate, and
+`aevryn backup-retention-config-check` now verifies declared production
+Supabase plan/window metadata and R2 deletion/lifecycle metadata. Owner
+production values and legal wording approval remain required.
 
 ---
 
@@ -115,5 +122,5 @@ Future phases should add:
 * account-level deletion
 * restore drills
 * backup access logs
-* backup-retention CI/deployment checks
+* hosted backup-retention CI/deployment checks
 * production object-storage lifecycle policy tests

@@ -104,6 +104,7 @@ OpenAI production account verification checklist: recorded with owner dashboard 
 Provider disclosure product-truth wording approval: recorded on 2026-08-02
 OpenAI provider config check: passed with metadata-only output on 2026-07-17
 Backup retention provider source review: recorded on 2026-08-02
+Backup retention production verifier: implemented
 Public wording consistency review: passed on 2026-08-02
 ```
 
@@ -121,8 +122,8 @@ Public legal review packet: prepared
 Provider terms and data-use review: open
 Provider disclosure legal review: open
 Backup retention public wording owner/legal review: open after source recheck
-Production Supabase plan retention verification: open
-Production R2 lifecycle/deletion policy verification: open
+Production Supabase plan retention verification: open - run and record production verifier
+Production R2 lifecycle/deletion policy verification: open - run and record production verifier
 Support procedure owner review: recorded for metadata-first support posture
 Final public-beta approval: open
 ```
