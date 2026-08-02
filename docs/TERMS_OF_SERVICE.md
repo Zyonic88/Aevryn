@@ -24,6 +24,9 @@ support channels.
 
 Users must be legally able to use Aevryn under applicable law.
 
+For V2 public beta, Aevryn is 18+ only. Public beta account creation should
+require the user to confirm they are eligible to use an adult-only beta.
+
 Public launch must include final attorney-reviewed age, minor-use, and parental
 consent language before Aevryn is offered to minors or users who may be treated
 as minors in their jurisdiction.

@@ -235,11 +235,20 @@ handling language for sensitive data under applicable law.
 
 # Children's Privacy
 
-Aevryn is not intended for children unless and until Aetherra Labs publishes an
-attorney-reviewed children's privacy posture.
+Aevryn V2 public beta is 18+ only and is not intended for children or minors.
+Public beta account creation should require an adult eligibility acknowledgement
+without collecting birthdate, government ID, or identity documents by default.
+
+Aevryn must not knowingly collect, process, or retain personal information from
+children unless and until Aetherra Labs publishes an attorney-reviewed
+children's privacy posture.
 
 Before public launch, counsel must approve minimum age, parental consent,
 minor-user, school-use, and content-safety language.
+
+Explicit sexual content processing remains blocked unless attorney review,
+provider policy review, and an approved age-verification or age-assurance
+approach are complete.
 
 ---
 

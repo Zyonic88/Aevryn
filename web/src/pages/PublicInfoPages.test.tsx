@@ -71,6 +71,20 @@ describe("public information pages", () => {
     expect(screen.getByText(/Backups are not used for AI training, analytics/u)).toBeInTheDocument();
   });
 
+  it("publishes the 18 plus public beta and restricted explicit-content boundary", () => {
+    render(
+      <MemoryRouter initialEntries={["/content"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Public Beta" })).toBeInTheDocument();
+    expect(screen.getByText("Aevryn V2 public beta is 18+ only.")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Restricted explicit sexual content processing remains disabled/u),
+    ).toBeInTheDocument();
+  });
+
   it("links public pages from the login screen", () => {
     render(
       <MemoryRouter initialEntries={["/login"]}>
