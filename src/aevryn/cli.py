@@ -2025,8 +2025,11 @@ def _run_backup_retention_config_check(environ: dict[str, str]) -> dict[str, obj
             raise ValueError(
                 "R2 lifecycle expiration exceeds AEVRYN_BACKUP_RETENTION_MAX_DAYS."
             )
+        lifecycle_rules = lifecycle.get("Rules")
+        if not isinstance(lifecycle_rules, list):
+            raise ValueError("R2 lifecycle response did not include a rules list.")
         lifecycle_expiration_days = expiration_days
-        lifecycle_rules_checked = len(lifecycle.get("Rules", ()))
+        lifecycle_rules_checked = len(lifecycle_rules)
 
     return {
         "backup_retention_max_days": maximum_window_days,
