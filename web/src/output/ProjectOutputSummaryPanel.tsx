@@ -122,9 +122,17 @@ function ProjectOutputSummary({
   }
 
   return (
-    <section className="project-panel" aria-label="Processed project output">
-      <h2>{surfaceSummary.title}</h2>
-      <p className="result-summary">{surfaceSummary.summary}</p>
+    <section className="project-panel output-summary-panel" aria-label="Processed project output">
+      <header className="surface-heading">
+        <div>
+          <p className="eyebrow">{surfaceEyebrow(surface)}</p>
+          <h2>{surfaceSummary.title}</h2>
+          <p className="result-summary">{surfaceSummary.summary}</p>
+        </div>
+        <span className="surface-count-badge">
+          {surfaceSummary.item_count.toLocaleString()} {surfaceItemLabel(surface)}
+        </span>
+      </header>
       <dl className="metric-grid">
         <Metric label="State" value={formatRunStatus(surfaceSummary.status)} />
         <Metric label="Items" value={surfaceSummary.item_count.toLocaleString()} />
@@ -154,6 +162,35 @@ function ProjectOutputSummary({
       ) : null}
     </section>
   );
+}
+
+function surfaceEyebrow(surface: OutputSurface): string {
+  if (surface === "prompts") {
+    return "Production";
+  }
+  if (surface === "exports") {
+    return "Delivery";
+  }
+  return "Canon surface";
+}
+
+function surfaceItemLabel(surface: OutputSurface): string {
+  if (surface === "characters") {
+    return "profiles";
+  }
+  if (surface === "world") {
+    return "entries";
+  }
+  if (surface === "timeline") {
+    return "changes";
+  }
+  if (surface === "scenes" || surface === "prompts") {
+    return "scenes";
+  }
+  if (surface === "exports") {
+    return "options";
+  }
+  return "records";
 }
 
 function hasIdentityReviewItems(outputs: ProjectOutputs): boolean {
