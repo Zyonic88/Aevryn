@@ -18,6 +18,7 @@ from aevryn.cli import (
     _run_audit_access_report,
     _run_audit_access_verify,
     _run_audit_ledger_verify,
+    _run_backup_retention_config_check,
     _run_cloud_run_deployment_check,
     _run_cloudflare_pages_config_check,
     _run_hosted_deployment_smoke,
@@ -605,6 +606,109 @@ def test_storage_smoke_reads_env_without_printing_credentials(
     assert "secret-r2-secret-key" not in captured.out
     assert "secret-r2-access-key" not in captured.err
     assert "secret-r2-secret-key" not in captured.err
+
+
+def test_backup_retention_config_check_reports_metadata_only_direct_delete(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Backup retention config check should verify metadata without printing secrets."""
+    monkeypatch.setenv("AEVRYN_BACKUP_RETENTION_MAX_DAYS", "30")
+    monkeypatch.setenv("AEVRYN_SUPABASE_PLAN", "team")
+    monkeypatch.setenv("AEVRYN_SUPABASE_BACKUP_RETENTION_DAYS", "14")
+    monkeypatch.setenv("AEVRYN_R2_DELETION_POLICY", "direct-delete")
+    monkeypatch.setenv("AEVRYN_R2_ACCESS_KEY_ID", "secret-r2-access-key")
+    monkeypatch.setenv("AEVRYN_R2_SECRET_ACCESS_KEY", "secret-r2-secret-key")
+
+    exit_code = main(["backup-retention-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "backup_retention_max_days=30" in captured.out
+    assert "supabase_plan=team" in captured.out
+    assert "supabase_backup_retention_days=14" in captured.out
+    assert "r2_deletion_policy=direct_delete" in captured.out
+    assert "r2_lifecycle_expiration_days=not_applicable" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=backup_retention_config_contract_checked" in captured.out
+    assert "secret-r2-access-key" not in captured.out
+    assert "secret-r2-secret-key" not in captured.out
+    assert "secret-r2-access-key" not in captured.err
+    assert "secret-r2-secret-key" not in captured.err
+
+
+def test_backup_retention_config_check_rejects_supabase_window_over_public_max() -> None:
+    """Supabase retention cannot exceed the public wording maximum."""
+    with pytest.raises(ValueError, match="exceeds AEVRYN_BACKUP_RETENTION_MAX_DAYS"):
+        _run_backup_retention_config_check(
+            {
+                "AEVRYN_BACKUP_RETENTION_MAX_DAYS": "14",
+                "AEVRYN_SUPABASE_PLAN": "enterprise",
+                "AEVRYN_SUPABASE_BACKUP_RETENTION_DAYS": "30",
+                "AEVRYN_R2_DELETION_POLICY": "direct_delete",
+            }
+        )
+
+
+def test_backup_retention_config_check_rejects_plan_incompatible_window() -> None:
+    """Declared retention should match the documented Supabase plan window."""
+    with pytest.raises(ValueError, match="documented daily backup window"):
+        _run_backup_retention_config_check(
+            {
+                "AEVRYN_BACKUP_RETENTION_MAX_DAYS": "30",
+                "AEVRYN_SUPABASE_PLAN": "pro",
+                "AEVRYN_SUPABASE_BACKUP_RETENTION_DAYS": "14",
+                "AEVRYN_R2_DELETION_POLICY": "direct_delete",
+            }
+        )
+
+
+def test_backup_retention_config_check_reads_r2_lifecycle_metadata(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Lifecycle mode should inspect metadata and enforce the public max."""
+    monkeypatch.setattr(
+        "aevryn.cli._r2_lifecycle_configuration_from_env",
+        lambda _environ: {
+            "Rules": [
+                {"Status": "Disabled", "Expiration": {"Days": 90}},
+                {"Status": "Enabled", "Expiration": {"Days": 21}},
+            ]
+        },
+    )
+
+    summary = _run_backup_retention_config_check(
+        {
+            "AEVRYN_BACKUP_RETENTION_MAX_DAYS": "30",
+            "AEVRYN_SUPABASE_PLAN": "enterprise",
+            "AEVRYN_SUPABASE_BACKUP_RETENTION_DAYS": "30",
+            "AEVRYN_R2_DELETION_POLICY": "lifecycle_expiration",
+        }
+    )
+
+    assert summary["r2_lifecycle_rules_checked"] == 2
+    assert summary["r2_lifecycle_expiration_days"] == 21
+    assert summary["ok"] == "backup_retention_config_contract_checked"
+
+
+def test_backup_retention_config_check_rejects_missing_lifecycle_expiration(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Lifecycle mode should fail closed when no enabled expiration is present."""
+    monkeypatch.setattr(
+        "aevryn.cli._r2_lifecycle_configuration_from_env",
+        lambda _environ: {"Rules": [{"Status": "Enabled"}]},
+    )
+
+    with pytest.raises(ValueError, match="requires at least one enabled"):
+        _run_backup_retention_config_check(
+            {
+                "AEVRYN_BACKUP_RETENTION_MAX_DAYS": "30",
+                "AEVRYN_SUPABASE_PLAN": "team",
+                "AEVRYN_SUPABASE_BACKUP_RETENTION_DAYS": "14",
+                "AEVRYN_R2_DELETION_POLICY": "lifecycle_expiration",
+            }
+        )
 
 
 def test_hosted_deployment_smoke_help_describes_frontend_api_check(

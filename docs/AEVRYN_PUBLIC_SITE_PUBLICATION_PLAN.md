@@ -18,7 +18,7 @@ Status: Started
 Public beta: Blocked
 ```
 
-The required contact aliases are verified. The initial public pages are implemented in the browser app and reachable on the production app domain. Owner review, legal review where required, backup/provider verification, and final public-beta signoff remain open. Owner review is tracked in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.
+The required contact aliases are verified. The initial public pages are implemented in the browser app and reachable on the production app domain. Public wording consistency review passed on 2026-08-02. Provider disclosure product-truth wording approval is recorded on 2026-08-02. Legal review where required, provider disclosure legal review, backup retention wording owner/legal review, and final public-beta signoff remain open. Owner review is tracked in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.
 
 ---
 
@@ -39,9 +39,9 @@ Public copy must not convert internal intent into public promises.
 | Trust | `/trust` | `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`, `docs/AEVRYN_TRUST_MODEL.md`, `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md` | Implemented; owner review pending |
 | Privacy | `/privacy` | `docs/PRIVACY_POLICY.md`, `docs/AEVRYN_PRIVACY.md` | Implemented as draft; attorney review required |
 | Security | `/security` | `docs/AEVRYN_SECURITY.md`, `docs/SECURITY_DISCLOSURE.md` | Implemented as draft; incident-response review required |
-| User Rights | `/user-rights` | `docs/AEVRYN_USER_RIGHTS.md`, `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`, `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md` | Implemented with public-beta backup wording candidate; owner/legal review pending |
+| User Rights | `/user-rights` | `docs/AEVRYN_USER_RIGHTS.md`, `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`, `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`, `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md` | Implemented with public-beta backup wording candidate; provider source rechecked; owner/legal review pending |
 | Content Classification | `/content` | `docs/AEVRYN_CONTENT_CLASSIFICATION.md` | Implemented as draft; legal/provider-policy review required |
-| Support | `/support` | `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`, `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`, `docs/AEVRYN_PUBLIC_CONTACTS.md`, `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md` | Implemented with verified contact details; support procedure owner review pending |
+| Support | `/support` | `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`, `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`, `docs/AEVRYN_PUBLIC_CONTACTS.md`, `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`, `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md` | Implemented with verified contact details; metadata-first support owner posture recorded; legal-sensitive wording review pending |
 | Security Disclosure | `/security/disclosure` | `docs/SECURITY_DISCLOSURE.md` | Implemented as draft; safe-harbor review required |
 | Terms | `/terms` | `docs/TERMS_OF_SERVICE.md` | Implemented as draft; attorney review required |
 | Acceptable Use | `/acceptable-use` | `docs/ACCEPTABLE_USE_POLICY.md` | Implemented as draft; attorney review required |

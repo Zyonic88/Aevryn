@@ -1058,11 +1058,15 @@ describe("App shell routing", () => {
     expect(screen.queryByText("Aevryn Web Alpha Shell")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Display name")).toHaveValue("");
     expect(screen.getByLabelText("Email")).toHaveValue("");
+    expect(
+      screen.getByLabelText(/Aevryn public beta is 18\+ only/u),
+    ).not.toBeChecked();
     await user.clear(screen.getByLabelText("Display name"));
     await user.type(screen.getByLabelText("Display name"), "  Demo   User  ");
     await user.clear(screen.getByLabelText("Email"));
     await user.type(screen.getByLabelText("Email"), " DEMO.User@example.com ");
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
+    await user.click(screen.getByLabelText(/Aevryn public beta is 18\+ only/u));
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
     expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
@@ -1075,6 +1079,7 @@ describe("App shell routing", () => {
       display_name: "Demo User",
       email: "demo.user@example.com",
       password: "StrongPass123",
+      beta_eligibility_confirmed: true,
     });
     expect(registerBody.now).toEqual(expect.any(String));
   });
@@ -1092,9 +1097,33 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Display name"), "Demo User");
     await user.type(screen.getByLabelText("Email"), "demo@example.com");
     await user.type(screen.getByLabelText("Password"), "short");
+    await user.click(screen.getByLabelText(/Aevryn public beta is 18\+ only/u));
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
     expect(await screen.findByText("Password must be at least 12 characters.")).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.authRegister)),
+    ).toBe(false);
+  });
+
+  it("requires public beta eligibility before registering", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.mocked(fetch);
+
+    render(
+      <MemoryRouter initialEntries={["/register"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText("Display name"), "Demo User");
+    await user.type(screen.getByLabelText("Email"), "demo@example.com");
+    await user.type(screen.getByLabelText("Password"), "StrongPass123");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(
+      await screen.findByText(/Aevryn public beta is 18\+ only\. Confirm eligibility/u),
+    ).toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.authRegister)),
     ).toBe(false);

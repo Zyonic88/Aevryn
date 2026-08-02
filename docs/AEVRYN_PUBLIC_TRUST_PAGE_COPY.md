@@ -69,7 +69,7 @@ Aevryn is designed to avoid putting full manuscripts, full chapters, full AI res
 
 When you delete a story, Aevryn removes it from active Aevryn-owned product storage. The current public-beta wording candidate says encrypted production backups may retain deleted project or story data for up to 30 days for authorized disaster recovery only. Backups are not used for AI training, analytics, support browsing, or product exploration.
 
-When provider-backed extraction is enabled, Aevryn may send selected story excerpts, scene context, evidence anchors, extraction instructions, and structured-output requirements to a reviewed AI provider. The current provider candidate is OpenAI. Provider output is not Canon; Aevryn validates provider output against story evidence before accepting anything into project state. Provider-backed extraction must remain disabled for public beta unless provider data-use terms, retention behavior, abuse-monitoring behavior, and no-training posture are reviewed, documented, and disclosed accurately.
+When provider-backed extraction is enabled, Aevryn may send selected story excerpts, scene context, evidence anchors, extraction instructions, and structured-output requirements to a reviewed AI provider. The current provider candidate is OpenAI. Aetherra Labs has verified that API input/output sharing and evaluation/fine-tuning sharing are disabled for the production OpenAI project, and Aevryn's extraction requests set store=false. OpenAI API inputs and outputs are not used for model training by default unless the organization opts in. OpenAI abuse-monitoring logs may contain prompts and responses for up to 30 days by default unless a different approved retention control applies or law requires longer retention. Modified Abuse Monitoring, Zero Data Retention, and data residency controls are not represented as enabled. Provider output is not Canon; Aevryn validates provider output against story evidence before accepting anything into project state. Provider-backed extraction must remain disabled for public beta until legal-sensitive provider wording and final public-beta signoff are complete.
 
 Privacy questions should go to privacy@aevryn.ai.
 ```
@@ -209,7 +209,7 @@ Before these pages can be published for public beta:
 * verified contact aliases must be published accurately
 * legal-sensitive pages must be attorney-reviewed
 * production backup retention window must be verified against the selected public-beta wording candidate
-* AI provider review must be completed against the selected disclosure candidate or provider-backed extraction must remain disabled
+* provider disclosure product-truth wording is approved, but legal review and final public-beta signoff must complete or provider-backed extraction must remain disabled
 * production security operations must be configured
 * claims must be checked against the final public-beta deployment
 

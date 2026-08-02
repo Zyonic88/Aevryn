@@ -15,6 +15,18 @@ Aevryn may classify content for handling.
 Aevryn does not claim ownership or moral authority over user stories.
 ```
 
+Public beta rule:
+
+```text
+Aevryn V2 public beta is 18+ only.
+```
+
+This is a release boundary, not a claim that Aevryn has completed full
+third-party age verification. Public beta account creation should require an
+adult eligibility acknowledgement. Explicit sexual content processing remains
+blocked unless and until attorney review, provider policy review, and an
+approved age-verification or age-assurance approach are complete.
+
 ---
 
 # Project Ratings
@@ -69,12 +81,20 @@ May include:
 
 Explicit classification must inform UI and generation behavior, but lawful user-owned fiction is not automatically banned because it is mature.
 
+During V2 public beta, explicit sexual content is restricted content. Aevryn may
+classify that an import appears restricted, but it must not process, summarize,
+extract, generate prompt packs from, or expose detailed structured output from
+restricted explicit sexual content unless the required adult-content gate is
+approved and active.
+
 ---
 
 # UI Behavior
 
 The UI should eventually:
 
+* state that V2 public beta is 18+ only during account creation
+* stop restricted explicit-content workflows before processing or output display
 * show the project rating in settings
 * warn before opening explicit projects in shared environments
 * allow users to filter or label exports by rating

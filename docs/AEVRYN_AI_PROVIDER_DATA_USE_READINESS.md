@@ -99,17 +99,37 @@ ok=provider_config_contract_checked
 This verifies configuration posture only. It does not replace owner, legal, or
 provider review.
 
+Official OpenAI source posture was rechecked on 2026-08-01 against the API data
+controls, API authentication, and data-sharing controls documents. The recheck
+confirmed the source-level boundary used by the disclosure candidate:
+
+* API inputs and outputs are not used for model training by default unless the
+  organization explicitly opts in.
+* API input/output sharing and evaluation/fine-tuning data sharing are disabled
+  by default and can be enabled by account owners.
+* `/v1/responses` is listed as not used for training, with abuse-monitoring
+  retention listed as 30 days by default.
+* Zero Data Retention, Modified Abuse Monitoring, and data residency are
+  account/project controls that must be recorded separately if enabled.
+* OpenAI API keys must remain server-side and out of browser/client code.
+
 Remaining public-beta blockers:
 
-* final model configuration must be recorded
-* production OpenAI organization/project data-control settings must be reviewed
-* provider retention behavior must be disclosed accurately
-* Modified Abuse Monitoring, Zero Data Retention, and data residency posture
-  must be recorded as unavailable, unapproved, approved, or enabled
+* provider retention behavior must remain disclosed accurately after owner
+  dashboard verification
 * user-facing privacy/trust copy must be owner/legal reviewed
 * release-candidate provider failure logging must remain metadata-only
 * public-beta signoff must explicitly approve or disable provider-backed
   extraction
+
+On 2026-08-02, the Aetherra Labs owner verified the production OpenAI
+organization and project in the dashboard, confirmed the API key is
+project-scoped, confirmed API input/output sharing is disabled, confirmed
+evaluation/fine-tuning sharing is disabled, confirmed no default training on
+user stories is enabled, and confirmed the production model remains
+`gpt-5.4-mini`. Modified Abuse Monitoring, Zero Data Retention, and data
+residency controls were not found by owner review and must not be represented
+publicly as enabled.
 
 The disclosure candidate names OpenAI as the current provider candidate, explains the data boundary, and requires provider-backed extraction to remain disabled for public beta unless no-training posture and retention behavior can be verified and disclosed accurately.
 
@@ -263,7 +283,13 @@ docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md records official source links, 
 docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md records the non-secret checklist for verifying the actual production OpenAI organization/project posture.
 Aevryn's Responses API extraction adapter now sends store=false.
 Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17.
-OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.
+OpenAI official source posture was rechecked on 2026-08-01 and still matches
+the disclosure candidate. Aevryn-side technical controls for model,
+Responses API scope, `store=false`, no background mode, and out-of-scope
+provider endpoints are verified for the current public-beta candidate.
+OpenAI production dashboard data-control verification was completed by owner
+review on 2026-08-02. Owner/legal public wording review and public-beta
+approval remain open.
 ```
 
 ---

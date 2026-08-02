@@ -187,7 +187,7 @@ Verify no test output exposes:
 | Monitoring | Metadata-only | Passed | Monitoring exposed status, counts, events, and summaries only |
 | Audit records | Metadata-only | Passed with limitation | Workflow events were metadata-only; broader audit-storage policy remains public-beta work |
 | Error messages | Concise and source-prose-free | Passed | Timeout failure summary was concise and source-prose-free |
-| Support guidance | Redaction guidance present | Passed with limitation | Public support page is published; support procedure owner review remains open |
+| Support guidance | Redaction guidance present | Passed with limitation | Public support page is published; metadata-first support owner posture is recorded; legal-sensitive support wording remains open |
 | Browser UI | No unnecessary machine noise | Passed with limitation | Known internal IDs and bundle names absent; some repetitive identity-review metadata remains |
 | Export preview | User-triggered only | Passed | Export was created only after explicit user-authorized click |
 | Provider failures | No full provider payloads | Passed | No full provider payload surfaced in UI or sampled logs |
@@ -234,12 +234,12 @@ Public beta may proceed only if each residual risk is explicit and accepted by t
 
 | Risk | Impact | Mitigation | Owner Decision |
 | --- | --- | --- | --- |
-| Prompt richness still needs hosted validation | Generated image/video prompts may need user editing if the browser output does not reflect the new current-scene action beat hardening clearly | Run hosted prompt-pack browser validation before beta marketing claims | Accepted for internal RC only; blocks public-beta positioning until validated |
+| Prompt richness hosted validation passed | Generated image/video prompts may still need user editing, but current V2 prompts now include scene-specific action, setting, character, and object context without exposing source prose or machine IDs | Maintain current prompt-pack limits and avoid marketing one-click perfect generation | Accepted for V2 public-beta readiness |
 | Output UX polish remains alpha-grade in some tabs | Users may find repeated summaries or dense cards tiring | Continue UX hardening before broad public beta | Accepted for internal RC only |
 | Public legal/trust/support pages need owner and legal review | Public users may see draft wording that is not public-beta approved | Review public-facing site/legal docs before public beta | Blocks public beta |
 | Production observability policy final bounded log review passed | Hosted logging and monitoring configuration passed, and final bounded Cloud Run log review found metadata-only output | Maintain policy and rerun bounded review before material observability changes | Accepted for public-beta readiness |
 | Backup retention wording needs production verification | Users need accurate deletion and backup expectations | Verify the selected public-beta backup wording against final production backup behavior | Blocks public beta |
-| AI provider disclosure needs provider verification | Users need accurate expectations for when story excerpts leave Aevryn-owned systems | Verify provider terms, retention, training behavior, abuse monitoring, and final model configuration against the selected disclosure candidate | Blocks public beta |
+| AI provider dashboard verification passed | Users still need accurate public wording for when story excerpts leave Aevryn-owned systems | Maintain OpenAI dashboard evidence, do not represent MAM/ZDR/data residency as enabled, and complete owner/legal provider wording approval | Blocks public beta until public wording/final signoff |
 | Restore/audit drill passed | Recovery evidence is no longer the blocker | Maintain the dated restore/audit drill record and rerun before material infrastructure changes | Accepted for Gate 5 |
 | Hosted audit append-only access verification passed with restricted runtime role | Audit access evidence is no longer the blocker | Maintain restricted runtime role and rerun audit access verification before public-beta signoff | Accepted for Gate 5 |
 
@@ -251,12 +251,12 @@ If a risk touches story privacy, deletion, account security, provider training, 
 
 | Responsibility | Decision | Signoff | Date |
 | --- | --- | --- | --- |
-| Product | Accepted for internal V2 release-candidate checkpoint; public beta blocked by listed product polish and public-surface work | Aetherra Labs project owner | 2026-07-14 |
-| Security | Accepted for internal V2 release-candidate checkpoint; hosted observability verification passed, public beta still blocked by remaining trust/legal/provider items | Aetherra Labs project owner | 2026-07-14 |
-| Privacy | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public trust/legal/support review is complete | Aetherra Labs project owner | 2026-07-14 |
+| Product | Accepted for internal V2 release-candidate checkpoint; public beta blocked by public-surface wording and final signoff | Aetherra Labs project owner | 2026-07-14 |
+| Security | Accepted for internal V2 release-candidate checkpoint; hosted observability, audit access, restore drill, and provider dashboard verification passed; public beta still blocked by legal-sensitive wording and final signoff | Aetherra Labs project owner | 2026-07-14 |
+| Privacy | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public legal/privacy/provider/backup wording is reviewed or explicitly accepted as residual risk | Aetherra Labs project owner | 2026-07-14 |
 | Legal | Not approved for public beta; legal documents require owner and attorney review before public launch | Aetherra Labs project owner | 2026-07-14 |
 | Operations | Accepted for internal V2 release-candidate checkpoint; restore/audit and hosted observability follow-up passed, public beta still blocked by backup wording and final approval | Aetherra Labs project owner | 2026-07-14 |
-| Support | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public support procedure owner review is complete | Aetherra Labs project owner | 2026-07-14 |
+| Support | Accepted for internal V2 release-candidate checkpoint; metadata-first support owner posture is recorded; public beta remains blocked until legal-sensitive support wording and final public-beta signoff are complete | Aetherra Labs project owner | 2026-07-14 |
 
 If one person holds multiple responsibilities, each responsibility must still be explicitly accepted.
 
@@ -267,8 +267,8 @@ If one person holds multiple responsibilities, each responsibility must still be
 ```text
 Internal V2 release candidate: Signed off
 Public beta: Blocked
-Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, final bounded hosted log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, initial public page publication, and dated restore/audit drill passed. Public beta remains blocked by public-facing legal/trust/support review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, deletion refresh UX hardening, and final public-beta approval.
-Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support review, backup retention wording owner/legal review, AI provider review, prompt-pack polish, deletion refresh UX hardening, and final public-beta approval.
+Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, final bounded hosted log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, initial public page publication, dated restore/audit drill, prompt-pack hosted validation, deletion refresh UX hardening, OpenAI dashboard provider verification, and provider disclosure product-truth wording approval passed. Public beta remains blocked by public-facing legal/trust/support wording review, backup retention wording owner/legal review, provider disclosure legal review, and final public-beta approval.
+Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support wording review, backup retention wording owner/legal review, provider disclosure legal review, and final public-beta approval.
 ```
 
 ---
