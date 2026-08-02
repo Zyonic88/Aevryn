@@ -48,6 +48,7 @@ Owner review is tracked in:
 * `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`
 * `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md`
 * `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`
+* `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md`
 
 ---
 
@@ -55,12 +56,12 @@ Owner review is tracked in:
 
 | Public Page | Route | Source Docs | Required Review | Current State | Public-Beta Decision |
 | --- | --- | --- | --- | --- | --- |
-| Trust | `/trust` | `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`, `docs/AEVRYN_TRUST_MODEL.md`, `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md` | Owner, Privacy, Security | Implemented and production-reachable; owner product-posture review recorded | Blocked |
+| Trust | `/trust` | `docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md`, `docs/AEVRYN_TRUST_MODEL.md`, `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`, `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md` | Owner, Privacy, Security | Implemented and production-reachable; owner product-posture review recorded; public wording consistency review passed | Blocked |
 | Privacy | `/privacy` | `docs/PRIVACY_POLICY.md`, `docs/AEVRYN_PRIVACY.md`, `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`, `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`, `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`, `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`, `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`, `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md` | Owner, Legal, Privacy, Provider Review | Implemented as draft; backup provider sources rechecked; provider wording candidate selected; OpenAI source review recorded; production account verification checklist exists | Blocked |
 | Security | `/security` | `docs/AEVRYN_SECURITY.md`, `docs/SECURITY_DISCLOSURE.md`, `docs/AEVRYN_PRODUCTION_OBSERVABILITY_POLICY.md` | Owner, Security, Legal | Implemented as draft; hosted observability evidence passed | Blocked |
 | User Rights | `/user-rights` | `docs/AEVRYN_USER_RIGHTS.md`, `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`, `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md` | Owner, Legal, Privacy, Operations | Implemented with backup wording candidate; provider source rechecked | Blocked |
 | Content Classification | `/content` | `docs/AEVRYN_CONTENT_CLASSIFICATION.md`, `docs/ACCEPTABLE_USE_POLICY.md` | Owner, Legal, Provider Review | Implemented as draft; provider-policy review pending | Blocked |
-| Support | `/support` | `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`, `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`, `docs/AEVRYN_PUBLIC_CONTACTS.md` | Owner, Support, Privacy, Security | Implemented with verified aliases; metadata-first support posture approved by owner | Blocked |
+| Support | `/support` | `docs/AEVRYN_PUBLIC_SUPPORT_READINESS.md`, `docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md`, `docs/AEVRYN_PUBLIC_CONTACTS.md`, `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md` | Owner, Support, Privacy, Security | Implemented with verified aliases; metadata-first support posture approved by owner; public wording consistency review passed | Blocked |
 | Security Disclosure | `/security/disclosure` | `docs/SECURITY_DISCLOSURE.md`, `docs/AEVRYN_PUBLIC_CONTACTS.md` | Owner, Security, Legal | Implemented as draft; safe-harbor review pending | Blocked |
 | Terms | `/terms` | `docs/TERMS_OF_SERVICE.md`, `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md` | Owner, Legal | Implemented as draft; governing law and liability language pending counsel | Blocked |
 | Acceptable Use | `/acceptable-use` | `docs/ACCEPTABLE_USE_POLICY.md`, `docs/AEVRYN_CONTENT_CLASSIFICATION.md`, `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md` | Owner, Legal, Provider Review | Implemented as draft; mature/explicit handling review pending | Blocked |
@@ -101,6 +102,7 @@ OpenAI official source review: recorded on 2026-07-24
 OpenAI production account verification checklist: recorded with owner dashboard review
 OpenAI provider config check: passed with metadata-only output on 2026-07-17
 Backup retention provider source review: recorded on 2026-08-02
+Public wording consistency review: passed on 2026-08-02
 ```
 
 ---
@@ -111,6 +113,7 @@ Backup retention provider source review: recorded on 2026-08-02
 Owner review: owner-controlled public-facing product posture decisions recorded
 Owner public review record: updated
 Owner dated review worksheet: updated
+Public wording consistency review: passed
 Attorney review: open
 Public legal review packet: prepared
 Provider terms and data-use review: open

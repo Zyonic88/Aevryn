@@ -187,7 +187,7 @@ Verify no test output exposes:
 | Monitoring | Metadata-only | Passed | Monitoring exposed status, counts, events, and summaries only |
 | Audit records | Metadata-only | Passed with limitation | Workflow events were metadata-only; broader audit-storage policy remains public-beta work |
 | Error messages | Concise and source-prose-free | Passed | Timeout failure summary was concise and source-prose-free |
-| Support guidance | Redaction guidance present | Passed with limitation | Public support page is published; support procedure owner review remains open |
+| Support guidance | Redaction guidance present | Passed with limitation | Public support page is published; metadata-first support owner posture is recorded; legal-sensitive support wording remains open |
 | Browser UI | No unnecessary machine noise | Passed with limitation | Known internal IDs and bundle names absent; some repetitive identity-review metadata remains |
 | Export preview | User-triggered only | Passed | Export was created only after explicit user-authorized click |
 | Provider failures | No full provider payloads | Passed | No full provider payload surfaced in UI or sampled logs |
@@ -256,7 +256,7 @@ If a risk touches story privacy, deletion, account security, provider training, 
 | Privacy | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public legal/privacy/provider/backup wording is reviewed or explicitly accepted as residual risk | Aetherra Labs project owner | 2026-07-14 |
 | Legal | Not approved for public beta; legal documents require owner and attorney review before public launch | Aetherra Labs project owner | 2026-07-14 |
 | Operations | Accepted for internal V2 release-candidate checkpoint; restore/audit and hosted observability follow-up passed, public beta still blocked by backup wording and final approval | Aetherra Labs project owner | 2026-07-14 |
-| Support | Accepted for internal V2 release-candidate checkpoint; public beta blocked until public support procedure owner review is complete | Aetherra Labs project owner | 2026-07-14 |
+| Support | Accepted for internal V2 release-candidate checkpoint; metadata-first support owner posture is recorded; public beta remains blocked until legal-sensitive support wording and final public-beta signoff are complete | Aetherra Labs project owner | 2026-07-14 |
 
 If one person holds multiple responsibilities, each responsibility must still be explicitly accepted.
 

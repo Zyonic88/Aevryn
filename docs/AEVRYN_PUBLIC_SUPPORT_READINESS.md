@@ -10,7 +10,7 @@ This document defines the public contact and support paths Aevryn needs before p
 
 ```text
 Gate: Public support and contact readiness
-Status: Contact paths verified; public support page published; support procedure drafted
+Status: Contact paths verified; public support page published; support posture owner-recorded
 Public beta: Blocked
 ```
 
@@ -18,7 +18,9 @@ Aevryn target support, privacy, security, and abuse contact paths are selected f
 
 The required aliases are provisioned and tested for inbound receipt, outbound product-domain sending, SPF, DKIM, DMARC, mailbox filtering, and MFA-protected operator access.
 
-The remaining work is owner review of the public support procedure, backup/deletion wording alignment, and legal-sensitive support wording review before public beta.
+The support procedure owner posture is recorded in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`, and public wording consistency was reviewed in `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md`.
+
+The remaining work is backup/deletion wording owner/legal approval and legal-sensitive support wording review before public beta.
 
 ---
 
@@ -190,7 +192,7 @@ Cloudflare Email Sending is the preferred outbound candidate.
 Support/privacy/security/abuse outbound reply tests passed to zyonic88@gmail.com.
 SPF/DKIM/DMARC received-message verification passed.
 Initial public support page is published at /support with verified contact details and private-story redaction guidance.
-Public support procedure exists in docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md and awaits support procedure owner review.
+Public support procedure exists in docs/AEVRYN_PUBLIC_SUPPORT_PROCEDURE.md. Owner posture is recorded for metadata-first support, and legal-sensitive support wording remains blocked until review.
 ```
 
 ---
