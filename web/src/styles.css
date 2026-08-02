@@ -2048,29 +2048,24 @@ textarea::placeholder {
 }
 
 .workspace-command-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: end;
-  gap: 8px;
+  display: grid;
+  justify-items: end;
+  gap: 4px;
 }
 
-.workspace-command-actions span,
-.workspace-command-actions a {
+.workspace-command-actions h2 {
+  min-width: 120px;
   min-height: 34px;
-  display: inline-flex;
-  align-items: center;
+  display: grid;
+  place-items: center;
+  margin: 0;
   border: 1px solid var(--app-line);
   border-radius: 8px;
   padding: 7px 10px;
-  color: var(--app-blue-2);
-  background: rgba(255, 255, 255, 0.04);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.workspace-command-actions span {
   color: var(--app-text);
   background: rgba(127, 178, 255, 0.12);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .dashboard-heading {

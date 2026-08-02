@@ -27,11 +27,6 @@ export function MonitoringWorkspaceView({ project }: { project: ProjectSummary }
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Monitoring</p>
-        <h2>Monitoring</h2>
-      </div>
-
       <section className="project-panel" aria-label="API health">
         <h2>API Health</h2>
         {healthQuery.isLoading ? <LoadingMessage>Checking API health.</LoadingMessage> : null}

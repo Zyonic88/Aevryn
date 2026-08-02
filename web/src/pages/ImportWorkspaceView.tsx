@@ -426,11 +426,6 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Import</p>
-        <h2>Import</h2>
-      </div>
-
       <StatusPanel title="Native Source Formats">
         {sourceFormats.isLoading ? <LoadingMessage>Loading source formats.</LoadingMessage> : null}
         {sourceFormats.error ? <ErrorMessage>{sourceFormats.error.message}</ErrorMessage> : null}

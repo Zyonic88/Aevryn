@@ -75,11 +75,6 @@ export function CharacterWorkspaceView({ project }: { project: ProjectSummary })
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Characters</p>
-        <h2>Characters</h2>
-      </div>
-
       <ProjectOutputSummaryPanel project={project} surface="characters" />
 
       <DeveloperPreviewToggle>

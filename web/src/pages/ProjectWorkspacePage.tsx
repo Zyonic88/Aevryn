@@ -103,7 +103,8 @@ export function ProjectWorkspacePage() {
             <h1>{project.name}</h1>
           </div>
           <div className="workspace-command-actions">
-            <span>{activeTab?.label ?? "Unknown"}</span>
+            <p className="eyebrow">Section</p>
+            <h2>{activeTab?.label ?? "Unknown"}</h2>
           </div>
         </header>
         {activeTab ? (

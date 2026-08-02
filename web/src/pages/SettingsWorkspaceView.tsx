@@ -52,23 +52,14 @@ export function SettingsWorkspaceView({ project }: { project: ProjectSummary }) 
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Settings</p>
-        <h2>Settings</h2>
-        <p className="field-note">
-          V2 settings separate editable project defaults from read-only account, privacy,
-          workspace, and diagnostic context. None of these settings can change Canon truth.
-        </p>
-      </div>
-
       <section className="project-panel settings-command-panel">
         <header className="surface-heading">
           <div>
             <p className="eyebrow">Control Surface</p>
             <h2>Settings Areas</h2>
             <p className="result-summary">
-              Project defaults are editable. Account, privacy, and diagnostics are surfaced here
-              without changing Canon.
+              V2 settings separate editable project defaults from read-only account, privacy,
+              workspace, and diagnostic context. None of these settings can change Canon truth.
             </p>
           </div>
           <span className="surface-count-badge">V2</span>
