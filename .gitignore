@@ -36,6 +36,7 @@ web/.vite/
 .env
 .env.*
 docs/AEVRYN_AI_CODING_RULES.md
+docs/legal_review/
 
 # Runtime and generated output
 /runtime/

@@ -80,6 +80,13 @@ Source URLs reviewed:
 This review reduces uncertainty, but it does not approve OpenAI for public
 beta by itself.
 
+The official OpenAI source posture was rechecked on 2026-08-01 against the API
+data controls, API authentication, and data-sharing controls documents. The
+recheck did not change Aevryn's current disclosure boundary: no training by
+default unless opted in, `/v1/responses` not used for training, default abuse
+monitoring retention for `/v1/responses` listed as 30 days, `store=false`
+required for Aevryn extraction, and OpenAI API keys remaining server-side only.
+
 Public beta remains blocked until Aetherra Labs records the final production
 OpenAI organization/project data-control posture, final model configuration,
 account-level opt-in status, retention posture, and user-facing disclosure.

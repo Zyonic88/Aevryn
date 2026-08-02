@@ -63,7 +63,7 @@ Tracking docs:
 Status:
 
 ```text
-Cloudflare routing rules created, inbound delivery passed, Cloudflare inbound DNS/routing health passed, and Cloudflare/Gmail MFA verified. Cloudflare Email Sending SMTP successfully sent support/privacy/security/abuse aliases to zyonic88@gmail.com. SPF/DKIM/DMARC received-message verification passed. Initial public support/trust/privacy pages are published. Support procedure owner review remains open.
+Cloudflare routing rules created, inbound delivery passed, Cloudflare inbound DNS/routing health passed, and Cloudflare/Gmail MFA verified. Cloudflare Email Sending SMTP successfully sent support/privacy/security/abuse aliases to zyonic88@gmail.com. SPF/DKIM/DMARC received-message verification passed. Initial public support/trust/privacy pages are published. Support procedure owner posture is recorded for metadata-first support, and legal-sensitive support wording review remains open.
 ```
 
 ---
@@ -117,7 +117,8 @@ Required decisions:
 
 Verification:
 
-* provider review is completed
+* provider source/dashboard review is completed
+* provider disclosure product-truth wording is approved, and legal review is complete or provider-backed extraction remains disabled
 * `aevryn provider-config-check` passes without printing secrets
 * no-training-by-default posture is preserved
 * public disclosure matches provider terms
@@ -131,11 +132,12 @@ Tracking docs:
 * `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`
 * `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`
 * `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`
+* `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`
 
 Status:
 
 ```text
-OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17, including `request_storage=disabled` and `responses_store=false`. Official OpenAI source review was recorded on 2026-07-24 in `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`. The production account/project verification checklist exists in `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`. Production OpenAI account/project data-control verification, owner/legal review, final provider disclosure approval, and public-beta approval remain open.
+OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17, including `model=gpt-5.4-mini`, `request_storage=disabled`, and `responses_store=false`. Official OpenAI source review was recorded on 2026-07-24 in `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`, and official source posture was rechecked on 2026-08-01 and 2026-08-02 in `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md` and `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`. The production account/project verification checklist now records technical/source verification plus owner dashboard review completed on 2026-08-02. Aevryn-side technical controls for model, Responses API scope, `store=false`, no background mode, and out-of-scope provider endpoints are verified for the current public-beta candidate. Owner confirmed production org/project, project-scoped key, API input/output sharing disabled, evaluation/fine-tuning sharing disabled, no default training on user stories, and production model `gpt-5.4-mini`; MAM/ZDR/data residency controls were not found by owner review and must not be represented as enabled. Owner product-truth provider disclosure wording approval is recorded; legal review and public-beta approval remain open.
 ```
 
 ---
@@ -175,7 +177,7 @@ Tracking docs:
 Status:
 
 ```text
-Restore plan, restore/audit drill record template, and provider-specific backup/restore runbook exist. Public-beta backup retention wording candidate selected for owner/legal review. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Audit integrity, access verification, and access-report commands exist. Hosted audit integrity verification passed with metadata-only output. Hosted audit access report and append-only access verification passed with a restricted runtime PostgreSQL role; the report showed `can_update=false`, `can_delete=false`, `can_truncate=false`, and `is_table_owner=false`. Production now requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` so schema bootstrap and migrations are separated from the runtime app role. Production backup provider verification runbook is selected. The 2026-07-17/2026-07-23 restore/audit drill passed source preflight, restored database audit verification, isolated restore API boundary verification, deleted-story verification, owner-scoped source/export verification, and bounded hosted restore log review with metadata-only evidence. Gate 5 is no longer a public-beta blocker; public-facing wording still requires owner/legal review.
+Restore plan, restore/audit drill record template, and provider-specific backup/restore runbook exist. Public-beta backup retention wording candidate selected for owner/legal review, and official Supabase and Cloudflare R2 source facts were rechecked on 2026-08-02 in `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`. Production backup retention verification tooling is recorded in `docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md` and exposed through `aevryn backup-retention-config-check`. Public-beta audit storage policy candidate selected for owner/security review. PostgreSQL audit adapter implementation exists. Workflow, identity, settings, access-denial, and production configuration-check failure audit events are wired when the configured audit writer is available. Audit integrity, access verification, and access-report commands exist. Hosted audit integrity verification passed with metadata-only output. Hosted audit access report and append-only access verification passed with a restricted runtime PostgreSQL role; the report showed `can_update=false`, `can_delete=false`, `can_truncate=false`, and `is_table_owner=false`. Production now requires `AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false` so schema bootstrap and migrations are separated from the runtime app role. Production backup provider verification runbook is selected. The 2026-07-17/2026-07-23 restore/audit drill passed source preflight, restored database audit verification, isolated restore API boundary verification, deleted-story verification, owner-scoped source/export verification, and bounded hosted restore log review with metadata-only evidence. Gate 5 is no longer a public-beta blocker; public-facing wording still requires running and recording production Supabase plan retention verification, running and recording production R2 lifecycle/deletion policy verification, and owner/legal review.
 ```
 
 ---
@@ -235,6 +237,8 @@ Verification:
 
 * public copy matches implementation
 * legal-sensitive pages are reviewed or explicitly blocked
+* V2 public beta 18+ eligibility wording matches account creation
+* restricted explicit sexual content processing remains disabled unless the adult-content gate is approved
 * contact aliases are live before publication
 * pages do not overpromise deletion, backup behavior, provider behavior, employee access, or public-beta readiness
 
@@ -255,7 +259,7 @@ Tracking docs:
 Status:
 
 ```text
-Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`. Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`. The dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` prepared for this review is awaiting owner decisions. Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`. Owner review, legal review, backup/provider verification, support procedure owner review, and final public-beta signoff remain open.
+Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. V2 public beta is selected as 18+ only, account creation requires an adult eligibility acknowledgement, and restricted explicit sexual content processing remains disabled unless attorney review, provider policy review, and an approved adult-content gate are complete. Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`. Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`. The dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` now records owner-controlled public-facing product posture decisions for operator identity, product domain, contact aliases, trust promise, story ownership, AI training posture, metadata-first support, and content classification. Public wording consistency review passed on 2026-08-02 in `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md`. Provider disclosure product-truth wording approval is recorded in `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`. Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`. Legal-sensitive wording review, age/minor-use wording legal review, explicit-content gate legal review, provider disclosure legal review, backup retention wording owner/legal review, and final public-beta signoff remain open.
 ```
 
 ---
