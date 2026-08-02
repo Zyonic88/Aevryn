@@ -268,8 +268,11 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` now records",
         "Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`.",
         "Official OpenAI source review was recorded on 2026-07-24",
-        "production account/project verification checklist exists",
-        "Production OpenAI dashboard data-control verification",
+        (
+            "production account/project verification checklist now records "
+            "technical/source verification"
+        ),
+        "owner dashboard review completed on 2026-08-02",
         "backup/provider verification",
         "Local production config contract passed.",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
@@ -1342,15 +1345,15 @@ def test_ai_provider_data_use_readiness_document_tracks_gate_six() -> None:
         "OpenAI official data-use and API data-controls review was recorded on 2026-07-24.",
         "docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md",
         "OpenAI abuse-monitoring logs may contain prompts and responses",
-        "Modified Abuse Monitoring, Zero Data Retention, and data residency posture",
+        "residency controls were not found by owner review",
         "provider configuration gate passed on 2026-07-17",
         "Official OpenAI source posture was rechecked on 2026-08-01",
-        "production OpenAI organization/project identifiers must be recorded without",
+        "Aetherra Labs owner verified the production OpenAI",
         "Responses API extraction adapter now sends store=false",
         "request_storage=disabled",
         "responses_store=false",
         "ok=provider_config_contract_checked",
-        "OpenAI production dashboard data-control verification",
+        "OpenAI production dashboard data-control verification was completed",
         "provider data-use disclosure",
     )
 
@@ -1478,8 +1481,8 @@ def test_openai_production_account_verification_keeps_provider_beta_blocked() ->
     required_terms = (
         "Verification: OpenAI production organization and project data controls",
         (
-            "Status: In progress - official sources and Aevryn technical controls "
-            "verified; production dashboard controls pending"
+            "Status: In progress - official sources, Aevryn technical controls, "
+            "and owner dashboard review verified; legal/final signoff pending"
         ),
         "Public beta: Blocked",
         "Verify the actual production account, not the intended policy.",
@@ -1495,17 +1498,25 @@ def test_openai_production_account_verification_keeps_provider_beta_blocked() ->
         "source prose from user manuscripts",
         "Production OpenAI organization identified",
         "Production OpenAI project identified",
+        "Owner confirmed production OpenAI organization on 2026-08-02",
+        "Owner confirmed production OpenAI project on 2026-08-02",
         "Final model configuration recorded",
         "Hosted production-like `aevryn provider-config-check` recorded `model=gpt-5.4-mini`",
         "API inputs/outputs data sharing not opted in",
+        "Owner confirmed API input/output sharing disabled on 2026-08-02",
         "feedback/evaluation/fine-tuning data sharing disabled unless explicitly disclosed",
+        "Owner confirmed evaluation/fine-tuning sharing disabled on 2026-08-02",
         "Responses API extraction sends `store=false`",
         "Hosted production-like `aevryn provider-config-check` recorded `responses_store=false`",
         "background mode disabled for extraction",
         "Modified Abuse Monitoring state recorded",
         "Zero Data Retention state recorded",
         "data residency state recorded",
-        "Owner Dashboard Verification Still Required",
+        "Owner could not locate MAM controls in dashboard on 2026-08-02",
+        "Owner could not locate ZDR controls in dashboard on 2026-08-02",
+        "Owner could not locate data residency controls in dashboard on 2026-08-02",
+        "Owner Dashboard Verification",
+        "Provider billing/quota limits still require final public-beta owner review.",
         "python -m aevryn.cli provider-config-check",
         "request_storage=disabled",
         "responses_store=false",
@@ -1513,7 +1524,7 @@ def test_openai_production_account_verification_keeps_provider_beta_blocked() ->
         "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
         "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
         "docs/PRIVACY_POLICY.md",
-        "OpenAI production account verification: Partially complete",
+        "OpenAI production account verification: Dashboard verified; legal/final signoff pending",
         "Provider-backed extraction for public beta: Blocked",
         "Fallback: Disable provider-backed extraction for public beta",
     )
