@@ -1385,13 +1385,12 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    const workspaceSidebar = await screen.findByRole("complementary");
-    expect(within(workspaceSidebar).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Characters" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Characters" })).toHaveAttribute(
       "aria-current",
       "page",
     );
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
 
   it("renders project monitoring from API-provided status", async () => {
@@ -1608,8 +1607,8 @@ describe("App shell routing", () => {
     );
 
     await user.click(await screen.findByRole("link", { name: /Alpha/ }));
-    const workspaceSidebar = await screen.findByRole("complementary");
-    expect(within(workspaceSidebar).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Import" }));
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
@@ -1966,9 +1965,8 @@ describe("App shell routing", () => {
 
     await user.click(await screen.findByRole("link", { name: /Alpha Updated/u }));
 
-    const workspaceSidebar = await screen.findByRole("complementary");
-    expect(within(workspaceSidebar).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
     expect(screen.queryByText("Loading project.")).not.toBeInTheDocument();
   });
 
