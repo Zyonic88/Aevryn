@@ -20,6 +20,8 @@ Public beta: Blocked
 
 The required contact aliases are verified. The initial public pages are implemented in the browser app and reachable on the production app domain. Public wording consistency review passed on 2026-08-02. Provider disclosure product-truth wording approval is recorded on 2026-08-02. Legal review where required, provider disclosure legal review, backup retention wording owner/legal review, and final public-beta signoff remain open. Owner review is tracked in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.
 
+The static public marketing site source is implemented in `website/`. It is separate from the authenticated application at `https://app.aevryn.ai` and must remain limited to public-facing product explanation, conservative beta wording, and links to approved support/trust surfaces.
+
 ---
 
 # Core Rule
@@ -45,6 +47,23 @@ Public copy must not convert internal intent into public promises.
 | Security Disclosure | `/security/disclosure` | `docs/SECURITY_DISCLOSURE.md` | Implemented as draft; safe-harbor review required |
 | Terms | `/terms` | `docs/TERMS_OF_SERVICE.md` | Implemented as draft; attorney review required |
 | Acceptable Use | `/acceptable-use` | `docs/ACCEPTABLE_USE_POLICY.md` | Implemented as draft; attorney review required |
+
+---
+
+# Static Website Deployment
+
+The public marketing site for `https://aevryn.ai` should be deployed from `website/` as a static Cloudflare Pages site.
+
+Recommended settings:
+
+```text
+Root directory: website
+Build command: none
+Build output directory: .
+Production branch: master
+```
+
+The static site must not duplicate Aevryn app workflows, collect manuscripts, or imply public beta approval before final signoff. Product actions should route to `https://app.aevryn.ai`.
 
 ---
 
