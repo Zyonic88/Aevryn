@@ -1385,7 +1385,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "Characters" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Characters" })).toHaveAttribute(
       "aria-current",
       "page",
