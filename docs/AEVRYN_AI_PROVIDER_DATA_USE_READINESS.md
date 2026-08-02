@@ -99,11 +99,27 @@ ok=provider_config_contract_checked
 This verifies configuration posture only. It does not replace owner, legal, or
 provider review.
 
+Official OpenAI source posture was rechecked on 2026-08-01 against the API data
+controls, API authentication, and data-sharing controls documents. The recheck
+confirmed the source-level boundary used by the disclosure candidate:
+
+* API inputs and outputs are not used for model training by default unless the
+  organization explicitly opts in.
+* API input/output sharing and evaluation/fine-tuning data sharing are disabled
+  by default and can be enabled by account owners.
+* `/v1/responses` is listed as not used for training, with abuse-monitoring
+  retention listed as 30 days by default.
+* Zero Data Retention, Modified Abuse Monitoring, and data residency are
+  account/project controls that must be recorded separately if enabled.
+* OpenAI API keys must remain server-side and out of browser/client code.
+
 Remaining public-beta blockers:
 
-* final model configuration must be recorded
+* production OpenAI organization/project identifiers must be recorded without
+  secrets
 * production OpenAI organization/project data-control settings must be reviewed
-* provider retention behavior must be disclosed accurately
+* provider retention behavior must remain disclosed accurately after dashboard
+  verification
 * Modified Abuse Monitoring, Zero Data Retention, and data residency posture
   must be recorded as unavailable, unapproved, approved, or enabled
 * user-facing privacy/trust copy must be owner/legal reviewed
@@ -263,7 +279,12 @@ docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md records official source links, 
 docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md records the non-secret checklist for verifying the actual production OpenAI organization/project posture.
 Aevryn's Responses API extraction adapter now sends store=false.
 Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17.
-OpenAI account/project data-control verification, owner/legal review, and public-beta approval remain open.
+OpenAI official source posture was rechecked on 2026-08-01 and still matches
+the disclosure candidate. Aevryn-side technical controls for model,
+Responses API scope, `store=false`, no background mode, and out-of-scope
+provider endpoints are verified for the current public-beta candidate.
+OpenAI production dashboard data-control verification, owner/legal review, and
+public-beta approval remain open.
 ```
 
 ---

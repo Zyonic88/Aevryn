@@ -133,16 +133,19 @@ Verified evidence:
 Status:
 
 ```text
-Open
+Aevryn technical/source posture partially verified; production dashboard,
+legal-sensitive wording, and final public-beta approval remain open
 ```
 
 Required:
 
-* verify final model configuration
-* verify provider data-retention behavior - official OpenAI source review recorded; production account posture still open
-* verify provider training behavior - official OpenAI source review recorded; production account opt-in status still open
+* ~~verify final model configuration~~
+* verify provider data-retention behavior - official OpenAI source review
+  recorded and rechecked; production account posture still open
+* verify provider training behavior - official OpenAI source review recorded
+  and rechecked; production account opt-in status still open
 * verify abuse-monitoring behavior - official OpenAI source review recorded; public disclosure and account controls still open
-* verify response-storage/request-storage posture
+* ~~verify response-storage/request-storage posture~~
 * confirm no-training-by-default public language
 * rerun provider config check after final provider settings
 
@@ -159,6 +162,28 @@ Acceptance:
 ```text
 Users can understand when story excerpts leave Aevryn-owned systems and what the selected provider may do with them.
 ```
+
+Verified evidence:
+
+* Hosted production-like `aevryn provider-config-check` passed on 2026-07-17
+  with `model=gpt-5.4-mini`, `request_storage=disabled`,
+  `responses_store=false`, and `secrets_printed=0`.
+* Official OpenAI source posture was rechecked on 2026-08-01 against API data
+  controls, API authentication, and data-sharing controls; the current source
+  boundary still supports Aevryn's disclosure candidate.
+* Aevryn-side technical controls for model, Responses API scope, `store=false`,
+  no background mode, and out-of-scope provider endpoints are verified for the
+  current public-beta candidate.
+
+Remaining blockers:
+
+* production OpenAI organization/project dashboard data-control settings
+* API input/output sharing opt-in status
+* evaluation/fine-tuning data-sharing status
+* Modified Abuse Monitoring, Zero Data Retention, and data residency status
+* owner/legal approval of public provider wording
+* final release-candidate provider approval or explicit provider-disable
+  decision
 
 ## 4. Hosted Observability Review
 
