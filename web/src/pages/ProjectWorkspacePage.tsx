@@ -21,23 +21,27 @@ import { TimelineWorkspaceView } from "./TimelineWorkspaceView";
 import { WorldWorkspaceView } from "./WorldWorkspaceView";
 
 const workspaceTabs = [
-  { id: "overview", label: "Overview" },
-  { id: "monitoring", label: "Monitoring" },
-  { id: "story", label: "Story" },
-  { id: "import", label: "Import" },
-  { id: "characters", label: "Characters" },
-  { id: "world", label: "World" },
-  { id: "timeline", label: "Timeline" },
-  { id: "scenes", label: "Scenes" },
-  { id: "continuity", label: "Continuity" },
-  { id: "prompts", label: "Prompt Packs" },
-  { id: "exports", label: "Exports" },
-  { id: "settings", label: "Settings" },
+  { id: "overview", label: "Overview", shortLabel: "O" },
+  { id: "monitoring", label: "Monitoring", shortLabel: "M" },
+  { id: "story", label: "Story", shortLabel: "S" },
+  { id: "import", label: "Import", shortLabel: "I" },
+  { id: "characters", label: "Characters", shortLabel: "C" },
+  { id: "world", label: "World", shortLabel: "W" },
+  { id: "timeline", label: "Timeline", shortLabel: "T" },
+  { id: "scenes", label: "Scenes", shortLabel: "Sc" },
+  { id: "continuity", label: "Continuity", shortLabel: "Co" },
+  { id: "prompts", label: "Prompt Packs", shortLabel: "P" },
+  { id: "exports", label: "Exports", shortLabel: "E" },
+  { id: "settings", label: "Settings", shortLabel: "Se" },
 ] as const;
 
 type WorkspaceTabId = (typeof workspaceTabs)[number]["id"];
 
 const visibleWorkspaceTabs = workspaceTabs.filter((tab) => tab.id !== "monitoring");
+const futureWorkspaceTools = [
+  { label: "Images", status: "Locked" },
+  { label: "Video", status: "Locked" },
+] as const;
 
 export function ProjectWorkspacePage() {
   const { session } = useAuth();
@@ -83,18 +87,40 @@ export function ProjectWorkspacePage() {
 
   return (
     <div className="workspace-shell">
+      <div className="workspace-rail" aria-label="Workspace quick map">
+        <img src="/assets/favicon-64.png" alt="" />
+        {visibleWorkspaceTabs.slice(0, 7).map((tab) => (
+          <NavLink
+            key={tab.id}
+            to={`/projects/${project.id}/${tab.id}`}
+            aria-label={tab.label}
+            title={tab.label}
+          >
+            {tab.shortLabel}
+          </NavLink>
+        ))}
+      </div>
       <aside className="workspace-sidebar">
         <div className="workspace-project">
           <p className="eyebrow">Project</p>
           <h1>{project.name}</h1>
+          <span>Canon workspace</span>
         </div>
         <nav aria-label="Workspace sections" className="workspace-nav">
           {visibleWorkspaceTabs.map((tab) => (
             <NavLink key={tab.id} to={`/projects/${project.id}/${tab.id}`}>
-              {tab.label}
+              <span>{tab.label}</span>
             </NavLink>
           ))}
         </nav>
+        <div className="workspace-locked-tools" aria-label="Future production tools">
+          {futureWorkspaceTools.map((tool) => (
+            <span key={tool.label} className="workspace-locked-link">
+              <span>{tool.label}</span>
+              <small>{tool.status}</small>
+            </span>
+          ))}
+        </div>
       </aside>
       <section className="workspace-content">
         {activeTab ? (

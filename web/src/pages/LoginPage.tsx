@@ -40,7 +40,10 @@ export function LoginPage() {
   return (
     <main className="auth-screen">
       <section className="auth-panel">
-        <div>
+        <div className="auth-heading">
+          <span className="auth-mark">
+            <img src="/assets/favicon-64.png" srcSet="/assets/favicon-256.png 2x" alt="" />
+          </span>
           <p className="eyebrow">Aevryn</p>
           <h1>Log in</h1>
         </div>
