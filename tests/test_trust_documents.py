@@ -38,6 +38,8 @@ def test_platform_trust_documents_exist_and_cover_core_principles() -> None:
             "Teen",
             "Mature",
             "Explicit",
+            "Aevryn V2 public beta is 18+ only.",
+            "restricted explicit sexual content",
             "Future Moderation",
         ),
         "docs/AEVRYN_TRUST_MODEL.md": (
@@ -80,6 +82,7 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
     required_documents = {
         "docs/TERMS_OF_SERVICE.md": (
             "attorney review",
+            "For V2 public beta, Aevryn is 18+ only.",
             "Acceptable Use",
             "User Responsibilities",
             "Payments",
@@ -103,6 +106,8 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
             "User Rights",
             "Sensitive Data",
             "Children's Privacy",
+            "Aevryn V2 public beta is 18+ only",
+            "Explicit sexual content processing remains blocked",
             "Contact Information",
         ),
         "docs/ACCEPTABLE_USE_POLICY.md": (
@@ -111,6 +116,8 @@ def test_legal_draft_documents_exist_and_require_attorney_review() -> None:
             "Prohibited Uses",
             "Platform Abuse",
             "Mature And Explicit Fiction",
+            "For V2 public beta, Aevryn is 18+ only.",
+            "Explicit sexual content is restricted content for V2 public beta.",
             "Copyright, Rights, And Repeat Infringers",
             "Enforcement",
             "copyright infringement",

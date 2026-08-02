@@ -7,6 +7,7 @@ export type LoginFormValues = {
 
 export type RegisterFormValues = LoginFormValues & {
   displayName: string;
+  betaEligibilityConfirmed: boolean;
 };
 
 export type PasswordRecoveryFormValues = {
@@ -26,6 +27,7 @@ export type LoginPayloadValues = {
 export type RegisterPayloadValues = LoginPayloadValues & {
   userId: string;
   displayName: string;
+  beta_eligibility_confirmed: true;
 };
 
 export type PasswordRecoveryPayloadValues = {
@@ -53,11 +55,15 @@ export function buildRegisterPayload(values: RegisterFormValues): RegisterPayloa
   if (!displayName) {
     throw new Error("Display name is required.");
   }
+  if (!values.betaEligibilityConfirmed) {
+    throw new Error("Aevryn public beta is 18+ only. Confirm eligibility to create an account.");
+  }
   validateNewPassword(login.password);
   return {
     ...login,
     userId: userIdFromEmail(login.email),
     displayName,
+    beta_eligibility_confirmed: true,
   };
 }
 

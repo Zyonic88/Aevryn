@@ -93,6 +93,8 @@ Examples include:
 Aevryn may support lawful mature or explicit fictional content when the user has
 the rights to process it and the content is not otherwise prohibited.
 
+For V2 public beta, Aevryn is 18+ only.
+
 Mature and explicit projects may be subject to:
 
 * project content classification
@@ -104,6 +106,12 @@ Mature and explicit projects may be subject to:
 * future moderation or account controls
 
 Aevryn does not approve unlawful material merely because it is fictional.
+
+Explicit sexual content is restricted content for V2 public beta. Aevryn may
+classify that an import appears restricted, but restricted explicit sexual
+content must not be processed, summarized, extracted, converted into prompt
+packs, or exposed as detailed structured output unless attorney review, provider
+policy review, and an approved adult-content gate are complete.
 
 Attorney review must approve final public wording for age restrictions,
 minor-protection requirements, explicit-content boundaries, and any legally

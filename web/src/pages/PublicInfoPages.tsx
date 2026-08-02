@@ -229,6 +229,13 @@ export function ContentClassificationPage() {
       status="Legal and provider-policy review are required before public beta."
       sections={[
         {
+          title: "Public Beta",
+          body: [
+            "Aevryn V2 public beta is 18+ only.",
+            "Account creation requires an adult eligibility acknowledgement.",
+          ],
+        },
+        {
           title: "Ratings",
           body: [
             "Aevryn may classify projects as General, Teen, Mature, or Explicit so the product can handle visibility, provider restrictions, exports, and future moderation responsibly.",
@@ -239,6 +246,7 @@ export function ContentClassificationPage() {
           body: [
             "Lawful mature fiction is not automatically prohibited.",
             "Content classification does not change ownership. Your stories remain yours.",
+            "Restricted explicit sexual content processing remains disabled unless attorney review, provider policy review, and an approved adult-content gate are complete.",
           ],
         },
       ]}
@@ -319,6 +327,13 @@ export function TermsPage() {
       summary="These draft terms describe intended product boundaries for Aevryn."
       status="Draft for attorney review before public launch."
       sections={[
+        {
+          title: "Eligibility",
+          body: [
+            "Aevryn V2 public beta is 18+ only.",
+            "Public beta account creation requires an adult eligibility acknowledgement.",
+          ],
+        },
         {
           title: "User Responsibilities",
           body: [

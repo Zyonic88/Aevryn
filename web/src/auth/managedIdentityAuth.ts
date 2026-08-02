@@ -51,6 +51,7 @@ export function registerWithConfiguredAuth(payload: RegisterRequest): Promise<Au
       data: {
         display_name: payload.display_name,
         full_name: payload.display_name,
+        aevryn_public_beta_18_plus_confirmed: payload.beta_eligibility_confirmed === true,
       },
     },
     fallbackEmail: payload.email,
