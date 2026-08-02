@@ -2444,7 +2444,7 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("19 scenes ready for review.")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Save import" }));
+    await user.click(screen.getByRole("button", { name: "Save only" }));
 
     await waitFor(() => expect(savedImportId).toMatch(/^import_aevryn_import_bundle_/u));
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
@@ -2543,7 +2543,7 @@ describe("App shell routing", () => {
     ]);
     await user.click(await screen.findByRole("button", { name: "Inspect import" }));
     await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors.");
-    await user.click(screen.getByRole("button", { name: "Save import" }));
+    await user.click(screen.getByRole("button", { name: "Save only" }));
 
     await waitFor(() => expect(savedImportIds).toHaveLength(2));
     expect(savedImportIds[0]).toMatch(/^import_aevryn_import_bundle_/u);
@@ -2608,7 +2608,7 @@ describe("App shell routing", () => {
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 2{enter}Different opening.");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await user.click(await screen.findByRole("button", { name: "Save only" }));
 
     expect(confirm).toHaveBeenCalledWith(
       "Alpha Story already has imported source. Only continue if this source belongs to the same story. Add it anyway?",
@@ -2716,13 +2716,12 @@ describe("App shell routing", () => {
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await user.click(await screen.findByRole("button", { name: "Save and process" }));
 
     await screen.findByText("Chapter import");
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
     expect(screen.queryByText("chapter_001.txt")).not.toBeInTheDocument();
     expect(screen.getAllByText("8 scenes").length).toBeGreaterThanOrEqual(1);
-    await user.click(screen.getByRole("button", { name: "Submit processing" }));
 
     expect(screen.queryByText("Processing started.")).not.toBeInTheDocument();
     expect(screen.queryByText("Processing completed.")).not.toBeInTheDocument();
@@ -2823,9 +2822,8 @@ describe("App shell routing", () => {
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await user.click(await screen.findByRole("button", { name: "Save and process" }));
     await screen.findByText("Chapter import");
-    await user.click(screen.getByRole("button", { name: "Submit processing" }));
 
     expect(await screen.findByText("Pending run")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Processing" })).toBeDisabled();
@@ -3052,7 +3050,7 @@ describe("App shell routing", () => {
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await user.click(await screen.findByRole("button", { name: "Save only" }));
     await screen.findByText("Chapter import");
     await user.click(screen.getAllByRole("button", { name: "Submit processing" })[0]);
 
@@ -3177,7 +3175,7 @@ describe("App shell routing", () => {
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await user.click(await screen.findByRole("button", { name: "Save only" }));
 
     await waitFor(() => expect(createdStoryId).toBe("story_alpha_story"));
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
