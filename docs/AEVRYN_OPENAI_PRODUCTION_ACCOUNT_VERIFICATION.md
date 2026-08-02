@@ -15,7 +15,7 @@ It does not contain secrets.
 
 ```text
 Verification: OpenAI production organization and project data controls
-Status: In progress - official sources and Aevryn technical controls verified; production dashboard controls pending
+Status: In progress - official sources, Aevryn technical controls, and owner dashboard review verified; legal/final signoff pending
 Public beta: Blocked
 ```
 
@@ -74,6 +74,21 @@ the Aevryn candidate posture:
 * OpenAI API keys must stay server-side and must not be exposed in browser or
   client-side code.
 
+On 2026-08-02, the Aetherra Labs owner completed the non-secret production
+OpenAI dashboard review and reported:
+
+* production OpenAI organization confirmed
+* production OpenAI project confirmed
+* API key is project-scoped
+* API input/output sharing is disabled
+* evaluation/fine-tuning sharing is disabled
+* training on user stories by default is not enabled
+* production model remains `gpt-5.4-mini`
+
+The owner could not locate Modified Abuse Monitoring, Zero Data Retention, or
+data residency controls in the dashboard. Those controls are recorded as
+not found by owner review and must not be represented publicly as enabled.
+
 ---
 
 # Non-Secret Evidence Rules
@@ -118,19 +133,19 @@ not_applicable
 
 | Item | Required Public-Beta State | Recorded State | Evidence |
 | --- | --- | --- | --- |
-| Production OpenAI organization identified | verified | blocked | Not recorded yet |
-| Production OpenAI project identified | verified | blocked | Not recorded yet |
+| Production OpenAI organization identified | verified | verified | Owner confirmed production OpenAI organization on 2026-08-02 without sharing secrets. |
+| Production OpenAI project identified | verified | verified | Owner confirmed production OpenAI project on 2026-08-02 without sharing secrets. |
 | Final model configuration recorded | verified | verified | Hosted production-like `aevryn provider-config-check` recorded `model=gpt-5.4-mini` on 2026-07-17; owner selected gpt-5.4-mini for current extraction testing. |
-| API inputs/outputs data sharing not opted in | verified | blocked | Not recorded yet |
-| feedback/evaluation/fine-tuning data sharing disabled unless explicitly disclosed | verified | blocked | Not recorded yet |
+| API inputs/outputs data sharing not opted in | verified | verified | Owner confirmed API input/output sharing disabled on 2026-08-02. |
+| feedback/evaluation/fine-tuning data sharing disabled unless explicitly disclosed | verified | verified | Owner confirmed evaluation/fine-tuning sharing disabled on 2026-08-02. |
 | Responses API extraction sends `store=false` | verified | verified | Hosted production-like `aevryn provider-config-check` recorded `responses_store=false` and `request_storage=disabled` on 2026-07-17; source review rechecked on 2026-08-01. |
 | background mode disabled for extraction | verified | verified | Aevryn's public-beta extraction scope uses direct Responses API extraction and does not enable background mode; background mode remains separately review-gated. |
 | Responses API endpoint scope confirmed | verified | verified | Aevryn provider review and hosted config evidence scope extraction to the OpenAI Responses API. |
 | Conversations/Assistants/Threads/Vector Stores/Files/Batches/Evals/fine-tuning out of public-beta extraction scope | verified | verified | Public-beta provider review keeps these endpoints out of extraction scope unless separately reviewed. |
 | abuse-monitoring retention disclosed accurately | verified | verified | Official source recheck on 2026-08-01 confirmed `/v1/responses` abuse-monitoring retention is listed as 30 days by default; disclosure candidate includes this boundary. |
-| Modified Abuse Monitoring state recorded | verified, not_approved, or not_available | blocked | Not recorded yet |
-| Zero Data Retention state recorded | verified, not_approved, or not_available | blocked | Not recorded yet |
-| data residency state recorded | verified, not_approved, or not_available | blocked | Not recorded yet |
+| Modified Abuse Monitoring state recorded | verified, not_approved, or not_available | not_available | Owner could not locate MAM controls in dashboard on 2026-08-02; do not disclose as enabled. |
+| Zero Data Retention state recorded | verified, not_approved, or not_available | not_available | Owner could not locate ZDR controls in dashboard on 2026-08-02; do not disclose as enabled. |
+| data residency state recorded | verified, not_approved, or not_available | not_available | Owner could not locate data residency controls in dashboard on 2026-08-02; do not disclose as enabled. |
 | public Privacy Policy matches verified account/project posture | verified | blocked | Not recorded yet |
 | public Trust/User Rights pages match verified account/project posture | verified | blocked | Not recorded yet |
 
@@ -168,22 +183,22 @@ settings are confirmed.
 
 ---
 
-# Owner Dashboard Verification Still Required
+# Owner Dashboard Verification
 
-The following items cannot be verified from repository code or official source
-review alone. The Aetherra Labs owner must review the production OpenAI
-dashboard and record non-secret results:
+The following items could not be verified from repository code or official
+source review alone. The Aetherra Labs owner reviewed the production OpenAI
+dashboard on 2026-08-02 and recorded non-secret results:
 
-* production organization name or opaque identifier
-* production project name or opaque identifier
+* production organization confirmed
+* production project confirmed
 * API inputs/outputs sharing disabled for the Aevryn production project
 * evaluation/fine-tuning data sharing disabled unless separately disclosed
-* whether Modified Abuse Monitoring is unavailable, not approved, approved, or
-  enabled
-* whether Zero Data Retention is unavailable, not approved, approved, or enabled
-* whether data residency is unavailable, not approved, approved, or enabled
-* whether the selected production project uses the expected model configuration
-* whether provider billing/quota limits are acceptable for public beta
+* Modified Abuse Monitoring controls were not found by owner review
+* Zero Data Retention controls were not found by owner review
+* data residency controls were not found by owner review
+* selected production project uses the expected `gpt-5.4-mini` model
+
+Provider billing/quota limits still require final public-beta owner review.
 
 If any dashboard setting differs from the public disclosure candidate, public
 provider-backed extraction must remain disabled until the public docs are
@@ -215,7 +230,7 @@ changes it.
 # Public-Beta Decision
 
 ```text
-OpenAI production account verification: Partially complete
+OpenAI production account verification: Dashboard verified; legal/final signoff pending
 Provider-backed extraction for public beta: Blocked
 Fallback: Disable provider-backed extraction for public beta
 ```

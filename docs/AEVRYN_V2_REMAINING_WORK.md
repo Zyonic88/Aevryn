@@ -133,17 +133,18 @@ Verified evidence:
 Status:
 
 ```text
-Aevryn technical/source posture partially verified; production dashboard,
-legal-sensitive wording, and final public-beta approval remain open
+Aevryn technical/source posture and owner dashboard review verified;
+legal-sensitive wording and final public-beta approval remain open
 ```
 
 Required:
 
 * ~~verify final model configuration~~
 * verify provider data-retention behavior - official OpenAI source review
-  recorded and rechecked; production account posture still open
+  recorded and rechecked; owner dashboard review completed
 * verify provider training behavior - official OpenAI source review recorded
-  and rechecked; production account opt-in status still open
+  and rechecked; owner confirmed API input/output and evaluation/fine-tuning
+  sharing are disabled
 * verify abuse-monitoring behavior - official OpenAI source review recorded; public disclosure and account controls still open
 * ~~verify response-storage/request-storage posture~~
 * confirm no-training-by-default public language
@@ -174,13 +175,16 @@ Verified evidence:
 * Aevryn-side technical controls for model, Responses API scope, `store=false`,
   no background mode, and out-of-scope provider endpoints are verified for the
   current public-beta candidate.
+* Owner verified the production OpenAI organization/project dashboard posture
+  on 2026-08-02: production org confirmed, production project confirmed,
+  project-scoped key confirmed, API input/output sharing disabled,
+  evaluation/fine-tuning sharing disabled, no default training on user stories,
+  and production model `gpt-5.4-mini`.
+* Modified Abuse Monitoring, Zero Data Retention, and data residency controls
+  were not found by owner review and must not be represented as enabled.
 
 Remaining blockers:
 
-* production OpenAI organization/project dashboard data-control settings
-* API input/output sharing opt-in status
-* evaluation/fine-tuning data-sharing status
-* Modified Abuse Monitoring, Zero Data Retention, and data residency status
 * owner/legal approval of public provider wording
 * final release-candidate provider approval or explicit provider-disable
   decision

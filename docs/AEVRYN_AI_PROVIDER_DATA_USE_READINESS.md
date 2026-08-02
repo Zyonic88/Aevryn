@@ -115,17 +115,21 @@ confirmed the source-level boundary used by the disclosure candidate:
 
 Remaining public-beta blockers:
 
-* production OpenAI organization/project identifiers must be recorded without
-  secrets
-* production OpenAI organization/project data-control settings must be reviewed
-* provider retention behavior must remain disclosed accurately after dashboard
-  verification
-* Modified Abuse Monitoring, Zero Data Retention, and data residency posture
-  must be recorded as unavailable, unapproved, approved, or enabled
+* provider retention behavior must remain disclosed accurately after owner
+  dashboard verification
 * user-facing privacy/trust copy must be owner/legal reviewed
 * release-candidate provider failure logging must remain metadata-only
 * public-beta signoff must explicitly approve or disable provider-backed
   extraction
+
+On 2026-08-02, the Aetherra Labs owner verified the production OpenAI
+organization and project in the dashboard, confirmed the API key is
+project-scoped, confirmed API input/output sharing is disabled, confirmed
+evaluation/fine-tuning sharing is disabled, confirmed no default training on
+user stories is enabled, and confirmed the production model remains
+`gpt-5.4-mini`. Modified Abuse Monitoring, Zero Data Retention, and data
+residency controls were not found by owner review and must not be represented
+publicly as enabled.
 
 The disclosure candidate names OpenAI as the current provider candidate, explains the data boundary, and requires provider-backed extraction to remain disabled for public beta unless no-training posture and retention behavior can be verified and disclosed accurately.
 
@@ -283,8 +287,9 @@ OpenAI official source posture was rechecked on 2026-08-01 and still matches
 the disclosure candidate. Aevryn-side technical controls for model,
 Responses API scope, `store=false`, no background mode, and out-of-scope
 provider endpoints are verified for the current public-beta candidate.
-OpenAI production dashboard data-control verification, owner/legal review, and
-public-beta approval remain open.
+OpenAI production dashboard data-control verification was completed by owner
+review on 2026-08-02. Owner/legal public wording review and public-beta
+approval remain open.
 ```
 
 ---
