@@ -267,8 +267,8 @@ If one person holds multiple responsibilities, each responsibility must still be
 ```text
 Internal V2 release candidate: Signed off
 Public beta: Blocked
-Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, final bounded hosted log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, initial public page publication, dated restore/audit drill, prompt-pack hosted validation, deletion refresh UX hardening, and OpenAI dashboard provider verification passed. Public beta remains blocked by public-facing legal/trust/support wording review, backup retention wording owner/legal review, final provider disclosure wording approval, and final public-beta approval.
-Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support wording review, backup retention wording owner/legal review, final provider disclosure wording approval, and final public-beta approval.
+Reason: The hosted release-candidate smoke path, monitoring, export creation, deletion cleanup, CI/security gates, final bounded hosted log review, hosted audit integrity verification, hosted audit append-only access verification, provider config check, observability config check, initial public page publication, dated restore/audit drill, prompt-pack hosted validation, deletion refresh UX hardening, OpenAI dashboard provider verification, and provider disclosure product-truth wording approval passed. Public beta remains blocked by public-facing legal/trust/support wording review, backup retention wording owner/legal review, provider disclosure legal review, and final public-beta approval.
+Existing non-audit blockers remain: Public beta remains blocked by public-facing legal/trust/support wording review, backup retention wording owner/legal review, provider disclosure legal review, and final public-beta approval.
 ```
 
 ---

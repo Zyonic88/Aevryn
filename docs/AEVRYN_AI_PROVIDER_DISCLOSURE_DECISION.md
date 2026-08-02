@@ -14,7 +14,7 @@ It does not approve any provider for public user manuscripts by itself.
 
 ```text
 Decision: AI provider disclosure candidate
-Status: Selected for owner/legal/provider review
+Status: Owner product-truth wording approved - attorney review still blocked
 Public beta: Blocked
 ```
 
@@ -26,10 +26,14 @@ Use: Evidence-bounded extraction
 Approval: Internal alpha only
 ```
 
-The official OpenAI source posture was rechecked on 2026-08-01. The candidate
-disclosure below still matches the current source-level boundary, but public
-beta remains blocked until the production OpenAI organization/project dashboard
-settings are verified and legal-sensitive wording is reviewed.
+The official OpenAI source posture was rechecked on 2026-08-01 and 2026-08-02.
+The candidate disclosure below still matches the current source-level boundary.
+The production OpenAI organization/project dashboard settings were verified by
+the owner on 2026-08-02, and owner product-truth wording approval is recorded in
+`docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`.
+
+Public beta remains blocked until legal-sensitive wording and final
+public-beta signoff are complete.
 
 ---
 
@@ -47,7 +51,8 @@ Aevryn must not hide provider use behind generic AI wording.
 
 # Candidate Public Disclosure
 
-For public beta, Aevryn should publish this provider disclosure unless final provider disclosure wording approval requires stricter wording:
+For public beta, Aevryn should publish this provider disclosure unless attorney
+review or final public-beta signoff requires stricter wording:
 
 ```text
 Aevryn may use third-party AI providers for evidence-bounded extraction when provider-backed processing is enabled. The current provider candidate is OpenAI.
@@ -162,16 +167,11 @@ User-facing errors should explain the workflow state and possible next action wi
 
 Public beta remains blocked until:
 
-* final provider list is selected
-* final model configuration is recorded
-* provider terms are reviewed
-* provider retention behavior is documented
-* provider training behavior is documented
-* abuse-monitoring retention behavior is disclosed accurately
-* no-training posture is preserved or provider-backed extraction is disabled
+* attorney review of legal-sensitive provider wording is complete
 * provider disclosure is published in public privacy/trust material
 * provider failure logging remains metadata-only in release-candidate smoke
 * provider-backed extraction is covered by final release gates
+* final public-beta signoff is recorded
 
 ---
 

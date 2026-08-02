@@ -18,7 +18,7 @@ Status: Started
 Public beta: Blocked
 ```
 
-The required contact aliases are verified. The initial public pages are implemented in the browser app and reachable on the production app domain. Public wording consistency review passed on 2026-08-02. Legal review where required, backup retention wording owner/legal review, final provider disclosure wording approval, and final public-beta signoff remain open. Owner review is tracked in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.
+The required contact aliases are verified. The initial public pages are implemented in the browser app and reachable on the production app domain. Public wording consistency review passed on 2026-08-02. Provider disclosure product-truth wording approval is recorded on 2026-08-02. Legal review where required, provider disclosure legal review, backup retention wording owner/legal review, and final public-beta signoff remain open. Owner review is tracked in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.
 
 ---
 

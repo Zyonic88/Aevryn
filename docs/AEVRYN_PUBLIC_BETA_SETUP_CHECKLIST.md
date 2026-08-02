@@ -118,7 +118,7 @@ Required decisions:
 Verification:
 
 * provider source/dashboard review is completed
-* final provider disclosure wording is approved or provider-backed extraction remains disabled
+* provider disclosure product-truth wording is approved, and legal review is complete or provider-backed extraction remains disabled
 * `aevryn provider-config-check` passes without printing secrets
 * no-training-by-default posture is preserved
 * public disclosure matches provider terms
@@ -132,11 +132,12 @@ Tracking docs:
 * `docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md`
 * `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`
 * `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`
+* `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`
 
 Status:
 
 ```text
-OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17, including `model=gpt-5.4-mini`, `request_storage=disabled`, and `responses_store=false`. Official OpenAI source review was recorded on 2026-07-24 in `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`, and official source posture was rechecked on 2026-08-01 in `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md`. The production account/project verification checklist now records technical/source verification plus owner dashboard review completed on 2026-08-02. Aevryn-side technical controls for model, Responses API scope, `store=false`, no background mode, and out-of-scope provider endpoints are verified for the current public-beta candidate. Owner confirmed production org/project, project-scoped key, API input/output sharing disabled, evaluation/fine-tuning sharing disabled, no default training on user stories, and production model `gpt-5.4-mini`; MAM/ZDR/data residency controls were not found by owner review and must not be represented as enabled. Owner/legal review, final provider disclosure approval, and public-beta approval remain open.
+OpenAI is documented as an internal-alpha candidate only. Public-beta provider disclosure candidate selected for owner/legal/provider review. Hosted production-like `aevryn provider-config-check` passed with metadata-only output on 2026-07-17, including `model=gpt-5.4-mini`, `request_storage=disabled`, and `responses_store=false`. Official OpenAI source review was recorded on 2026-07-24 in `docs/AEVRYN_OPENAI_PROVIDER_REVIEW_2026_07_24.md`, and official source posture was rechecked on 2026-08-01 and 2026-08-02 in `docs/AEVRYN_OPENAI_PRODUCTION_ACCOUNT_VERIFICATION.md` and `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`. The production account/project verification checklist now records technical/source verification plus owner dashboard review completed on 2026-08-02. Aevryn-side technical controls for model, Responses API scope, `store=false`, no background mode, and out-of-scope provider endpoints are verified for the current public-beta candidate. Owner confirmed production org/project, project-scoped key, API input/output sharing disabled, evaluation/fine-tuning sharing disabled, no default training on user stories, and production model `gpt-5.4-mini`; MAM/ZDR/data residency controls were not found by owner review and must not be represented as enabled. Owner product-truth provider disclosure wording approval is recorded; legal review and public-beta approval remain open.
 ```
 
 ---
@@ -256,7 +257,7 @@ Tracking docs:
 Status:
 
 ```text
-Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`. Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`. The dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` now records owner-controlled public-facing product posture decisions for operator identity, product domain, contact aliases, trust promise, story ownership, AI training posture, metadata-first support, and content classification. Public wording consistency review passed on 2026-08-02 in `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md`. Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`. Legal-sensitive wording review, backup retention wording owner/legal review, final provider disclosure wording approval, and final public-beta signoff remain open.
+Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`. Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`. The dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` now records owner-controlled public-facing product posture decisions for operator identity, product domain, contact aliases, trust promise, story ownership, AI training posture, metadata-first support, and content classification. Public wording consistency review passed on 2026-08-02 in `docs/AEVRYN_PUBLIC_WORDING_CONSISTENCY_REVIEW_2026_08_02.md`. Provider disclosure product-truth wording approval is recorded in `docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md`. Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`. Legal-sensitive wording review, provider disclosure legal review, backup retention wording owner/legal review, and final public-beta signoff remain open.
 ```
 
 ---

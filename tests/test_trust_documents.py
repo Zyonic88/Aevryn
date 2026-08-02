@@ -277,13 +277,14 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
         "dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` now records",
         "Public wording consistency review passed on 2026-08-02",
         "Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`.",
+        "Provider disclosure product-truth wording approval is recorded",
         "Official OpenAI source review was recorded on 2026-07-24",
         (
             "production account/project verification checklist now records "
             "technical/source verification"
         ),
         "owner dashboard review completed on 2026-08-02",
-        "final provider disclosure wording approval",
+        "provider disclosure legal review",
         "Local production config contract passed.",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
@@ -345,7 +346,8 @@ def test_public_trust_page_copy_preserves_plain_language_promises() -> None:
             "public-beta wording candidate"
         ),
         "up to 30 days",
-        "final provider disclosure wording must be approved",
+        "provider disclosure product-truth wording is approved",
+        "legal review and final public-beta signoff must complete",
         "without overpromising public-beta readiness",
     )
 
@@ -503,6 +505,7 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "Restore/audit drill: passed",
         "OpenAI official source review: recorded on 2026-07-24",
         "OpenAI production account verification checklist: recorded with owner dashboard review",
+        "Provider disclosure product-truth wording approval: recorded on 2026-08-02",
         "OpenAI provider config check: passed with metadata-only output on 2026-07-17",
         "Backup retention provider source review: recorded on 2026-08-02",
         "Public wording consistency review: passed on 2026-08-02",
@@ -514,7 +517,7 @@ def test_public_review_matrix_tracks_page_level_approval_status() -> None:
         "Attorney review: open",
         "Public legal review packet: prepared",
         "Provider terms and data-use review: open",
-        "Final provider disclosure wording approval: open",
+        "Provider disclosure legal review: open",
         "Backup retention public wording owner/legal review: open after source recheck",
         "Production Supabase plan retention verification: open",
         "Production R2 lifecycle/deletion policy verification: open",
@@ -1434,10 +1437,11 @@ def test_ai_provider_disclosure_decision_records_public_beta_candidate() -> None
 
     required_terms = (
         "Decision: AI provider disclosure candidate",
-        "Status: Selected for owner/legal/provider review",
+        "Status: Owner product-truth wording approved - attorney review still blocked",
         "Public beta: Blocked",
         "Provider: OpenAI",
-        "official OpenAI source posture was rechecked on 2026-08-01",
+        "official OpenAI source posture was rechecked on 2026-08-01 and 2026-08-02",
+        "docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md",
         "Use: Evidence-bounded extraction",
         "Users must know when story content leaves Aevryn-owned systems.",
         "The current provider candidate is OpenAI.",
@@ -1448,12 +1452,47 @@ def test_ai_provider_disclosure_decision_records_public_beta_candidate() -> None
         "Responses API extraction requests set `store=false`",
         "OpenAI abuse-monitoring logs may contain prompts and responses",
         "up to 30 days by default",
-        "abuse-monitoring retention behavior is disclosed accurately",
-        "production account data-control settings",
-        "provider-backed extraction must remain disabled for public beta",
+        "provider disclosure is published in public privacy/trust material",
+        "provider failure logging remains metadata-only in release-candidate smoke",
+        "attorney review of legal-sensitive provider wording is complete",
         "full provider prompts",
         "full provider responses",
-        "final model configuration is recorded",
+        "final public-beta signoff is recorded",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_provider_disclosure_wording_approval_records_owner_product_truth() -> None:
+    """Final provider wording approval should not imply legal or beta approval."""
+    document = read_doc("docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md")
+
+    required_terms = (
+        "Review: Final provider disclosure wording approval",
+        "Date: 2026-08-02",
+        "Status: Owner product-truth wording approved - attorney review still blocked",
+        "Public beta: Blocked",
+        "Users must know when story content leaves Aevryn-owned systems.",
+        "Aevryn uses OpenAI as the current AI provider candidate",
+        "selected story excerpts",
+        "scene context",
+        "evidence anchors",
+        "structured-output",
+        "Aevryn does not send account passwords, session tokens, API keys",
+        "Provider output is not Canon.",
+        "Aetherra Labs does not train on user stories without explicit opt-in.",
+        "API input/output sharing",
+        "evaluation/fine-tuning sharing",
+        "Responses API extraction requests set store=false",
+        "OpenAI abuse-monitoring logs may contain prompts and responses",
+        "up to 30 days by default",
+        "Modified Abuse Monitoring, Zero Data Retention, and data residency controls",
+        "must not be represented as",
+        "attorney review of legal-sensitive Privacy Policy",
+        "provider_disclosure_product_truth=approved",
+        "provider_disclosure_legal_review=blocked",
+        "public_beta=blocked_until_final_signoff",
     )
 
     for term in required_terms:
@@ -1507,8 +1546,9 @@ def test_openai_production_account_verification_keeps_provider_beta_blocked() ->
     required_terms = (
         "Verification: OpenAI production organization and project data controls",
         (
-            "Status: In progress - official sources, Aevryn technical controls, "
-            "and owner dashboard review verified; legal/final signoff pending"
+            "Status: Official sources, Aevryn technical controls, owner dashboard "
+            "review, and owner product-truth provider wording approved; "
+            "legal/final signoff pending"
         ),
         "Public beta: Blocked",
         "Verify the actual production account, not the intended policy.",
@@ -1541,6 +1581,7 @@ def test_openai_production_account_verification_keeps_provider_beta_blocked() ->
         "Owner could not locate MAM controls in dashboard on 2026-08-02",
         "Owner could not locate ZDR controls in dashboard on 2026-08-02",
         "Owner could not locate data residency controls in dashboard on 2026-08-02",
+        "docs/AEVRYN_PROVIDER_DISCLOSURE_WORDING_APPROVAL_2026_08_02.md",
         "Owner Dashboard Verification",
         "Provider billing/quota limits still require final public-beta owner review.",
         "python -m aevryn.cli provider-config-check",
@@ -1550,7 +1591,10 @@ def test_openai_production_account_verification_keeps_provider_beta_blocked() ->
         "docs/AEVRYN_AI_PROVIDER_DISCLOSURE_DECISION.md",
         "docs/AEVRYN_PUBLIC_TRUST_PAGE_COPY.md",
         "docs/PRIVACY_POLICY.md",
-        "OpenAI production account verification: Dashboard verified; legal/final signoff pending",
+        (
+            "OpenAI production account verification: Dashboard and owner "
+            "product-truth wording verified; legal/final signoff pending"
+        ),
         "Provider-backed extraction for public beta: Blocked",
         "Fallback: Disable provider-backed extraction for public beta",
     )
@@ -1762,8 +1806,8 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         ),
         (
             "Public beta remains blocked by public-facing legal/trust/support "
-            "wording review, backup retention wording owner/legal review, final "
-            "provider disclosure wording approval, and final public-beta approval."
+            "wording review, backup retention wording owner/legal review, "
+            "provider disclosure legal review, and final public-beta approval."
         ),
     )
 
