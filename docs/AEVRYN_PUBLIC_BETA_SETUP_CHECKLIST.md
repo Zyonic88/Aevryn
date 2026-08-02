@@ -117,7 +117,8 @@ Required decisions:
 
 Verification:
 
-* provider review is completed
+* provider source/dashboard review is completed
+* final provider disclosure wording is approved or provider-backed extraction remains disabled
 * `aevryn provider-config-check` passes without printing secrets
 * no-training-by-default posture is preserved
 * public disclosure matches provider terms
@@ -255,7 +256,7 @@ Tracking docs:
 Status:
 
 ```text
-Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`. Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`. The dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` now records owner-controlled public-facing product posture decisions for operator identity, product domain, contact aliases, trust promise, story ownership, AI training posture, metadata-first support, and content classification. Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`. Legal review, backup/provider verification, final public-beta signoff, and any legal-sensitive wording approval remain open.
+Initial public pages are implemented and deployed for trust, privacy, security, user rights, content classification, support, security disclosure, terms, and acceptable use. Contact verification passed. Public-beta backup wording candidate and AI provider disclosure candidate selected. Public review matrix exists in `docs/AEVRYN_PUBLIC_REVIEW_MATRIX.md`. Owner public review record exists in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`. The dated worksheet `docs/AEVRYN_OWNER_PUBLIC_REVIEW_2026_07_24.md` now records owner-controlled public-facing product posture decisions for operator identity, product domain, contact aliases, trust promise, story ownership, AI training posture, metadata-first support, and content classification. Public legal review packet exists in `docs/AEVRYN_PUBLIC_LEGAL_REVIEW_PACKET.md`. Legal-sensitive wording review, backup retention wording owner/legal review, final provider disclosure wording approval, and final public-beta signoff remain open.
 ```
 
 ---

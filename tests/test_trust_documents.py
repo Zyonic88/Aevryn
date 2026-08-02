@@ -273,7 +273,7 @@ def test_public_beta_setup_checklist_tracks_external_blockers() -> None:
             "technical/source verification"
         ),
         "owner dashboard review completed on 2026-08-02",
-        "backup/provider verification",
+        "final provider disclosure wording approval",
         "Local production config contract passed.",
         "docs/AEVRYN_PRODUCTION_LIKE_SMOKE_RECORD.md",
         "2026-07-01 local smoke attempt verified fail-closed behavior",
@@ -335,7 +335,7 @@ def test_public_trust_page_copy_preserves_plain_language_promises() -> None:
             "public-beta wording candidate"
         ),
         "up to 30 days",
-        "AI provider review must be completed",
+        "final provider disclosure wording must be approved",
         "without overpromising public-beta readiness",
     )
 
@@ -1602,7 +1602,7 @@ def test_release_candidate_run_record_template_tracks_final_signoff() -> None:
         "Operations",
         "Support",
         "Internal V2 release candidate: Signed off",
-        "Public beta remains blocked by public-facing legal/trust/support review",
+        "Public beta remains blocked by public-facing legal/trust/support wording review",
         "The release-candidate pass is complete, privacy-preserving, repeatable",
     )
 
@@ -1736,9 +1736,8 @@ def test_production_like_smoke_record_tracks_fail_closed_attempt() -> None:
         ),
         (
             "Public beta remains blocked by public-facing legal/trust/support "
-            "publication, final provider review, backup retention wording "
-            "owner/legal review, prompt-pack polish, deletion refresh UX "
-            "hardening, and final public-beta approval."
+            "wording review, backup retention wording owner/legal review, final "
+            "provider disclosure wording approval, and final public-beta approval."
         ),
     )
 

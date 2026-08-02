@@ -47,7 +47,7 @@ Aevryn must not hide provider use behind generic AI wording.
 
 # Candidate Public Disclosure
 
-For public beta, Aevryn should publish this provider disclosure unless final provider review requires stricter wording:
+For public beta, Aevryn should publish this provider disclosure unless final provider disclosure wording approval requires stricter wording:
 
 ```text
 Aevryn may use third-party AI providers for evidence-bounded extraction when provider-backed processing is enabled. The current provider candidate is OpenAI.

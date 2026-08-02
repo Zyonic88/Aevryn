@@ -18,7 +18,7 @@ Status: Started
 Public beta: Blocked
 ```
 
-The required contact aliases are verified. The initial public pages are implemented in the browser app and reachable on the production app domain. Owner review, legal review where required, backup/provider verification, and final public-beta signoff remain open. Owner review is tracked in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.
+The required contact aliases are verified. The initial public pages are implemented in the browser app and reachable on the production app domain. Owner review, legal review where required, backup retention wording owner/legal review, final provider disclosure wording approval, and final public-beta signoff remain open. Owner review is tracked in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.
 
 ---
 
