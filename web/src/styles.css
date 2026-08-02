@@ -2106,7 +2106,7 @@ textarea::placeholder {
 }
 
 .workspace-shell {
-  grid-template-columns: 58px 260px minmax(0, 1fr);
+  grid-template-columns: 58px 220px minmax(0, 1fr);
   border-color: var(--app-line-strong);
   background:
     linear-gradient(135deg, rgba(127, 178, 255, 0.06), transparent 36%),
@@ -2171,6 +2171,10 @@ textarea::placeholder {
   border-color: rgba(127, 178, 255, 0.24);
   color: var(--app-text);
   background: rgba(127, 178, 255, 0.1);
+}
+
+.workspace-sidebar {
+  grid-template-rows: auto 1fr;
 }
 
 .workspace-project {
@@ -2706,16 +2710,8 @@ textarea::placeholder {
   }
 
   .workspace-sidebar {
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     gap: 14px;
-  }
-
-  .workspace-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .workspace-nav a {
-    min-height: 40px;
   }
 }
 
@@ -2741,7 +2737,6 @@ textarea::placeholder {
     white-space: nowrap;
   }
 
-  .workspace-nav,
   .workspace-locked-tools {
     grid-template-columns: 1fr;
   }

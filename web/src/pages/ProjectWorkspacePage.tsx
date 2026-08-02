@@ -87,32 +87,25 @@ export function ProjectWorkspacePage() {
 
   return (
     <div className="workspace-shell">
-      <div className="workspace-rail" aria-hidden="true">
+      <nav className="workspace-rail" aria-label="Workspace sections">
         <img src="/assets/favicon-64.png" alt="" />
-        {visibleWorkspaceTabs.slice(0, 7).map((tab) => (
+        {visibleWorkspaceTabs.map((tab) => (
           <NavLink
             key={tab.id}
             to={`/projects/${project.id}/${tab.id}`}
-            tabIndex={-1}
+            aria-label={tab.label}
             title={tab.label}
           >
             {tab.shortLabel}
           </NavLink>
         ))}
-      </div>
+      </nav>
       <aside className="workspace-sidebar">
         <div className="workspace-project">
           <p className="eyebrow">Project</p>
           <h1>{project.name}</h1>
           <span>Canon workspace</span>
         </div>
-        <nav aria-label="Workspace sections" className="workspace-nav">
-          {visibleWorkspaceTabs.map((tab) => (
-            <NavLink key={tab.id} to={`/projects/${project.id}/${tab.id}`}>
-              <span>{tab.label}</span>
-            </NavLink>
-          ))}
-        </nav>
         <div className="workspace-locked-tools" aria-label="Future production tools">
           {futureWorkspaceTools.map((tool) => (
             <span key={tool.label} className="workspace-locked-link">
