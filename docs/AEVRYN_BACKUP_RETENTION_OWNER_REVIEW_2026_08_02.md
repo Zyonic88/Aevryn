@@ -16,7 +16,7 @@ It does not approve public beta.
 ```text
 Review: Backup retention owner/legal review
 Date: 2026-08-02
-Status: Provider source rechecked - owner/legal wording review pending
+Status: Provider source rechecked - production verification tooling implemented; owner/legal wording review pending
 Public beta: Blocked
 ```
 
@@ -100,6 +100,20 @@ Owner verification still required:
 production_r2_lifecycle_policy=blocked_pending_owner_verification
 ```
 
+Production verification tooling is recorded in:
+
+* `docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md`
+
+Run:
+
+```powershell
+python -m aevryn.cli backup-retention-config-check
+```
+
+The command validates the declared production Supabase plan/window and R2
+deletion/lifecycle policy without printing secrets, database URLs, R2
+credentials, bucket object names, source prose, or storage references.
+
 ---
 
 # Verified Aevryn Evidence
@@ -160,6 +174,7 @@ Before public beta, attorney review must confirm:
 | Hosted restore logs metadata-only | verified | bounded hosted restore log review |
 | Supabase source recheck | verified | official source rechecked 2026-08-02 |
 | Cloudflare R2 source recheck | verified | official source rechecked 2026-08-02 |
+| Production verification tooling | verified | `aevryn backup-retention-config-check` implemented |
 | Production Supabase plan retention | blocked | owner verification required |
 | Production R2 lifecycle/deletion policy | blocked | owner verification required |
 | Final public wording consistency | blocked | owner/legal review required |

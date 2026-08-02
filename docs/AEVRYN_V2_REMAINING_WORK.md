@@ -253,6 +253,7 @@ Tracking:
 * `docs/AEVRYN_BACKUP_RETENTION.md`
 * `docs/AEVRYN_BACKUP_RETENTION_DECISION.md`
 * `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`
+* `docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md`
 * `docs/AEVRYN_BACKUP_RECOVERY_AUDIT_READINESS.md`
 * `docs/DATA_RETENTION_POLICY.md`
 
@@ -264,13 +265,14 @@ Verified evidence:
 * audit ledger integrity passed after restore
 * hosted restore logs remained metadata-only
 * official Supabase and Cloudflare R2 source facts were rechecked on 2026-08-02
+* production backup retention verification tooling is implemented through
+  `aevryn backup-retention-config-check`
 
 Remaining blockers:
 
-* production Supabase plan retention owner verification
-* production R2 lifecycle/deletion policy owner verification
-* final public wording consistency review
-* owner/legal approval
+* run and record production Supabase plan retention verification
+* run and record production R2 lifecycle/deletion policy verification
+* backup retention owner/legal approval
 
 Acceptance:
 

@@ -18,7 +18,11 @@ Public beta: Blocked
 
 This decision gives Aevryn a truthful public wording target before beta. It must still be verified against the final production backup provider, final production storage lifecycle, and legal review.
 
-The dated owner/legal review packet is recorded in `docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`.
+The dated owner/legal review packet is recorded in
+`docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md`.
+
+The production configuration verification path is recorded in
+`docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md`.
 
 ---
 
@@ -71,6 +75,15 @@ Cloudflare R2 object retention and deletion facts were rechecked against officia
 * lifecycle changes can take longer to affect existing objects
 
 These source checks support the selected maximum-window candidate, but they do not complete owner/legal approval.
+
+Production verification tooling now exists:
+
+```powershell
+python -m aevryn.cli backup-retention-config-check
+```
+
+The command verifies declared production Supabase plan/window metadata and R2
+deletion/lifecycle metadata without printing secrets.
 
 ---
 

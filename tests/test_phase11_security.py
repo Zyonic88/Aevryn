@@ -115,7 +115,9 @@ def test_backup_retention_decision_records_public_beta_candidate() -> None:
         "Status: Provider source rechecked - owner/legal wording review pending",
         "Public beta: Blocked",
         "docs/AEVRYN_BACKUP_RETENTION_OWNER_REVIEW_2026_08_02.md",
+        "docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md",
         "Official provider source review was rechecked on 2026-08-02.",
+        "python -m aevryn.cli backup-retention-config-check",
         "daily database backup retention depends on plan",
         "Cloudflare R2 object retention and deletion facts were rechecked",
         "production Supabase plan retention is verified against the selected maximum window",
@@ -147,7 +149,10 @@ def test_backup_retention_owner_review_records_source_recheck_without_beta_appro
     required_terms = (
         "Review: Backup retention owner/legal review",
         "Date: 2026-08-02",
-        "Status: Provider source rechecked - owner/legal wording review pending",
+        (
+            "Status: Provider source rechecked - production verification tooling "
+            "implemented; owner/legal wording review pending"
+        ),
         "Public beta: Blocked",
         "Deletion removes active product data. Backups expire on a disclosed schedule.",
         "This is a maximum-window candidate",
@@ -160,12 +165,45 @@ def test_backup_retention_owner_review_records_source_recheck_without_beta_appro
         "https://developers.cloudflare.com/r2/buckets/object-lifecycles/",
         "https://developers.cloudflare.com/r2/objects/delete-objects/",
         "Object deletion through supported R2 tools is irreversible.",
+        "docs/AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md",
+        "python -m aevryn.cli backup-retention-config-check",
+        "Production verification tooling",
         "isolated restore drill passed",
         "Production Supabase plan retention",
         "Production R2 lifecycle/deletion policy",
         "Attorney review",
         "owner_legal_backup_wording_review=complete",
         "public_beta_backup_wording=approved",
+    )
+
+    for term in required_terms:
+        assert term in document
+
+
+def test_backup_retention_production_verification_records_fail_closed_contract() -> None:
+    """Production verification docs should define exact metadata-only checks."""
+    document = (
+        ROOT / "docs" / "AEVRYN_BACKUP_RETENTION_PRODUCTION_VERIFICATION.md"
+    ).read_text(encoding="utf-8")
+
+    required_terms = (
+        "Verification: Production backup retention configuration",
+        "Status: Verification tooling implemented - owner production values pending",
+        "Public beta: Blocked",
+        "Deletion removes active product data. Backups expire on a disclosed schedule.",
+        "python -m aevryn.cli backup-retention-config-check",
+        "AEVRYN_BACKUP_RETENTION_MAX_DAYS",
+        "AEVRYN_SUPABASE_PLAN",
+        "AEVRYN_SUPABASE_BACKUP_RETENTION_DAYS",
+        "AEVRYN_R2_DELETION_POLICY",
+        "secrets_printed=0",
+        "ok=backup_retention_config_contract_checked",
+        "declared Supabase retention exceeds the public maximum",
+        "lifecycle expiration mode has no enabled lifecycle expiration rule",
+        "object keys, source prose",
+        "production_supabase_plan_retention=blocked_pending_owner_verification",
+        "production_r2_lifecycle_policy=blocked_pending_owner_verification",
+        "backup_retention_legal_review=blocked",
     )
 
     for term in required_terms:
