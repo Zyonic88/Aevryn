@@ -3687,6 +3687,11 @@ describe("App shell routing", () => {
     expect(atAGlance.getByText("Alive")).toBeInTheDocument();
     expect(atAGlance.getByText("Goal")).toBeInTheDocument();
     expect(atAGlance.getByText("Find the Fortress")).toBeInTheDocument();
+    const identitySignals = within(markCard.getByLabelText("Character identity signals"));
+    expect(identitySignals.getByText("Aliases")).toBeInTheDocument();
+    expect(identitySignals.getByText("Titles")).toBeInTheDocument();
+    expect(identitySignals.getByText("Descriptions")).toBeInTheDocument();
+    expect(identitySignals.getAllByText("1 signal").length).toBeGreaterThanOrEqual(3);
     expect(markCard.getByRole("heading", { name: "Race" })).toBeInTheDocument();
     expect(markCard.getAllByText("Human").length).toBeGreaterThanOrEqual(2);
     expect(markCard.getByRole("heading", { name: "Gender" })).toBeInTheDocument();
