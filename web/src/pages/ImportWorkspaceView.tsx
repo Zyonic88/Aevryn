@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 
 import { apiClient, type ImportInspectRequest } from "../api/client";
@@ -51,6 +51,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
   const [submittingImportId, setSubmittingImportId] = useState<string | null>(null);
   const [importIntent, setImportIntent] = useState<"review" | "process" | null>(null);
+  const [processingClockMs, setProcessingClockMs] = useState(() => Date.now());
 
   const sourceFormats = useQuery({
     queryKey: ["source-formats"],
@@ -263,6 +264,15 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const activeProcessingSnapshot = activeProcessingRun
     ? snapshotsByRun.get(activeProcessingRun.run_id)
     : undefined;
+  useEffect(() => {
+    if (!activeProcessingRun) {
+      return undefined;
+    }
+    const intervalId = window.setInterval(() => {
+      setProcessingClockMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [activeProcessingRun]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -618,6 +628,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         isSubmitting={submitRun.isPending}
         activeRun={activeProcessingRun}
         activeSnapshot={activeProcessingSnapshot}
+        nowMs={processingClockMs}
       />
 
       <details className="project-panel disclosure-panel" aria-label="Web import">
@@ -796,6 +807,7 @@ function ImportProcessingPanel({
   isReadingSourceFile,
   isSaving,
   isSubmitting,
+  nowMs,
 }: {
   activeRun: EngineRun | undefined;
   activeSnapshot: Snapshot | undefined;
@@ -803,6 +815,7 @@ function ImportProcessingPanel({
   isReadingSourceFile: boolean;
   isSaving: boolean;
   isSubmitting: boolean;
+  nowMs: number;
 }) {
   const hasLocalProgress = isReadingSourceFile || isInspecting || isSaving || isSubmitting;
   if (!hasLocalProgress && !activeRun) {
@@ -818,7 +831,13 @@ function ImportProcessingPanel({
         <span>{activeRun ? formatRunStatus(activeRun.status) : "Working"}</span>
       </header>
       {activeRun ? (
-        <ProcessingStepper run={activeRun} snapshot={activeSnapshot} label="Current processing progress" />
+        <ProcessingStepper
+          run={activeRun}
+          snapshot={activeSnapshot}
+          label="Current processing progress"
+          nowMs={nowMs}
+          showTiming
+        />
       ) : (
         <ImportActionStepper
           isReadingSourceFile={isReadingSourceFile}
@@ -1136,11 +1155,15 @@ function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): strin
 
 function ProcessingStepper({
   label = "Processing progress",
+  nowMs,
   run,
+  showTiming = false,
   snapshot,
 }: {
   label?: string;
+  nowMs?: number;
   run: EngineRun;
+  showTiming?: boolean;
   snapshot: Snapshot | undefined;
 }) {
   const steps = processingSteps(run, snapshot);
@@ -1152,8 +1175,24 @@ function ProcessingStepper({
           <strong>{step.label}</strong>
         </div>
       ))}
+      {showTiming && nowMs !== undefined ? <ProcessingTiming run={run} nowMs={nowMs} /> : null}
       <p>{processingHelpText(run, snapshot)}</p>
     </div>
+  );
+}
+
+function ProcessingTiming({ nowMs, run }: { nowMs: number; run: EngineRun }) {
+  return (
+    <dl className="processing-timing" aria-label="Processing timing">
+      <div>
+        <dt>Elapsed</dt>
+        <dd>{formatRunElapsed(run, nowMs)}</dd>
+      </div>
+      <div>
+        <dt>Last update</dt>
+        <dd>{formatRunStatusAge(run, nowMs)}</dd>
+      </div>
+    </dl>
   );
 }
 
@@ -1199,6 +1238,38 @@ function processingHelpText(run: EngineRun, snapshot: Snapshot | undefined): str
     return "Processing finished. Aevryn is waiting for the canon snapshot to appear.";
   }
   return "You can leave this page. Aevryn will keep processing and update this run automatically.";
+}
+
+function formatRunElapsed(run: EngineRun, nowMs: number): string {
+  return formatDurationLabel(durationSince(run.started_at, nowMs));
+}
+
+function formatRunStatusAge(run: EngineRun, nowMs: number): string {
+  const updatedAt = run.status_updated_at ?? run.started_at;
+  return `${formatDurationLabel(durationSince(updatedAt, nowMs))} ago`;
+}
+
+function durationSince(timestamp: string, nowMs: number): number {
+  const startedAt = Date.parse(timestamp);
+  if (!Number.isFinite(startedAt)) {
+    return 0;
+  }
+  return Math.max(0, nowMs - startedAt);
+}
+
+function formatDurationLabel(durationMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes < 60) {
+    return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`;
 }
 
 function importCardTitle(index: number): string {

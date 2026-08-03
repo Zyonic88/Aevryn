@@ -2582,6 +2582,34 @@ textarea::placeholder {
   color: var(--app-muted);
 }
 
+.processing-timing {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.processing-timing > div {
+  border: 1px solid rgba(127, 178, 255, 0.18);
+  border-radius: 6px;
+  padding: 10px;
+  background: rgba(127, 178, 255, 0.06);
+}
+
+.processing-timing dt {
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.processing-timing dd {
+  margin: 4px 0 0;
+  color: var(--app-text);
+  font-weight: 900;
+}
+
 .overview-command-panel,
 .settings-command-panel {
   background:

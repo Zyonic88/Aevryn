@@ -2978,7 +2978,7 @@ describe("App shell routing", () => {
         if (submittedRun) {
           runListReadsAfterSubmit += 1;
         }
-        const status = runListReadsAfterSubmit >= 2 ? "succeeded" : "pending";
+        const status = runListReadsAfterSubmit >= 3 ? "succeeded" : "pending";
         const finishedFields =
           status === "succeeded"
             ? { finished_at: "2026-06-27T00:00:05.000Z" }
@@ -3000,7 +3000,7 @@ describe("App shell routing", () => {
           new Response(
             JSON.stringify({
               snapshots:
-                runListReadsAfterSubmit >= 2
+                runListReadsAfterSubmit >= 3
                   ? [{ ...snapshotPayload, run_id: submittedRun?.run_id }]
                   : [],
             }),
@@ -3054,6 +3054,10 @@ describe("App shell routing", () => {
     await user.click(screen.getAllByRole("button", { name: "Submit processing" })[0]);
 
     expect(await screen.findByRole("button", { name: "Processing" })).toBeDisabled();
+    const currentProgress = await screen.findByLabelText("Current processing progress");
+    expect(currentProgress).toHaveTextContent("Elapsed");
+    expect(currentProgress).toHaveTextContent("Last update");
+    expect(currentProgress).toHaveTextContent("ago");
     const processingProgress = await screen.findByLabelText("Processing progress");
     expect(processingProgress).toHaveTextContent("Queued");
     expect(processingProgress).toHaveTextContent("Processing");
