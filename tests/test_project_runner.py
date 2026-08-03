@@ -600,6 +600,72 @@ def test_runner_does_not_use_generic_status_for_title_name_resolution() -> None:
     )
 
 
+def test_runner_resolves_title_prefixed_known_name_without_prior_title_fact() -> None:
+    """Title-prefixed names should merge when the known identity name is explicit."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_mira",
+                        "entity_type": "character",
+                        "display_name": "Mira",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_001_scene_002": {
+                "entities": [
+                    {
+                        "entity_id": "character_captain_mira",
+                        "entity_type": "character",
+                        "display_name": "Captain Mira",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_captain_mira_status_present",
+                        "entity_id": "character_captain_mira",
+                        "attribute": "status",
+                        "value": "Present",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_mira"
+    assert result.database.retrieve_entity("character_captain_mira") is None
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_mira"
+        and decision.reference.text == "Captain Mira"
+        and decision.candidates[0].match_kind == "title_prefix_name"
+        for decision in result.identity_resolutions
+    )
+
+
 def test_runner_carries_identity_resolution_across_chapters() -> None:
     """Identity profiles should carry from earlier chapters into later chapters."""
     runner = AevrynProjectRunner()

@@ -523,6 +523,10 @@ Verified hardening:
 * entity resolution and project-runner tests resolve title-plus-name references
   such as General Charlotte to the existing Canon identity when the title/name
   support is explicit, while keeping shared titles ambiguous
+* entity resolution and project-runner tests resolve conservative rank/title
+  prefixes such as Captain Mira to a known Canon identity even before the title
+  has been stored as a prior fact, while rejecting ordinary descriptors such as
+  Wounded Mira
 * project-runner identity profiles preserve explicit relationship labels such as
   "sister of Zhao Chen," allowing possessive references like "Zhao Chen's sister"
   to resolve to an existing identity without creating duplicate character cards
