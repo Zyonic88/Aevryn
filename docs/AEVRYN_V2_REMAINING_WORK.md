@@ -396,8 +396,8 @@ In progress
 
 Remaining hardening:
 
-* verify Prompt Packs consume Character, World, Scene, Timeline, and Continuity
-  presentation state when building prompt context, not just scene summary text
+* ~~verify Prompt Packs consume Character, World, Scene, Timeline, and Continuity
+  presentation state when building prompt context, not just scene summary text~~
 * keep prompts Canon-bound enough to preserve known character appearance,
   setting, scene action, world objects, systems, skills, and current story state
 * improve Prompt Packs layout so chapter/scene prompts are easy to follow without
@@ -471,6 +471,12 @@ Verified hardening:
   details so users can judge prompt grounding without opening every prompt body
 * verified with focused Prompt Packs workspace test, full frontend test suite,
   lint, and production build
+* prompt-builder and presentation tests verify prompt text and prompt metadata
+  consume character cards, accepted character facts, world facts, relationships,
+  scene visual anchors, scene action beats, continuity notes, and missing-input
+  status instead of relying only on scene summary text
+* verified with focused Canon Prompt Builder, Prompt Engine, and Presentation
+  Engine tests
 
 Acceptance:
 
