@@ -168,6 +168,7 @@ function OutputMetadataDisclosure({
     <details className="output-metadata-disclosure">
       <summary>
         <span>Canon metadata</span>
+        {" "}
         <span>
           {runStatus} | {outputs.canon.chapters.toLocaleString()} chapters |{" "}
           {outputs.canon.scenes.toLocaleString()} scenes |{" "}
