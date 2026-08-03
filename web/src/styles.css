@@ -564,6 +564,7 @@ input:focus {
 }
 
 .workspace-content {
+  min-width: 0;
   padding: 24px;
 }
 
@@ -1088,7 +1089,7 @@ select:focus {
 
 .quick-action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 10px;
 }
 
@@ -1124,10 +1125,16 @@ select:focus {
 }
 
 .quick-action-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  justify-content: space-between;
   gap: 10px;
+}
+
+.quick-action-header strong {
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .quick-action-header small {
@@ -2177,22 +2184,38 @@ textarea::placeholder {
   border-bottom: 1px solid rgba(127, 178, 255, 0.16);
 }
 
+.workspace-project-title {
+  min-width: 0;
+}
+
 .workspace-command-strip .eyebrow {
   margin: 0;
   font-size: 10px;
 }
 
 .workspace-command-strip h1 {
+  max-width: min(54vw, 760px);
   margin: 2px 0 0;
+  overflow: hidden;
   color: var(--app-text);
   font-size: 16px;
   line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace-command-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 0 0 auto;
+}
+
+.workspace-command-actions span {
+  color: var(--app-muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .workspace-command-actions h2 {
