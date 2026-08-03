@@ -217,6 +217,37 @@ def test_resolves_supported_title_prefix_with_known_name() -> None:
     assert decision.candidates[0].match_kind == "title_prefix_name"
 
 
+@pytest.mark.parametrize(
+    "reference_text",
+    (
+        "Captain Mira's",
+        "the Captain Mira",
+        "Captain-Mira",
+        "Captain Mira,",
+    ),
+)
+def test_resolves_punctuated_title_prefix_with_known_name(
+    reference_text: str,
+) -> None:
+    """Punctuation and possessives should not fragment title/name identities."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference(reference_text, "anchor_032f"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_mira"
+    assert decision.candidates[0].match_kind == "title_prefix_name"
+
+
 def test_title_prefix_resolution_rejects_unknown_descriptors() -> None:
     """Descriptors should not be treated as identity titles."""
     engine = EntityResolutionEngine()

@@ -666,6 +666,76 @@ def test_runner_resolves_title_prefixed_known_name_without_prior_title_fact() ->
     )
 
 
+def test_runner_resolves_same_scene_title_name_duplicate_to_named_identity() -> None:
+    """Same-scene title/name variants should not create duplicate character cards."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_mira",
+                        "entity_type": "character",
+                        "display_name": "Mira",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_captain_mira",
+                        "entity_type": "character",
+                        "display_name": "Captain Mira",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_mira_status_ready",
+                        "entity_id": "character_mira",
+                        "attribute": "status",
+                        "value": "Ready",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_captain_mira_goal_briefing",
+                        "entity_id": "character_captain_mira",
+                        "attribute": "current_goal",
+                        "value": "Lead the briefing",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[0].accepted_entities == ("character_mira",)
+    assert len(result.extraction_results[0].entities) == 1
+    assert result.extraction_results[0].entities[0].entity_id == "character_mira"
+    assert result.extraction_results[0].facts[1].entity_id == "character_mira"
+    assert result.database.retrieve_entity("character_captain_mira") is None
+    goal_fact = result.database.retrieve_current_fact("character_mira", "current_goal")
+    assert goal_fact is not None
+    assert goal_fact.value == "Lead the briefing"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_mira"
+        and decision.reference.text == "Captain Mira"
+        and decision.candidates[0].match_kind == "title_prefix_name"
+        for decision in result.identity_resolutions
+    )
+
+
 def test_runner_carries_identity_resolution_across_chapters() -> None:
     """Identity profiles should carry from earlier chapters into later chapters."""
     runner = AevrynProjectRunner()
