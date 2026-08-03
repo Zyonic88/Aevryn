@@ -107,7 +107,7 @@ function ProjectOverview({
             <NavLink key={action.to} to={action.to} aria-label={`${action.title} ${action.detail}`}>
               <span className="quick-action-header">
                 <strong>{action.title}</strong>
-                <small>{action.action}</small>
+                <small>{quickActionBadge(action.action)}</small>
               </span>
               <span>{action.detail}</span>
             </NavLink>
@@ -270,6 +270,10 @@ function overviewActions(projectId: string, outputs: ProjectOutputs): OverviewAc
       to: `/projects/${projectId}/exports`,
     },
   ];
+}
+
+function quickActionBadge(action: string): string {
+  return action.toLowerCase().startsWith("open ") ? "Open" : action;
 }
 
 type OverviewAction = {

@@ -1119,7 +1119,7 @@ select:focus {
 
 .quick-action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 10px;
 }
 
@@ -1155,18 +1155,21 @@ select:focus {
 }
 
 .quick-action-header {
-  display: grid;
-  gap: 7px;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .quick-action-header strong {
   min-width: 0;
+  flex: 1 1 auto;
   overflow-wrap: anywhere;
   word-break: normal;
 }
 
 .quick-action-header small {
-  justify-self: start;
+  flex: 0 0 auto;
   max-width: 100%;
   padding: 3px 7px;
   border: 1px solid #c8d5e4;
