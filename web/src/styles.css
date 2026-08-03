@@ -2662,6 +2662,14 @@ textarea::placeholder {
   gap: 10px;
 }
 
+.import-fast-lane-note {
+  max-width: 760px;
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .selected-source-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

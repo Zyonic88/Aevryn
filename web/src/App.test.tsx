@@ -2735,7 +2735,8 @@ describe("App shell routing", () => {
     expect(screen.getByLabelText("Import reference")).not.toBeVisible();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect and process" }));
+    expect(screen.getByText(/Process chapters runs the full intake path/u)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Process chapters" }));
 
     await screen.findByText("Chapter import");
     expect(screen.queryByRole("button", { name: "Process reviewed import" })).not.toBeInTheDocument();
