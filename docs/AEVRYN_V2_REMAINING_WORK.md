@@ -717,6 +717,9 @@ Verified hardening:
 * source intake now labels the fast path as "Process chapters" and explains
   that it inspects, saves, and submits processing, while keeping "Inspect only"
   available for manual review without removing review/safety controls
+* source intake now keeps filename, title, import reference, and source
+  reference controls inside collapsible import details so the main path stays
+  focused on choosing source material and starting Canon processing
 * deferred source formats, source-format API failures, oversized pasted imports,
   and failed re-inspection paths show user-facing explanations and avoid stale
   import-structure output

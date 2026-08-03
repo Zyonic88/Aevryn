@@ -2731,7 +2731,8 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
     expect(await screen.findByText("No saved imports")).toBeInTheDocument();
-    expect(screen.getByText("Advanced import references")).toBeVisible();
+    expect(screen.getByText("Import details")).toBeVisible();
+    expect(screen.getByText("Advanced import references")).not.toBeVisible();
     expect(screen.getByLabelText("Import reference")).not.toBeVisible();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
