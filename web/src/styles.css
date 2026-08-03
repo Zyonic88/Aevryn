@@ -2778,6 +2778,15 @@ textarea::placeholder {
   content: "-";
 }
 
+.import-details {
+  max-width: 980px;
+}
+
+.nested-advanced-fields {
+  margin: 0 12px 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
 .compact-list {
   gap: 10px;
 }
