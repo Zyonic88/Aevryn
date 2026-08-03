@@ -672,6 +672,14 @@ Verified hardening:
 * verified with readable-output frontend unit test, lint, and production build
 * sentence understanding routes item, skill, system, location, and organization
   cues as metadata-only guidance; mixed or ambiguous cues remain reviewable
+* production sentence-understanding cues were scanned for alpha-story proper
+  nouns and genericized, so world-routing metadata relies on reusable concepts
+  such as academy, department, empire, fleet, star system, and training room
+  instead of names from the "Sorry, my starfleet only recruits female soldiers"
+  test corpus
+* production AI extraction prompt wording was hardened to describe gender/race
+  rules generically instead of priming the model with alpha-story phrases such
+  as "Half-Beastman," "female soldiers," or "male recruits"
   instead of becoming Canon truth
 * sentence understanding flags genre power-system/body terms such as dantian,
   meridian, qi, and spiritual root as translation-review metadata without

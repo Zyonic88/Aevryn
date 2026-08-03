@@ -149,7 +149,10 @@ def test_ai_extractor_returns_evidence_bounded_candidates() -> None:
     assert "Use entity_type=character for named people or persons." in client.prompt
     assert "especially gender, race, species" in client.prompt
     assert "sister, brother" in client.prompt
-    assert "Half-Beastman" in client.prompt
+    assert "Race or species labels are explicit race/species evidence" in client.prompt
+    assert "Half-Beastman" not in client.prompt
+    assert "female soldiers" not in client.prompt
+    assert "male recruits" not in client.prompt
     assert "gender, race, species, role" in client.prompt
     assert "Use entity_type=system only for named power systems" in client.prompt
     assert "Use entity_type=skill only for usable abilities" in client.prompt
@@ -231,12 +234,12 @@ def test_ai_extractor_prompt_includes_world_context_sentence_signals() -> None:
     prompt = extractor.build_prompt(
         scene=SceneExtractionInput(
             scene_id="source_demo_chapter_001_scene_001",
-            text="Zhao Chen stood inside the North Star Academy classroom.",
+            text="Mira stood inside the coastal academy classroom.",
             evidence_anchor_ids=("anchor_001",),
             evidence_anchors=(
                 SceneEvidenceAnchor(
                     anchor_id="anchor_001",
-                    quote="Zhao Chen stood inside the North Star Academy classroom.",
+                    quote="Mira stood inside the coastal academy classroom.",
                 ),
             ),
             sentence_understanding=(
@@ -248,7 +251,7 @@ def test_ai_extractor_prompt_includes_world_context_sentence_signals() -> None:
                         "location_reference",
                         "organization_reference",
                     ),
-                    cue_terms=("classroom", "north star academy"),
+                    cue_terms=("academy", "classroom"),
                     review_required=False,
                 ),
             ),
@@ -263,8 +266,8 @@ def test_ai_extractor_prompt_includes_world_context_sentence_signals() -> None:
         "signals=description,identity_reference,location_reference,"
         "organization_reference"
     ) in metadata_section
-    assert "cue_terms=classroom,north star academy" in metadata_section
-    assert "Zhao Chen stood inside" not in metadata_section
+    assert "cue_terms=academy,classroom" in metadata_section
+    assert "Mira stood inside" not in metadata_section
 
 
 def test_openai_responses_client_returns_output_text_without_network() -> None:
