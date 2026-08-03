@@ -1212,7 +1212,9 @@ function PromptCanonInputs({ pack }: { pack: ProductionPack }) {
     promptInputStatus("Continuity", pack.scene.continuity_changes),
     {
       label: "Constraints",
-      value:
+      status: guardrailCount > 0 ? "available" : "missing",
+      statusLabel: guardrailCount > 0 ? "Available" : "Missing",
+      detail:
         guardrailCount > 0
           ? `${guardrailCount.toLocaleString()} canon guardrail${
               guardrailCount === 1 ? "" : "s"
@@ -1225,9 +1227,15 @@ function PromptCanonInputs({ pack }: { pack: ProductionPack }) {
       <strong>Canon inputs</strong>
       <dl>
         {inputs.map((input) => (
-          <div key={input.label}>
+          <div
+            className={`prompt-canon-input prompt-canon-input-${input.status}`}
+            key={input.label}
+          >
             <dt>{input.label}</dt>
-            <dd>{input.value}</dd>
+            <dd>
+              <span>{input.statusLabel}</span>
+              <small>{input.detail}</small>
+            </dd>
           </div>
         ))}
       </dl>
@@ -1235,15 +1243,28 @@ function PromptCanonInputs({ pack }: { pack: ProductionPack }) {
   );
 }
 
-function promptInputStatus(label: string, ...sections: OutputSection[]): { label: string; value: string } {
-  const count = sections.reduce(
-    (total, section) => total + knownSectionItems(section).length,
-    0,
-  );
+function promptInputStatus(
+  label: string,
+  ...sections: OutputSection[]
+): {
+  label: string;
+  status: "available" | "missing";
+  statusLabel: string;
+  detail: string;
+} {
+  const values = sections.flatMap((section) => knownSectionItems(section));
+  const count = values.length;
+  const preview = values.slice(0, 2).join("; ");
   return {
     label,
-    value:
-      count > 0 ? `${count.toLocaleString()} known detail${count === 1 ? "" : "s"}` : "Unknown",
+    status: count > 0 ? "available" : "missing",
+    statusLabel: count > 0 ? "Available" : "Missing",
+    detail:
+      count > 0
+        ? `${count.toLocaleString()} known detail${count === 1 ? "" : "s"}${
+            preview ? `: ${preview}` : ""
+          }`
+        : "No accepted details yet",
   };
 }
 
