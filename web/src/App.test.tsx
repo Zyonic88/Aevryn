@@ -3953,6 +3953,10 @@ describe("App shell routing", () => {
 
     const selectedPack = screen.getByRole("article", { name: "Selected prompt pack" });
     expect(within(selectedPack).getByRole("heading", { name: "Scene 1" })).toBeInTheDocument();
+    const sceneNavigation = within(selectedPack).getByLabelText("Selected prompt scene navigation");
+    expect(sceneNavigation).toHaveTextContent("Scene 1 of 28");
+    expect(within(sceneNavigation).getByRole("button", { name: "Previous scene" })).toBeDisabled();
+    expect(within(sceneNavigation).getByRole("button", { name: "Next scene" })).toBeEnabled();
     const canonInputs = within(selectedPack).getByLabelText("Prompt canon inputs");
     expect(canonInputs).toHaveTextContent("Canon inputs");
     expect(canonInputs).toHaveTextContent("Characters");
@@ -4003,12 +4007,18 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: /^Scene 2\b/u }));
 
     expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
+    expect(sceneNavigation).toHaveTextContent("Scene 2 of 28");
     const updatedImagePromptPreview = within(selectedPack).getByRole("list", {
       name: "Image Prompt preview",
     });
     expect(
       within(updatedImagePromptPreview).getByText("Scene 2 image prompt detail."),
     ).toBeInTheDocument();
+    await user.click(within(sceneNavigation).getByRole("button", { name: "Next scene" }));
+    expect(within(selectedPack).getByRole("heading", { name: "Scene 3" })).toBeInTheDocument();
+    expect(sceneNavigation).toHaveTextContent("Scene 3 of 28");
+    await user.click(within(sceneNavigation).getByRole("button", { name: "Previous scene" }));
+    expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^Scene 25\b/u }));
     expect(within(selectedPack).getByRole("heading", { name: "Scene 25" })).toBeInTheDocument();

@@ -1050,6 +1050,14 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
       </div>
     );
   }
+  const selectedIndex = filteredPacks.findIndex(
+    (pack) => pack.scene.scene_id === selectedPack.scene.scene_id,
+  );
+  const previousPack = selectedIndex > 0 ? filteredPacks[selectedIndex - 1] : null;
+  const nextPack =
+    selectedIndex >= 0 && selectedIndex < filteredPacks.length - 1
+      ? filteredPacks[selectedIndex + 1]
+      : null;
 
   return (
     <div className="prompt-pack-browser">
@@ -1103,6 +1111,36 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
             </div>
             <span>{selectedPack.scene.evidence_summary}</span>
           </header>
+          <div className="prompt-scene-navigation" aria-label="Selected prompt scene navigation">
+            <button
+              type="button"
+              className="text-button"
+              disabled={!previousPack}
+              onClick={() => {
+                if (previousPack) {
+                  setSelectedSceneId(previousPack.scene.scene_id);
+                }
+              }}
+            >
+              Previous scene
+            </button>
+            <span>
+              Scene {(selectedIndex + 1).toLocaleString()} of{" "}
+              {filteredPacks.length.toLocaleString()}
+            </span>
+            <button
+              type="button"
+              className="text-button"
+              disabled={!nextPack}
+              onClick={() => {
+                if (nextPack) {
+                  setSelectedSceneId(nextPack.scene.scene_id);
+                }
+              }}
+            >
+              Next scene
+            </button>
+          </div>
           <PromptCanonInputs pack={selectedPack} />
           <PromptSceneBrief pack={selectedPack} />
           <details className="prompt-context-disclosure detail-disclosure">
