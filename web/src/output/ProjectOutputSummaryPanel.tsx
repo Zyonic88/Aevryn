@@ -1018,21 +1018,52 @@ function ContinuityBucket({
 }
 
 function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
+  const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(MAX_VISIBLE_PROMPT_SCENES);
-  const visiblePacks = packs.slice(0, visibleCount);
-  const hiddenPromptSceneCount = Math.max(packs.length - visiblePacks.length, 0);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredPacks = normalizedQuery
+    ? packs.filter((pack) => searchablePromptPackText(pack).includes(normalizedQuery))
+    : packs;
+  const visiblePacks = filteredPacks.slice(0, visibleCount);
+  const hiddenPromptSceneCount = Math.max(filteredPacks.length - visiblePacks.length, 0);
   const [selectedSceneId, setSelectedSceneId] = useState(packs[0]?.scene.scene_id ?? "");
-  const selectedPack = packs.find((pack) => pack.scene.scene_id === selectedSceneId) ?? packs[0];
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setVisibleCount(MAX_VISIBLE_PROMPT_SCENES);
+  }
+
+  const selectedPack =
+    filteredPacks.find((pack) => pack.scene.scene_id === selectedSceneId) ?? filteredPacks[0];
   if (!selectedPack) {
-    return null;
+    return (
+      <div className="prompt-pack-browser">
+        <PromptSceneSearch
+          query={query}
+          resultCount={filteredPacks.length}
+          totalCount={packs.length}
+          onChange={updateQuery}
+        />
+        <EmptyState title="No matching prompt scenes">
+          No prompt scenes match the current search.
+        </EmptyState>
+      </div>
+    );
   }
 
   return (
     <div className="prompt-pack-browser">
-      {packs.length > visiblePacks.length ? (
+      <PromptSceneSearch
+        query={query}
+        resultCount={filteredPacks.length}
+        totalCount={packs.length}
+        onChange={updateQuery}
+      />
+      {filteredPacks.length > visiblePacks.length ? (
         <p className="result-summary">
-          Showing {visiblePacks.length.toLocaleString()} of {packs.length.toLocaleString()} prompt
-          scenes. Select a scene to view its production prompts, or load more scenes when needed.
+          Showing {visiblePacks.length.toLocaleString()} of{" "}
+          {filteredPacks.length.toLocaleString()} prompt scenes. Select a scene to view its
+          production prompts, or load more scenes when needed.
         </p>
       ) : null}
       <div className="prompt-pack-layout">
@@ -1098,6 +1129,48 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
       </div>
     </div>
   );
+}
+
+function PromptSceneSearch({
+  query,
+  resultCount,
+  totalCount,
+  onChange,
+}: {
+  query: string;
+  resultCount: number;
+  totalCount: number;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="large-output-controls prompt-scene-search">
+      <label>
+        Search prompt scenes
+        <input
+          value={query}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Chapter, scene, character, setting, visual detail"
+        />
+      </label>
+      <p>
+        Showing {resultCount.toLocaleString()} of {totalCount.toLocaleString()} prompt scenes.
+      </p>
+    </div>
+  );
+}
+
+function searchablePromptPackText(pack: ProductionPack): string {
+  return [
+    pack.scene.title,
+    pack.scene.chapter_label,
+    pack.scene.evidence_summary,
+    ...readableOutputItems(pack.scene.characters_present.items),
+    ...readableOutputItems(pack.scene.location.items),
+    ...readableOutputItems(pack.scene.visual_highlights.items),
+    ...readableOutputItems(pack.scene.environment.items),
+  ]
+    .join(" ")
+    .toLowerCase();
 }
 
 function PromptSceneBrief({ pack }: { pack: ProductionPack }) {

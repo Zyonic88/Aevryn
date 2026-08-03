@@ -429,6 +429,11 @@ Verified hardening:
   imports are reachable without dumping every prompt card onto the page
 * verified with focused Prompt Packs workspace test, full frontend test suite,
   lint, and production build
+* Prompt Packs now include scene search by chapter, scene, character, setting,
+  visual detail, and environment so large projects can reach specific prompt
+  scenes without manual scrolling
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
 
 Acceptance:
 
