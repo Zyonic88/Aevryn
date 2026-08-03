@@ -3066,6 +3066,8 @@ describe("App shell routing", () => {
                     worker: {
                       ...projectStatusPayload.worker,
                       state: "queued",
+                      queued_jobs: 1,
+                      running_jobs: 0,
                       latest_job_status: "queued",
                       latest_job_queued_at: String(submittedRun.started_at),
                       latest_job_updated_at: String(submittedRun.status_updated_at),
@@ -3099,12 +3101,12 @@ describe("App shell routing", () => {
     await user.click(screen.getAllByRole("button", { name: "Submit processing" })[0]);
 
     expect(await screen.findByRole("button", { name: "Processing" })).toBeDisabled();
-    const currentProgress = await screen.findByLabelText("Current processing progress");
-    expect(currentProgress).toHaveTextContent("Elapsed");
-    expect(currentProgress).toHaveTextContent("Last update");
-    expect(currentProgress).toHaveTextContent("Worker job");
-    expect(currentProgress).toHaveTextContent("Queued");
-    expect(currentProgress).toHaveTextContent("ago");
+    const statusDetails = await screen.findByLabelText("Processing status details");
+    expect(statusDetails).toHaveTextContent("Current step");
+    expect(statusDetails).toHaveTextContent("Queued");
+    expect(statusDetails).toHaveTextContent("Worker");
+    expect(statusDetails).toHaveTextContent("Queue");
+    expect(statusDetails).toHaveTextContent("1 queued / 0 running");
     const processingProgress = await screen.findByLabelText("Processing progress");
     expect(processingProgress).toHaveTextContent("Queued");
     expect(processingProgress).toHaveTextContent("Processing");

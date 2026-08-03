@@ -698,6 +698,7 @@ input:focus {
   .metric-grid,
   .monitoring-detail-grid,
   .monitoring-event-row,
+  .processing-status-strip,
   .inline-form,
   .quick-action-grid,
   .settings-scope-grid,
@@ -893,6 +894,35 @@ select:focus {
   color: #536174;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.processing-status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.processing-status-strip > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.processing-status-strip dt {
+  color: #667386;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.processing-status-strip dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: #111722;
+  font-weight: 850;
 }
 
 .active-processing-panel {
@@ -2667,6 +2697,19 @@ textarea::placeholder {
   margin: 4px 0 0;
   color: var(--app-text);
   font-weight: 900;
+}
+
+.processing-status-strip > div {
+  border-color: rgba(127, 178, 255, 0.18);
+  background: rgba(127, 178, 255, 0.06);
+}
+
+.processing-status-strip dt {
+  color: var(--app-muted);
+}
+
+.processing-status-strip dd {
+  color: var(--app-text);
 }
 
 .overview-command-panel,
