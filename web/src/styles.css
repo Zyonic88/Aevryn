@@ -2301,6 +2301,37 @@ textarea::placeholder {
     rgba(5, 8, 14, 0.62);
 }
 
+.output-metadata-disclosure {
+  border: 1px solid rgba(127, 178, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(5, 8, 14, 0.52);
+}
+
+.output-metadata-disclosure summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  color: var(--app-text);
+  cursor: pointer;
+}
+
+.output-metadata-disclosure summary span:first-child {
+  font-weight: 850;
+}
+
+.output-metadata-disclosure summary span:last-child {
+  color: var(--app-muted);
+  font-size: 13px;
+  font-weight: 750;
+  text-align: right;
+}
+
+.output-metadata-body {
+  padding: 0 14px 14px;
+}
+
 .large-output-controls {
   padding: 12px;
   border: 1px solid var(--app-line);

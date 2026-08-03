@@ -133,23 +133,11 @@ function ProjectOutputSummary({
           {surfaceSummary.item_count.toLocaleString()} {surfaceItemLabel(surface)}
         </span>
       </header>
-      <dl className="metric-grid">
-        <Metric label="State" value={formatRunStatus(surfaceSummary.status)} />
-        <Metric label="Items" value={surfaceSummary.item_count.toLocaleString()} />
-        <Metric label="Import" value={outputs.latest_import ? "Latest import" : "No import"} />
-        <Metric
-          label="Run"
-          value={
-            outputs.latest_engine_run ? formatRunStatus(outputs.latest_engine_run.status) : "No run"
-          }
-        />
-        <Metric label="Chapters" value={outputs.canon.chapters.toLocaleString()} />
-        <Metric label="Scenes" value={outputs.canon.scenes.toLocaleString()} />
-        <Metric label="Evidence" value={outputs.canon.evidence_anchor_count.toLocaleString()} />
-        <Metric label="Snapshot" value={formatDateTime(outputs.canon.created_at)} />
-      </dl>
-      <LanguageIdentityStatus outputs={outputs} />
-      <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
+      <OutputMetadataDisclosure
+        outputs={outputs}
+        surfaceSummary={surfaceSummary}
+        surface={surface}
+      />
       {surface === "characters" && hasIdentityReviewItems(outputs) ? (
         <IdentityReviewPanel outputs={outputs} defaultOpen={false} />
       ) : null}
@@ -161,6 +149,46 @@ function ProjectOutputSummary({
         </EmptyState>
       ) : null}
     </section>
+  );
+}
+
+function OutputMetadataDisclosure({
+  outputs,
+  surface,
+  surfaceSummary,
+}: {
+  outputs: ProjectOutputs;
+  surface: OutputSurface;
+  surfaceSummary: ProjectOutputSurface;
+}) {
+  const runStatus = outputs.latest_engine_run
+    ? formatRunStatus(outputs.latest_engine_run.status)
+    : "No run";
+  return (
+    <details className="output-metadata-disclosure">
+      <summary>
+        <span>Canon metadata</span>
+        <span>
+          {runStatus} | {outputs.canon.chapters.toLocaleString()} chapters |{" "}
+          {outputs.canon.scenes.toLocaleString()} scenes |{" "}
+          {outputs.canon.evidence_anchor_count.toLocaleString()} evidence
+        </span>
+      </summary>
+      <div className="workspace-view-stack output-metadata-body">
+        <dl className="metric-grid">
+          <Metric label="State" value={formatRunStatus(surfaceSummary.status)} />
+          <Metric label="Items" value={surfaceSummary.item_count.toLocaleString()} />
+          <Metric label="Import" value={outputs.latest_import ? "Latest import" : "No import"} />
+          <Metric label="Run" value={runStatus} />
+          <Metric label="Chapters" value={outputs.canon.chapters.toLocaleString()} />
+          <Metric label="Scenes" value={outputs.canon.scenes.toLocaleString()} />
+          <Metric label="Evidence" value={outputs.canon.evidence_anchor_count.toLocaleString()} />
+          <Metric label="Snapshot" value={formatDateTime(outputs.canon.created_at)} />
+        </dl>
+        <LanguageIdentityStatus outputs={outputs} />
+        <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
+      </div>
+    </details>
   );
 }
 
