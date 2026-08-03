@@ -786,7 +786,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               return (
                 <div key={run.run_id} className="compact-row">
                   <strong>Processing run</strong>
-                  <span>{formatRunStatus(run.status)} run</span>
+                  <span>{runStatusLabel(run)} run</span>
                   <span>{runSnapshotLabel(run, snapshot)}</span>
                   <span>{runDurationSummary(run, processingClockMs)}</span>
                   <ProcessingStepper run={run} snapshot={snapshot} />
@@ -1142,6 +1142,9 @@ function isDuplicateImportError(error: unknown): boolean {
 }
 
 function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (isStaleActiveRun(run)) {
+    return "No snapshot: run timed out";
+  }
   if (run.status === "failed") {
     return "No snapshot: run failed";
   }
@@ -1152,6 +1155,13 @@ function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): strin
     return "Snapshot pending";
   }
   return "Snapshot waiting";
+}
+
+function runStatusLabel(run: EngineRun): string {
+  if (isStaleActiveRun(run)) {
+    return "Timed out";
+  }
+  return formatRunStatus(run.status);
 }
 
 function runDurationSummary(run: EngineRun, nowMs: number): string {
@@ -1211,7 +1221,7 @@ function processingSteps(
   run: EngineRun,
   snapshot: Snapshot | undefined,
 ): Array<{ label: string; state: "done" | "active" | "waiting" | "failed"; marker: string }> {
-  const failed = run.status === "failed";
+  const failed = run.status === "failed" || isStaleActiveRun(run);
   const succeeded = run.status === "succeeded";
   const doneMarker = "ok";
   return [
@@ -1239,6 +1249,9 @@ function processingSteps(
 }
 
 function processingHelpText(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (isStaleActiveRun(run)) {
+    return "Processing has not updated recently. Retry this import when you are ready.";
+  }
   if (run.status === "failed") {
     return "Processing stopped before a canon snapshot was created.";
   }
