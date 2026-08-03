@@ -355,8 +355,8 @@ def _title_prefix_name_score(
             continue
         if reference_tokens[-len(name_tokens) :] != name_tokens:
             continue
-        prefix_tokens = reference_tokens[: -len(name_tokens)]
-        if not _tokens_are_supported_title_prefix(prefix_tokens):
+        title_terms = reference_tokens[: -len(name_tokens)]
+        if not _tokens_are_supported_title_prefix(title_terms):
             continue
         return ResolutionCandidate(
             entity_id=profile.entity_id,

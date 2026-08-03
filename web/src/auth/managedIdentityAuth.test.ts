@@ -31,6 +31,8 @@ const supabaseSession = {
 
 describe("managed identity auth routing", () => {
   beforeEach(() => {
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
     vi.stubGlobal("fetch", vi.fn());
   });
 

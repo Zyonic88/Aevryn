@@ -743,6 +743,8 @@ function projectOutputsPath(projectId: string): string {
 describe("App shell routing", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -978,7 +980,7 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem("aevryn.session") ?? "{}")).toMatchObject({
       session_token: "session-token",
     });
@@ -1005,7 +1007,7 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("Session storage failed");
     expect(window.localStorage.getItem("aevryn.session")).toBeNull();
   });
@@ -1073,7 +1075,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByLabelText(/Aevryn public beta is 18\+ only/u));
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     const registerCall = fetchMock.mock.calls.find(([input]) =>
       String(input).endsWith(API_PATHS.authRegister),
     );
@@ -1167,7 +1169,7 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Monitoring" })).not.toBeInTheDocument();
   });
 
@@ -1342,7 +1344,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Log in" })).not.toBeInTheDocument();
   });
 
@@ -1355,7 +1357,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
   });
 
   it("redirects missing projects to the dashboard", async () => {
@@ -1367,7 +1369,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
   });
 
   it("opens direct workspace tab URLs and marks the active tab", async () => {
@@ -1813,7 +1815,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Demo User")).toBeInTheDocument();
     expect(await screen.findByText("Evidence in. Canon out.")).toBeInTheDocument();
     expect(await screen.findByText("No projects")).toBeInTheDocument();
@@ -1832,7 +1834,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    await screen.findByRole("heading", { name: "Dashboard" });
+    await screen.findByRole("heading", { name: "Project Dashboard" });
     await user.click(screen.getByRole("button", { name: "Log out" }));
 
     expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
@@ -2325,6 +2327,17 @@ describe("App shell routing", () => {
           1,
         ),
       );
+      if (index === 0) {
+        expect(screen.getByLabelText("Selected source")).toHaveTextContent(upload.filename);
+        expect(screen.queryByLabelText("Source text")).not.toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: "Clear selected file" }));
+        expect(screen.getByLabelText("Source text")).toHaveValue("");
+        await user.upload(
+          screen.getByLabelText("Source file"),
+          new File([content], upload.filename),
+        );
+        await screen.findByLabelText("Selected source");
+      }
       await user.click(screen.getByRole("button", { name: "Review structure" }));
       await waitFor(() => expect(inspectBodies).toHaveLength(index + 1));
 
@@ -2342,7 +2355,10 @@ describe("App shell routing", () => {
       new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
       new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
     ]);
-    await waitFor(() => expect(screen.getByText(/2 files \//u)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByLabelText("Selected source")).toHaveTextContent("2 files"),
+    );
+    expect(screen.getByLabelText("Selected source")).toHaveTextContent("bytes ready");
     await user.click(screen.getByRole("button", { name: "Review structure" }));
     await waitFor(() => expect(inspectBodies).toHaveLength(supportedUploads.length + 1));
     const bundledBody = inspectBodies[supportedUploads.length];

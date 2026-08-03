@@ -4915,14 +4915,6 @@ def _queue_job_is_running(background_job_queue: BackgroundJobQueue, job_id: str)
         return False
 
 
-def _job_id_from_ref(job_ref: str) -> str:
-    """Return the queue job ID from a run job_ref."""
-    prefix = "queue://"
-    if not job_ref.startswith(prefix):
-        return ""
-    return job_ref[len(prefix):]
-
-
 def _active_or_completed_import_run(
     *,
     runs: Sequence[EngineRunRecord],
