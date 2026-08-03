@@ -420,6 +420,10 @@ Verified hardening:
   printing source prose or internal IDs
 * verified with focused Canon Prompt Builder tests, presentation-engine tests,
   and background-worker prompt-presentation tests
+* system and skill mechanics now remain prompt-visible as non-visual Canon
+  constraints instead of being treated as image props, scenery, or required
+  visual references unless Canon explicitly marks them visible
+* verified with focused Canon Prompt Builder tests
 
 Acceptance:
 
