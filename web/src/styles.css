@@ -1052,14 +1052,17 @@ select:focus {
 
 .quick-action-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
 }
 
 .quick-action-grid a {
-  display: grid;
-  gap: 10px;
-  min-height: 92px;
+  display: flex;
+  min-width: 0;
+  min-height: 74px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
   padding: 14px;
   border: 1px solid #e1e7ef;
   border-radius: 6px;
@@ -1079,7 +1082,7 @@ select:focus {
 }
 
 .quick-action-grid span {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   color: #536174;
   font-size: 13px;
 }
