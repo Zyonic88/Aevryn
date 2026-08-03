@@ -414,6 +414,12 @@ Verified hardening:
 * hosted browser sweep verified current Prompt Packs output exposes collapsed,
   copyable prompt bodies without source text, source IDs, evidence anchors,
   import bundle IDs, machine chapter/scene fragments, or placeholder noise
+* prompt bodies now include a compact `Canon context used` checklist that exposes
+  which prompt inputs were available from character sheets, world facts,
+  relationships, scene beats, visual anchors, and continuity notes without
+  printing source prose or internal IDs
+* verified with focused Canon Prompt Builder tests, presentation-engine tests,
+  and background-worker prompt-presentation tests
 
 Acceptance:
 

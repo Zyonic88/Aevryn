@@ -837,6 +837,33 @@ def test_canon_prompt_builder_keeps_generation_context_in_every_prompt_type() ->
         )
 
 
+def test_canon_prompt_builder_declares_canon_context_inputs() -> None:
+    """Prompts should disclose the Canon surfaces used without leaking internals."""
+    context = build_context()
+    bundle = CanonPromptBuilder().build_bundle(context)
+
+    prompts = (
+        bundle.image_prompt,
+        bundle.narration_prompt,
+        bundle.camera_prompt,
+        bundle.animation_prompt,
+    )
+
+    for prompt in prompts:
+        assert "Canon context used:" in prompt
+        assert "chars=1" in prompt
+        assert "character_facts=" in prompt
+        assert "world=" in prompt
+        assert "rel=" in prompt
+        assert "beats=" in prompt
+        assert "anchors=" in prompt
+        assert "notes=" in prompt
+        assert "unknowns neutral" in prompt
+        assert context.scene.scene_id not in prompt
+        assert "source_demo_chapter_002_scene_001" not in prompt
+        assert "evidence_" not in prompt
+
+
 def test_canon_prompt_builder_rejects_duplicate_analysis_bullets() -> None:
     """Prompt sections require duplicate analysis rows to fail upstream."""
     with pytest.raises(ValueError, match="must be unique"):
