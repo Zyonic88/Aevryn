@@ -1098,7 +1098,7 @@ function importInspectButtonLabel({
   if (isReading) {
     return "Reading file";
   }
-  return isInspecting ? "Inspecting" : "Review structure";
+  return isInspecting ? "Inspecting" : "Inspect only";
 }
 
 function quickProcessButtonLabel({
@@ -1126,7 +1126,7 @@ function quickProcessButtonLabel({
   if (isSubmitting) {
     return "Submitting";
   }
-  return "Process chapters";
+  return "Inspect and process";
 }
 
 function deferredFormatMessage(filename: string, formats: SourceFormats | undefined): string {
