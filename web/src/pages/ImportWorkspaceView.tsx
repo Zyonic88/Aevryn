@@ -50,6 +50,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
   const [submittingImportId, setSubmittingImportId] = useState<string | null>(null);
+  const [importIntent, setImportIntent] = useState<"review" | "process" | null>(null);
 
   const sourceFormats = useQuery({
     queryKey: ["source-formats"],
@@ -229,6 +230,11 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     contentBase64: fileContentBase64,
   });
   const isInspectingImport = isReadingSourceFile || inspectImport.isPending;
+  const isImportActionBusy =
+    isInspectingImport ||
+    createImport.isPending ||
+    createDefaultStory.isPending ||
+    submitRun.isPending;
   const isSourceTextOversized = sourceText.length > MAX_IMPORT_SOURCE_CHARACTERS;
   const sourceFileAccept = sourceFormats.data
     ? sourceFormatAcceptValue(sourceFormats.data.supported)
@@ -256,10 +262,19 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    void inspectCurrentImport({ processAfterInspect: false });
+  }
+
+  async function inspectCurrentImport({
+    processAfterInspect,
+  }: {
+    processAfterInspect: boolean;
+  }): Promise<void> {
     inspectImport.reset();
     createImport.reset();
     submitRun.reset();
     drainLocalWorker.reset();
+    setImportIntent(processAfterInspect ? "process" : "review");
     try {
       const deferredFormatError = deferredFormatMessage(filename, sourceFormats.data);
       if (deferredFormatError) {
@@ -274,14 +289,22 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       });
       setFormError(null);
       setInspectionResult(null);
-      inspectImport.mutate(payload);
+      const result = await inspectImport.mutateAsync(payload);
+      setInspectionResult(result);
+      if (processAfterInspect) {
+        await saveAndProcessImport(payload);
+      }
     } catch (error) {
       setInspectionResult(null);
       setFormError(error instanceof Error ? error.message : "Import form is invalid.");
+    } finally {
+      setImportIntent(null);
     }
   }
 
-  async function saveImportMetadata(): Promise<ImportRecord | null> {
+  async function saveImportMetadata(
+    payloadOverride?: ImportInspectRequest,
+  ): Promise<ImportRecord | null> {
     createImport.reset();
     if (!importId.trim()) {
       setFormError("Import reference is required.");
@@ -292,13 +315,15 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       if (deferredFormatError) {
         throw new Error(deferredFormatError);
       }
-      const payload = buildImportInspectPayload({
-        sourceId,
-        filename,
-        title,
-        sourceText,
-        contentBase64: fileContentBase64,
-      });
+      const payload =
+        payloadOverride ??
+        buildImportInspectPayload({
+          sourceId,
+          filename,
+          title,
+          sourceText,
+          contentBase64: fileContentBase64,
+        });
       setFormError(null);
       const storyId = activeStoryId || (await createDefaultStory.mutateAsync()).story_id;
       if (!confirmAdditionalStoryImport({ storyId })) {
@@ -327,14 +352,18 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     }
   }
 
-  async function saveAndProcessImport() {
+  async function saveAndProcessImport(payloadOverride?: ImportInspectRequest) {
     submitRun.reset();
     drainLocalWorker.reset();
-    const importRecord = await saveImportMetadata();
+    const importRecord = await saveImportMetadata(payloadOverride);
     if (!importRecord) {
       return;
     }
     setSubmittingImportId(importRecord.import_id);
+    if (payloadOverride) {
+      await submitRun.mutateAsync(importRecord);
+      return;
+    }
     submitRun.mutate(importRecord);
   }
 
@@ -541,17 +570,36 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           {canDrainWorkerFromBrowser() && drainLocalWorker.error ? (
             <ErrorMessage>{drainLocalWorker.error.message}</ErrorMessage>
           ) : null}
-          <button
-            type="submit"
-            className="primary-button"
-            aria-busy={isInspectingImport}
-            disabled={!canSubmit || isInspectingImport}
-          >
-            {importInspectButtonLabel({
-              isReading: isReadingSourceFile,
-              isInspecting: inspectImport.isPending,
-            })}
-          </button>
+          <div className="import-action-row">
+            <button
+              type="button"
+              className="primary-button"
+              aria-busy={importIntent === "process" && isImportActionBusy}
+              disabled={!canSubmit || isImportActionBusy}
+              onClick={() => {
+                void inspectCurrentImport({ processAfterInspect: true });
+              }}
+            >
+              {quickProcessButtonLabel({
+                intent: importIntent,
+                isReading: isReadingSourceFile,
+                isInspecting: inspectImport.isPending,
+                isSaving: createImport.isPending || createDefaultStory.isPending,
+                isSubmitting: submitRun.isPending && importIntent === "process",
+              })}
+            </button>
+            <button
+              type="submit"
+              className="secondary-button"
+              aria-busy={importIntent === "review" && isInspectingImport}
+              disabled={!canSubmit || isImportActionBusy}
+            >
+              {importInspectButtonLabel({
+                isReading: isReadingSourceFile,
+                isInspecting: inspectImport.isPending && importIntent === "review",
+              })}
+            </button>
+          </div>
         </form>
       </section>
 
@@ -841,6 +889,34 @@ function importInspectButtonLabel({
     return "Reading file";
   }
   return isInspecting ? "Inspecting" : "Inspect import";
+}
+
+function quickProcessButtonLabel({
+  intent,
+  isReading,
+  isInspecting,
+  isSaving,
+  isSubmitting,
+}: {
+  intent: "review" | "process" | null;
+  isReading: boolean;
+  isInspecting: boolean;
+  isSaving: boolean;
+  isSubmitting: boolean;
+}): string {
+  if (isReading) {
+    return "Reading file";
+  }
+  if (isInspecting && intent === "process") {
+    return "Inspecting";
+  }
+  if (isSaving) {
+    return "Saving import";
+  }
+  if (isSubmitting) {
+    return "Submitting";
+  }
+  return "Inspect and process";
 }
 
 function deferredFormatMessage(filename: string, formats: SourceFormats | undefined): string {

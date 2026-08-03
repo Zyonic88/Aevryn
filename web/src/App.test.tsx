@@ -2715,8 +2715,7 @@ describe("App shell routing", () => {
     expect(screen.getByLabelText("Import reference")).not.toBeVisible();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save and process" }));
+    await user.click(screen.getByRole("button", { name: "Inspect and process" }));
 
     await screen.findByText("Chapter import");
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
