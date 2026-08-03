@@ -873,6 +873,34 @@ Acceptance:
 The full beta path works in browser without CLI knowledge.
 ```
 
+## J. Canon IDE Workspace UX
+
+Status:
+
+```text
+In progress
+```
+
+Remaining hardening:
+
+* keep workspace navigation compact and IDE-like instead of repeating equivalent
+  sidebar labels
+* reduce wasted workspace chrome while preserving orientation and readability
+* keep quick actions and command surfaces scannable at realistic desktop widths
+* continue hosted browser validation for visual noise, overlap, and cramped text
+
+Verified hardening:
+
+* overview quick-action tiles now preserve whole-word labels and no-wrap command
+  badges, wrapping cards before labels collapse into vertical text
+* verified with the full frontend test suite, lint, and production build
+
+Acceptance:
+
+```text
+Aevryn feels like a focused Canon IDE, not a generic dashboard with panels.
+```
+
 ---
 
 # Operational Hardening Backlog

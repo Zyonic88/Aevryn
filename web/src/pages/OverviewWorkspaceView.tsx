@@ -109,7 +109,7 @@ function ProjectOverview({
                 <strong>{action.title}</strong>
                 <small>{quickActionBadge(action.action)}</small>
               </span>
-              <span>{action.detail}</span>
+              <span className="quick-action-detail">{action.detail}</span>
             </NavLink>
           ))}
         </div>
