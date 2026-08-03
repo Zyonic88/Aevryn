@@ -155,6 +155,7 @@ ITEM_CUES = frozenset(
 ITEM_PHRASE_CUES = frozenset(
     {
         "ability crystal",
+        "ability token",
         "battle cruiser",
         "beast core",
         "cultivation manual",
@@ -167,6 +168,7 @@ ITEM_PHRASE_CUES = frozenset(
         "reactor core",
         "source crystal",
         "skill book",
+        "skill card",
         "skill crystal",
         "skill manual",
         "skill scroll",

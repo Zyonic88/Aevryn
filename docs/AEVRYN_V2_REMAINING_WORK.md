@@ -613,6 +613,12 @@ Verified hardening:
 * physical skill-source phrases such as skill book, spell book, skill manual, and
   technique manual route as item context instead of automatically becoming usable
   skills, while separate skill cues in the same sentence remain reviewable
+* physical skill-card and ability-token phrases route as item context instead of
+  automatically becoming usable skills; separate skill evidence in the same
+  sentence remains visible and reviewable
+* deterministic extraction guards reject provider candidates that classify
+  physical skill containers such as skill cards as usable skills while accepting
+  the same containers as physical items when evidence supports them
 * system-resource phrases such as skill points and experience points route as
   system context rather than usable skills, while separate ability cues in the
   same sentence remain visible and reviewable
