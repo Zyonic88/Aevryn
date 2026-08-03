@@ -3936,8 +3936,17 @@ describe("App shell routing", () => {
     expect(
       await screen.findByRole("region", { name: "Processed project output" }),
     ).toHaveTextContent("Showing 24 of 28 prompt scenes");
+    expect(screen.getByLabelText("Search prompt scenes")).toBeInTheDocument();
     expect(screen.getByText(/load more scenes when needed/u)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Scene 24/u })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Scene 25/u })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Search prompt scenes"), "Scene 25");
+    expect(screen.getByText("Showing 1 of 28 prompt scenes.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Scene 25/u })).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Selected prompt pack" })).toHaveTextContent(
+      "Scene 25",
+    );
+    await user.clear(screen.getByLabelText("Search prompt scenes"));
     expect(screen.queryByRole("button", { name: /Scene 25/u })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Show 4 more scenes" }));
     expect(screen.getByRole("button", { name: /Scene 25/u })).toBeInTheDocument();
