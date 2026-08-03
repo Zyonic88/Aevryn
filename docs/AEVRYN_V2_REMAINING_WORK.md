@@ -534,6 +534,9 @@ Verified hardening:
 * entity-resolution tests now cover punctuation, articles, hyphenation, and
   possessive suffixes around supported title/name references so variants such
   as "Captain Mira's" and "Captain-Mira" do not fragment identities
+* entity-resolution and project-runner tests now resolve conservative title
+  suffix variants such as "Mira, Captain" and "Mira the Captain" to the known
+  identity while leaving generic suffix descriptors unresolved
 * project-runner tests now verify same-scene title/name duplicate candidates
   rewrite to the named Canon identity instead of producing an extra character
   card

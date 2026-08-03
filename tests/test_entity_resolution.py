@@ -268,6 +268,57 @@ def test_title_prefix_resolution_rejects_unknown_descriptors() -> None:
     assert decision.candidates == ()
 
 
+@pytest.mark.parametrize(
+    "reference_text",
+    (
+        "Mira the Captain",
+        "Mira, Captain",
+        "Mira-Captain",
+    ),
+)
+def test_resolves_supported_title_suffix_with_known_name(
+    reference_text: str,
+) -> None:
+    """Known names with conservative title suffixes should not fragment identities."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference(reference_text, "anchor_032g"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_mira"
+    assert decision.confidence == 0.93
+    assert decision.candidates[0].match_kind == "title_suffix_name"
+
+
+def test_title_suffix_resolution_rejects_unknown_descriptors() -> None:
+    """Generic suffix descriptors should not be treated as identity titles."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Mira Present", "anchor_032h"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.candidates == ()
+
+
 def test_resolves_explicit_relationship_label_variant() -> None:
     """Family-role references should resolve only when explicitly profile-backed."""
     engine = EntityResolutionEngine()
