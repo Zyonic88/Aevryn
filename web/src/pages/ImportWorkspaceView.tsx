@@ -5,7 +5,7 @@ import { NavLink } from "react-router-dom";
 import { apiClient, type ImportInspectRequest } from "../api/client";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/useAuth";
-import { EmptyState, ErrorMessage, LoadingMessage, StatusPanel } from "../components/Feedback";
+import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
 import {
   MAX_IMPORT_SOURCE_CHARACTERS,
   buildImportInspectPayload,
@@ -455,7 +455,11 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
 
   return (
     <div className="workspace-view-stack">
-      <StatusPanel title="Native Source Formats">
+      <details className="status-panel disclosure-panel" aria-label="Native Source Formats">
+        <summary>
+          <h2>Native Source Formats</h2>
+          <span>Supported files</span>
+        </summary>
         {sourceFormats.isLoading ? <LoadingMessage>Loading source formats.</LoadingMessage> : null}
         {sourceFormats.error ? <ErrorMessage>{sourceFormats.error.message}</ErrorMessage> : null}
         {sourceFormats.data ? (
@@ -470,7 +474,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             />
           </div>
         ) : null}
-      </StatusPanel>
+      </details>
 
       <section className="project-panel">
         <h2>Source Intake</h2>
@@ -603,8 +607,11 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         </form>
       </section>
 
-      <section className="project-panel" aria-label="Web import">
-        <h2>Web Import</h2>
+      <details className="project-panel disclosure-panel" aria-label="Web import">
+        <summary>
+          <h2>Web Import</h2>
+          <span>Future intake</span>
+        </summary>
         <div className="import-form">
           <label>
             Source URL
@@ -617,7 +624,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             Check permissions
           </button>
         </div>
-      </section>
+      </details>
 
       {inspectionResult ? (
         <section className="project-panel" aria-label="Import inspection result">
