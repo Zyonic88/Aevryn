@@ -217,6 +217,56 @@ def test_sentence_understanding_treats_ability_crystal_as_item_context() -> None
     assert "system" in understanding.ambiguity_terms
 
 
+def test_sentence_understanding_treats_skill_card_as_item_context() -> None:
+    """A skill card is a knowledge/resource container, not a usable ability itself."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_card",
+        title="Sentence Skill Card",
+        text="Chapter 1\nThe system generated a skill card for Shadow Step.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "skill card" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
+def test_sentence_understanding_treats_ability_token_as_item_context() -> None:
+    """An ability token should stay item context until separate ability evidence appears."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_ability_token",
+        title="Sentence Ability Token",
+        text="Chapter 1\nMira placed the ability token beside the map.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "ability token" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_keeps_skill_card_and_separate_skill_reviewable() -> None:
+    """A physical skill card and separate skill evidence should both remain visible."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_card_and_skill",
+        title="Sentence Skill Card And Skill",
+        text="Chapter 1\nThe skill card unlocked the Shadow Step skill.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "skill card" in understanding.cue_terms
+    assert "skill" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_treats_physical_core_phrase_as_item_context() -> None:
     """A named physical core phrase is item context, not a settled power-system concept."""
     imported = StoryImporter().import_text(

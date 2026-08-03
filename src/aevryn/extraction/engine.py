@@ -32,6 +32,7 @@ PHYSICAL_ENTITY_TERMS = frozenset(
         "blade",
         "blueprint",
         "book",
+        "card",
         "car",
         "coin",
         "credits",
@@ -63,6 +64,8 @@ PHYSICAL_ENTITY_TERMS = frozenset(
 )
 PHYSICAL_ENTITY_PHRASE_TERMS = frozenset(
     {
+        "ability crystal",
+        "ability token",
         "beast core",
         "energy core",
         "magic core",
@@ -70,6 +73,30 @@ PHYSICAL_ENTITY_PHRASE_TERMS = frozenset(
         "monster core",
         "power core",
         "reactor core",
+        "skill book",
+        "skill card",
+        "skill crystal",
+        "skill manual",
+        "skill scroll",
+        "spell book",
+        "spell scroll",
+        "technique manual",
+        "technique scroll",
+    }
+)
+PHYSICAL_SKILL_CONTAINER_PHRASE_TERMS = frozenset(
+    {
+        "ability crystal",
+        "ability token",
+        "skill book",
+        "skill card",
+        "skill crystal",
+        "skill manual",
+        "skill scroll",
+        "spell book",
+        "spell scroll",
+        "technique manual",
+        "technique scroll",
     }
 )
 SKILL_ENTITY_TERMS = frozenset(
@@ -97,6 +124,7 @@ PHYSICAL_OBJECT_HEAD_TERMS = frozenset(
         "blade",
         "blueprint",
         "book",
+        "card",
         "car",
         "coin",
         "credits",
@@ -611,6 +639,9 @@ class EntityExtractionEngine:
         physical_phrase_terms = (
             classification_terms & PHYSICAL_ENTITY_PHRASE_TERMS
         )
+        physical_skill_container_terms = (
+            classification_terms & PHYSICAL_SKILL_CONTAINER_PHRASE_TERMS
+        )
         skill_terms = classification_terms & SKILL_ENTITY_TERMS
         system_terms = classification_terms & SYSTEM_ENTITY_TERMS
         physical_object_head = head_term in PHYSICAL_OBJECT_HEAD_TERMS
@@ -640,6 +671,11 @@ class EntityExtractionEngine:
             return (
                 "Entity classification conflict: place or organization cannot be skill: "
                 f"{entity.display_name}."
+            )
+        if entity.entity_type == "skill" and physical_skill_container_terms:
+            return (
+                "Entity classification conflict: physical knowledge or resource "
+                f"container cannot be skill: {entity.display_name}."
             )
         if (
             entity.entity_type == "skill"
