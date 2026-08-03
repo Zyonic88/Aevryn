@@ -31,7 +31,7 @@ import type { ProjectSummary } from "../projects/projectStore";
 import { readActiveStoryId, saveActiveStoryId } from "../stories/activeStory";
 
 const DEFAULT_IMPORT_TEXT = "";
-const DEFAULT_ACTIVE_RUN_POLL_INTERVAL_MS = 5000;
+const DEFAULT_ACTIVE_RUN_POLL_INTERVAL_MS = 2000;
 
 export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const { session } = useAuth();
@@ -259,6 +259,10 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const projectRunsForActiveStory = [
     ...(runsQuery.data?.runs ?? []).filter((run) => run.story_id === activeStoryId),
   ].sort((left, right) => runSortTimestamp(right).localeCompare(runSortTimestamp(left)));
+  const activeProcessingRun = projectRunsForActiveStory.find((run) => isActiveRun(run));
+  const activeProcessingSnapshot = activeProcessingRun
+    ? snapshotsByRun.get(activeProcessingRun.run_id)
+    : undefined;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -607,6 +611,15 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         </form>
       </section>
 
+      <ImportProcessingPanel
+        isReadingSourceFile={isReadingSourceFile}
+        isInspecting={inspectImport.isPending}
+        isSaving={createImport.isPending || createDefaultStory.isPending}
+        isSubmitting={submitRun.isPending}
+        activeRun={activeProcessingRun}
+        activeSnapshot={activeProcessingSnapshot}
+      />
+
       <details className="project-panel disclosure-panel" aria-label="Web import">
         <summary>
           <h2>Web Import</h2>
@@ -772,6 +785,90 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           </div>
         ) : null}
       </section>
+    </div>
+  );
+}
+
+function ImportProcessingPanel({
+  activeRun,
+  activeSnapshot,
+  isInspecting,
+  isReadingSourceFile,
+  isSaving,
+  isSubmitting,
+}: {
+  activeRun: EngineRun | undefined;
+  activeSnapshot: Snapshot | undefined;
+  isInspecting: boolean;
+  isReadingSourceFile: boolean;
+  isSaving: boolean;
+  isSubmitting: boolean;
+}) {
+  const hasLocalProgress = isReadingSourceFile || isInspecting || isSaving || isSubmitting;
+  if (!hasLocalProgress && !activeRun) {
+    return null;
+  }
+  return (
+    <section className="project-panel active-processing-panel" aria-label="Current import progress">
+      <header className="active-processing-header">
+        <div>
+          <p className="eyebrow">Processing</p>
+          <h2>{activeRun ? "Canon build in progress" : "Preparing import"}</h2>
+        </div>
+        <span>{activeRun ? formatRunStatus(activeRun.status) : "Working"}</span>
+      </header>
+      {activeRun ? (
+        <ProcessingStepper run={activeRun} snapshot={activeSnapshot} label="Current processing progress" />
+      ) : (
+        <ImportActionStepper
+          isReadingSourceFile={isReadingSourceFile}
+          isInspecting={isInspecting}
+          isSaving={isSaving}
+          isSubmitting={isSubmitting}
+        />
+      )}
+    </section>
+  );
+}
+
+function ImportActionStepper({
+  isInspecting,
+  isReadingSourceFile,
+  isSaving,
+  isSubmitting,
+}: {
+  isInspecting: boolean;
+  isReadingSourceFile: boolean;
+  isSaving: boolean;
+  isSubmitting: boolean;
+}) {
+  const steps = [
+    {
+      label: "Read source",
+      state: isReadingSourceFile ? "active" : isInspecting || isSaving || isSubmitting ? "done" : "waiting",
+    },
+    {
+      label: "Inspect structure",
+      state: isInspecting ? "active" : isSaving || isSubmitting ? "done" : "waiting",
+    },
+    {
+      label: "Save import",
+      state: isSaving ? "active" : isSubmitting ? "done" : "waiting",
+    },
+    {
+      label: "Submit processing",
+      state: isSubmitting ? "active" : "waiting",
+    },
+  ] satisfies Array<{ label: string; state: "active" | "done" | "waiting" }>;
+  return (
+    <div className="processing-stepper" aria-label="Import preparation progress">
+      {steps.map((step, index) => (
+        <div className={`processing-step processing-step-${step.state}`} key={step.label}>
+          <span aria-hidden="true">{step.state === "done" ? "ok" : index + 1}</span>
+          <strong>{step.label}</strong>
+        </div>
+      ))}
+      <p>Aevryn is preparing this source. The canon build will continue after processing is submitted.</p>
     </div>
   );
 }
@@ -1037,10 +1134,18 @@ function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): strin
   return "Snapshot waiting";
 }
 
-function ProcessingStepper({ run, snapshot }: { run: EngineRun; snapshot: Snapshot | undefined }) {
+function ProcessingStepper({
+  label = "Processing progress",
+  run,
+  snapshot,
+}: {
+  label?: string;
+  run: EngineRun;
+  snapshot: Snapshot | undefined;
+}) {
   const steps = processingSteps(run, snapshot);
   return (
-    <div className="processing-stepper" aria-label="Processing progress">
+    <div className="processing-stepper" aria-label={label}>
       {steps.map((step) => (
         <div className={`processing-step processing-step-${step.state}`} key={step.label}>
           <span aria-hidden="true">{step.marker}</span>

@@ -894,6 +894,42 @@ select:focus {
   line-height: 1.45;
 }
 
+.active-processing-panel {
+  display: grid;
+  gap: 14px;
+  border-color: rgba(127, 178, 255, 0.28);
+  background:
+    linear-gradient(135deg, rgba(127, 178, 255, 0.09), transparent 34%),
+    rgba(13, 20, 32, 0.82);
+}
+
+.active-processing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.active-processing-header h2,
+.active-processing-header .eyebrow {
+  margin: 0;
+}
+
+.active-processing-header h2 {
+  margin-top: 4px;
+}
+
+.active-processing-header > span {
+  border: 1px solid rgba(127, 178, 255, 0.28);
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: var(--app-blue-2);
+  background: rgba(127, 178, 255, 0.1);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .processing-step {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
