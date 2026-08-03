@@ -1018,7 +1018,9 @@ function ContinuityBucket({
 }
 
 function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
-  const visiblePacks = packs.slice(0, MAX_VISIBLE_PROMPT_SCENES);
+  const [visibleCount, setVisibleCount] = useState(MAX_VISIBLE_PROMPT_SCENES);
+  const visiblePacks = packs.slice(0, visibleCount);
+  const hiddenPromptSceneCount = Math.max(packs.length - visiblePacks.length, 0);
   const [selectedSceneId, setSelectedSceneId] = useState(packs[0]?.scene.scene_id ?? "");
   const selectedPack = packs.find((pack) => pack.scene.scene_id === selectedSceneId) ?? packs[0];
   if (!selectedPack) {
@@ -1030,25 +1032,37 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
       {packs.length > visiblePacks.length ? (
         <p className="result-summary">
           Showing {visiblePacks.length.toLocaleString()} of {packs.length.toLocaleString()} prompt
-          scenes. Select a scene to view its production prompts.
+          scenes. Select a scene to view its production prompts, or load more scenes when needed.
         </p>
       ) : null}
       <div className="prompt-pack-layout">
-        <div className="prompt-scene-list" aria-label="Prompt scenes">
-          {visiblePacks.map((pack) => (
+        <div className="prompt-scene-picker">
+          <div className="prompt-scene-list" aria-label="Prompt scenes">
+            {visiblePacks.map((pack) => (
+              <button
+                type="button"
+                className="prompt-scene-button"
+                aria-label={`${pack.scene.title} ${pack.scene.chapter_label} ${pack.scene.evidence_summary}`}
+                aria-pressed={pack.scene.scene_id === selectedPack.scene.scene_id}
+                key={pack.scene.scene_id}
+                onClick={() => setSelectedSceneId(pack.scene.scene_id)}
+              >
+                <strong>{pack.scene.title}</strong>
+                <span>{pack.scene.chapter_label}</span>
+                <small>{pack.scene.evidence_summary}</small>
+              </button>
+            ))}
+          </div>
+          {hiddenPromptSceneCount > 0 ? (
             <button
               type="button"
-              className="prompt-scene-button"
-              aria-label={`${pack.scene.title} ${pack.scene.chapter_label} ${pack.scene.evidence_summary}`}
-              aria-pressed={pack.scene.scene_id === selectedPack.scene.scene_id}
-              key={pack.scene.scene_id}
-              onClick={() => setSelectedSceneId(pack.scene.scene_id)}
+              className="secondary-button prompt-scene-more-button"
+              onClick={() => setVisibleCount((count) => count + MAX_VISIBLE_PROMPT_SCENES)}
             >
-              <strong>{pack.scene.title}</strong>
-              <span>{pack.scene.chapter_label}</span>
-              <small>{pack.scene.evidence_summary}</small>
+              Show {Math.min(MAX_VISIBLE_PROMPT_SCENES, hiddenPromptSceneCount).toLocaleString()}{" "}
+              more scenes
             </button>
-          ))}
+          ) : null}
         </div>
         <article className="profile-card prompt-pack-detail" aria-label="Selected prompt pack">
           <header className="prompt-pack-header">

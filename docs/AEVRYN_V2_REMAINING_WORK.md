@@ -424,6 +424,11 @@ Verified hardening:
   constraints instead of being treated as image props, scenery, or required
   visual references unless Canon explicitly marks them visible
 * verified with focused Canon Prompt Builder tests
+* large prompt-pack outputs remain bounded at first render but expose a
+  user-controlled "show more scenes" path, so later prompt scenes from large
+  imports are reachable without dumping every prompt card onto the page
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
 
 Acceptance:
 

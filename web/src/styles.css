@@ -1787,6 +1787,11 @@ select:focus {
   align-items: start;
 }
 
+.prompt-scene-picker {
+  display: grid;
+  gap: 10px;
+}
+
 .prompt-scene-list {
   display: grid;
   gap: 8px;
@@ -1813,6 +1818,11 @@ select:focus {
 .prompt-scene-button small {
   color: #667386;
   font-size: 13px;
+}
+
+.prompt-scene-more-button {
+  width: 100%;
+  justify-content: center;
 }
 
 .prompt-pack-detail {
@@ -2557,7 +2567,7 @@ textarea::placeholder {
   gap: 18px;
 }
 
-.prompt-scene-list {
+.prompt-scene-picker {
   position: sticky;
   top: 96px;
   max-height: calc(100vh - 132px);
@@ -3057,7 +3067,7 @@ textarea::placeholder {
     justify-self: start;
   }
 
-  .prompt-scene-list {
+  .prompt-scene-picker {
     position: static;
     max-height: none;
   }
