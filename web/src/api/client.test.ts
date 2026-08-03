@@ -104,6 +104,10 @@ const projectStatusPayload = {
     succeeded_jobs: 1,
     failed_jobs: 0,
     next_job_id: "",
+    latest_job_status: "succeeded",
+    latest_job_queued_at: "2026-06-27T00:00:00.000Z",
+    latest_job_updated_at: "2026-06-27T00:30:00.000Z",
+    latest_job_duration_seconds: 1800,
   },
   snapshots: {
     available: true,

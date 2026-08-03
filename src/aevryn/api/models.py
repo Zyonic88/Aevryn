@@ -364,6 +364,10 @@ class ProjectStatusWorker(BaseModel):
     succeeded_jobs: int = 0
     failed_jobs: int = 0
     next_job_id: str = ""
+    latest_job_status: str = ""
+    latest_job_queued_at: str = ""
+    latest_job_updated_at: str = ""
+    latest_job_duration_seconds: int | None = None
 
 
 class ProjectStatusSnapshots(BaseModel):

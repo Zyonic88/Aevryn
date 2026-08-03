@@ -4458,6 +4458,7 @@ def _project_status_worker(
     jobs = tuple(
         job for job in background_job_queue.list_jobs() if job.project_id == project_id
     )
+    latest_job = _latest_status_job_for_run(jobs=jobs, latest_run=latest_run)
     queued_jobs = sum(1 for job in jobs if job.status == "queued")
     running_jobs = sum(1 for job in jobs if job.status == "running")
     succeeded_jobs = sum(1 for job in jobs if job.status == "succeeded")
@@ -4479,7 +4480,47 @@ def _project_status_worker(
         succeeded_jobs=succeeded_jobs,
         failed_jobs=failed_jobs,
         next_job_id=next_job_id,
+        latest_job_status=latest_job.status if latest_job else "",
+        latest_job_queued_at=latest_job.queued_at if latest_job else "",
+        latest_job_updated_at=latest_job.status_updated_at if latest_job else "",
+        latest_job_duration_seconds=_terminal_job_duration_seconds(latest_job),
     )
+
+
+def _latest_status_job_for_run(
+    *,
+    jobs: Sequence[BackgroundJob],
+    latest_run: EngineRunRecord | None,
+) -> BackgroundJob | None:
+    """Return the queue job that best explains the latest project run."""
+    if latest_run is not None:
+        job_id = _job_id_from_ref(latest_run.job_ref)
+        if job_id:
+            matching_job = next((job for job in jobs if job.job_id == job_id), None)
+            if matching_job is not None:
+                return matching_job
+    if not jobs:
+        return None
+    return max(jobs, key=lambda job: (job.status_updated_at, job.queued_at, job.job_id))
+
+
+def _job_id_from_ref(job_ref: str) -> str:
+    """Return a queue job ID from a machine-readable job reference."""
+    prefix = "queue://"
+    if not job_ref.startswith(prefix):
+        return ""
+    return job_ref.removeprefix(prefix)
+
+
+def _terminal_job_duration_seconds(job: BackgroundJob | None) -> int | None:
+    """Return queued-to-terminal duration for completed jobs only."""
+    if job is None or job.status not in {"succeeded", "failed"}:
+        return None
+    queued_at = _parse_api_utc(job.queued_at)
+    updated_at = _parse_api_utc(job.status_updated_at)
+    if updated_at < queued_at:
+        return None
+    return int((updated_at - queued_at).total_seconds())
 
 
 def _project_status_worker_state(
