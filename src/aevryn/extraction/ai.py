@@ -282,11 +282,10 @@ class EvidenceBoundedAIExtractor:
                     "Gendered relationship or title words such as sister, brother, "
                     "mother, father, wife, husband, princess, or prince are explicit "
                     "gender evidence only for the character being described. Race or "
-                    "species labels such as Half-Beastman are explicit race/species "
-                    "evidence only for the character being described. Do not infer "
-                    "gender or race from another character, from a group merely being "
-                    "discussed, or from a chapter title/question. Gendered group "
-                    "phrases such as female soldiers or male recruits describe the "
+                    "species labels are explicit race/species evidence only for the "
+                    "character being described. Do not infer gender or race from "
+                    "another character, from a group merely being discussed, or from "
+                    "a chapter title/question. Gendered group phrases describe the "
                     "group, not a separate named character."
                 ),
                 (

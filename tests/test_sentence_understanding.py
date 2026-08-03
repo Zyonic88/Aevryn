@@ -425,8 +425,8 @@ def test_sentence_understanding_detects_location_and_organization_language() -> 
         title="Sentence World Context",
         text=(
             "Chapter 1\n"
-            "Zhao Chen stood inside the North Star Academy classroom while the "
-            "Starlight Empire fleet waited."
+            "Mira stood inside the coastal academy classroom while the "
+            "Azure Empire fleet waited."
         ),
     )
 
@@ -434,9 +434,9 @@ def test_sentence_understanding_detects_location_and_organization_language() -> 
 
     assert "location_reference" in understanding.signals
     assert "organization_reference" in understanding.signals
-    assert "north star academy" in understanding.cue_terms
+    assert "academy" in understanding.cue_terms
     assert "classroom" in understanding.cue_terms
-    assert "starlight empire" in understanding.cue_terms
+    assert "empire" in understanding.cue_terms
     assert "fleet" in understanding.cue_terms
 
 

@@ -90,9 +90,7 @@ LOCATION_CUES = frozenset(
 )
 LOCATION_PHRASE_CUES = frozenset(
     {
-        "captain department",
         "military academy",
-        "north star academy",
         "star system",
         "starship academy",
         "training room",
@@ -111,16 +109,12 @@ ORGANIZATION_CUES = frozenset(
         "guild",
         "kingdom",
         "sect",
-        "starfleet",
     }
 )
 ORGANIZATION_PHRASE_CUES = frozenset(
     {
-        "captain department",
         "galactic alliance",
         "military academy",
-        "north star academy",
-        "starlight empire",
         "starship academy",
     }
 )
