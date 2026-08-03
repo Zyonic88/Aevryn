@@ -3580,6 +3580,13 @@ describe("App shell routing", () => {
       screen.getByText("1 review item; 2 review items need character review"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Glossary term needs review")).not.toBeInTheDocument();
+    const identityReviewDisclosure = document.querySelector(
+      "details.identity-review-panel",
+    ) as HTMLDetailsElement | null;
+    expect(identityReviewDisclosure).not.toBeNull();
+    expect(identityReviewDisclosure).not.toHaveAttribute("open");
+    await user.click(identityReviewDisclosure?.querySelector("summary") as HTMLElement);
+    expect(identityReviewDisclosure).toHaveAttribute("open");
     expect(
       screen.getAllByText(
         "Chapter 1, Scene 1; 2 possible matches; 87% confidence; Aevryn did not merge this reference",
