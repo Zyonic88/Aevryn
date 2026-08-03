@@ -634,7 +634,7 @@ function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
         </p>
       </div>
       {visibleProfiles.length > 0 ? (
-        <div className="profile-grid" aria-label="Character cards">
+        <div className="profile-grid character-card-grid" aria-label="Character cards">
           {visibleProfiles.map((profile) => (
             <CharacterPanel key={profile.character_id} profile={profile} />
           ))}

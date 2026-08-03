@@ -158,7 +158,7 @@ function CharacterPreviewResult({ result }: { result: CharacterPreview }) {
         {result.character_profiles.length === 1 ? "" : "s"} for {formatSceneScope(result.scene_id)}.
       </p>
       {result.character_profiles.length > 0 ? (
-        <div className="profile-grid">
+        <div className="profile-grid character-card-grid">
           {result.character_profiles.map((profile) => (
             <CharacterProfileCard key={profile.character_id} profile={profile} />
           ))}
