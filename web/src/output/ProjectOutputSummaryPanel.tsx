@@ -151,7 +151,7 @@ function ProjectOutputSummary({
       <LanguageIdentityStatus outputs={outputs} />
       <SurfaceDetails surface={surface} outputs={outputs} surfaceSummary={surfaceSummary} />
       {surface === "characters" && hasIdentityReviewItems(outputs) ? (
-        <IdentityReviewPanel outputs={outputs} defaultOpen />
+        <IdentityReviewPanel outputs={outputs} defaultOpen={false} />
       ) : null}
       <ReadableSurfacePanels surface={surface} outputs={outputs} />
       {surfaceSummary.status === "waiting" ? (
