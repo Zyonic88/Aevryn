@@ -689,7 +689,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         </div>
       </details>
 
-      {inspectionResult ? (
+      {inspectionResult && inspectionResultMode === "review" ? (
         <section className="project-panel" aria-label="Import inspection result">
           <h2>Import Structure</h2>
           <p className="result-summary">{importResultTotalsLabel(inspectionResult)}</p>
@@ -733,40 +733,34 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               The import returned no scene map entries.
             </EmptyState>
           )}
-          {inspectionResultMode === "review" ? (
-            <div className="import-action-row">
-              <button
-                type="button"
-                className="primary-button"
-                disabled={
-                  createImport.isPending || createDefaultStory.isPending || submitRun.isPending
-                }
-                onClick={() => {
-                  void saveAndProcessImport();
-                }}
-              >
-                {createImport.isPending || createDefaultStory.isPending
-                  ? "Saving import"
-                  : submitRun.isPending
-                    ? "Submitting"
-                    : "Process reviewed import"}
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={
-                  createImport.isPending || createDefaultStory.isPending || submitRun.isPending
-                }
-                onClick={() => {
-                  void saveImportMetadata();
-                }}
-              >
-                {createImport.isPending || createDefaultStory.isPending
-                  ? "Saving import"
-                  : "Save without processing"}
-              </button>
-            </div>
-          ) : null}
+          <div className="import-action-row">
+            <button
+              type="button"
+              className="primary-button"
+              disabled={createImport.isPending || createDefaultStory.isPending || submitRun.isPending}
+              onClick={() => {
+                void saveAndProcessImport();
+              }}
+            >
+              {createImport.isPending || createDefaultStory.isPending
+                ? "Saving import"
+                : submitRun.isPending
+                  ? "Submitting"
+                  : "Process reviewed import"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={createImport.isPending || createDefaultStory.isPending || submitRun.isPending}
+              onClick={() => {
+                void saveImportMetadata();
+              }}
+            >
+              {createImport.isPending || createDefaultStory.isPending
+                ? "Saving import"
+                : "Save without processing"}
+            </button>
+          </div>
         </section>
       ) : null}
 

@@ -1126,23 +1126,26 @@ select:focus {
 
 .quick-action-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 10px;
+  gap: 7px;
 }
 
 .quick-action-header strong {
   min-width: 0;
-  overflow-wrap: normal;
+  overflow-wrap: anywhere;
   word-break: normal;
 }
 
 .quick-action-header small {
+  justify-self: start;
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid #c8d5e4;
+  border-radius: 999px;
   color: #2d5f8f;
   font-size: 11px;
   font-weight: 850;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
-  white-space: nowrap;
 }
 
 .settings-scope-grid,
