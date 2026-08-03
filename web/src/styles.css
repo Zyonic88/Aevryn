@@ -1234,6 +1234,38 @@ select:focus {
   gap: 16px;
 }
 
+.character-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+}
+
+.character-card-grid .character-fact-strip {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.character-card-grid .character-fact-strip div {
+  padding: 8px;
+}
+
+.character-card-grid .character-fact-strip dt {
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.character-card-grid .profile-card h3 {
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.character-card-grid .character-fact-strip dd {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 12px;
+}
+
 .large-output-stack {
   display: grid;
   gap: 16px;
@@ -2771,6 +2803,10 @@ textarea::placeholder {
   }
 
   .character-fact-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .character-card-grid .character-fact-strip {
     grid-template-columns: 1fr;
   }
 
