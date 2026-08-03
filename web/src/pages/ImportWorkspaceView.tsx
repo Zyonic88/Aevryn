@@ -826,18 +826,25 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           </EmptyState>
         ) : null}
         {projectRunsForActiveStory.length > 0 ? (
-          <div className="compact-list">
+          <div className="compact-list run-history-list" aria-label="Processing run history">
             {projectRunsForActiveStory.map((run) => {
               const errorLabel = runErrorLabel(run);
               const snapshot = snapshotsByRun.get(run.run_id);
               return (
-                <div key={run.run_id} className="compact-row">
-                  <strong>Processing run</strong>
-                  <span>{runStatusLabel(run)} run</span>
-                  <span>{runSnapshotLabel(run, snapshot)}</span>
+                <div
+                  key={run.run_id}
+                  className={`compact-row run-history-row run-history-row-${runHistoryState(
+                    run,
+                    snapshot,
+                  )}`}
+                >
+                  <div>
+                    <strong>{runHistoryTitle(run, snapshot)}</strong>
+                    <span>{runSnapshotLabel(run, snapshot)}</span>
+                  </div>
                   <span>{runDurationSummary(run, processingClockMs)}</span>
-                  <ProcessingStepper run={run} snapshot={snapshot} />
-                  {errorLabel ? <span>{errorLabel}</span> : null}
+                  <span>{processingCurrentStepLabel(run, snapshot)}</span>
+                  {errorLabel ? <span className="run-history-error">{errorLabel}</span> : null}
                 </div>
               );
             })}
@@ -1253,13 +1260,6 @@ function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): strin
   return "Snapshot waiting";
 }
 
-function runStatusLabel(run: EngineRun): string {
-  if (isStaleActiveRun(run)) {
-    return "Timed out";
-  }
-  return formatRunStatus(run.status);
-}
-
 function runDurationSummary(run: EngineRun, nowMs: number): string {
   if (run.finished_at) {
     return `Duration: ${formatDurationLabel(durationBetween(run.started_at, run.finished_at))}`;
@@ -1403,6 +1403,35 @@ function processingCurrentStepLabel(run: EngineRun, snapshot: Snapshot | undefin
     return "Building Canon";
   }
   return "Queued";
+}
+
+function runHistoryTitle(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (isActiveRun(run)) {
+    return "Active processing run";
+  }
+  if (run.status === "failed" || isStaleActiveRun(run)) {
+    return "Processing run needs attention";
+  }
+  if (snapshot) {
+    return "Completed Canon build";
+  }
+  return "Completed processing run";
+}
+
+function runHistoryState(
+  run: EngineRun,
+  snapshot: Snapshot | undefined,
+): "active" | "failed" | "succeeded" | "waiting" {
+  if (isActiveRun(run)) {
+    return "active";
+  }
+  if (run.status === "failed" || isStaleActiveRun(run)) {
+    return "failed";
+  }
+  if (snapshot) {
+    return "succeeded";
+  }
+  return "waiting";
 }
 
 function workerQueueLabel(worker: ProjectStatus["worker"]): string {

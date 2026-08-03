@@ -711,6 +711,9 @@ Verified hardening:
   summaries instead of leaving durable runs pending forever
 * active processing displays API-backed states such as Queued, Processing,
   Snapshot, and Output ready without fake percentages
+* project run history now renders as a compact activity log with duration,
+  snapshot state, current state, and concise failure summaries, while the
+  detailed processing stepper stays reserved for the active run
 * source intake now labels the fast path as "Process chapters" and explains
   that it inspects, saves, and submits processing, while keeping "Inspect only"
   available for manual review without removing review/safety controls
@@ -911,6 +914,8 @@ Verified hardening:
 
 * overview quick-action tiles now preserve whole-word labels and no-wrap command
   badges, wrapping cards before labels collapse into vertical text
+* import run history no longer repeats full processing steppers on every stored
+  run, reducing wasted vertical space while preserving the monitoring signal
 * verified with the full frontend test suite, lint, and production build
 
 Acceptance:
