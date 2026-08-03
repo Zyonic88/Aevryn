@@ -216,6 +216,13 @@ class EntityResolutionEngine:
         if title_prefix_name_score is not None:
             return title_prefix_name_score
 
+        title_suffix_name_score = _title_suffix_name_score(
+            normalized_reference,
+            profile,
+        )
+        if title_suffix_name_score is not None:
+            return title_suffix_name_score
+
         soft_score = _soft_description_score(normalized_reference, profile)
         if soft_score is None:
             return None
@@ -363,6 +370,33 @@ def _title_prefix_name_score(
             confidence=0.93,
             match_kind="title_prefix_name",
             matched_text=f"{profile.canonical_name} with title prefix",
+        )
+    return None
+
+
+def _title_suffix_name_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Resolve known names with conservative title/rank suffixes."""
+    reference_tokens = tuple(normalized_reference.split())
+    if len(reference_tokens) < 2:
+        return None
+
+    for name in (profile.canonical_name, *profile.aliases):
+        name_tokens = tuple(_normalized_phrase(name).split())
+        if not name_tokens or len(reference_tokens) <= len(name_tokens):
+            continue
+        if reference_tokens[: len(name_tokens)] != name_tokens:
+            continue
+        title_terms = reference_tokens[len(name_tokens) :]
+        if not _tokens_are_supported_title_prefix(title_terms):
+            continue
+        return ResolutionCandidate(
+            entity_id=profile.entity_id,
+            confidence=0.93,
+            match_kind="title_suffix_name",
+            matched_text=f"{profile.canonical_name} with title suffix",
         )
     return None
 
