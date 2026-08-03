@@ -196,6 +196,47 @@ def test_resolves_title_name_variant_without_prebuilt_alias() -> None:
     assert decision.candidates[0].match_kind == "title_name"
 
 
+def test_resolves_supported_title_prefix_with_known_name() -> None:
+    """Generic rank/title prefixes should not create duplicate named identities."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Captain Mira", "anchor_032d"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_mira"
+    assert decision.confidence == 0.93
+    assert decision.candidates[0].match_kind == "title_prefix_name"
+
+
+def test_title_prefix_resolution_rejects_unknown_descriptors() -> None:
+    """Descriptors should not be treated as identity titles."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Wounded Mira", "anchor_032e"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.candidates == ()
+
+
 def test_resolves_explicit_relationship_label_variant() -> None:
     """Family-role references should resolve only when explicitly profile-backed."""
     engine = EntityResolutionEngine()

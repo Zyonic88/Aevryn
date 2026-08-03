@@ -209,6 +209,13 @@ class EntityResolutionEngine:
         if title_name_score is not None:
             return title_name_score
 
+        title_prefix_name_score = _title_prefix_name_score(
+            normalized_reference,
+            profile,
+        )
+        if title_prefix_name_score is not None:
+            return title_prefix_name_score
+
         soft_score = _soft_description_score(normalized_reference, profile)
         if soft_score is None:
             return None
@@ -333,6 +340,38 @@ def _title_name_score(
     return None
 
 
+def _title_prefix_name_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Resolve known names with conservative title/rank prefixes."""
+    reference_tokens = tuple(normalized_reference.split())
+    if len(reference_tokens) < 2:
+        return None
+
+    for name in (profile.canonical_name, *profile.aliases):
+        name_tokens = tuple(_normalized_phrase(name).split())
+        if not name_tokens or len(reference_tokens) <= len(name_tokens):
+            continue
+        if reference_tokens[-len(name_tokens) :] != name_tokens:
+            continue
+        prefix_tokens = reference_tokens[: -len(name_tokens)]
+        if not _tokens_are_supported_title_prefix(prefix_tokens):
+            continue
+        return ResolutionCandidate(
+            entity_id=profile.entity_id,
+            confidence=0.93,
+            match_kind="title_prefix_name",
+            matched_text=f"{profile.canonical_name} with title prefix",
+        )
+    return None
+
+
+def _tokens_are_supported_title_prefix(tokens: tuple[str, ...]) -> bool:
+    """Return whether tokens are safe generic rank/title words."""
+    return bool(tokens) and all(token in _SUPPORTED_TITLE_PREFIX_TERMS for token in tokens)
+
+
 def _relationship_label_score(
     normalized_reference: str,
     profile: EntityIdentityProfile,
@@ -402,4 +441,42 @@ _IDENTITY_TOKEN_EQUIVALENTS = {
     "men": ("male",),
     "boy": ("male",),
     "boys": ("male",),
+}
+
+_SUPPORTED_TITLE_PREFIX_TERMS = {
+    "admiral",
+    "baron",
+    "baroness",
+    "captain",
+    "chief",
+    "colonel",
+    "commander",
+    "doctor",
+    "dr",
+    "duchess",
+    "duke",
+    "elder",
+    "emperor",
+    "empress",
+    "general",
+    "king",
+    "lady",
+    "lieutenant",
+    "lord",
+    "madam",
+    "major",
+    "master",
+    "minister",
+    "officer",
+    "president",
+    "prince",
+    "princess",
+    "professor",
+    "queen",
+    "saint",
+    "saintess",
+    "sergeant",
+    "sir",
+    "teacher",
+    "vice",
 }
