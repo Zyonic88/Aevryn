@@ -12,7 +12,15 @@ from aevryn import (
     SceneContextBuilder,
     StoryImporter,
 )
-from aevryn.core import Character, Entity, Evidence, Fact, StateChange, TimelineEvent
+from aevryn.core import (
+    Character,
+    Entity,
+    Evidence,
+    Fact,
+    Relationship,
+    StateChange,
+    TimelineEvent,
+)
 from tests.test_scene_context_builder import build_database, build_imported_source
 
 
@@ -835,6 +843,64 @@ def test_canon_prompt_builder_keeps_generation_context_in_every_prompt_type() ->
         assert "Iron Sword Visual Material: Dull iron blade with a worn leather grip" in (
             visual_prompt
         )
+
+
+def test_canon_prompt_builder_keeps_system_mechanics_out_of_visual_object_context() -> None:
+    """System facts should guide Canon state without becoming visible props."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_entity(
+        Entity(
+            entity_id="system_super_starfleet",
+            entity_type="system",
+            display_name="Super Starfleet System",
+        )
+    )
+    database.store_relationship(
+        Relationship(
+            relationship_id="relationship_mark_bound_to_system",
+            source_entity_id="character_mark",
+            relationship_type="bound_to_system",
+            target_entity_id="system_super_starfleet",
+            evidence_id="evidence_relationship",
+        )
+    )
+    database.store_fact(
+        Fact(
+            fact_id="fact_system_active_quest_status",
+            entity_id="system_super_starfleet",
+            attribute="system_status",
+            value="Active quest interface",
+            evidence_id="evidence_relationship",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_system_active_quest_status",
+            fact_id="fact_system_active_quest_status",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+    world_section = prompt.split("World and scene object context:", 1)[1].split(
+        "\n\n",
+        1,
+    )[0]
+
+    assert "System and non-visual canon constraints:" in prompt
+    assert "Super Starfleet Status: Active quest interface" in prompt
+    assert "do not depict them as visible UI, props, or scenery" in prompt
+    assert "Active quest interface" not in world_section
+    assert "Visual reference requirements:" not in prompt
 
 
 def test_canon_prompt_builder_declares_canon_context_inputs() -> None:

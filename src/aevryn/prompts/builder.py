@@ -162,6 +162,34 @@ VISUAL_PRODUCTION_ATTRIBUTE_PARTS = frozenset(
         "weapon",
     }
 )
+NON_VISUAL_CANON_ENTITY_PREFIXES = ("skill_", "system_")
+NON_VISUAL_CANON_ATTRIBUTE_PARTS = frozenset(
+    {
+        "ability",
+        "effect",
+        "interface",
+        "mechanic",
+        "message",
+        "notification",
+        "panel",
+        "points",
+        "quest",
+        "rule",
+        "skill",
+        "status",
+        "system",
+        "task",
+    }
+)
+EXPLICIT_VISUAL_ATTRIBUTE_PARTS = frozenset(
+    {
+        "appearance",
+        "design",
+        "displayed",
+        "visible",
+        "visual",
+    }
+)
 
 
 class CanonPromptBuilder:
@@ -247,6 +275,7 @@ class CanonPromptBuilder:
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
+                self._non_visual_canon_constraints_section(context),
                 self._image_setting_section(analysis),
                 self._visual_direction_section(analysis),
                 self._composition_section(context, analysis),
@@ -284,6 +313,7 @@ class CanonPromptBuilder:
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._world_context_section(context),
+                self._non_visual_canon_constraints_section(context),
                 self._continuity_guard_section(analysis),
             )
         )
@@ -316,6 +346,7 @@ class CanonPromptBuilder:
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
+                self._non_visual_canon_constraints_section(context),
                 self._visual_direction_section(analysis),
                 self._lighting_section(analysis),
                 self._visible_text_guard_section(),
@@ -349,6 +380,7 @@ class CanonPromptBuilder:
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
+                self._non_visual_canon_constraints_section(context),
                 self._visual_direction_section(analysis),
                 self._do_not_include_section(context, analysis),
                 self._visible_text_guard_section(),
@@ -684,6 +716,7 @@ class CanonPromptBuilder:
             for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
             if fact.entity_id not in character_ids
             and self._is_visual_production_attribute(fact.attribute)
+            and not self._is_non_visual_canon_fact(fact)
         ]
         relationship_lines = [
             self._relationship_prompt_line(relationship, display_names=display_names)
@@ -730,6 +763,7 @@ class CanonPromptBuilder:
             for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
             if fact.entity_id not in character_ids
             and self._is_visual_production_attribute(fact.attribute)
+            and not self._is_non_visual_canon_fact(fact)
         ][:4]
         lines.extend(world_visual_lines)
         unique_lines = self._unique_values(lines)
@@ -741,6 +775,30 @@ class CanonPromptBuilder:
                 "Visual reference requirements:",
                 *[f"- {self._shorten(line, width=150)}" for line in unique_lines],
                 "- Treat these as required references; keep unspecified traits neutral.",
+            ]
+        )
+
+    def _non_visual_canon_constraints_section(self, context: CanonSceneContext) -> str:
+        """Return system and skill context that should not become visible props."""
+        display_names = self._entity_display_names(context)
+        character_ids = {card.character_id for card in context.character_cards}
+        lines = [
+            self._world_fact_line(fact, display_names=display_names)
+            for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
+            if fact.entity_id not in character_ids
+            and self._is_non_visual_canon_fact(fact)
+        ][:6]
+        if not lines:
+            return ""
+
+        return "\n".join(
+            [
+                "System and non-visual canon constraints:",
+                *[f"- {self._shorten(line, width=150)}" for line in self._unique_values(lines)],
+                (
+                    "- Treat these as story-state constraints; do not depict them as "
+                    "visible UI, props, or scenery unless visible Canon says so."
+                ),
             ]
         )
 
@@ -1157,6 +1215,26 @@ class CanonPromptBuilder:
         )
 
     @staticmethod
+    def _is_non_visual_canon_fact(fact: Fact) -> bool:
+        """Return whether a system or skill fact is Canon context, not scenery."""
+        if CanonPromptBuilder._has_explicit_visual_attribute(fact.attribute):
+            return False
+        normalized_attribute = fact.attribute.lower()
+        return fact.entity_id.startswith(NON_VISUAL_CANON_ENTITY_PREFIXES) and any(
+            part in normalized_attribute
+            for part in NON_VISUAL_CANON_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
+    def _has_explicit_visual_attribute(attribute: str) -> bool:
+        """Return whether a fact explicitly describes visible appearance."""
+        normalized_attribute = attribute.lower()
+        return any(
+            part in normalized_attribute
+            for part in EXPLICIT_VISUAL_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
     def _fact_section(facts: Iterable[Fact]) -> str:
         """Return active fact section."""
         lines = [
@@ -1218,7 +1296,8 @@ class CanonPromptBuilder:
         words = [
             word
             for word in re.split(r"[_\s]+", attribute.strip())
-            if word and word not in {"character", "entity", "item", "location"}
+            if word
+            and word not in {"character", "entity", "item", "location", "skill", "system"}
         ]
         if not words:
             return attribute
