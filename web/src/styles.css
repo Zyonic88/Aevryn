@@ -1121,7 +1121,7 @@ select:focus {
 
 .quick-action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 10px;
 }
 
@@ -1157,7 +1157,8 @@ select:focus {
 }
 
 .quick-action-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   justify-content: space-between;
   gap: 10px;
@@ -1165,13 +1166,14 @@ select:focus {
 
 .quick-action-header strong {
   min-width: 0;
-  flex: 1 1 auto;
-  overflow-wrap: normal;
+  overflow-wrap: break-word;
   word-break: normal;
+  hyphens: none;
+  line-height: 1.25;
 }
 
 .quick-action-header small {
-  flex: 0 0 auto;
+  white-space: nowrap;
   max-width: 100%;
   padding: 3px 7px;
   border: 1px solid #c8d5e4;
@@ -1181,6 +1183,11 @@ select:focus {
   font-weight: 850;
   overflow-wrap: anywhere;
   text-transform: uppercase;
+}
+
+.quick-action-detail {
+  display: block;
+  min-width: 0;
 }
 
 .settings-scope-grid,
