@@ -875,14 +875,22 @@ function ImportProcessingPanel({
         <span>{activeRun ? formatRunStatus(activeRun.status) : "Working"}</span>
       </header>
       {activeRun ? (
-        <ProcessingStepper
-          run={activeRun}
-          snapshot={activeSnapshot}
-          label="Current processing progress"
-          nowMs={nowMs}
-          projectStatus={projectStatus}
-          showTiming
-        />
+        <>
+          <ProcessingStatusStrip
+            run={activeRun}
+            snapshot={activeSnapshot}
+            projectStatus={projectStatus}
+            nowMs={nowMs}
+          />
+          <ProcessingStepper
+            run={activeRun}
+            snapshot={activeSnapshot}
+            label="Current processing progress"
+            nowMs={nowMs}
+            projectStatus={projectStatus}
+            showTiming
+          />
+        </>
       ) : (
         <ImportActionStepper
           isReadingSourceFile={isReadingSourceFile}
@@ -892,6 +900,40 @@ function ImportProcessingPanel({
         />
       )}
     </section>
+  );
+}
+
+function ProcessingStatusStrip({
+  nowMs,
+  projectStatus,
+  run,
+  snapshot,
+}: {
+  nowMs: number;
+  projectStatus: ProjectStatus | undefined;
+  run: EngineRun;
+  snapshot: Snapshot | undefined;
+}) {
+  const worker = projectStatus?.worker;
+  return (
+    <dl className="processing-status-strip" aria-label="Processing status details">
+      <div>
+        <dt>Current step</dt>
+        <dd>{processingCurrentStepLabel(run, snapshot)}</dd>
+      </div>
+      <div>
+        <dt>Worker</dt>
+        <dd>{worker ? formatRunStatus(worker.state) : "Checking"}</dd>
+      </div>
+      <div>
+        <dt>Queue</dt>
+        <dd>{worker ? workerQueueLabel(worker) : "Checking"}</dd>
+      </div>
+      <div>
+        <dt>Updated</dt>
+        <dd>{formatRunStatusAge(run, nowMs)}</dd>
+      </div>
+    </dl>
   );
 }
 
@@ -1336,6 +1378,34 @@ function processingHelpText(run: EngineRun, snapshot: Snapshot | undefined): str
     return "Processing finished. Aevryn is waiting for the canon snapshot to appear.";
   }
   return "You can leave this page. Aevryn will keep processing and update this run automatically.";
+}
+
+function processingCurrentStepLabel(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (isStaleActiveRun(run)) {
+    return "Needs retry";
+  }
+  if (run.status === "failed") {
+    return "Failed";
+  }
+  if (snapshot) {
+    return "Output ready";
+  }
+  if (run.status === "succeeded") {
+    return "Snapshot finalizing";
+  }
+  if (run.status === "running") {
+    return "Building Canon";
+  }
+  return "Queued";
+}
+
+function workerQueueLabel(worker: ProjectStatus["worker"]): string {
+  const queued = worker.queued_jobs.toLocaleString();
+  const running = worker.running_jobs.toLocaleString();
+  if (worker.queued_jobs === 0 && worker.running_jobs === 0) {
+    return "No active jobs";
+  }
+  return `${queued} queued / ${running} running`;
 }
 
 function formatRunElapsed(run: EngineRun, nowMs: number): string {
