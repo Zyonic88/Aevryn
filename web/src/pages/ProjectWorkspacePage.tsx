@@ -98,12 +98,12 @@ export function ProjectWorkspacePage() {
       </nav>
       <section className="workspace-content">
         <header className="workspace-command-strip" aria-label="Workspace context">
-          <div>
+          <div className="workspace-project-title">
             <p className="eyebrow">Project</p>
             <h1>{project.name}</h1>
           </div>
           <div className="workspace-command-actions">
-            <p className="eyebrow">Section</p>
+            <span>Section</span>
             <h2>{activeTab?.label ?? "Unknown"}</h2>
           </div>
         </header>
