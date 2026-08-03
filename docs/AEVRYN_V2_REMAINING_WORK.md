@@ -496,8 +496,8 @@ Verified evidence:
 
 Remaining hardening:
 
-* prioritize duplicate-card reduction for title/name/alias/description cases
-  observed in hosted alpha runs
+* continue hosted duplicate-card review for title/name/alias/description cases
+  observed in alpha runs
 * ensure entity-resolution improvements remain story-neutral and never hardcoded
   to a specific character name, title, or source novel
 * continue reducing duplicate character cards caused by aliases/titles/descriptions
@@ -527,6 +527,12 @@ Verified hardening:
   prefixes such as Captain Mira to a known Canon identity even before the title
   has been stored as a prior fact, while rejecting ordinary descriptors such as
   Wounded Mira
+* entity-resolution tests now cover punctuation, articles, hyphenation, and
+  possessive suffixes around supported title/name references so variants such
+  as "Captain Mira's" and "Captain-Mira" do not fragment identities
+* project-runner tests now verify same-scene title/name duplicate candidates
+  rewrite to the named Canon identity instead of producing an extra character
+  card
 * project-runner identity profiles preserve explicit relationship labels such as
   "sister of Zhao Chen," allowing possessive references like "Zhao Chen's sister"
   to resolve to an existing identity without creating duplicate character cards
