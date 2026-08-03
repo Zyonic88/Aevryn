@@ -50,6 +50,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [isReadingSourceFile, setIsReadingSourceFile] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
+  const [inspectionResultMode, setInspectionResultMode] = useState<"review" | "process" | null>(
+    null,
+  );
   const [submittingImportId, setSubmittingImportId] = useState<string | null>(null);
   const [importIntent, setImportIntent] = useState<"review" | "process" | null>(null);
   const [processingClockMs, setProcessingClockMs] = useState(() => Date.now());
@@ -117,6 +120,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     },
     onError() {
       setInspectionResult(null);
+      setInspectionResultMode(null);
     },
   });
   const submitRun = useMutation({
@@ -321,12 +325,20 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       setInspectionResult(null);
       const result = await inspectImport.mutateAsync(payload);
       setInspectionResult(result);
+      setInspectionResultMode(processAfterInspect ? "process" : "review");
       if (processAfterInspect) {
         await saveAndProcessImport(payload);
       }
     } catch (error) {
       setInspectionResult(null);
-      setFormError(error instanceof Error ? error.message : "Import form is invalid.");
+      setInspectionResultMode(null);
+      setFormError(
+        error instanceof ApiError
+          ? null
+          : error instanceof Error
+            ? error.message
+            : "Import form is invalid.",
+      );
     } finally {
       setImportIntent(null);
     }
@@ -481,6 +493,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     submitRun.reset();
     drainLocalWorker.reset();
     setInspectionResult(null);
+    setInspectionResultMode(null);
   }
 
   return (
@@ -711,32 +724,40 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               The import returned no scene map entries.
             </EmptyState>
           )}
-          <div className="import-action-row">
-            <button
-              type="button"
-              className="primary-button"
-              disabled={createImport.isPending || createDefaultStory.isPending || submitRun.isPending}
-              onClick={() => {
-                void saveAndProcessImport();
-              }}
-            >
-              {createImport.isPending || createDefaultStory.isPending
-                ? "Saving import"
-                : submitRun.isPending
-                  ? "Submitting"
-                  : "Save and process"}
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={createImport.isPending || createDefaultStory.isPending || submitRun.isPending}
-              onClick={() => {
-                void saveImportMetadata();
-              }}
-            >
-              {createImport.isPending || createDefaultStory.isPending ? "Saving import" : "Save only"}
-            </button>
-          </div>
+          {inspectionResultMode === "review" ? (
+            <div className="import-action-row">
+              <button
+                type="button"
+                className="primary-button"
+                disabled={
+                  createImport.isPending || createDefaultStory.isPending || submitRun.isPending
+                }
+                onClick={() => {
+                  void saveAndProcessImport();
+                }}
+              >
+                {createImport.isPending || createDefaultStory.isPending
+                  ? "Saving import"
+                  : submitRun.isPending
+                    ? "Submitting"
+                    : "Process reviewed import"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={
+                  createImport.isPending || createDefaultStory.isPending || submitRun.isPending
+                }
+                onClick={() => {
+                  void saveImportMetadata();
+                }}
+              >
+                {createImport.isPending || createDefaultStory.isPending
+                  ? "Saving import"
+                  : "Save without processing"}
+              </button>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -1032,7 +1053,7 @@ function importInspectButtonLabel({
   if (isReading) {
     return "Reading file";
   }
-  return isInspecting ? "Inspecting" : "Inspect import";
+  return isInspecting ? "Inspecting" : "Review structure";
 }
 
 function quickProcessButtonLabel({
@@ -1060,7 +1081,7 @@ function quickProcessButtonLabel({
   if (isSubmitting) {
     return "Submitting";
   }
-  return "Inspect and process";
+  return "Process chapters";
 }
 
 function deferredFormatMessage(filename: string, formats: SourceFormats | undefined): string {

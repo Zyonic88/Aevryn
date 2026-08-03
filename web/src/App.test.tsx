@@ -2220,7 +2220,7 @@ describe("App shell routing", () => {
     expect(await screen.findByText(".txt")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(screen.getByRole("button", { name: "Review structure" }));
 
     expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
     expect(screen.getByText("Evidence anchors")).toBeInTheDocument();
@@ -2325,7 +2325,7 @@ describe("App shell routing", () => {
           1,
         ),
       );
-      await user.click(screen.getByRole("button", { name: "Inspect import" }));
+      await user.click(screen.getByRole("button", { name: "Review structure" }));
       await waitFor(() => expect(inspectBodies).toHaveLength(index + 1));
 
       expect(inspectBodies[index]).toMatchObject({
@@ -2343,7 +2343,7 @@ describe("App shell routing", () => {
       new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
     ]);
     await waitFor(() => expect(screen.getByText(/2 files \//u)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(screen.getByRole("button", { name: "Review structure" }));
     await waitFor(() => expect(inspectBodies).toHaveLength(supportedUploads.length + 1));
     const bundledBody = inspectBodies[supportedUploads.length];
     expect(bundledBody).toMatchObject({
@@ -2442,13 +2442,13 @@ describe("App shell routing", () => {
       new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
       new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
     ]);
-    await user.click(await screen.findByRole("button", { name: "Inspect import" }));
+    await user.click(await screen.findByRole("button", { name: "Review structure" }));
     expect(
       await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors."),
     ).toBeInTheDocument();
     expect(screen.queryByText("19 scenes ready for review.")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Save only" }));
+    await user.click(screen.getByRole("button", { name: "Save without processing" }));
 
     await waitFor(() => expect(savedImportId).toMatch(/^import_aevryn_import_bundle_/u));
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
@@ -2545,9 +2545,9 @@ describe("App shell routing", () => {
       new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
       new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
     ]);
-    await user.click(await screen.findByRole("button", { name: "Inspect import" }));
+    await user.click(await screen.findByRole("button", { name: "Review structure" }));
     await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors.");
-    await user.click(screen.getByRole("button", { name: "Save only" }));
+    await user.click(screen.getByRole("button", { name: "Save without processing" }));
 
     await waitFor(() => expect(savedImportIds).toHaveLength(2));
     expect(savedImportIds[0]).toMatch(/^import_aevryn_import_bundle_/u);
@@ -2611,8 +2611,8 @@ describe("App shell routing", () => {
     expect(await screen.findByText("Chapter import")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 2{enter}Different opening.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save only" }));
+    await user.click(screen.getByRole("button", { name: "Review structure" }));
+    await user.click(await screen.findByRole("button", { name: "Save without processing" }));
 
     expect(confirm).toHaveBeenCalledWith(
       "Alpha Story already has imported source. Only continue if this source belongs to the same story. Add it anyway?",
@@ -2719,9 +2719,11 @@ describe("App shell routing", () => {
     expect(screen.getByLabelText("Import reference")).not.toBeVisible();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect and process" }));
+    await user.click(screen.getByRole("button", { name: "Process chapters" }));
 
     await screen.findByText("Chapter import");
+    expect(screen.queryByRole("button", { name: "Process reviewed import" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save without processing" })).not.toBeInTheDocument();
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
     expect(screen.queryByText("chapter_001.txt")).not.toBeInTheDocument();
     expect(screen.getAllByText("8 scenes").length).toBeGreaterThanOrEqual(1);
@@ -2732,12 +2734,12 @@ describe("App shell routing", () => {
     expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled();
 
     await user.clear(screen.getByLabelText("Source text"));
-    expect(screen.getByRole("button", { name: "Inspect import" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review structure" })).toBeDisabled();
     await user.upload(
       screen.getByLabelText("Source file"),
       new File(["Chapter 2\nA new import can begin."], "chapter_002.txt"),
     );
-    expect(await screen.findByRole("button", { name: "Inspect import" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Review structure" })).toBeEnabled();
   });
 
   it("does not drain worker jobs from hosted browser sessions", async () => {
@@ -2824,8 +2826,8 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save and process" }));
+    await user.click(screen.getByRole("button", { name: "Review structure" }));
+    await user.click(await screen.findByRole("button", { name: "Process reviewed import" }));
     await screen.findByText("Chapter import");
 
     expect(await screen.findByText("Pending run")).toBeInTheDocument();
@@ -3075,8 +3077,8 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save only" }));
+    await user.click(screen.getByRole("button", { name: "Review structure" }));
+    await user.click(await screen.findByRole("button", { name: "Save without processing" }));
     await screen.findByText("Chapter import");
     await user.click(screen.getAllByRole("button", { name: "Submit processing" })[0]);
 
@@ -3207,8 +3209,8 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save only" }));
+    await user.click(screen.getByRole("button", { name: "Review structure" }));
+    await user.click(await screen.findByRole("button", { name: "Save without processing" }));
 
     await waitFor(() => expect(createdStoryId).toBe("story_alpha_story"));
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
@@ -5425,13 +5427,13 @@ describe("App shell routing", () => {
 
     await screen.findByText(".txt");
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(screen.getByRole("button", { name: "Review structure" }));
     expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
 
     failImport = true;
     await user.clear(screen.getByLabelText("Filename"));
     await user.type(screen.getByLabelText("Filename"), "chapter.txt");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(screen.getByRole("button", { name: "Review structure" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Import inspection failed.");
     expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();
@@ -5452,7 +5454,7 @@ describe("App shell routing", () => {
     await user.paste("a".repeat(MAX_IMPORT_SOURCE_CHARACTERS + 1));
 
     expect(await screen.findByText("500,001 / 500,000 characters")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Inspect import" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review structure" })).toBeDisabled();
   });
 
   it("shows source-format API failures on the import workspace tab", async () => {
@@ -5536,7 +5538,7 @@ describe("App shell routing", () => {
     for (const deferredInput of deferredInputs) {
       await user.clear(screen.getByLabelText("Filename"));
       await user.type(screen.getByLabelText("Filename"), deferredInput.filename);
-      await user.click(screen.getByRole("button", { name: "Inspect import" }));
+      await user.click(screen.getByRole("button", { name: "Review structure" }));
 
       expect(await screen.findByRole("alert")).toHaveTextContent(deferredInput.message);
       expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();
