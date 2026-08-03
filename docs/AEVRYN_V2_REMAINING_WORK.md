@@ -612,6 +612,10 @@ Verified hardening:
   ability crystals, skill crystals, and source crystals route as item context,
   while obvious AI attempts to classify crystals or slips as usable skills are
   rejected by deterministic extraction guards
+* physical-core phrases such as energy core, beast core, and reactor core route
+  as item context and are rejected when a provider tries to classify them as
+  usable skills or governing systems, while bare/genre core terms remain
+  translation-review metadata until evidence resolves meaning
 * the evidence-bounded AI extraction prompt tells the provider that manuals,
   scrolls, jade slips, and crystals are physical item containers unless evidence
   explicitly states a usable ability

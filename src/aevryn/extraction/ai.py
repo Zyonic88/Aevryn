@@ -308,16 +308,17 @@ class EvidenceBoundedAIExtractor:
                     "granted, sold, displayed, or described them. Physical objects stay "
                     "physical: swords are weapons, armor is armor, starships are vehicles, "
                     "blueprints/books/manuals/scrolls/jade slips/crystals/tokens/artifacts "
-                    "are items, and rooms or academies are buildings or locations. A "
-                    "system-created item is still an item or vehicle unless the evidence "
-                    "states it is a usable ability."
+                    "are items, named physical cores such as energy cores are items, and "
+                    "rooms or academies are buildings or locations. A system-created item "
+                    "is still an item or vehicle unless the evidence states it is a usable "
+                    "ability."
                 ),
                 (
                     "Use entity_type=skill only when the evidence describes an ability "
                     "that a character can use, activate, learn, cast, train, or possess "
                     "as a capability. Do not classify a product, blueprint, title, rank, "
                     "currency, reward, quest, ship, weapon, equipment, manual, scroll, "
-                    "jade slip, or crystal as a skill."
+                    "jade slip, crystal, or physical core as a skill."
                 ),
                 (
                     "Use entity_type=organization for factions, academies, clans, guilds, "
