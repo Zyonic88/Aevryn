@@ -1166,7 +1166,7 @@ select:focus {
 .quick-action-header strong {
   min-width: 0;
   flex: 1 1 auto;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   word-break: normal;
 }
 
