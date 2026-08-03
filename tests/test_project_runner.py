@@ -1644,6 +1644,115 @@ def test_runner_keeps_same_scene_ambiguous_description_unmerged() -> None:
     )
 
 
+def test_runner_flattens_chained_identity_rewrites_to_final_entity() -> None:
+    """Chained duplicate identities should not leave facts on removed entities."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_general_charlotte",
+                        "entity_type": "character",
+                        "display_name": "General Charlotte",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                    {
+                        "entity_id": "character_female_general",
+                        "entity_type": "character",
+                        "display_name": "Female General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.88,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_title_general",
+                        "entity_id": "character_charlotte",
+                        "attribute": "title",
+                        "value": "General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_general_charlotte_gender_female",
+                        "entity_id": "character_general_charlotte",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                    {
+                        "fact_id": "fact_character_general_charlotte_title_general",
+                        "entity_id": "character_general_charlotte",
+                        "attribute": "title",
+                        "value": "General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                    {
+                        "fact_id": "fact_character_female_general_status_alert",
+                        "entity_id": "character_female_general",
+                        "attribute": "status",
+                        "value": "Alert",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.88,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [
+                    {
+                        "entity_id": "character_female_general",
+                        "attribute": "stance",
+                        "value": "Watching the room",
+                        "valid_from_anchor_id": anchor_id,
+                        "confidence": 0.88,
+                    }
+                ],
+            },
+        },
+    )
+
+    assert result.update_summaries[0].accepted_entities == ("character_charlotte",)
+    assert result.database.retrieve_entity("character_general_charlotte") is None
+    assert result.database.retrieve_entity("character_female_general") is None
+    assert result.database.retrieve_current_fact("character_charlotte", "gender") is not None
+    assert (
+        result.database.retrieve_current_fact("character_charlotte", "status").value
+        == "Alert"
+    )
+    assert result.extraction_results[0].state_changes[0].entity_id == (
+        "character_charlotte"
+    )
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_charlotte"
+        and decision.reference.text == "General Charlotte"
+        for decision in result.identity_resolutions
+    )
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_general_charlotte"
+        and decision.reference.text == "Female General"
+        for decision in result.identity_resolutions
+    )
+
+
 def test_runner_rejects_empty_imported_source() -> None:
     """Project runner reports empty imported sources clearly."""
     runner = AevrynProjectRunner()
