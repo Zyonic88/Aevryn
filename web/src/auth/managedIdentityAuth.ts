@@ -18,11 +18,14 @@ type SupabaseAuthResponse = {
   msg?: unknown;
 };
 
-const SUPABASE_URL = normalizeBaseUrl(import.meta.env.VITE_SUPABASE_URL);
-const SUPABASE_ANON_KEY = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
+type ManagedIdentityConfig = {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+};
 
 export function isManagedIdentityAuthConfigured(): boolean {
-  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+  const config = managedIdentityConfig();
+  return Boolean(config.supabaseUrl && config.supabaseAnonKey);
 }
 
 export function loginWithConfiguredAuth(payload: LoginRequest): Promise<AuthSession> {
@@ -87,11 +90,13 @@ export async function requestConfiguredPasswordRecovery({
   if (!isManagedIdentityAuthConfigured()) {
     throw new Error("Password recovery requires the managed identity provider.");
   }
+  const config = requireManagedIdentityConfig();
 
   const response = await supabaseAuthRequest({
     path: `/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
     body: { email },
-    authorizationToken: SUPABASE_ANON_KEY,
+    authorizationToken: config.supabaseAnonKey,
+    config,
   });
   if (!response.ok) {
     throw new Error(supabaseErrorMessage(readSupabasePayload(response.payload)));
@@ -108,6 +113,7 @@ export async function completeConfiguredPasswordRecovery({
   if (!isManagedIdentityAuthConfigured()) {
     throw new Error("Password recovery requires the managed identity provider.");
   }
+  const config = requireManagedIdentityConfig();
   const token = textValue(accessToken);
   if (!token) {
     throw new Error("Password recovery link is invalid or expired.");
@@ -118,6 +124,7 @@ export async function completeConfiguredPasswordRecovery({
     method: "PUT",
     body: { password },
     authorizationToken: token,
+    config,
   });
   if (!response.ok) {
     throw new Error(supabaseErrorMessage(readSupabasePayload(response.payload)));
@@ -135,15 +142,14 @@ async function supabasePasswordAuth({
   fallbackEmail: string;
   fallbackDisplayName?: string;
 }): Promise<AuthSession> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error("Managed identity provider is not configured.");
-  }
+  const config = requireManagedIdentityConfig();
 
   try {
     const response = await supabaseAuthRequest({
       path,
       body,
-      authorizationToken: SUPABASE_ANON_KEY,
+      authorizationToken: config.supabaseAnonKey,
+      config,
     });
     const payload = readSupabasePayload(response.payload);
     if (!response.ok) {
@@ -173,27 +179,41 @@ async function supabaseAuthRequest({
   path,
   body,
   authorizationToken,
+  config,
   method = "POST",
 }: {
   path: string;
   body: Record<string, unknown>;
   authorizationToken: string;
+  config: ManagedIdentityConfig;
   method?: "POST" | "PUT";
 }) {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error("Managed identity provider is not configured.");
-  }
-  const response = await postJson(`${SUPABASE_URL}${path}`, {
+  const response = await postJson(`${config.supabaseUrl}${path}`, {
     method,
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
+      apikey: config.supabaseAnonKey,
       Authorization: `Bearer ${authorizationToken}`,
     },
     body,
   });
   return response;
+}
+
+function managedIdentityConfig(): ManagedIdentityConfig {
+  return {
+    supabaseUrl: normalizeBaseUrl(import.meta.env.VITE_SUPABASE_URL),
+    supabaseAnonKey: String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim(),
+  };
+}
+
+function requireManagedIdentityConfig(): ManagedIdentityConfig {
+  const config = managedIdentityConfig();
+  if (!config.supabaseUrl || !config.supabaseAnonKey) {
+    throw new Error("Managed identity provider is not configured.");
+  }
+  return config;
 }
 
 function readSupabasePayload(payload: unknown): SupabaseAuthResponse {

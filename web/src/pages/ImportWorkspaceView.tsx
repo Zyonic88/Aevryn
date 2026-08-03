@@ -587,26 +587,35 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             />
           </label>
           {fileContentBase64 ? (
-            <button type="button" className="secondary-button" onClick={clearSelectedFile}>
-              Clear selected file
-            </button>
-          ) : null}
-          <label>
-            Source text
-            <textarea
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-              rows={10}
-              aria-describedby="source-text-count"
-              disabled={Boolean(fileContentBase64)}
-            />
-          </label>
-          <p
-            id="source-text-count"
-            className={isSourceTextOversized ? "field-note field-note-error" : "field-note"}
-          >
-            {sourceCountLabel}
-          </p>
+            <div className="selected-source-card" aria-label="Selected source">
+              <div>
+                <span>Selected source</span>
+                <strong>{selectedFileName}</strong>
+                <small>{selectedFileSize.toLocaleString()} bytes ready</small>
+              </div>
+              <button type="button" className="secondary-button" onClick={clearSelectedFile}>
+                Clear selected file
+              </button>
+            </div>
+          ) : (
+            <>
+              <label>
+                Source text
+                <textarea
+                  value={sourceText}
+                  onChange={(event) => setSourceText(event.target.value)}
+                  rows={10}
+                  aria-describedby="source-text-count"
+                />
+              </label>
+              <p
+                id="source-text-count"
+                className={isSourceTextOversized ? "field-note field-note-error" : "field-note"}
+              >
+                {sourceCountLabel}
+              </p>
+            </>
+          )}
           {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
           {inspectImport.error ? <ErrorMessage>{inspectImport.error.message}</ErrorMessage> : null}
           {createImport.error ? <ErrorMessage>{createImport.error.message}</ErrorMessage> : null}
