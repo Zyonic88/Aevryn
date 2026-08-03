@@ -43,6 +43,45 @@ Silent assumptions are not acceptable.
 
 ---
 
+# Product Standard
+
+```text
+Aevryn is a Canon IDE, not a generic dashboard with dark styling.
+```
+
+V2 public beta must feel and behave like an IDE-style creative workspace:
+
+* navigation should be compact, stable, and fast to scan
+* workers must be observable, reliable, retryable, and never appear stuck without explanation
+* wasted space should be converted into useful context or removed
+* panels should not be stacked inside panels as decorative structure
+* every visible surface should help the creator understand Canon, workflow state, or next action
+* fewer clicks are better when they do not remove necessary review or safety
+* UI polish matters, but Canon accuracy matters more
+
+The accuracy standard is:
+
+```text
+Canon truth is the product.
+```
+
+If Aevryn cannot reliably understand characters, world objects, skills, systems,
+scene state, and story changes, the frontend polish does not matter. Remaining V2
+hardening should prioritize story-neutral accuracy, evidence-backed presentation,
+and workflow clarity over decorative redesign.
+
+Prompt Packs are especially important because they are the first production-facing
+output creators may reuse outside Aevryn. A V2 prompt does not need to promise
+one-click perfect generation, but it must be materially better than manually
+pasting chapter text into a generic AI tool.
+
+Multiple prompts per chapter remain future production-batching scope unless
+explicitly re-scoped. V2 should still preserve the architecture needed for
+scene-level prompt expansion later by keeping prompts scene-bound, Canon-bound,
+and grounded in current character/world state.
+
+---
+
 # Public Beta Blockers
 
 These block public beta unless resolved or explicitly accepted as residual risk.
@@ -325,6 +364,14 @@ In progress
 
 Remaining hardening:
 
+* verify Prompt Packs consume Character, World, Scene, Timeline, and Continuity
+  presentation state when building prompt context, not just scene summary text
+* keep prompts Canon-bound enough to preserve known character appearance,
+  setting, scene action, world objects, systems, skills, and current story state
+* improve Prompt Packs layout so chapter/scene prompts are easy to follow without
+  endless scrolling
+* preserve scene-level prompt architecture so future multi-prompt-per-chapter and
+  production batching can be added without rewriting Canon or extraction
 * ~~run hosted browser validation against the current prompt-pack output~~
 * ~~confirm prompts include enough scene-specific action, setting, character, and object context~~
 * ~~ensure normal prompt-pack presentation does not include raw manuscript prose~~
@@ -371,7 +418,8 @@ Verified hardening:
 Acceptance:
 
 ```text
-Prompt Packs are useful for beta without promising one-click perfect image/video generation.
+Prompt Packs are Canon-bound, scene-aware, and useful for beta without promising
+one-click perfect image/video generation.
 ```
 
 ## B. Continuity Readability
@@ -442,6 +490,10 @@ Verified evidence:
 
 Remaining hardening:
 
+* prioritize duplicate-card reduction for title/name/alias/description cases
+  observed in hosted alpha runs
+* ensure entity-resolution improvements remain story-neutral and never hardcoded
+  to a specific character name, title, or source novel
 * continue reducing duplicate character cards caused by aliases/titles/descriptions
 * keep ambiguous identity references visible for review instead of force-merging
 * ensure race/gender remain Canon-truthful and not story-specific guesses
@@ -491,7 +543,8 @@ Verified hardening:
 Acceptance:
 
 ```text
-Characters are readable and honest even when identity resolution is uncertain.
+Characters are readable, Canon-truthful, and honest even when identity
+resolution is uncertain.
 ```
 
 ## D. World Classification
@@ -504,6 +557,8 @@ In progress
 
 Remaining hardening:
 
+* continue sentence-understanding hardening for item/skill/system boundaries
+  without over-tightening valid genre-specific world facts
 * reduce incorrect item/skill/location/organization categorization where evidence supports a better class
 * avoid tailoring classification to one novel
 * ~~preserve uncertain classifications as reviewable instead of pretending certainty~~
@@ -905,13 +960,27 @@ Track future ideas in:
 
 # Recommended Execution Order
 
-1. Finish engineering-owned UI hardening:
+1. Finish Canon IDE hardening:
+   * compact IDE navigation and workspace density
+   * remove or reuse wasted space
+   * avoid panels stacked inside panels unless the nested panel is a real tool
+   * keep worker state visible and API-backed
+   * reduce clicks in import and processing workflows where review/safety is preserved
+
+2. Finish accuracy hardening:
+   * duplicate character-card reduction for aliases, titles, and descriptions
+   * conservative race/gender handling backed by explicit Canon evidence
+   * item/skill/system/world classification backed by sentence understanding
+   * Prompt Packs grounded in Character, World, Scene, Timeline, and Continuity state
+
+3. Finish output UX hardening:
+   * Prompt Pack chapter/scene layout
    * Continuity readability
-   * Prompt Pack hosted validation and polish
    * Character/entity review readability
    * Settings honesty pass
+   * Exports clarity
 
-2. Run full local gates:
+4. Run full local gates:
    * backend tests
    * backend lint
    * backend typing
@@ -920,25 +989,25 @@ Track future ideas in:
    * frontend build
    * release-readiness document tests
 
-3. Push and settle GitHub:
+5. Push and settle GitHub:
    * all branches/PRs understandable
    * required checks green
    * no stale blocking branches
 
-4. Run hosted browser pass:
+6. Run hosted browser pass:
    * 10-chapter canonical beta path
    * confirm export/download still works
    * deletion
    * session recovery
 
-5. Complete external reviews:
+7. Complete external reviews:
    * legal
    * provider
    * backup wording
    * support/trust pages
    * observability logs
 
-6. Update release-candidate record:
+8. Update release-candidate record:
    * final results
    * final residual risks
    * public-beta decision
@@ -955,6 +1024,9 @@ Stop and do not approve public beta if any of the following are true:
 * full AI payloads are logged
 * deleted project/story data remains visible in active product surfaces
 * cross-user project access succeeds
+* duplicate character-card behavior remains common enough to undermine Canon trust
+* Prompt Packs do not materially use accepted Canon state
+* worker state can appear stuck without API-backed explanation or recovery path
 * provider terms are not reviewed
 * public legal pages are not reviewed
 * the browser beta path requires CLI knowledge
@@ -966,13 +1038,14 @@ Stop and do not approve public beta if any of the following are true:
 Recommended next engineering slice:
 
 ```text
-Continue UX hardening on the processed-output surfaces, then commit each completed slice before moving on.
+Continue Canon IDE hardening one slice at a time, then commit each completed
+slice before moving on.
 ```
 
 The next best target is:
 
 ```text
-Full beta browser-path validation and remaining visible UI polish, starting
-with any remaining public-facing noise and hosted browser validation of the
-latest deletion/dashboard behavior.
+Prompt Pack Canon-context verification and layout hardening, followed by
+Character/entity duplicate-card hardening and a browser pass against the
+10-chapter canonical beta path.
 ```
