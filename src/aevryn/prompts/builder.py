@@ -271,6 +271,7 @@ class CanonPromptBuilder:
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._character_identity_reference_section(context),
+                self._character_continuity_lock_section(context),
                 self._image_subject_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
@@ -310,6 +311,7 @@ class CanonPromptBuilder:
                 self._scene_directive_section(analysis),
                 self._narration_direction_section(analysis),
                 self._character_identity_reference_section(context),
+                self._character_continuity_lock_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._world_context_section(context),
@@ -342,6 +344,7 @@ class CanonPromptBuilder:
                 self._camera_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
                 self._character_identity_reference_section(context),
+                self._character_continuity_lock_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
@@ -376,6 +379,7 @@ class CanonPromptBuilder:
                 self._animation_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
                 self._character_identity_reference_section(context),
+                self._character_continuity_lock_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
@@ -525,6 +529,32 @@ class CanonPromptBuilder:
             "do not create extra characters from them."
         )
         return "\n".join(lines)
+
+    def _character_continuity_lock_section(self, context: CanonSceneContext) -> str:
+        """Return prompt guidance that keeps one Canon identity as one person."""
+        if not context.character_cards:
+            return ""
+        if not any(self._character_identity_lines(card) for card in context.character_cards):
+            return ""
+
+        character_names = tuple(card.display_name for card in context.character_cards)
+        character_count = len(character_names)
+        character_text = ", ".join(character_names)
+        return "\n".join(
+            [
+                "Character continuity lock:",
+                (
+                    f"- Exactly {character_count} confirmed "
+                    f"{'character' if character_count == 1 else 'characters'}: "
+                    f"{character_text}."
+                ),
+                (
+                    "- Aliases, titles, roles, descriptions, and relationship labels "
+                    "are identity aids, not extra people; preserve accepted "
+                    "appearance facts and keep missing traits neutral."
+                ),
+            ]
+        )
 
     def _visual_identity_known_unknown_section(self, context: CanonSceneContext) -> str:
         """Return per-character visual identity coverage without inventing details."""
