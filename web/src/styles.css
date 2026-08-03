@@ -556,16 +556,18 @@ input:focus {
 .workspace-shell {
   min-height: calc(100vh - 124px);
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  border: 1px solid #d8dee7;
+  grid-template-columns: 58px minmax(0, 1fr);
+  border: 1px solid var(--app-line-strong);
   border-radius: 8px;
   overflow: hidden;
-  background: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(127, 178, 255, 0.06), transparent 36%),
+    rgba(8, 13, 21, 0.94);
 }
 
 .workspace-content {
   min-width: 0;
-  padding: 24px;
+  padding: 20px;
 }
 
 .placeholder-panel {
@@ -2325,11 +2327,7 @@ textarea::placeholder {
 }
 
 .workspace-shell {
-  grid-template-columns: 58px minmax(0, 1fr);
   border-color: var(--app-line-strong);
-  background:
-    linear-gradient(135deg, rgba(127, 178, 255, 0.06), transparent 36%),
-    rgba(8, 13, 21, 0.94);
 }
 
 .workspace-rail {
