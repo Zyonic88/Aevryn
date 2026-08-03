@@ -486,6 +486,7 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
         </div>
       </header>
       <CharacterAtAGlance profile={profile} />
+      <CharacterIdentitySignals profile={profile} />
       <details className="profile-disclosure">
         <summary>Character details</summary>
         <div className="profile-section-grid">
@@ -508,6 +509,39 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
       <p className="evidence-note">{profile.evidence_summary}</p>
     </article>
   );
+}
+
+function CharacterIdentitySignals({ profile }: { profile: CharacterProfile }) {
+  const signals = [
+    characterSignal("Aliases", profile.aliases),
+    characterSignal("Titles", profile.titles),
+    characterSignal("Descriptions", profile.descriptions),
+    characterSignal("Relationships", profile.relationships),
+  ];
+  return (
+    <dl className="character-identity-strip" aria-label="Character identity signals">
+      {signals.map((signal) => (
+        <div key={signal.label} className={signal.count > 0 ? "" : "is-unknown"}>
+          <dt>{signal.label}</dt>
+          <dd>{signal.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function characterSignal(
+  label: string,
+  section: OutputSection,
+): { label: string; value: string; count: number } {
+  const knownItems = knownSectionItems(section);
+  const count = knownItems.length;
+  const labelText = count === 1 ? "signal" : "signals";
+  return {
+    label,
+    value: count > 0 ? `${count.toLocaleString()} ${labelText}` : "Unknown",
+    count,
+  };
 }
 
 function CharacterAtAGlance({ profile }: { profile: CharacterProfile }) {
