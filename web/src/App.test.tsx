@@ -3847,10 +3847,12 @@ describe("App shell routing", () => {
       "/projects/project_alpha/characters",
     );
     expect(screen.getByRole("heading", { name: "Quick Actions" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Prompt Packs 1 scenes ready/u })).toHaveAttribute(
+    const promptPacksAction = screen.getByRole("link", { name: /Prompt Packs 1 scenes ready/u });
+    expect(promptPacksAction).toHaveAttribute(
       "href",
       "/projects/project_alpha/prompts",
     );
+    expect(within(promptPacksAction).getByText("Open")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Exports Snapshot export available/u })).toHaveAttribute(
       "href",
       "/projects/project_alpha/exports",
