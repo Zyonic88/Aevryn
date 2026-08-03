@@ -1854,6 +1854,19 @@ select:focus {
   min-width: 0;
 }
 
+.prompt-canon-input {
+  border-left: 3px solid #cbd6e2;
+  padding-left: 8px;
+}
+
+.prompt-canon-input-available {
+  border-left-color: #2d5f8f;
+}
+
+.prompt-canon-input-missing {
+  border-left-color: #9aa6b5;
+}
+
 .prompt-canon-inputs dt {
   color: #52647c;
   font-size: 12px;
@@ -1861,10 +1874,20 @@ select:focus {
 }
 
 .prompt-canon-inputs dd {
+  display: grid;
+  gap: 2px;
   margin: 2px 0 0;
   color: #1e293b;
   font-size: 13px;
   font-weight: 800;
+}
+
+.prompt-canon-inputs dd small {
+  overflow-wrap: anywhere;
+  color: #667386;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .prompt-section li {
@@ -3011,6 +3034,26 @@ textarea::placeholder {
 .monitoring-detail-grid dd,
 .settings-area-status {
   color: var(--app-text) !important;
+}
+
+.prompt-canon-input {
+  border-left-color: rgba(127, 178, 255, 0.22);
+}
+
+.prompt-canon-input-available {
+  border-left-color: var(--app-blue);
+}
+
+.prompt-canon-input-missing {
+  border-left-color: rgba(148, 163, 184, 0.52);
+}
+
+.prompt-canon-inputs dd {
+  color: var(--app-text);
+}
+
+.prompt-canon-inputs dd small {
+  color: var(--app-muted);
 }
 
 .export-preview-content,

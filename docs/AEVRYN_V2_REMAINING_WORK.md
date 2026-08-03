@@ -434,6 +434,11 @@ Verified hardening:
   scenes without manual scrolling
 * verified with focused Prompt Packs workspace test, full frontend test suite,
   lint, and production build
+* prompt-pack detail cards now show available/missing Canon input status for
+  characters, setting, visuals, continuity, and constraints with compact preview
+  details so users can judge prompt grounding without opening every prompt body
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
 
 Acceptance:
 
