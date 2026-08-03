@@ -12,6 +12,33 @@ The Canon Engine is the source of truth.
 
 Every other subsystem either feeds evidence into canon, reads canon to produce context, or exports canon for external tools.
 
+Aevryn follows a structured certainty pipeline:
+
+```text
+Story Import
+-> Sentence Understanding
+-> Translation / Normalization
+-> Entity Extraction
+-> Entity Resolution
+-> Canon Updating / Canon
+-> Scene, Character, World, Timeline, Continuity
+-> Prompt Engine
+```
+
+Every downstream system should receive more structured information than the
+system before it. Each stage reduces ambiguity when evidence allows it and
+preserves uncertainty when evidence does not allow certainty.
+
+The identity boundary is:
+
+```text
+Extraction proposes.
+Resolution consolidates.
+Canon decides truth.
+```
+
+See `docs/AEVRYN_STRUCTURED_CERTAINTY_PIPELINE.md`.
+
 ## Subsystems
 
 ### Story Import System

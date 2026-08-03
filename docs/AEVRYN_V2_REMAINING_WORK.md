@@ -65,6 +65,38 @@ The accuracy standard is:
 Canon truth is the product.
 ```
 
+The pipeline standard is:
+
+```text
+Every downstream system should receive more structured information than the
+system before it.
+```
+
+V2 now treats this as the Structured Certainty Pipeline:
+
+```text
+Story Import
+-> Sentence Understanding
+-> Translation / Normalization
+-> Entity Extraction
+-> Entity Resolution
+-> Canon Updating / Canon
+-> Scene, Character, World, Timeline, Continuity
+-> Prompt Engine
+```
+
+The required identity boundary is:
+
+```text
+Extraction proposes.
+Resolution consolidates.
+Canon decides truth.
+```
+
+Tracking:
+
+* `docs/AEVRYN_STRUCTURED_CERTAINTY_PIPELINE.md`
+
 If Aevryn cannot reliably understand characters, world objects, skills, systems,
 scene state, and story changes, the frontend polish does not matter. Remaining V2
 hardening should prioritize story-neutral accuracy, evidence-backed presentation,

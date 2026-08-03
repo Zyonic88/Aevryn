@@ -191,11 +191,17 @@ class RecordingTextExtractor:
     def __init__(self) -> None:
         self.scene_texts: list[str] = []
         self.anchor_ids: list[tuple[str, ...]] = []
+        self.sentence_understanding_counts: list[int] = []
+        self.sentence_understanding_anchor_ids: list[tuple[str, ...]] = []
 
     def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
         """Record text and anchors without producing candidates."""
         self.scene_texts.append(scene.text)
         self.anchor_ids.append(scene.evidence_anchor_ids)
+        self.sentence_understanding_counts.append(len(scene.sentence_understanding))
+        self.sentence_understanding_anchor_ids.append(
+            tuple(item.evidence_anchor_id for item in scene.sentence_understanding)
+        )
         return ExtractionResult(scene_id=scene.scene_id)
 
 
@@ -275,6 +281,44 @@ def test_runner_feeds_sentence_ambiguity_to_translation_review() -> None:
         issue.evidence_anchor_ids
         for issue in result.translation_units[0].issues
     )
+
+
+def test_runner_honors_structured_certainty_pipeline_contract() -> None:
+    """Pipeline handoffs should structure evidence without bypassing Canon."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=ambiguous_translation_source_file(),
+        source_id="demo",
+    )
+    extractor = RecordingTextExtractor()
+
+    result = runner.run_imported_source(
+        imported_source=imported_source,
+        extractor=extractor,
+        translation_glossary=(
+            GlossaryTerm(
+                source_term="dao core",
+                preferred_term="Dao Core",
+                evidence_anchor_id=imported_source.anchors[-1].anchor_id,
+                term_kind="item",
+            ),
+        ),
+    )
+
+    assert extractor.scene_texts == ["Charlotte studied the Dao Core."]
+    assert extractor.anchor_ids == [(imported_source.anchors[-1].anchor_id,)]
+    assert extractor.sentence_understanding_counts == [1]
+    assert extractor.sentence_understanding_anchor_ids == [
+        (imported_source.anchors[-1].anchor_id,)
+    ]
+    assert result.translation_units[0].source_evidence_anchor_ids == (
+        imported_source.anchors[-1].anchor_id,
+    )
+    assert result.translation_units[0].normalized_text == "Charlotte studied the Dao Core."
+    assert result.extraction_results[0].entities == ()
+    assert result.update_summaries[0].accepted_entities == ()
+    assert result.database.retrieve_entity("character_charlotte") is None
+    assert result.database.retrieve_entity("item_dao_core") is None
 
 
 def test_runner_builds_phase12_translation_and_identity_metadata() -> None:
