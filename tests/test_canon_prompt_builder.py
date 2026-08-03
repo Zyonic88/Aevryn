@@ -736,6 +736,56 @@ def test_canon_prompt_builder_carries_stable_identity_references_from_cards() ->
         assert "School Year: First Year" not in prompt
 
 
+def test_canon_prompt_builder_locks_character_identity_count() -> None:
+    """Production prompts should not turn aliases or titles into extra characters."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("alias", "General Mark"),
+        ("title", "Commander"),
+        ("description", "White-haired academy officer"),
+    ):
+        fact_id = f"fact_001_identity_lock_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_001",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_001_identity_lock_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_001_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+    builder = CanonPromptBuilder()
+
+    prompts = (
+        builder.build_image_prompt(context),
+        builder.build_narration_prompt(context),
+        builder.build_camera_prompt(context),
+        builder.build_animation_prompt(context),
+    )
+
+    for prompt in prompts:
+        assert "Character continuity lock:" in prompt
+        assert "- Exactly 1 confirmed character: Mark." in prompt
+        assert "not extra people" in prompt
+        assert "preserve accepted appearance facts" in prompt
+
+
 def test_canon_prompt_builder_omits_mechanical_metadata_from_character_details() -> None:
     """Prompt character details omit task math that belongs in audit views."""
     imported_source = build_imported_source()

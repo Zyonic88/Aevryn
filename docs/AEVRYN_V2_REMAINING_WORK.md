@@ -561,6 +561,10 @@ Verified hardening:
 * prompt packs omit negated visual identity facts from character detail lines
   and visual identity coverage, preventing denied race/species/gender evidence
   from becoming positive image or narration guidance
+* prompt packs add a bounded character-continuity lock when aliases, titles,
+  descriptions, or relationship labels are present, telling generation tools to
+  keep those surfaces attached to the same Canon identity instead of creating
+  extra people
 * verified with the focused processed-character-panel frontend test
 
 Acceptance:
