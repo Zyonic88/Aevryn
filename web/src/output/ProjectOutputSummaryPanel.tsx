@@ -456,6 +456,7 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
           <p>{subtitle}</p>
         </div>
       </header>
+      <CharacterAtAGlance profile={profile} />
       <details className="profile-disclosure">
         <summary>Character details</summary>
         <div className="profile-section-grid">
@@ -478,6 +479,30 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
       <p className="evidence-note">{profile.evidence_summary}</p>
     </article>
   );
+}
+
+function CharacterAtAGlance({ profile }: { profile: CharacterProfile }) {
+  const facts = [
+    characterFact("Race", profile.race),
+    characterFact("Gender", profile.gender),
+    characterFact("Status", profile.status),
+    characterFact("Goal", profile.current_goal),
+  ];
+  return (
+    <dl className="character-fact-strip" aria-label="Character at a glance">
+      {facts.map((fact) => (
+        <div key={fact.label}>
+          <dt>{fact.label}</dt>
+          <dd>{fact.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function characterFact(label: string, section: OutputSection): { label: string; value: string } {
+  const knownItems = readableOutputItems(section.items).filter((item) => item !== "Unknown");
+  return { label, value: knownItems[0] ?? "Unknown" };
 }
 
 function characterInitials(name: string): string {
