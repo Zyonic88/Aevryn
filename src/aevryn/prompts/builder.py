@@ -233,11 +233,11 @@ class CanonPromptBuilder:
             (
                 (
                     "Generate this image using only accepted Aevryn canon.\n"
-                    "Image generation task: Create one scene image showing the "
-                    "confirmed subjects, setting, mood, and objects below. Do not "
-                    "invent character appearance, vehicle design, logos, colors, or "
-                    "scenery details that are not listed as known canon."
+                    "Image task: Create one scene image from the confirmed "
+                    "subjects, setting, mood, objects, and Canon limits below. "
+                    "Do not invent unlisted appearance, design, or scenery."
                 ),
+                self._canon_context_checklist_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_visual_anchor_section(context),
                 self._scene_action_beats_section(context, analysis),
@@ -275,6 +275,7 @@ class CanonPromptBuilder:
                     "that are not supported by canon.\n"
                     "Narrate using only accepted canon facts."
                 ),
+                self._canon_context_checklist_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
@@ -303,6 +304,7 @@ class CanonPromptBuilder:
                     "invent new physical details.\n"
                     "Describe camera framing without inventing new canon."
                 ),
+                self._canon_context_checklist_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
@@ -336,6 +338,7 @@ class CanonPromptBuilder:
                     "motion minimal and neutral.\n"
                     "Describe motion using only accepted scene facts."
                 ),
+                self._canon_context_checklist_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
@@ -398,6 +401,45 @@ class CanonPromptBuilder:
                 f"Conflict: {CanonPromptBuilder._shorten(analysis.conflict)}",
                 f"Mood and tone: {CanonPromptBuilder._shorten(analysis.mood)}",
                 f"Setting: {CanonPromptBuilder._shorten(analysis.environment_summary)}",
+            ]
+        )
+
+    def _canon_context_checklist_section(
+        self,
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return the Canon surfaces used by the prompt without leaking IDs."""
+        character_ids = {card.character_id for card in context.character_cards}
+        world_fact_count = sum(
+            1
+            for fact in context.active_facts
+            if fact.entity_id not in character_ids
+        )
+        character_fact_count = sum(
+            len(
+                self._character_fact_lines(
+                    card=card,
+                    scene_fact_keys=self._scene_fact_keys(context.active_facts),
+                )
+            )
+            for card in context.character_cards
+        )
+        scene_anchor_count = len(self._scene_visual_anchors(context))
+        action_beat_count = len(self._scene_action_beats(context, analysis))
+        continuity_count = len(analysis.continuity_notes)
+        return "\n".join(
+            [
+                "Canon context used:",
+                (
+                    f"- chars={len(context.character_cards)}, "
+                    f"character_facts={character_fact_count}, "
+                    f"world={world_fact_count}, "
+                    f"rel={len(context.relationships)}, "
+                    f"beats={action_beat_count}, "
+                    f"anchors={scene_anchor_count}, "
+                    f"notes={continuity_count}; unknowns neutral."
+                ),
             ]
         )
 
