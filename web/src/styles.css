@@ -784,6 +784,32 @@ select:focus {
   background: #f8fafc;
 }
 
+.disclosure-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.disclosure-panel summary h2 {
+  margin: 0;
+}
+
+.disclosure-panel summary span {
+  color: #536174;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.disclosure-panel[open] summary {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #dbe3ec;
+}
+
 .advanced-fields {
   border: 1px solid #dbe3ec;
   border-radius: 6px;
@@ -2366,6 +2392,14 @@ textarea::placeholder {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.disclosure-panel summary span {
+  color: var(--app-blue-2);
+}
+
+.disclosure-panel[open] summary {
+  border-bottom-color: rgba(127, 178, 255, 0.16);
 }
 
 .advanced-fields {
