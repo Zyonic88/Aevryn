@@ -676,6 +676,9 @@ Verified hardening:
   summaries instead of leaving durable runs pending forever
 * active processing displays API-backed states such as Queued, Processing,
   Snapshot, and Output ready without fake percentages
+* source intake now labels the fast path as "Inspect and process" and the
+  slower review path as "Inspect only," making the one-click import path
+  explicit without removing review/safety controls
 * deferred source formats, source-format API failures, oversized pasted imports,
   and failed re-inspection paths show user-facing explanations and avoid stale
   import-structure output
