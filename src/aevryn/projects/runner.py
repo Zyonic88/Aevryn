@@ -524,6 +524,7 @@ class AevrynProjectRunner:
             and decision.entity_id is not None
             and decision.entity_id != entity.entity_id
         }
+        entity_id_map = _flattened_identity_map(entity_id_map)
         if not entity_id_map:
             return extraction_result, decisions
 
@@ -1576,6 +1577,20 @@ def _same_surface_entity_id_map(result: ExtractionResult) -> dict[str, str]:
             if entity.entity_id != survivor.entity_id:
                 entity_id_map[entity.entity_id] = survivor.entity_id
     return entity_id_map
+
+
+def _flattened_identity_map(entity_id_map: dict[str, str]) -> dict[str, str]:
+    """Return a rewrite map that points every duplicate to its final survivor."""
+    flattened: dict[str, str] = {}
+    for entity_id in sorted(entity_id_map):
+        target_id = entity_id_map[entity_id]
+        seen_ids = {entity_id}
+        while target_id in entity_id_map and target_id not in seen_ids:
+            seen_ids.add(target_id)
+            target_id = entity_id_map[target_id]
+        if target_id != entity_id:
+            flattened[entity_id] = target_id
+    return flattened
 
 
 def _rewritten_extraction_result_for_identity_map(

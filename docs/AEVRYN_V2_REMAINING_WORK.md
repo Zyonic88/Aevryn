@@ -601,6 +601,10 @@ Verified hardening:
 * project-runner tests now verify same-scene exact visible-surface duplicates
   collapse to the highest-confidence entity, preserving attached facts/state
   changes under one Canon identity instead of creating duplicate cards
+* project-runner identity rewrites now flatten chained duplicate resolutions
+  before Canon update, so a descriptive duplicate that resolves to a title/name
+  duplicate still lands on the final Canon identity instead of leaving facts or
+  state changes attached to a removed intermediate character
 * project-runner identity profiles preserve explicit relationship labels such as
   "sister of Zhao Chen," allowing possessive references like "Zhao Chen's sister"
   to resolve to an existing identity without creating duplicate character cards
