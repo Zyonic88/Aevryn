@@ -3298,6 +3298,87 @@ describe("App shell routing", () => {
     expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();
   });
 
+  it("labels stale active import runs as timed out and recoverable", async () => {
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ imports: [importRecordPayload] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                runs: [
+                  {
+                    ...engineRunPayload,
+                    status: "pending",
+                    started_at: "2026-06-27T00:00:00.000Z",
+                    status_updated_at: "2026-06-27T00:00:00.000Z",
+                    finished_at: null,
+                  },
+                ],
+              }),
+            ),
+          );
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+        }
+        if (url.endsWith(projectOutputsPath(projectAlpha.id))) {
+          return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
+          return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Timed out run")).toBeInTheDocument();
+    expect(screen.getByText("No snapshot: run timed out")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry processing" })).toBeEnabled();
+    expect(screen.getByText("Run error: Processing timed out before completion.")).toBeInTheDocument();
+    expect(screen.queryByText("Pending run")).not.toBeInTheDocument();
+  });
+
   it("shows persisted failed import runs without crashing after refresh", async () => {
     storeAuthenticatedProject();
     vi.stubGlobal(
