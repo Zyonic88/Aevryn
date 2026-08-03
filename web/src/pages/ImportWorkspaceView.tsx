@@ -591,7 +591,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               <div>
                 <span>Selected source</span>
                 <strong>{selectedFileName}</strong>
-                <small>{selectedFileSize.toLocaleString()} bytes ready</small>
+                <small>
+                  {selectedFileSize.toLocaleString()} bytes ready for structure review or processing
+                </small>
               </div>
               <button type="button" className="secondary-button" onClick={clearSelectedFile}>
                 Clear selected file
@@ -656,6 +658,10 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               })}
             </button>
           </div>
+          <p className="import-fast-lane-note">
+            Process chapters runs the full intake path: inspect source structure, save the import,
+            then submit Canon processing. Inspect only is for manual review before processing.
+          </p>
         </form>
       </section>
 
@@ -1126,7 +1132,7 @@ function quickProcessButtonLabel({
   if (isSubmitting) {
     return "Submitting";
   }
-  return "Inspect and process";
+  return "Process chapters";
 }
 
 function deferredFormatMessage(filename: string, formats: SourceFormats | undefined): string {
