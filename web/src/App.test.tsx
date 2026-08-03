@@ -2979,9 +2979,13 @@ describe("App shell routing", () => {
           runListReadsAfterSubmit += 1;
         }
         const status = runListReadsAfterSubmit >= 3 ? "succeeded" : "pending";
+        const finishedAt =
+          status === "succeeded" && submittedRun
+            ? new Date(Date.parse(String(submittedRun.started_at)) + 5000).toISOString()
+            : null;
         const finishedFields =
           status === "succeeded"
-            ? { finished_at: "2026-06-27T00:00:05.000Z" }
+            ? { finished_at: finishedAt }
             : { finished_at: null };
         return Promise.resolve(
           new Response(
@@ -3065,6 +3069,7 @@ describe("App shell routing", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled());
     expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
+    expect(screen.getByText("Duration: 5s")).toBeInTheDocument();
     expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();
     expect(screen.getByText(/Canon output is ready/u)).toBeInTheDocument();
     expect(

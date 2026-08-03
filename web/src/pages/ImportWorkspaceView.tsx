@@ -788,6 +788,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
                   <strong>Processing run</strong>
                   <span>{formatRunStatus(run.status)} run</span>
                   <span>{runSnapshotLabel(run, snapshot)}</span>
+                  <span>{runDurationSummary(run, processingClockMs)}</span>
                   <ProcessingStepper run={run} snapshot={snapshot} />
                   {errorLabel ? <span>{errorLabel}</span> : null}
                 </div>
@@ -1153,6 +1154,16 @@ function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): strin
   return "Snapshot waiting";
 }
 
+function runDurationSummary(run: EngineRun, nowMs: number): string {
+  if (run.finished_at) {
+    return `Duration: ${formatDurationLabel(durationBetween(run.started_at, run.finished_at))}`;
+  }
+  if (run.status === "pending" || run.status === "running") {
+    return `Elapsed: ${formatDurationLabel(durationSince(run.started_at, nowMs))}`;
+  }
+  return "Duration unavailable";
+}
+
 function ProcessingStepper({
   label = "Processing progress",
   nowMs,
@@ -1255,6 +1266,15 @@ function durationSince(timestamp: string, nowMs: number): number {
     return 0;
   }
   return Math.max(0, nowMs - startedAt);
+}
+
+function durationBetween(startedAtTimestamp: string, finishedAtTimestamp: string): number {
+  const startedAt = Date.parse(startedAtTimestamp);
+  const finishedAt = Date.parse(finishedAtTimestamp);
+  if (!Number.isFinite(startedAt) || !Number.isFinite(finishedAt)) {
+    return 0;
+  }
+  return Math.max(0, finishedAt - startedAt);
 }
 
 function formatDurationLabel(durationMs: number): string {
