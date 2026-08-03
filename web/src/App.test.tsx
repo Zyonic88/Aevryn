@@ -2747,7 +2747,9 @@ describe("App shell routing", () => {
 
     expect(screen.queryByText("Processing started.")).not.toBeInTheDocument();
     expect(screen.queryByText("Processing completed.")).not.toBeInTheDocument();
-    expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
+    const runHistory = await screen.findByLabelText("Processing run history");
+    expect(runHistory).toHaveTextContent("Completed processing run");
+    expect(runHistory).toHaveTextContent("Snapshot pending");
     expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled();
 
     await user.clear(screen.getByLabelText("Source text"));
@@ -2847,7 +2849,9 @@ describe("App shell routing", () => {
     await user.click(await screen.findByRole("button", { name: "Process reviewed import" }));
     await screen.findByText("Chapter import");
 
-    expect(await screen.findByText("Pending run")).toBeInTheDocument();
+    const runHistory = await screen.findByLabelText("Processing run history");
+    expect(runHistory).toHaveTextContent("Active processing run");
+    expect(runHistory).toHaveTextContent("Queued");
     expect(screen.getByRole("button", { name: "Processing" })).toBeDisabled();
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.workerProcess)),
@@ -3108,16 +3112,14 @@ describe("App shell routing", () => {
     expect(statusDetails).toHaveTextContent("Worker");
     expect(statusDetails).toHaveTextContent("Queue");
     expect(statusDetails).toHaveTextContent("1 queued / 0 running");
-    const processingProgress = await screen.findByLabelText("Processing progress");
-    expect(processingProgress).toHaveTextContent("Queued");
-    expect(processingProgress).toHaveTextContent("Processing");
-    expect(processingProgress).not.toHaveTextContent(/%/u);
+    expect(statusDetails).not.toHaveTextContent(/%/u);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled());
-    expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
-    expect(screen.getByText("Duration: 5s")).toBeInTheDocument();
-    expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();
-    expect(screen.getByText(/Canon output is ready/u)).toBeInTheDocument();
+    const runHistory = await screen.findByLabelText("Processing run history");
+    expect(runHistory).toHaveTextContent("Completed Canon build");
+    expect(runHistory).toHaveTextContent("Duration: 5s");
+    expect(runHistory).toHaveTextContent("Canon snapshot ready");
+    expect(screen.queryByLabelText("Current processing progress")).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.workerProcess)),
     ).toBe(false);
@@ -3332,16 +3334,11 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
     expect(await screen.findByText("Chapter import")).toBeInTheDocument();
     expect(screen.getByText("8 scenes")).toBeInTheDocument();
-    expect(await screen.findByText("Failed run")).toBeInTheDocument();
-    expect(screen.getByText("Succeeded run")).toBeInTheDocument();
     const projectRunsSection = screen.getByRole("region", { name: "Project runs" });
-    const runStatuses = within(projectRunsSection).getAllByText(/^(Failed|Succeeded) run$/);
-    expect(runStatuses.map((status) => status.textContent)).toEqual([
-      "Failed run",
-      "Succeeded run",
-    ]);
-    expect(screen.getByText("No snapshot: run failed")).toBeInTheDocument();
-    expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();
+    await within(projectRunsSection).findByText("Processing run needs attention");
+    expect(projectRunsSection).toHaveTextContent("Completed Canon build");
+    expect(projectRunsSection).toHaveTextContent("No snapshot: run failed");
+    expect(projectRunsSection).toHaveTextContent("Canon snapshot ready");
   });
 
   it("labels stale active import runs as timed out and recoverable", async () => {
@@ -3418,8 +3415,9 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Timed out run")).toBeInTheDocument();
-    expect(screen.getByText("No snapshot: run timed out")).toBeInTheDocument();
+    const staleRunHistory = await screen.findByLabelText("Processing run history");
+    expect(staleRunHistory).toHaveTextContent("Processing run needs attention");
+    expect(staleRunHistory).toHaveTextContent("No snapshot: run timed out");
     expect(screen.getByRole("button", { name: "Retry processing" })).toBeEnabled();
     expect(screen.getByText("Run error: Processing timed out before completion.")).toBeInTheDocument();
     expect(screen.queryByText("Pending run")).not.toBeInTheDocument();
@@ -3498,8 +3496,9 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Failed run")).toBeInTheDocument();
-    expect(screen.getByText("No snapshot: run failed")).toBeInTheDocument();
+    const failedRunHistory = await screen.findByLabelText("Processing run history");
+    expect(failedRunHistory).toHaveTextContent("Processing run needs attention");
+    expect(failedRunHistory).toHaveTextContent("No snapshot: run failed");
     expect(
       screen.getByText("Run error: Parser could not read chapter content."),
     ).toBeInTheDocument();
@@ -3601,7 +3600,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText("Failed run")).toHaveLength(4);
+    expect(await screen.findAllByText("Processing run needs attention")).toHaveLength(4);
     expect(
       screen.getByText(
         "Run error: Import evidence could not be matched during AI extraction. Review the import structure, then retry processing. If it repeats, split the import into smaller chapter batches.",

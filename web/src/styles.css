@@ -2794,6 +2794,46 @@ textarea::placeholder {
   justify-self: start;
 }
 
+.run-history-list {
+  gap: 8px;
+}
+
+.run-history-row {
+  grid-template-columns: minmax(220px, 1.4fr) minmax(120px, 0.7fr) minmax(130px, 0.7fr);
+  align-items: start;
+  border-left: 3px solid rgba(127, 178, 255, 0.22);
+}
+
+.run-history-row > div {
+  min-width: 0;
+}
+
+.run-history-row > div span,
+.run-history-row > span {
+  display: block;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.run-history-row-succeeded {
+  border-left-color: rgba(142, 218, 166, 0.62);
+}
+
+.run-history-row-active,
+.run-history-row-waiting {
+  border-left-color: rgba(127, 178, 255, 0.72);
+}
+
+.run-history-row-failed {
+  border-left-color: rgba(255, 143, 143, 0.7);
+}
+
+.run-history-error {
+  grid-column: 1 / -1;
+  color: var(--app-danger) !important;
+}
+
 .story-select-button {
   padding: 8px 0;
 }
