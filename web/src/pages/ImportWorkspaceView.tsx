@@ -22,6 +22,7 @@ import type {
   EngineRunList,
   ImportInspect,
   ImportRecord,
+  ProjectStatus,
   Snapshot,
   SnapshotList,
   Story,
@@ -264,6 +265,21 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const activeProcessingSnapshot = activeProcessingRun
     ? snapshotsByRun.get(activeProcessingRun.run_id)
     : undefined;
+  const statusQuery = useQuery({
+    queryKey: projectStatusQueryKey(project.id, session?.session_token),
+    queryFn: () =>
+      apiClient.projectStatus(
+        project.id,
+        requireSessionToken(session),
+        new Date().toISOString(),
+      ),
+    enabled: session !== null && activeProcessingRun !== undefined,
+    refetchInterval: activeProcessingRun ? activeRunPollIntervalMs() : false,
+  });
+  const activeProcessingStatus =
+    statusQuery.data?.latest_engine_run?.run_id === activeProcessingRun?.run_id
+      ? statusQuery.data
+      : undefined;
   useEffect(() => {
     if (!activeProcessingRun) {
       return undefined;
@@ -628,6 +644,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         isSubmitting={submitRun.isPending}
         activeRun={activeProcessingRun}
         activeSnapshot={activeProcessingSnapshot}
+        projectStatus={activeProcessingStatus}
         nowMs={processingClockMs}
       />
 
@@ -809,6 +826,7 @@ function ImportProcessingPanel({
   isSaving,
   isSubmitting,
   nowMs,
+  projectStatus,
 }: {
   activeRun: EngineRun | undefined;
   activeSnapshot: Snapshot | undefined;
@@ -817,6 +835,7 @@ function ImportProcessingPanel({
   isSaving: boolean;
   isSubmitting: boolean;
   nowMs: number;
+  projectStatus: ProjectStatus | undefined;
 }) {
   const hasLocalProgress = isReadingSourceFile || isInspecting || isSaving || isSubmitting;
   if (!hasLocalProgress && !activeRun) {
@@ -837,6 +856,7 @@ function ImportProcessingPanel({
           snapshot={activeSnapshot}
           label="Current processing progress"
           nowMs={nowMs}
+          projectStatus={projectStatus}
           showTiming
         />
       ) : (
@@ -1082,6 +1102,10 @@ function snapshotQueryKey(projectId: string, storyId: string, sessionToken: stri
   return ["story-snapshots", projectId, storyId, "canon", sessionToken] as const;
 }
 
+function projectStatusQueryKey(projectId: string, sessionToken: string | undefined) {
+  return ["project-status", projectId, sessionToken] as const;
+}
+
 function storyQueryKey(projectId: string, sessionToken: string | undefined) {
   return ["project-stories", projectId, sessionToken] as const;
 }
@@ -1177,12 +1201,14 @@ function runDurationSummary(run: EngineRun, nowMs: number): string {
 function ProcessingStepper({
   label = "Processing progress",
   nowMs,
+  projectStatus,
   run,
   showTiming = false,
   snapshot,
 }: {
   label?: string;
   nowMs?: number;
+  projectStatus?: ProjectStatus;
   run: EngineRun;
   showTiming?: boolean;
   snapshot: Snapshot | undefined;
@@ -1196,13 +1222,24 @@ function ProcessingStepper({
           <strong>{step.label}</strong>
         </div>
       ))}
-      {showTiming && nowMs !== undefined ? <ProcessingTiming run={run} nowMs={nowMs} /> : null}
+      {showTiming && nowMs !== undefined ? (
+        <ProcessingTiming run={run} nowMs={nowMs} projectStatus={projectStatus} />
+      ) : null}
       <p>{processingHelpText(run, snapshot)}</p>
     </div>
   );
 }
 
-function ProcessingTiming({ nowMs, run }: { nowMs: number; run: EngineRun }) {
+function ProcessingTiming({
+  nowMs,
+  projectStatus,
+  run,
+}: {
+  nowMs: number;
+  projectStatus: ProjectStatus | undefined;
+  run: EngineRun;
+}) {
+  const worker = projectStatus?.worker;
   return (
     <dl className="processing-timing" aria-label="Processing timing">
       <div>
@@ -1213,6 +1250,19 @@ function ProcessingTiming({ nowMs, run }: { nowMs: number; run: EngineRun }) {
         <dt>Last update</dt>
         <dd>{formatRunStatusAge(run, nowMs)}</dd>
       </div>
+      {worker?.latest_job_status ? (
+        <div>
+          <dt>Worker job</dt>
+          <dd>{formatRunStatus(worker.latest_job_status)}</dd>
+        </div>
+      ) : null}
+      {worker?.latest_job_duration_seconds !== undefined &&
+      worker.latest_job_duration_seconds !== null ? (
+        <div>
+          <dt>Job duration</dt>
+          <dd>{formatDurationLabel(worker.latest_job_duration_seconds * 1000)}</dd>
+        </div>
+      ) : null}
     </dl>
   );
 }

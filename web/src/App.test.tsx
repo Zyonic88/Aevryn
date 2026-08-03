@@ -3038,7 +3038,26 @@ describe("App shell routing", () => {
         return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
       }
       if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
-        return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+        return Promise.resolve(
+          new Response(
+            JSON.stringify(
+              submittedRun
+                ? {
+                    ...projectStatusPayload,
+                    latest_engine_run: submittedRun,
+                    worker: {
+                      ...projectStatusPayload.worker,
+                      state: "queued",
+                      latest_job_status: "queued",
+                      latest_job_queued_at: String(submittedRun.started_at),
+                      latest_job_updated_at: String(submittedRun.status_updated_at),
+                      latest_job_duration_seconds: null,
+                    },
+                  }
+                : projectStatusPayload,
+            ),
+          ),
+        );
       }
       if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
         return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
@@ -3065,6 +3084,8 @@ describe("App shell routing", () => {
     const currentProgress = await screen.findByLabelText("Current processing progress");
     expect(currentProgress).toHaveTextContent("Elapsed");
     expect(currentProgress).toHaveTextContent("Last update");
+    expect(currentProgress).toHaveTextContent("Worker job");
+    expect(currentProgress).toHaveTextContent("Queued");
     expect(currentProgress).toHaveTextContent("ago");
     const processingProgress = await screen.findByLabelText("Processing progress");
     expect(processingProgress).toHaveTextContent("Queued");
