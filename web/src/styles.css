@@ -2631,6 +2631,39 @@ textarea::placeholder {
   text-align: right;
 }
 
+.prompt-scene-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0 4px;
+  padding: 8px;
+  border: 1px solid rgba(127, 178, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(5, 8, 14, 0.42);
+}
+
+.prompt-scene-navigation span {
+  color: var(--app-muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.prompt-scene-navigation .text-button {
+  padding: 5px 9px;
+  border: 1px solid rgba(127, 178, 255, 0.22);
+  border-radius: 6px;
+  color: var(--app-blue-2);
+  background: rgba(127, 178, 255, 0.08);
+}
+
+.prompt-scene-navigation .text-button:disabled {
+  cursor: not-allowed;
+  color: var(--app-muted);
+  opacity: 0.54;
+}
+
 .prompt-scene-brief {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

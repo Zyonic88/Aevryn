@@ -400,8 +400,8 @@ Remaining hardening:
   presentation state when building prompt context, not just scene summary text~~
 * keep prompts Canon-bound enough to preserve known character appearance,
   setting, scene action, world objects, systems, skills, and current story state
-* improve Prompt Packs layout so chapter/scene prompts are easy to follow without
-  endless scrolling
+* ~~improve Prompt Packs layout so chapter/scene prompts are easy to follow without
+  endless scrolling~~
 * preserve scene-level prompt architecture so future multi-prompt-per-chapter and
   production batching can be added without rewriting Canon or extraction
 * ~~run hosted browser validation against the current prompt-pack output~~
@@ -477,6 +477,11 @@ Verified hardening:
   status instead of relying only on scene summary text
 * verified with focused Canon Prompt Builder, Prompt Engine, and Presentation
   Engine tests
+* Prompt Packs selected-scene detail now includes previous/next scene navigation
+  and a filtered scene-position counter, reducing list-hopping while reviewing
+  production prompts scene by scene
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
 
 Acceptance:
 
