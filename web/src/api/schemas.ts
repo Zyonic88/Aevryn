@@ -157,6 +157,10 @@ export const projectStatusWorkerSchema = z.object({
   succeeded_jobs: z.number(),
   failed_jobs: z.number(),
   next_job_id: z.string(),
+  latest_job_status: z.string().default(""),
+  latest_job_queued_at: z.string().default(""),
+  latest_job_updated_at: z.string().default(""),
+  latest_job_duration_seconds: z.number().nullable().default(null),
 });
 
 export const projectStatusSnapshotsSchema = z.object({

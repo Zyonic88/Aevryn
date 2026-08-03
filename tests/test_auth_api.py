@@ -1884,6 +1884,10 @@ def test_project_status_reports_metadata_only_monitoring_summary(
             "succeeded_jobs": 1,
             "failed_jobs": 0,
             "next_job_id": "",
+            "latest_job_status": "succeeded",
+            "latest_job_queued_at": NOW,
+            "latest_job_updated_at": SOON,
+            "latest_job_duration_seconds": 1800,
         },
         "snapshots": {
             "available": True,
@@ -2046,6 +2050,10 @@ def test_project_status_worker_state_ignores_other_project_terminal_failures() -
         "succeeded_jobs": 1,
         "failed_jobs": 0,
         "next_job_id": "",
+        "latest_job_status": "succeeded",
+        "latest_job_queued_at": NOW,
+        "latest_job_updated_at": "2026-06-27T00:45:00Z",
+        "latest_job_duration_seconds": 2700,
     }
     assert payload["latest_failure_summary"] == ""
 
@@ -2134,6 +2142,10 @@ def test_project_status_worker_state_ignores_same_project_stale_failed_jobs() ->
         "succeeded_jobs": 1,
         "failed_jobs": 1,
         "next_job_id": "",
+        "latest_job_status": "succeeded",
+        "latest_job_queued_at": NOW,
+        "latest_job_updated_at": "2026-06-27T00:45:00Z",
+        "latest_job_duration_seconds": 2700,
     }
     assert payload["latest_failure_summary"] == ""
 
