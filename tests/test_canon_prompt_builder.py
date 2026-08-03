@@ -966,15 +966,15 @@ def test_canon_prompt_builder_declares_canon_context_inputs() -> None:
     )
 
     for prompt in prompts:
-        assert "Canon context used:" in prompt
-        assert "chars=1" in prompt
-        assert "character_facts=" in prompt
-        assert "world=" in prompt
-        assert "rel=" in prompt
-        assert "beats=" in prompt
-        assert "anchors=" in prompt
-        assert "notes=" in prompt
-        assert "unknowns neutral" in prompt
+        assert "Canon inputs:" in prompt
+        assert "1 character" in prompt
+        assert "character fact" in prompt
+        assert "world fact" in prompt
+        assert "relationship" in prompt
+        assert "beat" in prompt
+        assert "anchor" in prompt
+        assert "note" in prompt
+        assert "Unknowns neutral." in prompt
         assert context.scene.scene_id not in prompt
         assert "source_demo_chapter_002_scene_001" not in prompt
         assert "evidence_" not in prompt

@@ -466,15 +466,15 @@ class CanonPromptBuilder:
         continuity_count = len(analysis.continuity_notes)
         return "\n".join(
             [
-                "Canon context used:",
+                "Canon inputs:",
                 (
-                    f"- chars={len(context.character_cards)}, "
-                    f"character_facts={character_fact_count}, "
-                    f"world={world_fact_count}, "
-                    f"rel={len(context.relationships)}, "
-                    f"beats={action_beat_count}, "
-                    f"anchors={scene_anchor_count}, "
-                    f"notes={continuity_count}; unknowns neutral."
+                    f"- {self._count_label(len(context.character_cards), 'character')}; "
+                    f"{self._count_label(character_fact_count, 'character fact')}; "
+                    f"{self._count_label(world_fact_count, 'world fact')}; "
+                    f"{self._count_label(len(context.relationships), 'relationship')}; "
+                    f"{self._count_label(action_beat_count, 'beat')}; "
+                    f"{self._count_label(scene_anchor_count, 'anchor')}; "
+                    f"{self._count_label(continuity_count, 'note')}. Unknowns neutral."
                 ),
             ]
         )
@@ -1342,6 +1342,12 @@ class CanonPromptBuilder:
             return "Unknown"
 
         return textwrap.shorten(normalized_value, width=width, placeholder="...")
+
+    @staticmethod
+    def _count_label(count: int, singular: str) -> str:
+        """Return a compact human-readable count label."""
+        suffix = "" if count == 1 else "s"
+        return f"{count} {singular}{suffix}"
 
     @staticmethod
     def _unique_values(values: Iterable[str]) -> list[str]:
