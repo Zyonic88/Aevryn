@@ -1017,30 +1017,69 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
           ))}
         </div>
         <article className="profile-card prompt-pack-detail" aria-label="Selected prompt pack">
-          <header>
-            <h3>{selectedPack.scene.title}</h3>
-            <p>{selectedPack.scene.chapter_label}</p>
+          <header className="prompt-pack-header">
+            <div>
+              <h3>{selectedPack.scene.title}</h3>
+              <p>{selectedPack.scene.chapter_label}</p>
+            </div>
+            <span>{selectedPack.scene.evidence_summary}</span>
           </header>
           <PromptCanonInputs pack={selectedPack} />
-          <div className="profile-section-grid prompt-scene-context">
-            <PanelSection section={selectedPack.scene.characters_present} />
-            <PanelSection section={selectedPack.scene.location} />
-            <PanelSection section={selectedPack.scene.mood} />
-            <PanelSection section={selectedPack.scene.purpose} />
-            <PanelSection section={selectedPack.scene.visual_highlights} />
-            <PanelSection section={selectedPack.scene.environment} />
-          </div>
+          <PromptSceneBrief pack={selectedPack} />
+          <details className="prompt-context-disclosure detail-disclosure">
+            <summary>
+              <span>Canon context</span>
+              <span>Characters, setting, visuals, continuity</span>
+            </summary>
+            <div className="profile-section-grid prompt-scene-context">
+              <PanelSection section={selectedPack.scene.characters_present} />
+              <PanelSection section={selectedPack.scene.location} />
+              <PanelSection section={selectedPack.scene.mood} />
+              <PanelSection section={selectedPack.scene.purpose} />
+              <PanelSection section={selectedPack.scene.visual_highlights} />
+              <PanelSection section={selectedPack.scene.environment} />
+            </div>
+          </details>
           <div className="prompt-pack-grid">
             <PromptTextSection section={selectedPack.image_prompt} full />
             <PromptTextSection section={selectedPack.narration_prompt} full />
             <PromptTextSection section={selectedPack.camera_prompt} full />
             <PromptTextSection section={selectedPack.animation_prompt} full />
           </div>
-          <p className="evidence-note">{selectedPack.scene.evidence_summary}</p>
         </article>
       </div>
     </div>
   );
+}
+
+function PromptSceneBrief({ pack }: { pack: ProductionPack }) {
+  const items = [
+    promptSceneBriefItem("Characters", pack.scene.characters_present),
+    promptSceneBriefItem("Setting", pack.scene.location, pack.scene.environment),
+    promptSceneBriefItem("Visuals", pack.scene.visual_highlights),
+    promptSceneBriefItem("Purpose", pack.scene.purpose),
+  ];
+  return (
+    <dl className="prompt-scene-brief" aria-label="Selected prompt scene brief">
+      {items.map((item) => (
+        <div key={item.label}>
+          <dt>{item.label}</dt>
+          <dd>{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function promptSceneBriefItem(
+  label: string,
+  ...sections: OutputSection[]
+): { label: string; value: string } {
+  const values = sections.flatMap((section) => knownSectionItems(section));
+  return {
+    label,
+    value: values.slice(0, 2).join("; ") || "Unknown",
+  };
 }
 
 function PromptCanonInputs({ pack }: { pack: ProductionPack }) {

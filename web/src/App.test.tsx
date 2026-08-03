@@ -3944,6 +3944,16 @@ describe("App shell routing", () => {
     expect(canonInputs).toHaveTextContent("Constraints");
     expect(canonInputs).toHaveTextContent("4 canon guardrails");
     expect(within(canonInputs).queryByText(/source_alpha_chapter/u)).not.toBeInTheDocument();
+    const sceneBrief = within(selectedPack).getByLabelText("Selected prompt scene brief");
+    expect(sceneBrief).toHaveTextContent("Characters");
+    expect(sceneBrief).toHaveTextContent("Mark");
+    expect(sceneBrief).toHaveTextContent("Setting");
+    expect(sceneBrief).toHaveTextContent("Hangar");
+    expect(sceneBrief).toHaveTextContent("Quiet hangar");
+    const canonContext = selectedPack.querySelector(
+      "details.prompt-context-disclosure",
+    ) as HTMLDetailsElement;
+    expect(canonContext.open).toBe(false);
     const imagePromptPreview = within(selectedPack).getByRole("list", {
       name: "Image Prompt preview",
     });
