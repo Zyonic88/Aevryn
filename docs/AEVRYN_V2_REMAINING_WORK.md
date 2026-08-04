@@ -643,6 +643,10 @@ Verified hardening:
   descriptions, or relationship labels are present, telling generation tools to
   keep those surfaces attached to the same Canon identity instead of creating
   extra people
+* entity resolution now supports conservative composite visual-description
+  matching from accepted visible traits, such as gender plus hair color, so
+  later references like "white-haired woman" can resolve to a unique prior
+  identity without making gender-only merges
 * backend persistence and API now define project-scoped user correction records
   with a fixed `User Edited` source label, ownership checks, metadata-only audit
   events, JSON/PostgreSQL schema support, and project-delete cleanup
