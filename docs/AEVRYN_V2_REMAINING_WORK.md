@@ -567,6 +567,8 @@ Remaining hardening:
 * ensure race/gender remain Canon-truthful and not story-specific guesses
 * run hosted browser validation that user-authored corrections show in Character
   and World output panels with a visible `User Edited` label
+* ~~run isolated local browser validation that Character corrections save,
+  refresh, stay collapsed until opened, and show a visible `User Edited` label~~
 * ~~keep character card sections collapsed and readable~~
 * ~~ensure character portraits remain neutral placeholders until a real portrait/reference system exists~~
 * ~~verify no source-backed placeholder text leaks into user output~~
@@ -580,6 +582,9 @@ Verified hardening:
 * character cards and developer-preview cards use neutral initials placeholders
   without rendering fake portrait images before a real portrait/reference system
   exists
+* local browser validation confirmed collapsed correction editors do not leak
+  hidden form controls, saved Character corrections refresh output, and singular
+  profile counts render correctly
 * extraction rejects plural race/gender group phrases as character cards while
   preserving singular unnamed character candidates when evidence supports them
 * entity resolution keeps pronouns, shared honorifics, near-tied matches, and
