@@ -1522,6 +1522,58 @@ select:focus {
   padding: 12px 12px 12px 30px;
 }
 
+.correction-editor {
+  border: 1px dashed #c9d5e3;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.correction-editor summary {
+  padding: 9px 12px;
+  color: #40516a;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.correction-editor form {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid #dbe3ec;
+}
+
+.correction-editor label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: #536174;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.correction-editor input,
+.correction-editor select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #cfd9e6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #162033;
+  font: inherit;
+  text-transform: none;
+}
+
+.form-success {
+  margin: 0;
+  color: #167044;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .profile-section-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2523,6 +2575,7 @@ textarea::placeholder {
 }
 
 .profile-disclosure,
+.correction-editor,
 .prompt-disclosure,
 .nested-disclosure,
 .detail-disclosure {
@@ -2531,6 +2584,7 @@ textarea::placeholder {
 }
 
 .profile-disclosure summary,
+.correction-editor summary,
 .prompt-disclosure summary,
 .nested-disclosure summary,
 .detail-disclosure summary {
@@ -2541,6 +2595,7 @@ textarea::placeholder {
 }
 
 .profile-disclosure summary::after,
+.correction-editor summary::after,
 .prompt-disclosure summary::after,
 .nested-disclosure summary::after,
 .detail-disclosure summary::after {
@@ -2550,10 +2605,30 @@ textarea::placeholder {
 }
 
 .profile-disclosure[open] summary::after,
+.correction-editor[open] summary::after,
 .prompt-disclosure[open] summary::after,
 .nested-disclosure[open] summary::after,
 .detail-disclosure[open] summary::after {
   content: "-";
+}
+
+.correction-editor form {
+  border-top-color: rgba(127, 178, 255, 0.14);
+}
+
+.correction-editor label {
+  color: var(--app-muted);
+}
+
+.correction-editor input,
+.correction-editor select {
+  border-color: rgba(127, 178, 255, 0.22);
+  background: rgba(4, 9, 16, 0.88);
+  color: var(--app-text);
+}
+
+.form-success {
+  color: #9bc5ff;
 }
 
 .profile-section {

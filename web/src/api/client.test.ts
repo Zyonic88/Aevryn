@@ -30,6 +30,17 @@ const projectSettingsPayload = {
   default_export_format: "markdown",
   locale: "en-US",
 };
+const projectCorrectionPayload = {
+  correction_id: "correction_character_mark_gender",
+  project_id: "project_alpha",
+  target_type: "character",
+  target_id: "character_mark",
+  field_name: "gender",
+  value: "Male",
+  source_label: "User Edited",
+  created_at: "2026-06-27T00:00:00.000Z",
+  updated_at: "2026-06-27T00:00:00.000Z",
+};
 const storyPayload = {
   story_id: "story_alpha",
   project_id: "project_alpha",
@@ -783,6 +794,60 @@ describe("AevrynApiClient", () => {
       expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
     }
     expect(fetchMock.mock.calls[1][1].method).toBe("PUT");
+  });
+
+  it("sends authenticated requests for user-edited project corrections", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ corrections: [projectCorrectionPayload] }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify(projectCorrectionPayload), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new AevrynApiClient("https://api.aevryn.ai");
+    await expect(
+      client.listProjectCorrections(
+        "project_alpha",
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toEqual({ corrections: [projectCorrectionPayload] });
+    await expect(
+      client.upsertProjectCorrection(
+        "project_alpha",
+        "correction_character_mark_gender",
+        {
+          target_type: "character",
+          target_id: "character_mark",
+          field_name: "gender",
+          value: "Male",
+          now: "2026-06-27T00:00:00.000Z",
+        },
+        "session-token",
+        "2026-06-27T00:00:00.000Z",
+      ),
+    ).resolves.toEqual(projectCorrectionPayload);
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/corrections`,
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      `https://api.aevryn.ai${API_PATHS.projects}/project_alpha/corrections/correction_character_mark_gender`,
+    );
+    expect(fetchMock.mock.calls[1][1].method).toBe("PUT");
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual({
+      target_type: "character",
+      target_id: "character_mark",
+      field_name: "gender",
+      value: "Male",
+      now: "2026-06-27T00:00:00.000Z",
+    });
+    for (const [, init] of fetchMock.mock.calls) {
+      const headers = init.headers as Headers;
+      expect(headers.get("Authorization")).toBe("Bearer session-token");
+      expect(headers.get("X-Aevryn-Now")).toBe("2026-06-27T00:00:00.000Z");
+    }
   });
 
   it("sends authenticated requests for project stories", async () => {
