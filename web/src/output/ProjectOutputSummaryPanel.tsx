@@ -153,6 +153,7 @@ function ProjectOutputSummary({
       </section>
     );
   }
+  const visibleSurfaceCount = surfaceDisplayItemCount(surface, outputs, surfaceSummary);
 
   return (
     <section className="project-panel output-summary-panel" aria-label="Processed project output">
@@ -163,11 +164,13 @@ function ProjectOutputSummary({
           <p className="result-summary">{surfaceSummary.summary}</p>
         </div>
         <span className="surface-count-badge">
-          {surfaceSummary.item_count.toLocaleString()} {surfaceItemLabel(surface)}
+          {visibleSurfaceCount.toLocaleString()}{" "}
+          {surfaceItemLabel(surface, visibleSurfaceCount)}
         </span>
       </header>
       <OutputMetadataDisclosure
         outputs={outputs}
+        itemCount={visibleSurfaceCount}
         surfaceSummary={surfaceSummary}
         surface={surface}
       />
@@ -191,10 +194,12 @@ function ProjectOutputSummary({
 }
 
 function OutputMetadataDisclosure({
+  itemCount,
   outputs,
   surface,
   surfaceSummary,
 }: {
+  itemCount: number;
   outputs: ProjectOutputs;
   surface: OutputSurface;
   surfaceSummary: ProjectOutputSurface;
@@ -216,7 +221,7 @@ function OutputMetadataDisclosure({
       <div className="workspace-view-stack output-metadata-body">
         <dl className="metric-grid">
           <Metric label="State" value={formatRunStatus(surfaceSummary.status)} />
-          <Metric label="Items" value={surfaceSummary.item_count.toLocaleString()} />
+          <Metric label="Items" value={itemCount.toLocaleString()} />
           <Metric label="Import" value={outputs.latest_import ? "Latest import" : "No import"} />
           <Metric label="Run" value={runStatus} />
           <Metric label="Chapters" value={outputs.canon.chapters.toLocaleString()} />
@@ -231,6 +236,20 @@ function OutputMetadataDisclosure({
   );
 }
 
+function surfaceDisplayItemCount(
+  surface: OutputSurface,
+  outputs: ProjectOutputs,
+  surfaceSummary: ProjectOutputSurface,
+): number {
+  if (surface === "characters") {
+    return mergeCharacterProfiles(outputs.character_profiles).length;
+  }
+  if (surface === "world") {
+    return outputs.world_sheet?.entity_sections.length ?? 0;
+  }
+  return surfaceSummary.item_count;
+}
+
 function surfaceEyebrow(surface: OutputSurface): string {
   if (surface === "prompts") {
     return "Production";
@@ -241,21 +260,21 @@ function surfaceEyebrow(surface: OutputSurface): string {
   return "Canon surface";
 }
 
-function surfaceItemLabel(surface: OutputSurface): string {
+function surfaceItemLabel(surface: OutputSurface, count = 2): string {
   if (surface === "characters") {
-    return "profiles";
+    return count === 1 ? "profile" : "profiles";
   }
   if (surface === "world") {
-    return "entries";
+    return count === 1 ? "entry" : "entries";
   }
   if (surface === "timeline") {
-    return "changes";
+    return count === 1 ? "change" : "changes";
   }
   if (surface === "scenes" || surface === "prompts") {
-    return "scenes";
+    return count === 1 ? "scene" : "scenes";
   }
   if (surface === "exports") {
-    return "options";
+    return count === 1 ? "option" : "options";
   }
   return "records";
 }
@@ -1535,6 +1554,7 @@ function CorrectionEditor({
 }) {
   const queryClient = useQueryClient();
   const [fieldName, setFieldName] = useState(fieldOptions[0]?.field ?? "");
+  const [isOpen, setIsOpen] = useState(false);
   const [value, setValue] = useState("");
   const [savedLabel, setSavedLabel] = useState("");
   const saveCorrection = useMutation({
@@ -1582,35 +1602,44 @@ function CorrectionEditor({
   }
 
   return (
-    <details className="correction-editor">
+    <details
+      className="correction-editor"
+      onToggle={(event) => setIsOpen(event.currentTarget.open)}
+    >
       <summary>User Edited correction</summary>
-      <form onSubmit={submit}>
-        <label>
-          Field
-          <select value={fieldName} onChange={(event) => setFieldName(event.target.value)}>
-            {fieldOptions.map((option) => (
-              <option key={option.field} value={option.field}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Correction
-          <input
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            placeholder={`Correct ${targetLabel}`}
-          />
-        </label>
-        {saveCorrection.error ? (
-          <ErrorMessage>{saveCorrection.error.message}</ErrorMessage>
-        ) : null}
-        {savedLabel ? <p className="form-success">{savedLabel}</p> : null}
-        <button type="submit" className="text-button" disabled={!canSave || saveCorrection.isPending}>
-          {saveCorrection.isPending ? "Saving" : "Save correction"}
-        </button>
-      </form>
+      {isOpen ? (
+        <form onSubmit={submit}>
+          <label>
+            Field
+            <select value={fieldName} onChange={(event) => setFieldName(event.target.value)}>
+              {fieldOptions.map((option) => (
+                <option key={option.field} value={option.field}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Correction
+            <input
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              placeholder={`Correct ${targetLabel}`}
+            />
+          </label>
+          {saveCorrection.error ? (
+            <ErrorMessage>{saveCorrection.error.message}</ErrorMessage>
+          ) : null}
+          {savedLabel ? <p className="form-success">{savedLabel}</p> : null}
+          <button
+            type="submit"
+            className="text-button"
+            disabled={!canSave || saveCorrection.isPending}
+          >
+            {saveCorrection.isPending ? "Saving" : "Save correction"}
+          </button>
+        </form>
+      ) : null}
     </details>
   );
 }
