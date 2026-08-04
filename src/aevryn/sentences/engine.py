@@ -212,10 +212,15 @@ SYSTEM_PHRASE_CUES = frozenset(
         "mission reward",
         "quest reward",
         "skill points",
+        "quest notification",
+        "status notification",
         "status panel",
+        "status screen",
         "system interface",
         "system message",
         "system prompt",
+        "system screen",
+        "system window",
     }
 )
 TRANSLATION_AMBIGUITY_CUES = frozenset(

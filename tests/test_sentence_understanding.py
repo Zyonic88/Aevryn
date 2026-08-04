@@ -63,6 +63,41 @@ def test_sentence_understanding_detects_system_ui_phrases() -> None:
     assert "quest reward" in understanding.cue_terms
 
 
+def test_sentence_understanding_detects_system_window_and_screen_phrases() -> None:
+    """Game-like UI window and screen phrases should route as system context."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_system_ui_surfaces",
+        title="Sentence System UI Surfaces",
+        text=(
+            "Chapter 1\n"
+            "A system window opened, then a status screen displayed a quest notification."
+        ),
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "system window" in understanding.cue_terms
+    assert "status screen" in understanding.cue_terms
+    assert "quest notification" in understanding.cue_terms
+
+
+def test_sentence_understanding_does_not_treat_plain_window_as_system_ui() -> None:
+    """A literal window should not become system context without a system UI phrase."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_plain_window",
+        title="Sentence Plain Window",
+        text="Chapter 1\nMira opened the window beside the classroom.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "location_reference" in understanding.signals
+    assert "system_reference" not in understanding.signals
+    assert "classroom" in understanding.cue_terms
+    assert "window" not in understanding.cue_terms
+
+
 def test_sentence_understanding_keeps_system_rewards_out_of_skill_context() -> None:
     """Quest, mission, points, and reward language are system context, not abilities."""
     imported = StoryImporter().import_text(

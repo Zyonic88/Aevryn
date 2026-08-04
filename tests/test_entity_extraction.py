@@ -608,6 +608,44 @@ class ValidSystemExtractor:
         )
 
 
+class MisclassifiedSystemUiItemExtractor:
+    """Extractor that labels a game-like system UI phrase as a physical item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious system-ui/item classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_status_screen",
+                    entity_type="item",
+                    display_name="Status screen",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.92,
+                ),
+            ),
+        )
+
+
+class ValidSystemUiExtractor:
+    """Extractor that labels a game-like system UI phrase as system context."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid system UI candidate."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="system_status_screen",
+                    entity_type="system",
+                    display_name="Status screen",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.92,
+                ),
+            ),
+        )
+
+
 class AnonymousGroupCharacterExtractor:
     """Extractor that labels an anonymous group phrase as a character."""
 
@@ -1191,6 +1229,33 @@ def test_extraction_accepts_explicit_system_terms() -> None:
     result = engine.extract_imported_source(imported)[0]
 
     assert result.entities[0].entity_id == "system_super_starfleet"
+
+
+def test_extraction_rejects_system_ui_phrase_as_physical_item() -> None:
+    """System UI phrases must not be accepted as physical item entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSystemUiItemExtractor())
+
+    with pytest.raises(ValueError, match="governing system cannot be physical item"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_system_ui_phrase_as_system() -> None:
+    """Game-like UI phrases are valid system entities when typed as systems."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidSystemUiExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_id == "system_status_screen"
 
 
 def test_extraction_accepts_system_created_physical_items() -> None:
