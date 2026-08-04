@@ -1557,6 +1557,92 @@ def test_runner_resolves_same_scene_description_to_named_identity() -> None:
     )
 
 
+def test_runner_resolves_later_visual_description_to_prior_identity() -> None:
+    """Separate accepted visual facts should prevent later descriptive duplicate cards."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_mira",
+                        "entity_type": "character",
+                        "display_name": "Mira",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_mira_gender_female",
+                        "entity_id": "character_mira",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_mira_hair_color_white",
+                        "entity_id": "character_mira",
+                        "attribute": "hair_color",
+                        "value": "White",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_001_scene_002": {
+                "entities": [
+                    {
+                        "entity_id": "character_white_haired_woman",
+                        "entity_type": "character",
+                        "display_name": "White-haired Woman",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_white_haired_woman_status_alert",
+                        "entity_id": "character_white_haired_woman",
+                        "attribute": "status",
+                        "value": "Alert",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_mira"
+    assert result.database.retrieve_entity("character_white_haired_woman") is None
+    status_fact = result.database.retrieve_current_fact("character_mira", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Alert"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_mira"
+        and decision.reference.text == "White-haired Woman"
+        and decision.candidates[0].match_kind == "composite_description"
+        for decision in result.identity_resolutions
+    )
+
+
 def test_runner_keeps_same_scene_ambiguous_description_unmerged() -> None:
     """Same-scene descriptions should not merge when multiple characters fit."""
     runner = AevrynProjectRunner()

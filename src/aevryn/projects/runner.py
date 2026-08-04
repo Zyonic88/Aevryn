@@ -1416,6 +1416,10 @@ def _add_identity_profile_fact(
         titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
     elif attribute in {"description", "appearance", "race", "species", "gender", "sex"}:
         descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+    elif _attribute_is_identity_visual_detail(attribute):
+        descriptions_by_id.setdefault(fact.entity_id, set()).update(
+            _identity_visual_detail_surfaces(attribute, fact.value)
+        )
     elif attribute in {
         "family_role",
         "relationship_role",
@@ -1446,6 +1450,20 @@ def _status_value_is_title_like(value: str) -> bool:
         return False
     normalized = " ".join(tokens)
     return normalized in _TITLE_LIKE_STATUS_VALUES
+
+
+def _attribute_is_identity_visual_detail(attribute: str) -> bool:
+    """Return whether a fact can support later visual identity references."""
+    return attribute in _IDENTITY_VISUAL_DETAIL_ATTRIBUTES or attribute.endswith("_color")
+
+
+def _identity_visual_detail_surfaces(attribute: str, value: str) -> tuple[str, ...]:
+    """Return conservative identity surfaces for visible trait facts."""
+    surfaces = [value]
+    if attribute.endswith("_color"):
+        base_attribute = attribute.removesuffix("_color").replace("_", " ")
+        surfaces.append(f"{value} {base_attribute}")
+    return tuple(surfaces)
 
 
 def _explicit_gender_terms_for_identity_surfaces(values: tuple[str, ...]) -> set[str]:
@@ -1544,6 +1562,25 @@ _TITLE_LIKE_STATUS_VALUES = {
     "queen",
     "teacher",
     "vice captain",
+}
+_IDENTITY_VISUAL_DETAIL_ATTRIBUTES = {
+    "build",
+    "clothing",
+    "complexion",
+    "ear",
+    "ears",
+    "eye",
+    "eyes",
+    "face",
+    "hair",
+    "height",
+    "marking",
+    "markings",
+    "scar",
+    "scars",
+    "uniform",
+    "wing",
+    "wings",
 }
 
 
