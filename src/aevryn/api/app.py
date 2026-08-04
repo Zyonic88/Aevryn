@@ -73,6 +73,9 @@ from aevryn.api.models import (
     ImportOutput,
     OutputSection,
     ProductionPackOutput,
+    ProjectCorrectionListResponse,
+    ProjectCorrectionOutput,
+    ProjectCorrectionRequest,
     ProjectCreateRequest,
     ProjectExportOptionOutput,
     ProjectIdentityReviewItem,
@@ -160,6 +163,8 @@ from aevryn.persistence import (
     JsonProjectRepository,
     PersistenceError,
     PostgresqlProjectRepository,
+    ProjectCorrectionRecord,
+    ProjectCorrectionTargetType,
     ProjectRecord,
     ProjectRepository,
     ProjectSettingsRecord,
@@ -932,6 +937,132 @@ def create_app(
         except PersistenceError as error:
             raise _project_storage_error(error) from error
         return _project_settings_output(settings)
+
+    @app.get(
+        "/v2/projects/{project_id}/corrections",
+        response_model=ProjectCorrectionListResponse,
+        tags=["Projects"],
+        operation_id="getV2ProjectCorrections",
+    )
+    def list_project_corrections(
+        project_id: str,
+        request: Request,
+    ) -> ProjectCorrectionListResponse:
+        """Return user-authored Canon corrections inside an authenticated project."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            corrections = repository.list_project_corrections(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return ProjectCorrectionListResponse(
+            corrections=tuple(
+                _project_correction_output(correction)
+                for correction in corrections
+            )
+        )
+
+    @app.put(
+        "/v2/projects/{project_id}/corrections/{correction_id}",
+        response_model=ProjectCorrectionOutput,
+        tags=["Projects"],
+        operation_id="putV2ProjectCorrection",
+    )
+    def update_project_correction(
+        project_id: str,
+        correction_id: str,
+        request_body: ProjectCorrectionRequest,
+        request: Request,
+    ) -> ProjectCorrectionOutput:
+        """Create or update one user-authored Canon correction."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            repository.get_project(user_id=user.user_id, project_id=project_id)
+            normalized_correction_id = _normalized_machine_token(
+                correction_id,
+                "Correction ID",
+            )
+            existing = {
+                correction.correction_id: correction
+                for correction in repository.list_project_corrections(
+                    user_id=user.user_id,
+                    project_id=project_id,
+                )
+            }.get(normalized_correction_id)
+            correction = ProjectCorrectionRecord(
+                correction_id=normalized_correction_id,
+                project_id=project_id,
+                target_type=_normalized_correction_target_type(
+                    request_body.target_type,
+                ),
+                target_id=_normalized_machine_token(
+                    request_body.target_id,
+                    "Correction target ID",
+                ),
+                field_name=_normalized_machine_token(
+                    request_body.field_name,
+                    "Correction field name",
+                ),
+                value=_normalized_correction_value(request_body.value),
+                created_at=existing.created_at if existing is not None else request_body.now,
+                updated_at=request_body.now,
+            )
+            repository.save_project_correction(correction)
+            _append_audit_event(
+                audit_ledger,
+                event_type="project_correction_changed",
+                occurred_at=request_body.now,
+                summary="User-edited Canon correction changed.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={
+                    "target_type": correction.target_type,
+                    "field_name": correction.field_name,
+                    "source_label": correction.source_label,
+                },
+            )
+        except AccessDeniedError as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="cross_user_access_attempt",
+                occurred_at=_audit_timestamp(),
+                summary="Cross-user project access denied.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={"route": "project_corrections"},
+            )
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except RecordNotFoundError as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "project_correction_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _project_correction_output(correction)
 
     @app.get(
         "/v2/projects/{project_id}/stories",
@@ -3104,6 +3235,23 @@ def _project_settings_output(settings: ProjectSettingsRecord) -> ProjectSettings
     )
 
 
+def _project_correction_output(
+    correction: ProjectCorrectionRecord,
+) -> ProjectCorrectionOutput:
+    """Convert persisted user-authored correction metadata to the API contract."""
+    return ProjectCorrectionOutput(
+        correction_id=correction.correction_id,
+        project_id=correction.project_id,
+        target_type=correction.target_type,
+        target_id=correction.target_id,
+        field_name=correction.field_name,
+        value=correction.value,
+        source_label=correction.source_label,
+        created_at=correction.created_at,
+        updated_at=correction.updated_at,
+    )
+
+
 def _story_output(story: StoryRecord) -> StoryOutput:
     """Convert persisted story metadata to the API contract."""
     return StoryOutput(
@@ -5003,6 +5151,22 @@ def _normalized_locale(value: str) -> str:
         raise ValueError("Settings locale cannot be blank.")
     if any(character.isspace() for character in normalized):
         raise ValueError("Settings locale cannot contain whitespace.")
+    return normalized
+
+
+def _normalized_correction_target_type(value: str) -> ProjectCorrectionTargetType:
+    """Return a normalized correction target type."""
+    normalized = _normalized_machine_token(value, "Correction target type")
+    if normalized not in {"character", "world"}:
+        raise ValueError("Correction target type must be character or world.")
+    return cast(ProjectCorrectionTargetType, normalized)
+
+
+def _normalized_correction_value(value: str) -> str:
+    """Return concise user-edited value text without changing its meaning."""
+    normalized = " ".join(value.split())
+    if not normalized:
+        raise ValueError("Correction value cannot be blank.")
     return normalized
 
 

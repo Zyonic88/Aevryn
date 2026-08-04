@@ -15,6 +15,7 @@ from aevryn.persistence.models import (
     EngineRunRecord,
     ExportRecord,
     ImportRecord,
+    ProjectCorrectionRecord,
     ProjectRecord,
     ProjectSettingsRecord,
     SnapshotRecord,
@@ -157,6 +158,14 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
             lambda: super(PostgresqlProjectRepository, self).save_project_settings(settings)
         )
 
+    def save_project_correction(self, correction: ProjectCorrectionRecord) -> None:
+        """Persist a user-authored Canon correction and flush the PostgreSQL store."""
+        self._commit(
+            lambda: super(PostgresqlProjectRepository, self).save_project_correction(
+                correction
+            )
+        )
+
     def _connect(self) -> Any:
         """Return a new PostgreSQL connection."""
         return self._connect_factory(self._database_url)
@@ -182,6 +191,7 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
             self._snapshots.copy(),
             self._exports.copy(),
             self._settings.copy(),
+            self._corrections.copy(),
         )
 
     def _restore_state(self, state: tuple[dict[str, Any], ...]) -> None:
@@ -195,6 +205,7 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
             self._snapshots,
             self._exports,
             self._settings,
+            self._corrections,
         ) = state
 
     def _load(self) -> None:
@@ -210,6 +221,10 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
                 payload["snapshots"] = _fetch_records(cursor, "snapshots")
                 payload["exports"] = _fetch_records(cursor, "exports")
                 payload["project_settings"] = _fetch_records(cursor, "project_settings")
+                payload["project_corrections"] = _fetch_records(
+                    cursor,
+                    "project_corrections",
+                )
 
         self._users = _load_records(payload, "users", UserRecord, "user_id")
         self._projects = _load_records(payload, "projects", ProjectRecord, "project_id")
@@ -223,6 +238,12 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
             "project_settings",
             ProjectSettingsRecord,
             "project_id",
+        )
+        self._corrections = _load_records(
+            payload,
+            "project_corrections",
+            ProjectCorrectionRecord,
+            "correction_id",
         )
         self._validate_loaded_uniqueness()
         self._validate_loaded_relationships()
@@ -272,6 +293,8 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
                     raise ValueError("Export kind must match snapshot kind.")
             for settings in self._settings.values():
                 self._get_required(self._projects, settings.project_id, "project")
+            for correction in self._corrections.values():
+                self._get_required(self._projects, correction.project_id, "project")
         except (RecordNotFoundError, ValueError) as error:
             raise PersistenceError("Project database relationships are invalid.") from error
 
@@ -281,6 +304,7 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
             try:
                 with connection.cursor() as cursor:
                     for table_name in (
+                        "project_corrections",
                         "project_settings",
                         "exports",
                         "snapshots",
@@ -302,6 +326,11 @@ class PostgresqlProjectRepository(InMemoryProjectRepository):
                         cursor,
                         "project_settings",
                         _dump_records(self._settings),
+                    )
+                    _insert_records(
+                        cursor,
+                        "project_corrections",
+                        _dump_records(self._corrections),
                     )
                 connection.commit()
             except Exception:

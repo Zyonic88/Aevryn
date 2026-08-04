@@ -30,7 +30,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
     public.background_jobs,
     public.snapshots,
     public.exports,
-    public.project_settings
+    public.project_settings,
+    public.project_corrections
 TO "<runtime_role>";
 
 GRANT SELECT, INSERT ON TABLE public.audit_ledger_records TO "<runtime_role>";

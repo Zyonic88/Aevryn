@@ -9,6 +9,7 @@ from aevryn.persistence.models import (
     EngineRunRecord,
     ExportRecord,
     ImportRecord,
+    ProjectCorrectionRecord,
     ProjectRecord,
     ProjectSettingsRecord,
     SnapshotKind,
@@ -46,6 +47,7 @@ class InMemoryProjectRepository:
         self._snapshots: dict[str, SnapshotRecord] = {}
         self._exports: dict[str, ExportRecord] = {}
         self._settings: dict[str, ProjectSettingsRecord] = {}
+        self._corrections: dict[str, ProjectCorrectionRecord] = {}
 
     def create_user(self, user: UserRecord) -> None:
         """Persist a user identity record."""
@@ -156,6 +158,12 @@ class InMemoryProjectRepository:
         for story_id in story_ids:
             del self._stories[story_id]
         self._settings.pop(project.project_id, None)
+        for correction_id in tuple(
+            correction.correction_id
+            for correction in self._corrections.values()
+            if correction.project_id == project.project_id
+        ):
+            del self._corrections[correction_id]
         del self._projects[project.project_id]
         logger.debug(
             "project_record_deleted",
@@ -483,6 +491,40 @@ class InMemoryProjectRepository:
         if settings is None:
             return ProjectSettingsRecord(project_id=project_id)
         return settings
+
+    def save_project_correction(self, correction: ProjectCorrectionRecord) -> None:
+        """Persist a user-authored Canon correction for an existing project."""
+        self._get_required(self._projects, correction.project_id, "project")
+        existing = self._corrections.get(correction.correction_id)
+        if existing is not None and existing.project_id != correction.project_id:
+            raise ValueError("Correction updates cannot change project scope.")
+        self._corrections[correction.correction_id] = correction
+        logger.debug(
+            "project_correction_saved",
+            extra={
+                "project_id": correction.project_id,
+                "target_type": correction.target_type,
+                "field_name": correction.field_name,
+            },
+        )
+
+    def list_project_corrections(
+        self,
+        user_id: str,
+        project_id: str,
+    ) -> tuple[ProjectCorrectionRecord, ...]:
+        """Return user-authored Canon corrections for an accessible project."""
+        self.get_project(user_id=user_id, project_id=project_id)
+        return tuple(
+            sorted(
+                (
+                    correction
+                    for correction in self._corrections.values()
+                    if correction.project_id == project_id
+                ),
+                key=lambda correction: correction.correction_id,
+            )
+        )
 
     def _require_story_in_project(self, story_id: str, project_id: str) -> StoryRecord:
         """Return a story or raise if it does not belong to the project."""

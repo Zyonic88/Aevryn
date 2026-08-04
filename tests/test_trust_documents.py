@@ -1980,6 +1980,7 @@ def test_database_privilege_template_preserves_append_only_audit_contract() -> N
         "REVOKE ALL ON TABLE public.audit_ledger_records FROM PUBLIC;",
         "public.background_jobs",
         "public.project_settings",
+        "public.project_corrections",
         'GRANT SELECT, INSERT ON TABLE public.audit_ledger_records TO "<runtime_role>";',
         (
             'REVOKE UPDATE, DELETE, TRUNCATE ON TABLE public.audit_ledger_records '

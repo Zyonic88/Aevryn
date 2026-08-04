@@ -9,6 +9,7 @@ from aevryn.persistence.models import (
     EngineRunRecord,
     ExportRecord,
     ImportRecord,
+    ProjectCorrectionRecord,
     ProjectRecord,
     ProjectSettingsRecord,
     SnapshotKind,
@@ -160,3 +161,13 @@ class ProjectRepository(Protocol):
         project_id: str,
     ) -> ProjectSettingsRecord:
         """Return settings for an accessible project."""
+
+    def save_project_correction(self, correction: ProjectCorrectionRecord) -> None:
+        """Persist a user-authored Canon correction for an existing project."""
+
+    def list_project_corrections(
+        self,
+        user_id: str,
+        project_id: str,
+    ) -> tuple[ProjectCorrectionRecord, ...]:
+        """Return user-authored Canon corrections for an accessible project."""

@@ -1732,10 +1732,9 @@ def test_runner_flattens_chained_identity_rewrites_to_final_entity() -> None:
     assert result.database.retrieve_entity("character_general_charlotte") is None
     assert result.database.retrieve_entity("character_female_general") is None
     assert result.database.retrieve_current_fact("character_charlotte", "gender") is not None
-    assert (
-        result.database.retrieve_current_fact("character_charlotte", "status").value
-        == "Alert"
-    )
+    status_fact = result.database.retrieve_current_fact("character_charlotte", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Alert"
     assert result.extraction_results[0].state_changes[0].entity_id == (
         "character_charlotte"
     )
