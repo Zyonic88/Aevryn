@@ -565,9 +565,9 @@ Remaining hardening:
 * continue reducing duplicate character cards caused by aliases/titles/descriptions
 * keep ambiguous identity references visible for review instead of force-merging
 * ensure race/gender remain Canon-truthful and not story-specific guesses
-* wire user-authored corrections into Character and World output panels with a
-  visible `User Edited` label instead of pretending edited values are extracted
-  evidence
+* add the frontend edit panel/action for approved Character and World fields
+* run hosted browser validation that user-authored corrections show in Character
+  and World output panels with a visible `User Edited` label
 * ~~keep character card sections collapsed and readable~~
 * ~~ensure character portraits remain neutral placeholders until a real portrait/reference system exists~~
 * ~~verify no source-backed placeholder text leaks into user output~~
@@ -636,6 +636,9 @@ Verified hardening:
 * backend persistence and API now define project-scoped user correction records
   with a fixed `User Edited` source label, ownership checks, metadata-only audit
   events, JSON/PostgreSQL schema support, and project-delete cleanup
+* project outputs now apply user-authored corrections to Character sections and
+  append World correction sections with a visible `User Edited` label instead
+  of pretending edited values are extracted evidence
 * verified with the focused processed-character-panel frontend test
 
 Acceptance:
