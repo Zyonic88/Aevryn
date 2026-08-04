@@ -3388,7 +3388,11 @@ def _project_outputs_response(
         world_sheet=_with_world_corrections(world_sheet, corrections),
         timeline_changes=_snapshot_timeline_changes(canon_payload),
         scene_sheets=_snapshot_scene_sheets(canon_payload, display_names=display_names),
-        prompt_packs=_snapshot_prompt_packs(canon_payload, display_names=display_names),
+        prompt_packs=_with_prompt_pack_corrections(
+            _snapshot_prompt_packs(canon_payload, display_names=display_names),
+            corrections,
+            display_names=display_names,
+        ),
         continuity_report=_snapshot_continuity_report(
             canon_payload,
             display_names=display_names,
@@ -4049,6 +4053,105 @@ def _user_edited_item(correction: ProjectCorrectionRecord) -> str:
 def _readable_correction_field(field_name: str) -> str:
     """Return readable field text for user-authored corrections."""
     return " ".join(part.capitalize() for part in field_name.split("_") if part)
+
+
+def _with_prompt_pack_corrections(
+    prompt_packs: Sequence[ProductionPackOutput],
+    corrections: Sequence[ProjectCorrectionRecord],
+    *,
+    display_names: Mapping[str, str],
+) -> tuple[ProductionPackOutput, ...]:
+    """Return prompt packs with visible user-authored correction context."""
+    correction_lines = _prompt_correction_lines(
+        corrections,
+        display_names=display_names,
+    )
+    if not correction_lines:
+        return tuple(prompt_packs)
+
+    return tuple(
+        ProductionPackOutput(
+            scene=pack.scene,
+            image_prompt=_with_prompt_section_corrections(
+                pack.image_prompt,
+                correction_lines,
+            ),
+            narration_prompt=_with_prompt_section_corrections(
+                pack.narration_prompt,
+                correction_lines,
+            ),
+            camera_prompt=_with_prompt_section_corrections(
+                pack.camera_prompt,
+                correction_lines,
+            ),
+            animation_prompt=_with_prompt_section_corrections(
+                pack.animation_prompt,
+                correction_lines,
+            ),
+        )
+        for pack in prompt_packs
+    )
+
+
+def _with_prompt_section_corrections(
+    section: OutputSection,
+    correction_lines: Sequence[str],
+) -> OutputSection:
+    """Append User Edited correction lines to a prompt output section."""
+    return OutputSection(
+        title=section.title,
+        items=(
+            *section.items,
+            "User Edited Canon corrections:",
+            *tuple(f"- {line}" for line in correction_lines),
+        ),
+    )
+
+
+def _prompt_correction_lines(
+    corrections: Sequence[ProjectCorrectionRecord],
+    *,
+    display_names: Mapping[str, str],
+) -> tuple[str, ...]:
+    """Return prompt-safe correction lines without exposing machine IDs."""
+    lines: list[str] = []
+    for correction in sorted(
+        corrections,
+        key=lambda item: (
+            item.target_type,
+            item.target_id,
+            item.field_name,
+            item.correction_id,
+        ),
+    ):
+        target_label = _readable_correction_target(
+            correction.target_id,
+            display_names=display_names,
+        )
+        target_type = correction.target_type.capitalize()
+        field_label = _readable_correction_field(correction.field_name)
+        lines.append(
+            (
+                f"{correction.source_label} {target_type} Correction: "
+                f"{target_label} {field_label} = {correction.value}"
+            )
+        )
+
+    return tuple(lines)
+
+
+def _readable_correction_target(
+    target_id: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
+    """Return a readable correction target without exposing internal tokens."""
+    display_name = display_names.get(target_id) or display_names.get(target_id.lower())
+    if display_name:
+        return display_name
+    if re.fullmatch(r"[Ee]\d{1,4}", target_id.strip()):
+        return _snapshot_entity_label(target_id, display_names=display_names)
+    return _title_preserving_snapshot_acronyms(target_id.replace("_", " "))
 
 
 def _snapshot_scene_sheets(

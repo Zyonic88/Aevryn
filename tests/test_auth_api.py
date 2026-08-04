@@ -2459,10 +2459,30 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     assert payload["scene_sheets"][0]["characters_present"]["items"] == ["Mark"]
     assert payload["prompt_packs"][0]["scene"]["title"] == "Scene 1"
     assert payload["prompt_packs"][0]["image_prompt"]["title"] == "Image Prompt"
+    prompt_pack_text = ""
+    for prompt_kind in (
+        "image_prompt",
+        "narration_prompt",
+        "camera_prompt",
+        "animation_prompt",
+    ):
+        prompt_items = payload["prompt_packs"][0][prompt_kind]["items"]
+        prompt_pack_text += "\n".join(prompt_items)
+        assert "User Edited Canon corrections:" in prompt_items
+        assert (
+            "- User Edited Character Correction: Mark Gender = Male"
+            in prompt_items
+        )
+        assert (
+            "- User Edited World Correction: Item Demo Classification = Item"
+            in prompt_items
+        )
     assert payload["continuity_report"]["source_id"] == "source_alpha"
     assert payload["continuity_report"]["scenes"][0]["new"]
     assert payload["export_options"][0]["export_kind"] == "character_profile"
     assert payload["timeline_changes"] == []
+    assert "character_mark" not in prompt_pack_text
+    assert "item_demo" not in prompt_pack_text
     assert "Mark carried a rusty dagger" not in response.text
     assert "serialized_output" not in response.text
 

@@ -482,6 +482,12 @@ Verified hardening:
   production prompts scene by scene
 * verified with focused Prompt Packs workspace test, full frontend test suite,
   lint, and production build
+* project output prompt packs now append visible `User Edited Canon corrections`
+  context to image, narration, camera, and animation prompts when user-authored
+  Character or World corrections exist, without mutating extracted Canon or
+  exposing internal target IDs
+* verified with project output API regression coverage and the full Python test
+  suite
 
 Acceptance:
 
