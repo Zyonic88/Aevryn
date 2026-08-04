@@ -30,6 +30,7 @@ from aevryn.persistence import (
     ExportRecord,
     ImportRecord,
     InMemoryProjectRepository,
+    ProjectCorrectionRecord,
     RecordNotFoundError,
     SnapshotRecord,
 )
@@ -2351,6 +2352,30 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
         json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
     )
     assert processed.status_code == 200
+    repository.save_project_correction(
+        ProjectCorrectionRecord(
+            correction_id="correction_mark_gender",
+            project_id="project_alpha",
+            target_type="character",
+            target_id="character_mark",
+            field_name="gender",
+            value="Male",
+            created_at=SOON,
+            updated_at=SOON,
+        )
+    )
+    repository.save_project_correction(
+        ProjectCorrectionRecord(
+            correction_id="correction_world_item",
+            project_id="project_alpha",
+            target_type="world",
+            target_id="item_demo",
+            field_name="classification",
+            value="Item",
+            created_at=SOON,
+            updated_at=SOON,
+        )
+    )
 
     response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
 
@@ -2421,9 +2446,14 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     assert payload["character_profiles"][0]["character_id"] == "character_mark"
     assert payload["character_profiles"][0]["display_name"] == "Mark"
     assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
-    assert payload["character_profiles"][0]["gender"]["items"] == ["Unknown"]
+    assert payload["character_profiles"][0]["gender"]["items"] == ["User Edited: Male"]
     assert payload["character_profiles"][0]["status"]["items"] == ["Unknown"]
-    assert payload["world_sheet"]["entity_sections"] == []
+    assert payload["world_sheet"]["entity_sections"] == [
+        {
+            "title": "User Edited: Classification",
+            "items": ["User Edited: Item"],
+        }
+    ]
     assert payload["scene_sheets"][0]["title"] == "Scene 1"
     assert payload["scene_sheets"][0]["chapter_label"] == "Chapter 1"
     assert payload["scene_sheets"][0]["characters_present"]["items"] == ["Mark"]

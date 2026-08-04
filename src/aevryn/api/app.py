@@ -1299,6 +1299,10 @@ def create_app(
                 user_id=user.user_id,
                 project_id=project_id,
             )
+            corrections = repository.list_project_corrections(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
         except (AccessDeniedError, RecordNotFoundError) as error:
             raise HTTPException(
                 status_code=404,
@@ -1311,6 +1315,7 @@ def create_app(
             imports=imports,
             runs=runs,
             snapshots=snapshots,
+            corrections=corrections,
         )
 
     @app.post(
@@ -3354,6 +3359,7 @@ def _project_outputs_response(
     imports: Sequence[ImportRecord],
     runs: Sequence[EngineRunRecord],
     snapshots: Sequence[SnapshotRecord],
+    corrections: Sequence[ProjectCorrectionRecord] = (),
 ) -> ProjectOutputsResponse:
     """Build project output summaries from persisted snapshots without executing workflows."""
     latest_import = _latest_import(imports)
@@ -3362,6 +3368,11 @@ def _project_outputs_response(
     canon_summary = _project_output_canon_summary(latest_canon)
     canon_payload = _canon_snapshot_metadata(latest_canon) if latest_canon else {}
     display_names = _snapshot_display_names(canon_payload)
+    character_profiles = _snapshot_character_profiles(
+        canon_payload,
+        display_names=display_names,
+    )
+    world_sheet = _snapshot_world_sheet(canon_payload, display_names=display_names)
     return ProjectOutputsResponse(
         project_id=project_id,
         status=_project_workflow_state(runs=runs, imports=imports, snapshots=snapshots),
@@ -3370,11 +3381,11 @@ def _project_outputs_response(
         canon=canon_summary,
         surfaces=_project_output_surfaces(canon_summary),
         language_identity=_project_language_identity_summary(canon_payload),
-        character_profiles=_snapshot_character_profiles(
-            canon_payload,
-            display_names=display_names,
+        character_profiles=_with_character_corrections(
+            character_profiles,
+            corrections,
         ),
-        world_sheet=_snapshot_world_sheet(canon_payload, display_names=display_names),
+        world_sheet=_with_world_corrections(world_sheet, corrections),
         timeline_changes=_snapshot_timeline_changes(canon_payload),
         scene_sheets=_snapshot_scene_sheets(canon_payload, display_names=display_names),
         prompt_packs=_snapshot_prompt_packs(canon_payload, display_names=display_names),
@@ -3936,6 +3947,108 @@ def _snapshot_world_sheet(
         )
     except (ValueError, ValidationError):
         return None
+
+
+def _with_character_corrections(
+    profiles: Sequence[CharacterProfileOutput],
+    corrections: Sequence[ProjectCorrectionRecord],
+) -> tuple[CharacterProfileOutput, ...]:
+    """Return character profiles with user-authored corrections visibly labeled."""
+    corrections_by_character: dict[str, list[ProjectCorrectionRecord]] = {}
+    for correction in corrections:
+        if correction.target_type != "character":
+            continue
+        corrections_by_character.setdefault(correction.target_id, []).append(correction)
+    if not corrections_by_character:
+        return tuple(profiles)
+    corrected_profiles: list[CharacterProfileOutput] = []
+    for profile in profiles:
+        corrected_profile = profile
+        for correction in sorted(
+            corrections_by_character.get(profile.character_id, ()),
+            key=lambda item: (item.field_name, item.correction_id),
+        ):
+            corrected_profile = _with_character_profile_correction(
+                corrected_profile,
+                correction,
+            )
+        corrected_profiles.append(corrected_profile)
+    return tuple(corrected_profiles)
+
+
+def _with_character_profile_correction(
+    profile: CharacterProfileOutput,
+    correction: ProjectCorrectionRecord,
+) -> CharacterProfileOutput:
+    """Return one character profile with an editable section correction applied."""
+    section_by_field = {
+        "race": profile.race,
+        "gender": profile.gender,
+        "status": profile.status,
+        "current_goal": profile.current_goal,
+        "current_equipment": profile.current_equipment,
+        "current_abilities": profile.current_abilities,
+        "current_assets": profile.current_assets,
+        "territory": profile.territory,
+        "relationships": profile.relationships,
+        "current_limitations": profile.current_limitations,
+        "recent_changes": profile.recent_changes,
+    }
+    section = section_by_field.get(correction.field_name)
+    if section is None:
+        return profile
+    return profile.model_copy(
+        update={
+            correction.field_name: _user_edited_section(section, correction)
+        }
+    )
+
+
+def _with_world_corrections(
+    world_sheet: WorldSheetOutput | None,
+    corrections: Sequence[ProjectCorrectionRecord],
+) -> WorldSheetOutput | None:
+    """Return world output with user-authored corrections visibly labeled."""
+    world_corrections = tuple(
+        sorted(
+            (
+                correction
+                for correction in corrections
+                if correction.target_type == "world"
+            ),
+            key=lambda item: (item.target_id, item.field_name, item.correction_id),
+        )
+    )
+    if world_sheet is None or not world_corrections:
+        return world_sheet
+    edited_sections = tuple(
+        OutputSection(
+            title=f"User Edited: {_readable_correction_field(correction.field_name)}",
+            items=(_user_edited_item(correction),),
+        )
+        for correction in world_corrections
+    )
+    return world_sheet.model_copy(
+        update={"entity_sections": world_sheet.entity_sections + edited_sections}
+    )
+
+
+def _user_edited_section(
+    section: OutputSection,
+    correction: ProjectCorrectionRecord,
+) -> OutputSection:
+    """Return a section replaced by a clearly labeled user edit."""
+    return OutputSection(title=section.title, items=(_user_edited_item(correction),))
+
+
+def _user_edited_item(correction: ProjectCorrectionRecord) -> str:
+    """Return a human-readable user-edited value marker."""
+    return f"User Edited: {correction.value}"
+
+
+def _readable_correction_field(field_name: str) -> str:
+    """Return readable field text for user-authored corrections."""
+    return " ".join(part.capitalize() for part in field_name.split("_") if part)
 
 
 def _snapshot_scene_sheets(
