@@ -116,6 +116,19 @@ SYSTEM_ENTITY_TERMS = frozenset(
         "system",
     }
 )
+SYSTEM_ENTITY_PHRASE_TERMS = frozenset(
+    {
+        "quest notification",
+        "status notification",
+        "status panel",
+        "status screen",
+        "system interface",
+        "system message",
+        "system prompt",
+        "system screen",
+        "system window",
+    }
+)
 PHYSICAL_OBJECT_HEAD_TERMS = frozenset(
     {
         "armor",
@@ -643,7 +656,9 @@ class EntityExtractionEngine:
             classification_terms & PHYSICAL_SKILL_CONTAINER_PHRASE_TERMS
         )
         skill_terms = classification_terms & SKILL_ENTITY_TERMS
-        system_terms = classification_terms & SYSTEM_ENTITY_TERMS
+        system_terms = (classification_terms & SYSTEM_ENTITY_TERMS) | (
+            classification_terms & SYSTEM_ENTITY_PHRASE_TERMS
+        )
         physical_object_head = head_term in PHYSICAL_OBJECT_HEAD_TERMS
         place_or_organization_head = head_term in PLACE_OR_ORGANIZATION_HEAD_TERMS
         role_or_title_terms = classification_terms & ROLE_OR_TITLE_ENTITY_TERMS
@@ -784,7 +799,7 @@ class EntityExtractionEngine:
         )
         tokens.update(
             phrase
-            for phrase in PHYSICAL_ENTITY_PHRASE_TERMS
+            for phrase in PHYSICAL_ENTITY_PHRASE_TERMS | SYSTEM_ENTITY_PHRASE_TERMS
             if re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized)
         )
         return tokens

@@ -714,6 +714,11 @@ Verified hardening:
   rather than a usable skill unless the evidence explicitly describes an ability
 * system UI plus skill/ability cues are marked reviewable instead of being treated
   as settled meaning
+* system UI phrases such as system window, status screen, and quest notification
+  route as system metadata; plain literal windows remain ordinary world context
+  unless a system UI phrase is present
+* extraction validation rejects system UI phrases when proposed as physical items
+  while accepting them as system entities when evidence supports that type
 * system-created physical objects such as technical blueprints remain item
   candidates when evidence supports a concrete object classification
 * physical skill-source phrases such as skill book, spell book, skill manual, and
