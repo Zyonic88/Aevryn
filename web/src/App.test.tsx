@@ -740,6 +740,10 @@ function projectOutputsPath(projectId: string): string {
   return `${API_PATHS.projects}/${projectId}/outputs`;
 }
 
+function projectCorrectionsPath(projectId: string): string {
+  return `${API_PATHS.projects}/${projectId}/corrections`;
+}
+
 describe("App shell routing", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -835,6 +839,28 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
           return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+        }
+        if (
+          url.includes(`${projectCorrectionsPath(projectAlphaPayload.project_id)}/`) &&
+          init?.method === "PUT"
+        ) {
+          const body = JSON.parse(String(init.body));
+          const correctionId = decodeURIComponent(url.split("/").pop() ?? "");
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                correction_id: correctionId,
+                project_id: projectAlphaPayload.project_id,
+                target_type: body.target_type,
+                target_id: body.target_id,
+                field_name: body.field_name,
+                value: body.value,
+                source_label: "User Edited",
+                created_at: body.now,
+                updated_at: body.now,
+              }),
+            ),
+          );
         }
         if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/exports`)) {
           if (init?.method === "POST") {
@@ -3721,6 +3747,18 @@ describe("App shell routing", () => {
       screen.getByText("1 review item; 2 review items need character review"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Glossary term needs review")).not.toBeInTheDocument();
+    const correctionDisclosure = markCard.getByText("User Edited correction").closest("details");
+    expect(correctionDisclosure).not.toBeNull();
+    await user.click(correctionDisclosure?.querySelector("summary") as HTMLElement);
+    const correctionForm = within(correctionDisclosure as HTMLElement);
+    await user.selectOptions(correctionForm.getByLabelText("Field"), "gender");
+    await user.type(correctionForm.getByLabelText("Correction"), "Male");
+    await user.click(correctionForm.getByRole("button", { name: "Save correction" }));
+    await waitFor(() => {
+      expect(
+        screen.getByText("Gender saved as User Edited."),
+      ).toBeInTheDocument();
+    });
     const identityReviewDisclosure = document.querySelector(
       "details.identity-review-panel",
     ) as HTMLDetailsElement | null;

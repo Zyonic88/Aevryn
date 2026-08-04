@@ -565,7 +565,6 @@ Remaining hardening:
 * continue reducing duplicate character cards caused by aliases/titles/descriptions
 * keep ambiguous identity references visible for review instead of force-merging
 * ensure race/gender remain Canon-truthful and not story-specific guesses
-* add the frontend edit panel/action for approved Character and World fields
 * run hosted browser validation that user-authored corrections show in Character
   and World output panels with a visible `User Edited` label
 * ~~keep character card sections collapsed and readable~~
@@ -639,6 +638,9 @@ Verified hardening:
 * project outputs now apply user-authored corrections to Character sections and
   append World correction sections with a visible `User Edited` label instead
   of pretending edited values are extracted evidence
+* frontend Character and World cards now expose compact user correction editors
+  for approved fields; saves round-trip through the correction API and refresh
+  processed outputs instead of rendering optimistic fake Canon
 * verified with the focused processed-character-panel frontend test
 
 Acceptance:

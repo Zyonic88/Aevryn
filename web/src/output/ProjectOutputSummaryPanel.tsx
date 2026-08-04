@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, type FormEvent, type ReactNode } from "react";
 
-import { apiClient } from "../api/client";
+import { apiClient, type ProjectCorrectionRequest } from "../api/client";
 import type {
   CharacterProfile,
   ContinuityReport,
@@ -15,7 +15,7 @@ import type {
   WorldSheet,
 } from "../api/schemas";
 import { useAuth } from "../auth/useAuth";
-import { EmptyState, LoadingMessage } from "../components/Feedback";
+import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
 import { formatDateTime, formatRunStatus, formatSceneScope } from "../formatting/display";
 import type { ProjectSummary } from "../projects/projectStore";
 import {
@@ -45,6 +45,28 @@ const WORLD_CARD_PAGE_SIZE = 48;
 const TIMELINE_GROUP_PAGE_SIZE = 60;
 const SCENE_CARD_PAGE_SIZE = 48;
 const CONTINUITY_SCENE_PAGE_SIZE = 24;
+const CHARACTER_CORRECTION_FIELDS = [
+  { field: "race", label: "Race" },
+  { field: "gender", label: "Gender" },
+  { field: "status", label: "Status" },
+  { field: "current_goal", label: "Current goal" },
+  { field: "current_equipment", label: "Current equipment" },
+  { field: "current_abilities", label: "Current abilities" },
+  { field: "current_assets", label: "Current assets" },
+  { field: "territory", label: "Territory" },
+  { field: "relationships", label: "Relationships" },
+  { field: "current_limitations", label: "Current limitations" },
+  { field: "recent_changes", label: "Recent changes" },
+] as const;
+const WORLD_CORRECTION_FIELDS = [
+  { field: "classification", label: "Classification" },
+  { field: "display_name", label: "Display name" },
+  { field: "description", label: "Description" },
+  { field: "condition", label: "Condition" },
+  { field: "location", label: "Location" },
+  { field: "relationships", label: "Relationships" },
+  { field: "notes", label: "Notes" },
+] as const;
 const CHARACTER_RECENT_CHANGE_PROFILE_LABELS = new Set([
   "alias",
   "description",
@@ -85,7 +107,14 @@ export function ProjectOutputSummaryPanel({
       </EmptyState>
     );
   }
-  return <ProjectOutputSummary outputs={outputsQuery.data} surface={surface} />;
+  return (
+    <ProjectOutputSummary
+      outputs={outputsQuery.data}
+      projectId={project.id}
+      sessionToken={session?.session_token ?? ""}
+      surface={surface}
+    />
+  );
 }
 
 export function DeveloperPreviewToggle({ children }: { children: ReactNode }) {
@@ -99,9 +128,13 @@ export function DeveloperPreviewToggle({ children }: { children: ReactNode }) {
 
 function ProjectOutputSummary({
   outputs,
+  projectId,
+  sessionToken,
   surface,
 }: {
   outputs: ProjectOutputs;
+  projectId: string;
+  sessionToken: string;
   surface: OutputSurface;
 }) {
   const surfaceSummary = outputs.surfaces.find((item) => item.surface === surface);
@@ -141,7 +174,12 @@ function ProjectOutputSummary({
       {surface === "characters" && hasIdentityReviewItems(outputs) ? (
         <IdentityReviewPanel outputs={outputs} defaultOpen={false} />
       ) : null}
-      <ReadableSurfacePanels surface={surface} outputs={outputs} />
+      <ReadableSurfacePanels
+        surface={surface}
+        outputs={outputs}
+        projectId={projectId}
+        sessionToken={sessionToken}
+      />
       {surfaceSummary.status === "waiting" ? (
         <EmptyState title="No extracted canon content yet">
           This project has imported chapter and scene structure, but this output needs accepted
@@ -374,20 +412,36 @@ function IdentityReviewPanel({
 function ReadableSurfacePanels({
   surface,
   outputs,
+  projectId,
+  sessionToken,
 }: {
   surface: OutputSurface;
   outputs: ProjectOutputs;
+  projectId: string;
+  sessionToken: string;
 }) {
   if (surface === "characters" && outputs.character_profiles.length > 0) {
     const characterProfiles = mergeCharacterProfiles(outputs.character_profiles);
-    return <CharacterPanels profiles={characterProfiles} />;
+    return (
+      <CharacterPanels
+        profiles={characterProfiles}
+        projectId={projectId}
+        sessionToken={sessionToken}
+      />
+    );
   }
   if (
     surface === "world" &&
     outputs.world_sheet &&
     outputs.world_sheet.entity_sections.length > 0
   ) {
-    return <WorldPanel world={outputs.world_sheet} />;
+    return (
+      <WorldPanel
+        world={outputs.world_sheet}
+        projectId={projectId}
+        sessionToken={sessionToken}
+      />
+    );
   }
   if (surface === "timeline" && outputs.timeline_changes.length > 0) {
     return <TimelinePanel changes={outputs.timeline_changes} />;
@@ -470,7 +524,15 @@ function mergedEvidenceSummary(left: string, right: string): string {
   return Array.from(new Set([left, right])).join("; ");
 }
 
-function CharacterPanel({ profile }: { profile: CharacterProfile }) {
+function CharacterPanel({
+  profile,
+  projectId,
+  sessionToken,
+}: {
+  profile: CharacterProfile;
+  projectId: string;
+  sessionToken: string;
+}) {
   const recentChanges = characterRecentChanges(profile);
   const displayName = readableCharacterName(profile.display_name);
   const subtitle = readableCharacterSubtitle(profile.subtitle);
@@ -506,6 +568,14 @@ function CharacterPanel({ profile }: { profile: CharacterProfile }) {
           <PanelSection section={recentChanges} />
         </div>
       </details>
+      <CorrectionEditor
+        correctionKind="character"
+        fieldOptions={CHARACTER_CORRECTION_FIELDS}
+        projectId={projectId}
+        sessionToken={sessionToken}
+        targetId={profile.character_id}
+        targetLabel={displayName}
+      />
       <p className="evidence-note">{profile.evidence_summary}</p>
     </article>
   );
@@ -663,7 +733,15 @@ function readableCharacterName(name: string): string {
   return readableOutputText(name);
 }
 
-function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
+function CharacterPanels({
+  profiles,
+  projectId,
+  sessionToken,
+}: {
+  profiles: CharacterProfile[];
+  projectId: string;
+  sessionToken: string;
+}) {
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(CHARACTER_CARD_PAGE_SIZE);
   const normalizedQuery = query.trim().toLowerCase();
@@ -699,7 +777,12 @@ function CharacterPanels({ profiles }: { profiles: CharacterProfile[] }) {
       {visibleProfiles.length > 0 ? (
         <div className="profile-grid character-card-grid" aria-label="Character cards">
           {visibleProfiles.map((profile) => (
-            <CharacterPanel key={profile.character_id} profile={profile} />
+            <CharacterPanel
+              key={profile.character_id}
+              profile={profile}
+              projectId={projectId}
+              sessionToken={sessionToken}
+            />
           ))}
         </div>
       ) : (
@@ -743,7 +826,15 @@ function searchableCharacterText(profile: CharacterProfile): string {
   ].join(" ");
 }
 
-function WorldPanel({ world }: { world: WorldSheet }) {
+function WorldPanel({
+  world,
+  projectId,
+  sessionToken,
+}: {
+  world: WorldSheet;
+  projectId: string;
+  sessionToken: string;
+}) {
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(WORLD_CARD_PAGE_SIZE);
   const normalizedQuery = query.trim().toLowerCase();
@@ -792,6 +883,14 @@ function WorldPanel({ world }: { world: WorldSheet }) {
                 <summary>World details</summary>
                 <WorldSection section={section} />
               </details>
+              <CorrectionEditor
+                correctionKind="world"
+                fieldOptions={WORLD_CORRECTION_FIELDS}
+                projectId={projectId}
+                sessionToken={sessionToken}
+                targetId={`world_${machineToken(section.title)}`}
+                targetLabel={section.title}
+              />
             </article>
           ))}
         </div>
@@ -1414,6 +1513,119 @@ function sceneTitle(change: ProjectTimelineChange): string {
     return chapterTitle;
   }
   return `${chapterTitle} / ${sceneTitle}`;
+}
+
+type CorrectionKind = "character" | "world";
+type CorrectionFieldOption = { readonly field: string; readonly label: string };
+
+function CorrectionEditor({
+  correctionKind,
+  fieldOptions,
+  projectId,
+  sessionToken,
+  targetId,
+  targetLabel,
+}: {
+  correctionKind: CorrectionKind;
+  fieldOptions: readonly CorrectionFieldOption[];
+  projectId: string;
+  sessionToken: string;
+  targetId: string;
+  targetLabel: string;
+}) {
+  const queryClient = useQueryClient();
+  const [fieldName, setFieldName] = useState(fieldOptions[0]?.field ?? "");
+  const [value, setValue] = useState("");
+  const [savedLabel, setSavedLabel] = useState("");
+  const saveCorrection = useMutation({
+    mutationFn: (payload: ProjectCorrectionRequest & { correctionId: string }) => {
+      const now = nowUtc();
+      return apiClient.upsertProjectCorrection(
+        projectId,
+        payload.correctionId,
+        {
+          target_type: payload.target_type,
+          target_id: payload.target_id,
+          field_name: payload.field_name,
+          value: payload.value,
+          now,
+        },
+        sessionToken,
+        now,
+      );
+    },
+    async onSuccess(result) {
+      setSavedLabel(`${readableLabel(result.field_name)} saved as User Edited.`);
+      setValue("");
+      await queryClient.invalidateQueries({
+        queryKey: projectOutputsQueryKey(projectId, sessionToken),
+      });
+    },
+  });
+  const trimmedValue = value.trim();
+  const canSave = Boolean(sessionToken && fieldName && trimmedValue);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSave) {
+      return;
+    }
+    setSavedLabel("");
+    saveCorrection.mutate({
+      correctionId: correctionId(correctionKind, targetId, fieldName),
+      target_type: correctionKind,
+      target_id: targetId,
+      field_name: fieldName,
+      value: trimmedValue,
+      now: nowUtc(),
+    });
+  }
+
+  return (
+    <details className="correction-editor">
+      <summary>User Edited correction</summary>
+      <form onSubmit={submit}>
+        <label>
+          Field
+          <select value={fieldName} onChange={(event) => setFieldName(event.target.value)}>
+            {fieldOptions.map((option) => (
+              <option key={option.field} value={option.field}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Correction
+          <input
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            placeholder={`Correct ${targetLabel}`}
+          />
+        </label>
+        {saveCorrection.error ? (
+          <ErrorMessage>{saveCorrection.error.message}</ErrorMessage>
+        ) : null}
+        {savedLabel ? <p className="form-success">{savedLabel}</p> : null}
+        <button type="submit" className="text-button" disabled={!canSave || saveCorrection.isPending}>
+          {saveCorrection.isPending ? "Saving" : "Save correction"}
+        </button>
+      </form>
+    </details>
+  );
+}
+
+function correctionId(kind: CorrectionKind, targetId: string, fieldName: string): string {
+  return `correction_${kind}_${machineToken(targetId)}_${machineToken(fieldName)}`;
+}
+
+function machineToken(value: string): string {
+  const token = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "_")
+    .replace(/^_+|_+$/gu, "");
+  return token || "unknown";
 }
 
 function PanelSection({ section }: { section: OutputSection }) {

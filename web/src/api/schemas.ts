@@ -76,6 +76,22 @@ export const projectSettingsSchema = z.object({
   locale: z.string(),
 });
 
+export const projectCorrectionSchema = z.object({
+  correction_id: z.string(),
+  project_id: z.string(),
+  target_type: z.string(),
+  target_id: z.string(),
+  field_name: z.string(),
+  value: z.string(),
+  source_label: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const projectCorrectionListSchema = z.object({
+  corrections: z.array(projectCorrectionSchema),
+});
+
 export const storySchema = z.object({
   story_id: z.string(),
   project_id: z.string(),
@@ -549,6 +565,8 @@ export type AuthUser = z.infer<typeof authMeSchema>;
 export type Project = z.infer<typeof projectSchema>;
 export type ProjectList = z.infer<typeof projectListSchema>;
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
+export type ProjectCorrection = z.infer<typeof projectCorrectionSchema>;
+export type ProjectCorrectionList = z.infer<typeof projectCorrectionListSchema>;
 export type Story = z.infer<typeof storySchema>;
 export type StoryList = z.infer<typeof storyListSchema>;
 export type ImportRecord = z.infer<typeof importRecordSchema>;
