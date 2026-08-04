@@ -520,6 +520,138 @@ def test_project_settings_and_cross_user_attempts_append_audit_events() -> None:
     audit_ledger.verify()
 
 
+def test_project_corrections_api_persists_user_edited_corrections() -> None:
+    """Project corrections API should persist user-authored Canon overlays."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created.status_code == 200
+
+    updated = client.put(
+        "/v2/projects/project_alpha/corrections/correction_gender",
+        headers=auth_headers("token_001"),
+        json={
+            "target_type": "character",
+            "target_id": "character_demo",
+            "field_name": "gender",
+            "value": "  Unknown  ",
+            "now": NOW,
+        },
+    )
+    listed = client.get(
+        "/v2/projects/project_alpha/corrections",
+        headers=auth_headers("token_001"),
+    )
+
+    assert updated.status_code == 200
+    assert updated.json() == {
+        "correction_id": "correction_gender",
+        "project_id": "project_alpha",
+        "target_type": "character",
+        "target_id": "character_demo",
+        "field_name": "gender",
+        "value": "Unknown",
+        "source_label": "User Edited",
+        "created_at": NOW,
+        "updated_at": NOW,
+    }
+    assert listed.status_code == 200
+    assert listed.json() == {"corrections": [updated.json()]}
+
+
+def test_project_corrections_api_rejects_cross_user_and_metadata_only_audit() -> None:
+    """Correction writes should enforce ownership and avoid logging edited values."""
+    audit_ledger = AuditLedger()
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            audit_ledger=audit_ledger,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created.status_code == 200
+
+    updated = client.put(
+        "/v2/projects/project_alpha/corrections/correction_goal",
+        headers=auth_headers("token_001"),
+        json={
+            "target_type": "character",
+            "target_id": "character_demo",
+            "field_name": "current_goal",
+            "value": "Find the harbor map",
+            "now": NOW,
+        },
+    )
+    cross_user = client.put(
+        "/v2/projects/project_alpha/corrections/correction_goal",
+        headers=auth_headers("token_002"),
+        json={
+            "target_type": "character",
+            "target_id": "character_demo",
+            "field_name": "current_goal",
+            "value": "Should not write",
+            "now": NOW,
+        },
+    )
+    invalid = client.put(
+        "/v2/projects/project_alpha/corrections/correction_goal",
+        headers=auth_headers("token_001"),
+        json={
+            "target_type": "scene",
+            "target_id": "character_demo",
+            "field_name": "current_goal",
+            "value": "Find the harbor map",
+            "now": NOW,
+        },
+    )
+
+    assert updated.status_code == 200
+    assert cross_user.status_code == 404
+    assert cross_user.json()["error"] == "project_not_found"
+    assert invalid.status_code == 400
+    assert invalid.json()["error"] == "project_correction_failed"
+    correction_events = tuple(
+        record
+        for record in audit_ledger.records()
+        if record.event_type in {"project_correction_changed", "cross_user_access_attempt"}
+    )
+    assert tuple(record.event_type for record in correction_events) == (
+        "project_correction_changed",
+        "cross_user_access_attempt",
+    )
+    assert correction_events[0].metadata == {
+        "target_type": "character",
+        "field_name": "current_goal",
+        "source_label": "User Edited",
+    }
+    assert correction_events[1].metadata == {"route": "project_corrections"}
+    serialized_records = json.dumps(
+        [record.payload_for_hash() for record in audit_ledger.records()],
+        sort_keys=True,
+    )
+    assert "Find the harbor map" not in serialized_records
+    assert "Should not write" not in serialized_records
+    audit_ledger.verify()
+
+
 def test_project_stories_api_creates_and_lists_stories() -> None:
     """Project stories API should persist story metadata behind auth."""
     repository = InMemoryProjectRepository()

@@ -23,6 +23,7 @@ from aevryn.persistence import (
     JsonProjectRepository,
     PersistenceError,
     PostgresqlProjectRepository,
+    ProjectCorrectionRecord,
     ProjectRecord,
     ProjectRepository,
     ProjectSettingsRecord,
@@ -45,7 +46,7 @@ NOW = "2026-06-27T00:00:00Z"
 
 def test_project_database_schema_manifest_defines_phase_2_tables() -> None:
     """Schema manifest should define the Phase 2 persistence target."""
-    assert PROJECT_DATABASE_SCHEMA.schema_version == "v2_phase_2_001"
+    assert PROJECT_DATABASE_SCHEMA.schema_version == "v2_phase_2_002"
     assert PROJECT_DATABASE_SCHEMA.table_names() == (
         "users",
         "projects",
@@ -56,6 +57,7 @@ def test_project_database_schema_manifest_defines_phase_2_tables() -> None:
         "snapshots",
         "exports",
         "project_settings",
+        "project_corrections",
     )
 
 
@@ -82,6 +84,7 @@ def test_project_database_schema_renders_postgresql_contract() -> None:
     assert "owner_user_id text NOT NULL REFERENCES users(user_id)" in statements[1]
     assert "run_id text NOT NULL" in statements[5]
     assert "serialized_output jsonb NOT NULL" in statements[6]
+    assert "source_label text NOT NULL" in statements[-1]
     assert statements[-1].endswith(");")
 
 
@@ -100,6 +103,8 @@ def test_project_database_schema_manifest_defines_check_constraints() -> None:
         "chk_background_jobs_error_summary_by_status",
         "chk_snapshots_snapshot_kind",
         "chk_exports_size_non_negative",
+        "chk_project_corrections_target_type",
+        "chk_project_corrections_source_label",
     )
 
 
@@ -114,6 +119,7 @@ def test_project_database_schema_renders_postgresql_constraints() -> None:
     assert any("chk_engine_runs_status" in statement for statement in statements)
     assert any("chk_background_jobs_status" in statement for statement in statements)
     assert any("chk_snapshots_snapshot_kind" in statement for statement in statements)
+    assert any("chk_project_corrections_source_label" in statement for statement in statements)
 
 
 def test_project_database_schema_rejects_forward_references() -> None:
@@ -172,6 +178,8 @@ def test_project_database_schema_manifest_defines_indexes() -> None:
         "idx_snapshots_project_id",
         "idx_snapshots_story_kind",
         "idx_exports_project_id",
+        "idx_project_corrections_project_id",
+        "idx_project_corrections_target",
     )
 
 
@@ -193,6 +201,10 @@ def test_project_database_schema_renders_postgresql_indexes() -> None:
     assert (
         "CREATE INDEX idx_snapshots_story_kind ON snapshots "
         "(story_id, snapshot_kind);"
+    ) in statements
+    assert (
+        "CREATE INDEX idx_project_corrections_target ON project_corrections "
+        "(project_id, target_type, target_id);"
     ) in statements
     assert postgresql_schema_statements() == (
         postgresql_create_table_statements()
@@ -239,6 +251,7 @@ def test_project_database_records_full_project_flow() -> None:
             locale="en-US",
         )
     )
+    repository.save_project_correction(project_correction_record())
 
     assert repository.list_projects_for_user("user_demo") == (project_record(),)
     assert repository.list_stories_for_project("user_demo", "project_demo") == (
@@ -262,6 +275,9 @@ def test_project_database_records_full_project_flow() -> None:
     assert repository.get_export("user_demo", "export_demo") == export_record()
     assert repository.get_project_settings("user_demo", "project_demo").default_export_format == (
         "json"
+    )
+    assert repository.list_project_corrections("user_demo", "project_demo") == (
+        project_correction_record(),
     )
 
 
@@ -302,6 +318,7 @@ def test_repository_hard_deletes_project_scoped_records() -> None:
             locale="en-US",
         )
     )
+    repository.save_project_correction(project_correction_record())
 
     deleted = repository.delete_project("user_demo", "project_demo")
 
@@ -326,6 +343,8 @@ def test_repository_hard_deletes_project_scoped_records() -> None:
         repository.get_export("user_demo", "export_demo")
     with pytest.raises(RecordNotFoundError):
         repository.get_project_settings("user_demo", "project_demo")
+    with pytest.raises(RecordNotFoundError):
+        repository.list_project_corrections("user_demo", "project_demo")
 
 
 def test_json_project_repository_persists_records_across_instances(
@@ -348,6 +367,7 @@ def test_json_project_repository_persists_records_across_instances(
             locale="en-US",
         )
     )
+    repository.save_project_correction(project_correction_record())
 
     reloaded = JsonProjectRepository(database_path)
 
@@ -359,7 +379,10 @@ def test_json_project_repository_persists_records_across_instances(
     assert reloaded.get_project_settings("user_demo", "project_demo").default_export_format == (
         "json"
     )
-    assert '"schema_version": "v2_phase_2_001"' in database_path.read_text(
+    assert reloaded.list_project_corrections("user_demo", "project_demo") == (
+        project_correction_record(),
+    )
+    assert '"schema_version": "v2_phase_2_002"' in database_path.read_text(
         encoding="utf-8"
     )
 
@@ -511,7 +534,7 @@ def test_json_project_repository_rejects_missing_sections(tmp_path: Path) -> Non
     """Local JSON persistence should reject partial database files."""
     database_path = tmp_path / "project_database.json"
     database_path.write_text(
-        json.dumps({"schema_version": "v2_phase_2_001", "users": []}),
+        json.dumps({"schema_version": "v2_phase_2_002", "users": []}),
         encoding="utf-8",
     )
 
@@ -538,7 +561,7 @@ def test_json_project_repository_rejects_invalid_sections(tmp_path: Path) -> Non
     database_path.write_text(
         json.dumps(
             {
-                "schema_version": "v2_phase_2_001",
+                "schema_version": "v2_phase_2_002",
                 "users": {},
                 "projects": [],
                 "stories": [],
@@ -547,6 +570,7 @@ def test_json_project_repository_rejects_invalid_sections(tmp_path: Path) -> Non
                 "snapshots": [],
                 "exports": [],
                 "project_settings": [],
+                "project_corrections": [],
             }
         ),
         encoding="utf-8",
@@ -1237,4 +1261,18 @@ def export_record() -> ExportRecord:
         content_type="text/markdown; charset=utf-8",
         storage_ref="storage://exports/character_mark.md",
         created_at=NOW,
+    )
+
+
+def project_correction_record() -> ProjectCorrectionRecord:
+    """Return a stable user-authored correction record."""
+    return ProjectCorrectionRecord(
+        correction_id="correction_demo",
+        project_id="project_demo",
+        target_type="character",
+        target_id="character_demo",
+        field_name="gender",
+        value="Unknown",
+        created_at=NOW,
+        updated_at=NOW,
     )
