@@ -1358,6 +1358,41 @@ select:focus {
   font-size: 12px;
 }
 
+.character-profile-card .profile-disclosure[open] {
+  overflow: hidden;
+}
+
+.character-profile-card .character-detail-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.character-profile-card .character-detail-grid .profile-section {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.42fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.character-profile-card .character-detail-grid .profile-section h4 {
+  margin: 0;
+  min-width: 0;
+}
+
+.character-profile-card .character-detail-grid .profile-section ul,
+.character-profile-card .character-detail-grid .profile-section p {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.character-profile-card .character-detail-grid .profile-section ul {
+  gap: 6px;
+}
+
 .large-output-stack {
   display: grid;
   gap: 16px;
@@ -3347,6 +3382,10 @@ textarea::placeholder {
 
   .character-card-grid .character-fact-strip,
   .character-card-grid .character-identity-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .character-profile-card .character-detail-grid .profile-section {
     grid-template-columns: 1fr;
   }
 

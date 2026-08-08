@@ -654,10 +654,15 @@ h3 {
   }
 
   .hero {
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     padding-top: 48px;
   }
 
   .hero-copy {
+    order: 1;
     max-width: 760px;
   }
 
@@ -666,9 +671,13 @@ h3 {
   }
 
   .hero-panel {
-    inset: auto 18px 22px 18px;
-    opacity: 0.42;
-    transform: translateY(10%);
+    position: relative;
+    inset: auto;
+    order: 2;
+    width: 100%;
+    margin-top: 28px;
+    opacity: 1;
+    transform: none;
   }
 
   .cards.three,
@@ -715,6 +724,11 @@ h3 {
     padding-right: 18px;
   }
 
+  .hero {
+    padding-top: 42px;
+    padding-bottom: 34px;
+  }
+
   h1 {
     font-size: 42px;
   }
@@ -729,6 +743,10 @@ h3 {
 
   .editor-card {
     margin: 14px;
+  }
+
+  .code-line {
+    overflow-wrap: anywhere;
   }
 
   .tabs {

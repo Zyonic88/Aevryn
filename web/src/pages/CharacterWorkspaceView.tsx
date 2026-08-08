@@ -188,7 +188,7 @@ function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
       </header>
       <details className="profile-disclosure">
         <summary>Character details</summary>
-        <div className="profile-section-grid">
+        <div className="profile-section-grid character-detail-grid">
           <ProfileSection section={profile.race} />
           <ProfileSection section={profile.gender} />
           <ProfileSection section={profile.aliases} />
