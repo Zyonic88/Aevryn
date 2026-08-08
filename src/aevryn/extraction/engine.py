@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Mapping
 from typing import Literal, Protocol
 
@@ -31,6 +32,7 @@ PHYSICAL_ENTITY_TERMS = frozenset(
         "blade",
         "blueprint",
         "book",
+        "card",
         "car",
         "coin",
         "credits",
@@ -60,6 +62,43 @@ PHYSICAL_ENTITY_TERMS = frozenset(
         "weapon",
     }
 )
+PHYSICAL_ENTITY_PHRASE_TERMS = frozenset(
+    {
+        "ability crystal",
+        "ability token",
+        "beast core",
+        "energy core",
+        "magic core",
+        "mana core",
+        "monster core",
+        "power core",
+        "reactor core",
+        "skill book",
+        "skill card",
+        "skill crystal",
+        "skill manual",
+        "skill scroll",
+        "spell book",
+        "spell scroll",
+        "technique manual",
+        "technique scroll",
+    }
+)
+PHYSICAL_SKILL_CONTAINER_PHRASE_TERMS = frozenset(
+    {
+        "ability crystal",
+        "ability token",
+        "skill book",
+        "skill card",
+        "skill crystal",
+        "skill manual",
+        "skill scroll",
+        "spell book",
+        "spell scroll",
+        "technique manual",
+        "technique scroll",
+    }
+)
 SKILL_ENTITY_TERMS = frozenset(
     {
         "ability",
@@ -77,6 +116,19 @@ SYSTEM_ENTITY_TERMS = frozenset(
         "system",
     }
 )
+SYSTEM_ENTITY_PHRASE_TERMS = frozenset(
+    {
+        "quest notification",
+        "status notification",
+        "status panel",
+        "status screen",
+        "system interface",
+        "system message",
+        "system prompt",
+        "system screen",
+        "system window",
+    }
+)
 PHYSICAL_OBJECT_HEAD_TERMS = frozenset(
     {
         "armor",
@@ -85,6 +137,7 @@ PHYSICAL_OBJECT_HEAD_TERMS = frozenset(
         "blade",
         "blueprint",
         "book",
+        "card",
         "car",
         "coin",
         "credits",
@@ -596,8 +649,16 @@ class EntityExtractionEngine:
         classification_terms = EntityExtractionEngine._classification_terms(entity)
         head_term = EntityExtractionEngine._classification_head_term(entity)
         physical_terms = classification_terms & PHYSICAL_ENTITY_TERMS
+        physical_phrase_terms = (
+            classification_terms & PHYSICAL_ENTITY_PHRASE_TERMS
+        )
+        physical_skill_container_terms = (
+            classification_terms & PHYSICAL_SKILL_CONTAINER_PHRASE_TERMS
+        )
         skill_terms = classification_terms & SKILL_ENTITY_TERMS
-        system_terms = classification_terms & SYSTEM_ENTITY_TERMS
+        system_terms = (classification_terms & SYSTEM_ENTITY_TERMS) | (
+            classification_terms & SYSTEM_ENTITY_PHRASE_TERMS
+        )
         physical_object_head = head_term in PHYSICAL_OBJECT_HEAD_TERMS
         place_or_organization_head = head_term in PLACE_OR_ORGANIZATION_HEAD_TERMS
         role_or_title_terms = classification_terms & ROLE_OR_TITLE_ENTITY_TERMS
@@ -626,7 +687,16 @@ class EntityExtractionEngine:
                 "Entity classification conflict: place or organization cannot be skill: "
                 f"{entity.display_name}."
             )
-        if entity.entity_type == "skill" and physical_terms and not skill_terms:
+        if entity.entity_type == "skill" and physical_skill_container_terms:
+            return (
+                "Entity classification conflict: physical knowledge or resource "
+                f"container cannot be skill: {entity.display_name}."
+            )
+        if (
+            entity.entity_type == "skill"
+            and (physical_terms or physical_phrase_terms)
+            and not skill_terms
+        ):
             return (
                 "Entity classification conflict: physical object cannot be skill: "
                 f"{entity.display_name}."
@@ -645,7 +715,11 @@ class EntityExtractionEngine:
                 "Entity classification conflict: non-capability story concept cannot "
                 f"be skill: {entity.display_name}."
             )
-        if entity.entity_type == "system" and physical_terms and not system_terms:
+        if (
+            entity.entity_type == "system"
+            and (physical_terms or physical_phrase_terms)
+            and not system_terms
+        ):
             return (
                 "Entity classification conflict: physical object cannot be system: "
                 f"{entity.display_name}."
@@ -717,6 +791,17 @@ class EntityExtractionEngine:
             tokens.add("battlecruiser")
         if "star" in tokens and "ship" in tokens:
             tokens.add("starship")
+        normalized = " ".join(
+            "".join(
+                character.lower() if character.isalnum() else " "
+                for character in raw_text
+            ).split()
+        )
+        tokens.update(
+            phrase
+            for phrase in PHYSICAL_ENTITY_PHRASE_TERMS | SYSTEM_ENTITY_PHRASE_TERMS
+            if re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", normalized)
+        )
         return tokens
 
     @staticmethod

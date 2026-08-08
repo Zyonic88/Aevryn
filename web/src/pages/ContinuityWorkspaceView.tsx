@@ -81,11 +81,6 @@ export function ContinuityWorkspaceView({ project }: { project: ProjectSummary }
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Continuity</p>
-        <h2>Continuity</h2>
-      </div>
-
       <ProjectOutputSummaryPanel project={project} surface="continuity" />
 
       <DeveloperPreviewToggle>

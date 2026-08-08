@@ -209,10 +209,30 @@ class EntityResolutionEngine:
         if title_name_score is not None:
             return title_name_score
 
+        title_prefix_name_score = _title_prefix_name_score(
+            normalized_reference,
+            profile,
+        )
+        if title_prefix_name_score is not None:
+            return title_prefix_name_score
+
+        title_suffix_name_score = _title_suffix_name_score(
+            normalized_reference,
+            profile,
+        )
+        if title_suffix_name_score is not None:
+            return title_suffix_name_score
+
         soft_score = _soft_description_score(normalized_reference, profile)
-        if soft_score is None:
+        if soft_score is not None and soft_score.confidence >= RESOLUTION_THRESHOLD:
+            return soft_score
+        composite_score = _composite_description_score(normalized_reference, profile)
+        scores = tuple(
+            score for score in (soft_score, composite_score) if score is not None
+        )
+        if not scores:
             return None
-        return soft_score
+        return max(scores, key=lambda score: score.confidence)
 
 
 def _validated_profiles(
@@ -278,9 +298,11 @@ def _soft_description_score(
         description_tokens = _expanded_identity_tokens(normalized_description)
         if not description_tokens:
             continue
-        overlap = len(reference_tokens.intersection(description_tokens))
-        if overlap == 0:
+        overlaps = reference_tokens.intersection(description_tokens)
+        distinctive_overlap = overlaps.difference(_GENERIC_IDENTITY_TOKENS)
+        if not overlaps or not distinctive_overlap:
             continue
+        overlap = len(overlaps)
         confidence = _description_variant_confidence(
             overlap=overlap,
             reference_token_count=len(reference_tokens),
@@ -299,6 +321,37 @@ def _soft_description_score(
         if best is None or candidate.confidence > best.confidence:
             best = candidate
     return best
+
+
+def _composite_description_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Return a conservative score from combined visual/title identity signals."""
+    reference_tokens = _expanded_identity_tokens(normalized_reference)
+    if len(reference_tokens) < 2:
+        return None
+
+    profile_tokens: set[str] = set()
+    for surface in (*profile.titles, *profile.descriptions):
+        profile_tokens.update(_expanded_identity_tokens(_normalized_phrase(surface)))
+    if not profile_tokens:
+        return None
+
+    overlap = reference_tokens.intersection(profile_tokens)
+    distinctive_overlap = overlap.difference(_GENERIC_IDENTITY_TOKENS)
+    if len(overlap) < 2 or not distinctive_overlap:
+        return None
+    if len(overlap) / len(reference_tokens) < 0.5:
+        return None
+
+    confidence = min(0.86, 0.8 + len(distinctive_overlap) * 0.02)
+    return ResolutionCandidate(
+        entity_id=profile.entity_id,
+        confidence=confidence,
+        match_kind="composite_description",
+        matched_text=profile.canonical_name,
+    )
 
 
 def _title_name_score(
@@ -331,6 +384,65 @@ def _title_name_score(
                 matched_text=f"{profile.canonical_name} with title",
             )
     return None
+
+
+def _title_prefix_name_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Resolve known names with conservative title/rank prefixes."""
+    reference_tokens = tuple(normalized_reference.split())
+    if len(reference_tokens) < 2:
+        return None
+
+    for name in (profile.canonical_name, *profile.aliases):
+        name_tokens = tuple(_normalized_phrase(name).split())
+        if not name_tokens or len(reference_tokens) <= len(name_tokens):
+            continue
+        if reference_tokens[-len(name_tokens) :] != name_tokens:
+            continue
+        title_terms = reference_tokens[: -len(name_tokens)]
+        if not _tokens_are_supported_title_prefix(title_terms):
+            continue
+        return ResolutionCandidate(
+            entity_id=profile.entity_id,
+            confidence=0.93,
+            match_kind="title_prefix_name",
+            matched_text=f"{profile.canonical_name} with title prefix",
+        )
+    return None
+
+
+def _title_suffix_name_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Resolve known names with conservative title/rank suffixes."""
+    reference_tokens = tuple(normalized_reference.split())
+    if len(reference_tokens) < 2:
+        return None
+
+    for name in (profile.canonical_name, *profile.aliases):
+        name_tokens = tuple(_normalized_phrase(name).split())
+        if not name_tokens or len(reference_tokens) <= len(name_tokens):
+            continue
+        if reference_tokens[: len(name_tokens)] != name_tokens:
+            continue
+        title_terms = reference_tokens[len(name_tokens) :]
+        if not _tokens_are_supported_title_prefix(title_terms):
+            continue
+        return ResolutionCandidate(
+            entity_id=profile.entity_id,
+            confidence=0.93,
+            match_kind="title_suffix_name",
+            matched_text=f"{profile.canonical_name} with title suffix",
+        )
+    return None
+
+
+def _tokens_are_supported_title_prefix(tokens: tuple[str, ...]) -> bool:
+    """Return whether tokens are safe generic rank/title words."""
+    return bool(tokens) and all(token in _SUPPORTED_TITLE_PREFIX_TERMS for token in tokens)
 
 
 def _relationship_label_score(
@@ -402,4 +514,57 @@ _IDENTITY_TOKEN_EQUIVALENTS = {
     "men": ("male",),
     "boy": ("male",),
     "boys": ("male",),
+}
+
+_GENERIC_IDENTITY_TOKENS = frozenset(
+    {
+        "female",
+        "woman",
+        "women",
+        "girl",
+        "girls",
+        "male",
+        "man",
+        "men",
+        "boy",
+        "boys",
+    }
+)
+
+_SUPPORTED_TITLE_PREFIX_TERMS = {
+    "admiral",
+    "baron",
+    "baroness",
+    "captain",
+    "chief",
+    "colonel",
+    "commander",
+    "doctor",
+    "dr",
+    "duchess",
+    "duke",
+    "elder",
+    "emperor",
+    "empress",
+    "general",
+    "king",
+    "lady",
+    "lieutenant",
+    "lord",
+    "madam",
+    "major",
+    "master",
+    "minister",
+    "officer",
+    "president",
+    "prince",
+    "princess",
+    "professor",
+    "queen",
+    "saint",
+    "saintess",
+    "sergeant",
+    "sir",
+    "teacher",
+    "vice",
 }

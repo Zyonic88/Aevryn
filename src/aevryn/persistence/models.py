@@ -11,6 +11,7 @@ from typing import Literal
 _MACHINE_TOKEN_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 
 EngineRunStatus = Literal["pending", "running", "succeeded", "failed"]
+ProjectCorrectionTargetType = Literal["character", "world"]
 SnapshotKind = Literal[
     "canon",
     "timeline",
@@ -250,6 +251,43 @@ class ProjectSettingsRecord:
         _require_machine_token(self.project_id, "Settings project ID")
         _require_machine_token(self.default_export_format, "Default export format")
         _require_text(self.locale, "Settings locale")
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectCorrectionRecord:
+    """Persisted user-authored Canon correction overlay.
+
+    Corrections are not extracted evidence. They are durable user edits that
+    downstream presentation surfaces can label as User Edited without changing
+    the evidence-backed Canon snapshot.
+    """
+
+    correction_id: str
+    project_id: str
+    target_type: ProjectCorrectionTargetType
+    target_id: str
+    field_name: str
+    value: str
+    source_label: str = "User Edited"
+    created_at: str = ""
+    updated_at: str = ""
+
+    def __post_init__(self) -> None:
+        """Validate user correction metadata without inspecting story prose."""
+        _require_machine_token(self.correction_id, "Correction ID")
+        _require_machine_token(self.project_id, "Correction project ID")
+        if self.target_type not in {"character", "world"}:
+            raise ValueError("Correction target type is invalid.")
+        _require_machine_token(self.target_id, "Correction target ID")
+        _require_machine_token(self.field_name, "Correction field name")
+        _require_text(self.value, "Correction value")
+        _require_text(self.source_label, "Correction source label")
+        if self.source_label != "User Edited":
+            raise ValueError("Correction source label must be User Edited.")
+        created_at = _require_timestamp(self.created_at, "Correction created_at")
+        updated_at = _require_timestamp(self.updated_at, "Correction updated_at")
+        if updated_at < created_at:
+            raise ValueError("Correction updated_at cannot be before created_at.")
 
 
 def _require_machine_token(value: str, label: str) -> None:

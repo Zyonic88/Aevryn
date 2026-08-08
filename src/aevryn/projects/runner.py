@@ -478,6 +478,13 @@ class AevrynProjectRunner:
         identity_profiles: tuple[EntityIdentityProfile, ...],
     ) -> tuple[ExtractionResult, tuple[ResolvedReference, ...]]:
         """Rewrite high-confidence identity references to prior accepted entities."""
+        same_surface_entity_id_map = _same_surface_entity_id_map(extraction_result)
+        if same_surface_entity_id_map:
+            extraction_result = _rewritten_extraction_result_for_identity_map(
+                extraction_result,
+                same_surface_entity_id_map,
+                additional_rejected_candidate_count=len(same_surface_entity_id_map),
+            )
         local_identity_profiles = _identity_profiles_from_extraction_results(
             (extraction_result,)
         )
@@ -517,55 +524,14 @@ class AevrynProjectRunner:
             and decision.entity_id is not None
             and decision.entity_id != entity.entity_id
         }
+        entity_id_map = _flattened_identity_map(entity_id_map)
         if not entity_id_map:
             return extraction_result, decisions
 
-        rewritten_entities = tuple(
-            entity
-            for entity in extraction_result.entities
-            if entity.entity_id not in entity_id_map
-        )
-        rewritten_facts = tuple(
-            _rewritten_fact_for_resolved_identity(fact, entity_id_map[fact.entity_id])
-            if fact.entity_id in entity_id_map
-            else fact
-            for fact in extraction_result.facts
-        )
-        rewritten_relationships = tuple(
-            ExtractedRelationship(
-                source_entity_id=entity_id_map.get(
-                    relationship.source_entity_id,
-                    relationship.source_entity_id,
-                ),
-                relationship_type=relationship.relationship_type,
-                target_entity_id=entity_id_map.get(
-                    relationship.target_entity_id,
-                    relationship.target_entity_id,
-                ),
-                evidence_anchor_id=relationship.evidence_anchor_id,
-                confidence=relationship.confidence,
-            )
-            for relationship in extraction_result.relationships
-        )
-        rewritten_state_changes = tuple(
-            ExtractedStateChange(
-                entity_id=entity_id_map.get(state_change.entity_id, state_change.entity_id),
-                attribute=state_change.attribute,
-                value=state_change.value,
-                valid_from_anchor_id=state_change.valid_from_anchor_id,
-                confidence=state_change.confidence,
-                valid_until_anchor_id=state_change.valid_until_anchor_id,
-            )
-            for state_change in extraction_result.state_changes
-        )
         return (
-            ExtractionResult(
-                scene_id=extraction_result.scene_id,
-                entities=rewritten_entities,
-                facts=rewritten_facts,
-                relationships=rewritten_relationships,
-                state_changes=rewritten_state_changes,
-                rejected_candidate_count=extraction_result.rejected_candidate_count,
+            _rewritten_extraction_result_for_identity_map(
+                extraction_result,
+                entity_id_map,
             ),
             decisions,
         )
@@ -1450,6 +1416,10 @@ def _add_identity_profile_fact(
         titles_by_id.setdefault(fact.entity_id, set()).add(fact.value)
     elif attribute in {"description", "appearance", "race", "species", "gender", "sex"}:
         descriptions_by_id.setdefault(fact.entity_id, set()).add(fact.value)
+    elif _attribute_is_identity_visual_detail(attribute):
+        descriptions_by_id.setdefault(fact.entity_id, set()).update(
+            _identity_visual_detail_surfaces(attribute, fact.value)
+        )
     elif attribute in {
         "family_role",
         "relationship_role",
@@ -1480,6 +1450,20 @@ def _status_value_is_title_like(value: str) -> bool:
         return False
     normalized = " ".join(tokens)
     return normalized in _TITLE_LIKE_STATUS_VALUES
+
+
+def _attribute_is_identity_visual_detail(attribute: str) -> bool:
+    """Return whether a fact can support later visual identity references."""
+    return attribute in _IDENTITY_VISUAL_DETAIL_ATTRIBUTES or attribute.endswith("_color")
+
+
+def _identity_visual_detail_surfaces(attribute: str, value: str) -> tuple[str, ...]:
+    """Return conservative identity surfaces for visible trait facts."""
+    surfaces = [value]
+    if attribute.endswith("_color"):
+        base_attribute = attribute.removesuffix("_color").replace("_", " ")
+        surfaces.append(f"{value} {base_attribute}")
+    return tuple(surfaces)
 
 
 def _explicit_gender_terms_for_identity_surfaces(values: tuple[str, ...]) -> set[str]:
@@ -1579,6 +1563,25 @@ _TITLE_LIKE_STATUS_VALUES = {
     "teacher",
     "vice captain",
 }
+_IDENTITY_VISUAL_DETAIL_ATTRIBUTES = {
+    "build",
+    "clothing",
+    "complexion",
+    "ear",
+    "ears",
+    "eye",
+    "eyes",
+    "face",
+    "hair",
+    "height",
+    "marking",
+    "markings",
+    "scar",
+    "scars",
+    "uniform",
+    "wing",
+    "wings",
+}
 
 
 def _identity_surface_tokens(value: str) -> tuple[str, ...]:
@@ -1588,6 +1591,101 @@ def _identity_surface_tokens(value: str) -> tuple[str, ...]:
         for character in value
     )
     return tuple(part for part in normalized.split() if part)
+
+
+def _same_surface_entity_id_map(result: ExtractionResult) -> dict[str, str]:
+    """Return duplicate same-scene entity IDs keyed to the best visible surface match."""
+    grouped_entities: dict[tuple[str, str], list[ExtractedEntity]] = {}
+    for entity in result.entities:
+        surface_key = " ".join(_identity_surface_tokens(entity.display_name))
+        if not surface_key:
+            continue
+        grouped_entities.setdefault((entity.entity_type, surface_key), []).append(entity)
+
+    entity_id_map: dict[str, str] = {}
+    for duplicate_entities in grouped_entities.values():
+        if len(duplicate_entities) < 2:
+            continue
+        survivor = sorted(
+            duplicate_entities,
+            key=lambda entity: (-entity.confidence, entity.entity_id),
+        )[0]
+        for entity in duplicate_entities:
+            if entity.entity_id != survivor.entity_id:
+                entity_id_map[entity.entity_id] = survivor.entity_id
+    return entity_id_map
+
+
+def _flattened_identity_map(entity_id_map: dict[str, str]) -> dict[str, str]:
+    """Return a rewrite map that points every duplicate to its final survivor."""
+    flattened: dict[str, str] = {}
+    for entity_id in sorted(entity_id_map):
+        target_id = entity_id_map[entity_id]
+        seen_ids = {entity_id}
+        while target_id in entity_id_map and target_id not in seen_ids:
+            seen_ids.add(target_id)
+            target_id = entity_id_map[target_id]
+        if target_id != entity_id:
+            flattened[entity_id] = target_id
+    return flattened
+
+
+def _rewritten_extraction_result_for_identity_map(
+    extraction_result: ExtractionResult,
+    entity_id_map: dict[str, str],
+    *,
+    additional_rejected_candidate_count: int = 0,
+) -> ExtractionResult:
+    """Return an extraction result rewritten from duplicate/resolved IDs."""
+    rewritten_entities = tuple(
+        entity
+        for entity in extraction_result.entities
+        if entity.entity_id not in entity_id_map
+    )
+    rewritten_facts = tuple(
+        _rewritten_fact_for_resolved_identity(fact, entity_id_map[fact.entity_id])
+        if fact.entity_id in entity_id_map
+        else fact
+        for fact in extraction_result.facts
+    )
+    rewritten_relationships = tuple(
+        ExtractedRelationship(
+            source_entity_id=entity_id_map.get(
+                relationship.source_entity_id,
+                relationship.source_entity_id,
+            ),
+            relationship_type=relationship.relationship_type,
+            target_entity_id=entity_id_map.get(
+                relationship.target_entity_id,
+                relationship.target_entity_id,
+            ),
+            evidence_anchor_id=relationship.evidence_anchor_id,
+            confidence=relationship.confidence,
+        )
+        for relationship in extraction_result.relationships
+    )
+    rewritten_state_changes = tuple(
+        ExtractedStateChange(
+            entity_id=entity_id_map.get(state_change.entity_id, state_change.entity_id),
+            attribute=state_change.attribute,
+            value=state_change.value,
+            valid_from_anchor_id=state_change.valid_from_anchor_id,
+            confidence=state_change.confidence,
+            valid_until_anchor_id=state_change.valid_until_anchor_id,
+        )
+        for state_change in extraction_result.state_changes
+    )
+    return ExtractionResult(
+        scene_id=extraction_result.scene_id,
+        entities=rewritten_entities,
+        facts=rewritten_facts,
+        relationships=rewritten_relationships,
+        state_changes=rewritten_state_changes,
+        rejected_candidate_count=(
+            extraction_result.rejected_candidate_count
+            + additional_rejected_candidate_count
+        ),
+    )
 
 
 def _gender_token_is_negated(tokens: tuple[str, ...], index: int) -> bool:

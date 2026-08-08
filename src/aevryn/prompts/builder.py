@@ -162,6 +162,34 @@ VISUAL_PRODUCTION_ATTRIBUTE_PARTS = frozenset(
         "weapon",
     }
 )
+NON_VISUAL_CANON_ENTITY_PREFIXES = ("skill_", "system_")
+NON_VISUAL_CANON_ATTRIBUTE_PARTS = frozenset(
+    {
+        "ability",
+        "effect",
+        "interface",
+        "mechanic",
+        "message",
+        "notification",
+        "panel",
+        "points",
+        "quest",
+        "rule",
+        "skill",
+        "status",
+        "system",
+        "task",
+    }
+)
+EXPLICIT_VISUAL_ATTRIBUTE_PARTS = frozenset(
+    {
+        "appearance",
+        "design",
+        "displayed",
+        "visible",
+        "visual",
+    }
+)
 
 
 class CanonPromptBuilder:
@@ -233,20 +261,22 @@ class CanonPromptBuilder:
             (
                 (
                     "Generate this image using only accepted Aevryn canon.\n"
-                    "Image generation task: Create one scene image showing the "
-                    "confirmed subjects, setting, mood, and objects below. Do not "
-                    "invent character appearance, vehicle design, logos, colors, or "
-                    "scenery details that are not listed as known canon."
+                    "Image task: Create one scene image from the confirmed "
+                    "subjects, setting, mood, objects, and Canon limits below. "
+                    "Do not invent unlisted appearance, design, or scenery."
                 ),
+                self._canon_context_checklist_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_visual_anchor_section(context),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._character_identity_reference_section(context),
+                self._character_continuity_lock_section(context),
                 self._image_subject_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
+                self._non_visual_canon_constraints_section(context),
                 self._image_setting_section(analysis),
                 self._visual_direction_section(analysis),
                 self._composition_section(context, analysis),
@@ -275,14 +305,17 @@ class CanonPromptBuilder:
                     "that are not supported by canon.\n"
                     "Narrate using only accepted canon facts."
                 ),
+                self._canon_context_checklist_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._narration_direction_section(analysis),
                 self._character_identity_reference_section(context),
+                self._character_continuity_lock_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._world_context_section(context),
+                self._non_visual_canon_constraints_section(context),
                 self._continuity_guard_section(analysis),
             )
         )
@@ -303,6 +336,7 @@ class CanonPromptBuilder:
                     "invent new physical details.\n"
                     "Describe camera framing without inventing new canon."
                 ),
+                self._canon_context_checklist_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
@@ -310,10 +344,12 @@ class CanonPromptBuilder:
                 self._camera_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
                 self._character_identity_reference_section(context),
+                self._character_continuity_lock_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
+                self._non_visual_canon_constraints_section(context),
                 self._visual_direction_section(analysis),
                 self._lighting_section(analysis),
                 self._visible_text_guard_section(),
@@ -336,16 +372,19 @@ class CanonPromptBuilder:
                     "motion minimal and neutral.\n"
                     "Describe motion using only accepted scene facts."
                 ),
+                self._canon_context_checklist_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
                 self._animation_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
                 self._character_identity_reference_section(context),
+                self._character_continuity_lock_section(context),
                 self._character_section(context),
                 self._visual_identity_known_unknown_section(context),
                 self._visual_reference_requirements_section(context),
                 self._world_context_section(context),
+                self._non_visual_canon_constraints_section(context),
                 self._visual_direction_section(analysis),
                 self._do_not_include_section(context, analysis),
                 self._visible_text_guard_section(),
@@ -401,6 +440,45 @@ class CanonPromptBuilder:
             ]
         )
 
+    def _canon_context_checklist_section(
+        self,
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return the Canon surfaces used by the prompt without leaking IDs."""
+        character_ids = {card.character_id for card in context.character_cards}
+        world_fact_count = sum(
+            1
+            for fact in context.active_facts
+            if fact.entity_id not in character_ids
+        )
+        character_fact_count = sum(
+            len(
+                self._character_fact_lines(
+                    card=card,
+                    scene_fact_keys=self._scene_fact_keys(context.active_facts),
+                )
+            )
+            for card in context.character_cards
+        )
+        scene_anchor_count = len(self._scene_visual_anchors(context))
+        action_beat_count = len(self._scene_action_beats(context, analysis))
+        continuity_count = len(analysis.continuity_notes)
+        return "\n".join(
+            [
+                "Canon inputs:",
+                (
+                    f"- {self._count_label(len(context.character_cards), 'character')}; "
+                    f"{self._count_label(character_fact_count, 'character fact')}; "
+                    f"{self._count_label(world_fact_count, 'world fact')}; "
+                    f"{self._count_label(len(context.relationships), 'relationship')}; "
+                    f"{self._count_label(action_beat_count, 'beat')}; "
+                    f"{self._count_label(scene_anchor_count, 'anchor')}; "
+                    f"{self._count_label(continuity_count, 'note')}. Unknowns neutral."
+                ),
+            ]
+        )
+
     def _image_subject_section(self, context: CanonSceneContext) -> str:
         """Return subject details for image prompts."""
         lines = ["Subjects and known appearance:"]
@@ -451,6 +529,32 @@ class CanonPromptBuilder:
             "do not create extra characters from them."
         )
         return "\n".join(lines)
+
+    def _character_continuity_lock_section(self, context: CanonSceneContext) -> str:
+        """Return prompt guidance that keeps one Canon identity as one person."""
+        if not context.character_cards:
+            return ""
+        if not any(self._character_identity_lines(card) for card in context.character_cards):
+            return ""
+
+        character_names = tuple(card.display_name for card in context.character_cards)
+        character_count = len(character_names)
+        character_text = ", ".join(character_names)
+        return "\n".join(
+            [
+                "Character continuity lock:",
+                (
+                    f"- Exactly {character_count} confirmed "
+                    f"{'character' if character_count == 1 else 'characters'}: "
+                    f"{character_text}."
+                ),
+                (
+                    "- Aliases, titles, roles, descriptions, and relationship labels "
+                    "are identity aids, not extra people; preserve accepted "
+                    "appearance facts and keep missing traits neutral."
+                ),
+            ]
+        )
 
     def _visual_identity_known_unknown_section(self, context: CanonSceneContext) -> str:
         """Return per-character visual identity coverage without inventing details."""
@@ -642,6 +746,7 @@ class CanonPromptBuilder:
             for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
             if fact.entity_id not in character_ids
             and self._is_visual_production_attribute(fact.attribute)
+            and not self._is_non_visual_canon_fact(fact)
         ]
         relationship_lines = [
             self._relationship_prompt_line(relationship, display_names=display_names)
@@ -688,6 +793,7 @@ class CanonPromptBuilder:
             for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
             if fact.entity_id not in character_ids
             and self._is_visual_production_attribute(fact.attribute)
+            and not self._is_non_visual_canon_fact(fact)
         ][:4]
         lines.extend(world_visual_lines)
         unique_lines = self._unique_values(lines)
@@ -699,6 +805,30 @@ class CanonPromptBuilder:
                 "Visual reference requirements:",
                 *[f"- {self._shorten(line, width=150)}" for line in unique_lines],
                 "- Treat these as required references; keep unspecified traits neutral.",
+            ]
+        )
+
+    def _non_visual_canon_constraints_section(self, context: CanonSceneContext) -> str:
+        """Return system and skill context that should not become visible props."""
+        display_names = self._entity_display_names(context)
+        character_ids = {card.character_id for card in context.character_cards}
+        lines = [
+            self._world_fact_line(fact, display_names=display_names)
+            for fact in sorted(context.active_facts, key=lambda fact: fact.fact_id)
+            if fact.entity_id not in character_ids
+            and self._is_non_visual_canon_fact(fact)
+        ][:6]
+        if not lines:
+            return ""
+
+        return "\n".join(
+            [
+                "System and non-visual canon constraints:",
+                *[f"- {self._shorten(line, width=150)}" for line in self._unique_values(lines)],
+                (
+                    "- Treat these as story-state constraints; do not depict them as "
+                    "visible UI, props, or scenery unless visible Canon says so."
+                ),
             ]
         )
 
@@ -1115,6 +1245,26 @@ class CanonPromptBuilder:
         )
 
     @staticmethod
+    def _is_non_visual_canon_fact(fact: Fact) -> bool:
+        """Return whether a system or skill fact is Canon context, not scenery."""
+        if CanonPromptBuilder._has_explicit_visual_attribute(fact.attribute):
+            return False
+        normalized_attribute = fact.attribute.lower()
+        return fact.entity_id.startswith(NON_VISUAL_CANON_ENTITY_PREFIXES) and any(
+            part in normalized_attribute
+            for part in NON_VISUAL_CANON_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
+    def _has_explicit_visual_attribute(attribute: str) -> bool:
+        """Return whether a fact explicitly describes visible appearance."""
+        normalized_attribute = attribute.lower()
+        return any(
+            part in normalized_attribute
+            for part in EXPLICIT_VISUAL_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
     def _fact_section(facts: Iterable[Fact]) -> str:
         """Return active fact section."""
         lines = [
@@ -1176,7 +1326,8 @@ class CanonPromptBuilder:
         words = [
             word
             for word in re.split(r"[_\s]+", attribute.strip())
-            if word and word not in {"character", "entity", "item", "location"}
+            if word
+            and word not in {"character", "entity", "item", "location", "skill", "system"}
         ]
         if not words:
             return attribute
@@ -1191,6 +1342,12 @@ class CanonPromptBuilder:
             return "Unknown"
 
         return textwrap.shorten(normalized_value, width=width, placeholder="...")
+
+    @staticmethod
+    def _count_label(count: int, singular: str) -> str:
+        """Return a compact human-readable count label."""
+        suffix = "" if count == 1 else "s"
+        return f"{count} {singular}{suffix}"
 
     @staticmethod
     def _unique_values(values: Iterable[str]) -> list[str]:

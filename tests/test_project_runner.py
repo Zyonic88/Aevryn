@@ -191,11 +191,17 @@ class RecordingTextExtractor:
     def __init__(self) -> None:
         self.scene_texts: list[str] = []
         self.anchor_ids: list[tuple[str, ...]] = []
+        self.sentence_understanding_counts: list[int] = []
+        self.sentence_understanding_anchor_ids: list[tuple[str, ...]] = []
 
     def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
         """Record text and anchors without producing candidates."""
         self.scene_texts.append(scene.text)
         self.anchor_ids.append(scene.evidence_anchor_ids)
+        self.sentence_understanding_counts.append(len(scene.sentence_understanding))
+        self.sentence_understanding_anchor_ids.append(
+            tuple(item.evidence_anchor_id for item in scene.sentence_understanding)
+        )
         return ExtractionResult(scene_id=scene.scene_id)
 
 
@@ -275,6 +281,44 @@ def test_runner_feeds_sentence_ambiguity_to_translation_review() -> None:
         issue.evidence_anchor_ids
         for issue in result.translation_units[0].issues
     )
+
+
+def test_runner_honors_structured_certainty_pipeline_contract() -> None:
+    """Pipeline handoffs should structure evidence without bypassing Canon."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=ambiguous_translation_source_file(),
+        source_id="demo",
+    )
+    extractor = RecordingTextExtractor()
+
+    result = runner.run_imported_source(
+        imported_source=imported_source,
+        extractor=extractor,
+        translation_glossary=(
+            GlossaryTerm(
+                source_term="dao core",
+                preferred_term="Dao Core",
+                evidence_anchor_id=imported_source.anchors[-1].anchor_id,
+                term_kind="item",
+            ),
+        ),
+    )
+
+    assert extractor.scene_texts == ["Charlotte studied the Dao Core."]
+    assert extractor.anchor_ids == [(imported_source.anchors[-1].anchor_id,)]
+    assert extractor.sentence_understanding_counts == [1]
+    assert extractor.sentence_understanding_anchor_ids == [
+        (imported_source.anchors[-1].anchor_id,)
+    ]
+    assert result.translation_units[0].source_evidence_anchor_ids == (
+        imported_source.anchors[-1].anchor_id,
+    )
+    assert result.translation_units[0].normalized_text == "Charlotte studied the Dao Core."
+    assert result.extraction_results[0].entities == ()
+    assert result.update_summaries[0].accepted_entities == ()
+    assert result.database.retrieve_entity("character_charlotte") is None
+    assert result.database.retrieve_entity("item_dao_core") is None
 
 
 def test_runner_builds_phase12_translation_and_identity_metadata() -> None:
@@ -596,6 +640,284 @@ def test_runner_does_not_use_generic_status_for_title_name_resolution() -> None:
             and decision.entity_id == "character_charlotte"
             and decision.reference.text == "Present Charlotte"
         )
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_resolves_title_prefixed_known_name_without_prior_title_fact() -> None:
+    """Title-prefixed names should merge when the known identity name is explicit."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_mira",
+                        "entity_type": "character",
+                        "display_name": "Mira",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_001_scene_002": {
+                "entities": [
+                    {
+                        "entity_id": "character_captain_mira",
+                        "entity_type": "character",
+                        "display_name": "Captain Mira",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_captain_mira_status_present",
+                        "entity_id": "character_captain_mira",
+                        "attribute": "status",
+                        "value": "Present",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_mira"
+    assert result.database.retrieve_entity("character_captain_mira") is None
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_mira"
+        and decision.reference.text == "Captain Mira"
+        and decision.candidates[0].match_kind == "title_prefix_name"
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_resolves_same_scene_title_name_duplicate_to_named_identity() -> None:
+    """Same-scene title/name variants should not create duplicate character cards."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_mira",
+                        "entity_type": "character",
+                        "display_name": "Mira",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_captain_mira",
+                        "entity_type": "character",
+                        "display_name": "Captain Mira",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_mira_status_ready",
+                        "entity_id": "character_mira",
+                        "attribute": "status",
+                        "value": "Ready",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_captain_mira_goal_briefing",
+                        "entity_id": "character_captain_mira",
+                        "attribute": "current_goal",
+                        "value": "Lead the briefing",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[0].accepted_entities == ("character_mira",)
+    assert len(result.extraction_results[0].entities) == 1
+    assert result.extraction_results[0].entities[0].entity_id == "character_mira"
+    assert result.extraction_results[0].facts[1].entity_id == "character_mira"
+    assert result.database.retrieve_entity("character_captain_mira") is None
+    goal_fact = result.database.retrieve_current_fact("character_mira", "current_goal")
+    assert goal_fact is not None
+    assert goal_fact.value == "Lead the briefing"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_mira"
+        and decision.reference.text == "Captain Mira"
+        and decision.candidates[0].match_kind == "title_prefix_name"
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_collapses_same_scene_exact_surface_duplicate_to_best_entity() -> None:
+    """Same-scene exact surface duplicates should keep one Canon entity."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_mira",
+                        "entity_type": "character",
+                        "display_name": "Mira",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_mira_duplicate",
+                        "entity_type": "character",
+                        "display_name": "Mira",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_mira_status_ready",
+                        "entity_id": "character_mira",
+                        "attribute": "status",
+                        "value": "Ready",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_mira_duplicate_goal_briefing",
+                        "entity_id": "character_mira_duplicate",
+                        "attribute": "current_goal",
+                        "value": "Lead the briefing",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [
+                    {
+                        "entity_id": "character_mira_duplicate",
+                        "attribute": "location",
+                        "value": "Briefing room",
+                        "valid_from_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+            },
+        },
+    )
+
+    assert result.update_summaries[0].accepted_entities == ("character_mira",)
+    assert len(result.extraction_results[0].entities) == 1
+    assert result.extraction_results[0].entities[0].entity_id == "character_mira"
+    assert result.extraction_results[0].facts[1].entity_id == "character_mira"
+    assert result.extraction_results[0].state_changes[0].entity_id == "character_mira"
+    assert result.extraction_results[0].rejected_candidate_count == 1
+    assert result.database.retrieve_entity("character_mira_duplicate") is None
+    goal_fact = result.database.retrieve_current_fact("character_mira", "current_goal")
+    assert goal_fact is not None
+    assert goal_fact.value == "Lead the briefing"
+
+
+def test_runner_resolves_title_suffix_known_name_to_prior_identity() -> None:
+    """Title-suffix name variants should not create duplicate character cards."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_mira",
+                        "entity_type": "character",
+                        "display_name": "Mira",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    }
+                ],
+                "facts": [],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_001_scene_002": {
+                "entities": [
+                    {
+                        "entity_id": "character_mira_captain",
+                        "entity_type": "character",
+                        "display_name": "Mira, Captain",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_mira_captain_goal_briefing",
+                        "entity_id": "character_mira_captain",
+                        "attribute": "current_goal",
+                        "value": "Lead the briefing",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    }
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_mira"
+    assert result.database.retrieve_entity("character_mira_captain") is None
+    goal_fact = result.database.retrieve_current_fact("character_mira", "current_goal")
+    assert goal_fact is not None
+    assert goal_fact.value == "Lead the briefing"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_mira"
+        and decision.reference.text == "Mira, Captain"
+        and decision.candidates[0].match_kind == "title_suffix_name"
         for decision in result.identity_resolutions
     )
 
@@ -1235,6 +1557,92 @@ def test_runner_resolves_same_scene_description_to_named_identity() -> None:
     )
 
 
+def test_runner_resolves_later_visual_description_to_prior_identity() -> None:
+    """Separate accepted visual facts should prevent later descriptive duplicate cards."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=two_scene_source_file(),
+        source_id="demo",
+    )
+    first_anchor_id = imported_source.anchors[0].anchor_id
+    second_anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_mira",
+                        "entity_type": "character",
+                        "display_name": "Mira",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_mira_gender_female",
+                        "entity_id": "character_mira",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_mira_hair_color_white",
+                        "entity_id": "character_mira",
+                        "attribute": "hair_color",
+                        "value": "White",
+                        "evidence_anchor_id": first_anchor_id,
+                        "confidence": 0.95,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+            "demo_chapter_001_scene_002": {
+                "entities": [
+                    {
+                        "entity_id": "character_white_haired_woman",
+                        "entity_type": "character",
+                        "display_name": "White-haired Woman",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_white_haired_woman_status_alert",
+                        "entity_id": "character_white_haired_woman",
+                        "attribute": "status",
+                        "value": "Alert",
+                        "evidence_anchor_id": second_anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[1].accepted_entities == ()
+    assert result.extraction_results[1].entities == ()
+    assert result.extraction_results[1].facts[0].entity_id == "character_mira"
+    assert result.database.retrieve_entity("character_white_haired_woman") is None
+    status_fact = result.database.retrieve_current_fact("character_mira", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Alert"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_mira"
+        and decision.reference.text == "White-haired Woman"
+        and decision.candidates[0].match_kind == "composite_description"
+        for decision in result.identity_resolutions
+    )
+
+
 def test_runner_keeps_same_scene_ambiguous_description_unmerged() -> None:
     """Same-scene descriptions should not merge when multiple characters fit."""
     runner = AevrynProjectRunner()
@@ -1318,6 +1726,114 @@ def test_runner_keeps_same_scene_ambiguous_description_unmerged() -> None:
         and decision.reference.text == "Female General"
         and {candidate.entity_id for candidate in decision.candidates}
         == {"character_charlotte", "character_elaine"}
+        for decision in result.identity_resolutions
+    )
+
+
+def test_runner_flattens_chained_identity_rewrites_to_final_entity() -> None:
+    """Chained duplicate identities should not leave facts on removed entities."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_general_charlotte",
+                        "entity_type": "character",
+                        "display_name": "General Charlotte",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                    {
+                        "entity_id": "character_female_general",
+                        "entity_type": "character",
+                        "display_name": "Female General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.88,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_title_general",
+                        "entity_id": "character_charlotte",
+                        "attribute": "title",
+                        "value": "General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_general_charlotte_gender_female",
+                        "entity_id": "character_general_charlotte",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                    {
+                        "fact_id": "fact_character_general_charlotte_title_general",
+                        "entity_id": "character_general_charlotte",
+                        "attribute": "title",
+                        "value": "General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                    {
+                        "fact_id": "fact_character_female_general_status_alert",
+                        "entity_id": "character_female_general",
+                        "attribute": "status",
+                        "value": "Alert",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.88,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [
+                    {
+                        "entity_id": "character_female_general",
+                        "attribute": "stance",
+                        "value": "Watching the room",
+                        "valid_from_anchor_id": anchor_id,
+                        "confidence": 0.88,
+                    }
+                ],
+            },
+        },
+    )
+
+    assert result.update_summaries[0].accepted_entities == ("character_charlotte",)
+    assert result.database.retrieve_entity("character_general_charlotte") is None
+    assert result.database.retrieve_entity("character_female_general") is None
+    assert result.database.retrieve_current_fact("character_charlotte", "gender") is not None
+    status_fact = result.database.retrieve_current_fact("character_charlotte", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Alert"
+    assert result.extraction_results[0].state_changes[0].entity_id == (
+        "character_charlotte"
+    )
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_charlotte"
+        and decision.reference.text == "General Charlotte"
+        for decision in result.identity_resolutions
+    )
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_general_charlotte"
+        and decision.reference.text == "Female General"
         for decision in result.identity_resolutions
     )
 

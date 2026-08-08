@@ -11,6 +11,8 @@ import {
   exportPreviewSchema,
   projectExportListSchema,
   projectExportSchema,
+  projectCorrectionListSchema,
+  projectCorrectionSchema,
   promptPreviewSchema,
   scenePreviewSchema,
   snapshotListSchema,
@@ -54,6 +56,8 @@ import {
   type ProjectExport,
   type ProjectExportList,
   type ProjectOutputs,
+  type ProjectCorrection,
+  type ProjectCorrectionList,
   type Story,
   type StoryList,
   type SourceFormats,
@@ -121,6 +125,14 @@ export type ProjectCreateRequest = {
 export type ProjectSettingsRequest = {
   default_export_format: string;
   locale: string;
+};
+
+export type ProjectCorrectionRequest = {
+  target_type: string;
+  target_id: string;
+  field_name: string;
+  value: string;
+  now: string;
 };
 
 export type StoryCreateRequest = {
@@ -477,6 +489,34 @@ export class AevrynApiClient {
     });
   }
 
+  listProjectCorrections(
+    projectId: string,
+    sessionToken: string,
+    now: string,
+  ): Promise<ProjectCorrectionList> {
+    return this.request(projectCorrectionsPath(projectId), projectCorrectionListSchema, {
+      headers: authHeaders(sessionToken, now),
+    });
+  }
+
+  upsertProjectCorrection(
+    projectId: string,
+    correctionId: string,
+    payload: ProjectCorrectionRequest,
+    sessionToken: string,
+    now: string,
+  ): Promise<ProjectCorrection> {
+    return this.request(
+      projectCorrectionPath(projectId, correctionId),
+      projectCorrectionSchema,
+      {
+        method: "PUT",
+        headers: authHeaders(sessionToken, now),
+        body: JSON.stringify(payload),
+      },
+    );
+  }
+
   listProjectExports(
     projectId: string,
     sessionToken: string,
@@ -666,6 +706,14 @@ function projectStatusPath(projectId: string): string {
 
 function projectOutputsPath(projectId: string): string {
   return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/outputs`;
+}
+
+function projectCorrectionsPath(projectId: string): string {
+  return `${API_PATHS.projects}/${encodeURIComponent(projectId)}/corrections`;
+}
+
+function projectCorrectionPath(projectId: string, correctionId: string): string {
+  return `${projectCorrectionsPath(projectId)}/${encodeURIComponent(correctionId)}`;
 }
 
 function projectExportsPath(projectId: string): string {

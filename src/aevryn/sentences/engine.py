@@ -18,6 +18,7 @@ ACTION_CUES = frozenset(
         "fired",
         "lifted",
         "opened",
+        "picked",
         "raised",
         "repaired",
         "summoned",
@@ -89,9 +90,7 @@ LOCATION_CUES = frozenset(
 )
 LOCATION_PHRASE_CUES = frozenset(
     {
-        "captain department",
         "military academy",
-        "north star academy",
         "star system",
         "starship academy",
         "training room",
@@ -110,16 +109,12 @@ ORGANIZATION_CUES = frozenset(
         "guild",
         "kingdom",
         "sect",
-        "starfleet",
     }
 )
 ORGANIZATION_PHRASE_CUES = frozenset(
     {
-        "captain department",
         "galactic alliance",
         "military academy",
-        "north star academy",
-        "starlight empire",
         "starship academy",
     }
 )
@@ -154,11 +149,20 @@ ITEM_CUES = frozenset(
 ITEM_PHRASE_CUES = frozenset(
     {
         "ability crystal",
+        "ability token",
         "battle cruiser",
+        "beast core",
         "cultivation manual",
+        "energy core",
         "jade slip",
+        "magic core",
+        "mana core",
+        "monster core",
+        "power core",
+        "reactor core",
         "source crystal",
         "skill book",
+        "skill card",
         "skill crystal",
         "skill manual",
         "skill scroll",
@@ -208,10 +212,15 @@ SYSTEM_PHRASE_CUES = frozenset(
         "mission reward",
         "quest reward",
         "skill points",
+        "quest notification",
+        "status notification",
         "status panel",
+        "status screen",
         "system interface",
         "system message",
         "system prompt",
+        "system screen",
+        "system window",
     }
 )
 TRANSLATION_AMBIGUITY_CUES = frozenset(

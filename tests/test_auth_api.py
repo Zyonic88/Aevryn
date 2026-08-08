@@ -30,6 +30,7 @@ from aevryn.persistence import (
     ExportRecord,
     ImportRecord,
     InMemoryProjectRepository,
+    ProjectCorrectionRecord,
     RecordNotFoundError,
     SnapshotRecord,
 )
@@ -517,6 +518,138 @@ def test_project_settings_and_cross_user_attempts_append_audit_events() -> None:
     )
     assert "owner@example.com" not in serialized_records
     assert "other@example.com" not in serialized_records
+    audit_ledger.verify()
+
+
+def test_project_corrections_api_persists_user_edited_corrections() -> None:
+    """Project corrections API should persist user-authored Canon overlays."""
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+        )
+    )
+    register_user(client, user_id="user_demo", email="demo@example.com")
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created.status_code == 200
+
+    updated = client.put(
+        "/v2/projects/project_alpha/corrections/correction_gender",
+        headers=auth_headers("token_001"),
+        json={
+            "target_type": "character",
+            "target_id": "character_demo",
+            "field_name": "gender",
+            "value": "  Unknown  ",
+            "now": NOW,
+        },
+    )
+    listed = client.get(
+        "/v2/projects/project_alpha/corrections",
+        headers=auth_headers("token_001"),
+    )
+
+    assert updated.status_code == 200
+    assert updated.json() == {
+        "correction_id": "correction_gender",
+        "project_id": "project_alpha",
+        "target_type": "character",
+        "target_id": "character_demo",
+        "field_name": "gender",
+        "value": "Unknown",
+        "source_label": "User Edited",
+        "created_at": NOW,
+        "updated_at": NOW,
+    }
+    assert listed.status_code == 200
+    assert listed.json() == {"corrections": [updated.json()]}
+
+
+def test_project_corrections_api_rejects_cross_user_and_metadata_only_audit() -> None:
+    """Correction writes should enforce ownership and avoid logging edited values."""
+    audit_ledger = AuditLedger()
+    repository = InMemoryProjectRepository()
+    client = TestClient(
+        create_app(
+            authentication_service=auth_service(repository=repository),
+            project_repository=repository,
+            audit_ledger=audit_ledger,
+        )
+    )
+    register_user(client, user_id="user_owner", email="owner@example.com")
+    register_user(client, user_id="user_other", email="other@example.com")
+    created = client.post(
+        "/v2/projects",
+        headers=auth_headers("token_001"),
+        json={"project_id": "project_alpha", "name": "Alpha", "now": NOW},
+    )
+    assert created.status_code == 200
+
+    updated = client.put(
+        "/v2/projects/project_alpha/corrections/correction_goal",
+        headers=auth_headers("token_001"),
+        json={
+            "target_type": "character",
+            "target_id": "character_demo",
+            "field_name": "current_goal",
+            "value": "Find the harbor map",
+            "now": NOW,
+        },
+    )
+    cross_user = client.put(
+        "/v2/projects/project_alpha/corrections/correction_goal",
+        headers=auth_headers("token_002"),
+        json={
+            "target_type": "character",
+            "target_id": "character_demo",
+            "field_name": "current_goal",
+            "value": "Should not write",
+            "now": NOW,
+        },
+    )
+    invalid = client.put(
+        "/v2/projects/project_alpha/corrections/correction_goal",
+        headers=auth_headers("token_001"),
+        json={
+            "target_type": "scene",
+            "target_id": "character_demo",
+            "field_name": "current_goal",
+            "value": "Find the harbor map",
+            "now": NOW,
+        },
+    )
+
+    assert updated.status_code == 200
+    assert cross_user.status_code == 404
+    assert cross_user.json()["error"] == "project_not_found"
+    assert invalid.status_code == 400
+    assert invalid.json()["error"] == "project_correction_failed"
+    correction_events = tuple(
+        record
+        for record in audit_ledger.records()
+        if record.event_type in {"project_correction_changed", "cross_user_access_attempt"}
+    )
+    assert tuple(record.event_type for record in correction_events) == (
+        "project_correction_changed",
+        "cross_user_access_attempt",
+    )
+    assert correction_events[0].metadata == {
+        "target_type": "character",
+        "field_name": "current_goal",
+        "source_label": "User Edited",
+    }
+    assert correction_events[1].metadata == {"route": "project_corrections"}
+    serialized_records = json.dumps(
+        [record.payload_for_hash() for record in audit_ledger.records()],
+        sort_keys=True,
+    )
+    assert "Find the harbor map" not in serialized_records
+    assert "Should not write" not in serialized_records
     audit_ledger.verify()
 
 
@@ -1884,6 +2017,10 @@ def test_project_status_reports_metadata_only_monitoring_summary(
             "succeeded_jobs": 1,
             "failed_jobs": 0,
             "next_job_id": "",
+            "latest_job_status": "succeeded",
+            "latest_job_queued_at": NOW,
+            "latest_job_updated_at": SOON,
+            "latest_job_duration_seconds": 1800,
         },
         "snapshots": {
             "available": True,
@@ -2046,6 +2183,10 @@ def test_project_status_worker_state_ignores_other_project_terminal_failures() -
         "succeeded_jobs": 1,
         "failed_jobs": 0,
         "next_job_id": "",
+        "latest_job_status": "succeeded",
+        "latest_job_queued_at": NOW,
+        "latest_job_updated_at": "2026-06-27T00:45:00Z",
+        "latest_job_duration_seconds": 2700,
     }
     assert payload["latest_failure_summary"] == ""
 
@@ -2134,6 +2275,10 @@ def test_project_status_worker_state_ignores_same_project_stale_failed_jobs() ->
         "succeeded_jobs": 1,
         "failed_jobs": 1,
         "next_job_id": "",
+        "latest_job_status": "succeeded",
+        "latest_job_queued_at": NOW,
+        "latest_job_updated_at": "2026-06-27T00:45:00Z",
+        "latest_job_duration_seconds": 2700,
     }
     assert payload["latest_failure_summary"] == ""
 
@@ -2207,6 +2352,30 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
         json={"started_at": SOON, "finished_at": SOON, "max_jobs": 1},
     )
     assert processed.status_code == 200
+    repository.save_project_correction(
+        ProjectCorrectionRecord(
+            correction_id="correction_mark_gender",
+            project_id="project_alpha",
+            target_type="character",
+            target_id="character_mark",
+            field_name="gender",
+            value="Male",
+            created_at=SOON,
+            updated_at=SOON,
+        )
+    )
+    repository.save_project_correction(
+        ProjectCorrectionRecord(
+            correction_id="correction_world_item",
+            project_id="project_alpha",
+            target_type="world",
+            target_id="item_demo",
+            field_name="classification",
+            value="Item",
+            created_at=SOON,
+            updated_at=SOON,
+        )
+    )
 
     response = client.get("/v2/projects/project_alpha/outputs", headers=auth_headers("token_001"))
 
@@ -2277,18 +2446,43 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     assert payload["character_profiles"][0]["character_id"] == "character_mark"
     assert payload["character_profiles"][0]["display_name"] == "Mark"
     assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
-    assert payload["character_profiles"][0]["gender"]["items"] == ["Unknown"]
+    assert payload["character_profiles"][0]["gender"]["items"] == ["User Edited: Male"]
     assert payload["character_profiles"][0]["status"]["items"] == ["Unknown"]
-    assert payload["world_sheet"]["entity_sections"] == []
+    assert payload["world_sheet"]["entity_sections"] == [
+        {
+            "title": "User Edited: Classification",
+            "items": ["User Edited: Item"],
+        }
+    ]
     assert payload["scene_sheets"][0]["title"] == "Scene 1"
     assert payload["scene_sheets"][0]["chapter_label"] == "Chapter 1"
     assert payload["scene_sheets"][0]["characters_present"]["items"] == ["Mark"]
     assert payload["prompt_packs"][0]["scene"]["title"] == "Scene 1"
     assert payload["prompt_packs"][0]["image_prompt"]["title"] == "Image Prompt"
+    prompt_pack_text = ""
+    for prompt_kind in (
+        "image_prompt",
+        "narration_prompt",
+        "camera_prompt",
+        "animation_prompt",
+    ):
+        prompt_items = payload["prompt_packs"][0][prompt_kind]["items"]
+        prompt_pack_text += "\n".join(prompt_items)
+        assert "User Edited Canon corrections:" in prompt_items
+        assert (
+            "- User Edited Character Correction: Mark Gender = Male"
+            in prompt_items
+        )
+        assert (
+            "- User Edited World Correction: Item Demo Classification = Item"
+            in prompt_items
+        )
     assert payload["continuity_report"]["source_id"] == "source_alpha"
     assert payload["continuity_report"]["scenes"][0]["new"]
     assert payload["export_options"][0]["export_kind"] == "character_profile"
     assert payload["timeline_changes"] == []
+    assert "character_mark" not in prompt_pack_text
+    assert "item_demo" not in prompt_pack_text
     assert "Mark carried a rusty dagger" not in response.text
     assert "serialized_output" not in response.text
 

@@ -27,11 +27,6 @@ export function MonitoringWorkspaceView({ project }: { project: ProjectSummary }
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Monitoring</p>
-        <h2>Monitoring</h2>
-      </div>
-
       <section className="project-panel" aria-label="API health">
         <h2>API Health</h2>
         {healthQuery.isLoading ? <LoadingMessage>Checking API health.</LoadingMessage> : null}
@@ -190,6 +185,22 @@ function ProjectStatusSummary({ status }: { status: ProjectStatus }) {
           <dd>{status.worker.state}</dd>
         </div>
         <div>
+          <dt>Latest job</dt>
+          <dd>{status.worker.latest_job_status ? formatRunStatus(status.worker.latest_job_status) : "none"}</dd>
+        </div>
+        <div>
+          <dt>Job queued</dt>
+          <dd>{status.worker.latest_job_queued_at ? formatDateTime(status.worker.latest_job_queued_at) : "none"}</dd>
+        </div>
+        <div>
+          <dt>Job updated</dt>
+          <dd>{status.worker.latest_job_updated_at ? formatDateTime(status.worker.latest_job_updated_at) : "none"}</dd>
+        </div>
+        <div>
+          <dt>Job duration</dt>
+          <dd>{formatJobDuration(status.worker.latest_job_duration_seconds)}</dd>
+        </div>
+        <div>
           <dt>Queued jobs</dt>
           <dd>{status.worker.queued_jobs}</dd>
         </div>
@@ -200,6 +211,21 @@ function ProjectStatusSummary({ status }: { status: ProjectStatus }) {
       </dl>
     </div>
   );
+}
+
+function formatJobDuration(durationSeconds: number | null): string {
+  if (durationSeconds === null) {
+    return "pending";
+  }
+  if (durationSeconds < 60) {
+    return `${durationSeconds}s`;
+  }
+  const minutes = Math.floor(durationSeconds / 60);
+  const seconds = durationSeconds % 60;
+  if (seconds === 0) {
+    return `${minutes}m`;
+  }
+  return `${minutes}m ${seconds}s`;
 }
 
 function projectStatusQueryKey(projectId: string, sessionToken: string | undefined) {

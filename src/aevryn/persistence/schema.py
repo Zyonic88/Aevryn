@@ -206,7 +206,7 @@ def _require_reference(value: str, label: str) -> None:
 
 
 PROJECT_DATABASE_SCHEMA = SchemaDefinition(
-    schema_version="v2_phase_2_001",
+    schema_version="v2_phase_2_002",
     tables=(
         TableDefinition(
             name="users",
@@ -327,6 +327,20 @@ PROJECT_DATABASE_SCHEMA = SchemaDefinition(
                 ColumnDefinition("locale", "text"),
             ),
         ),
+        TableDefinition(
+            name="project_corrections",
+            columns=(
+                ColumnDefinition("correction_id", "text", primary_key=True),
+                ColumnDefinition("project_id", "text", references="projects.project_id"),
+                ColumnDefinition("target_type", "text"),
+                ColumnDefinition("target_id", "text"),
+                ColumnDefinition("field_name", "text"),
+                ColumnDefinition("value", "text"),
+                ColumnDefinition("source_label", "text"),
+                ColumnDefinition("created_at", "timestamptz"),
+                ColumnDefinition("updated_at", "timestamptz"),
+            ),
+        ),
     ),
     constraints=(
         CheckConstraintDefinition(
@@ -392,6 +406,16 @@ PROJECT_DATABASE_SCHEMA = SchemaDefinition(
             "exports",
             "size >= 0",
         ),
+        CheckConstraintDefinition(
+            "chk_project_corrections_target_type",
+            "project_corrections",
+            "target_type IN ('character', 'world')",
+        ),
+        CheckConstraintDefinition(
+            "chk_project_corrections_source_label",
+            "project_corrections",
+            "source_label = 'User Edited'",
+        ),
     ),
     indexes=(
         IndexDefinition("idx_projects_owner_user_id", "projects", ("owner_user_id",)),
@@ -417,6 +441,16 @@ PROJECT_DATABASE_SCHEMA = SchemaDefinition(
             ("story_id", "snapshot_kind"),
         ),
         IndexDefinition("idx_exports_project_id", "exports", ("project_id",)),
+        IndexDefinition(
+            "idx_project_corrections_project_id",
+            "project_corrections",
+            ("project_id",),
+        ),
+        IndexDefinition(
+            "idx_project_corrections_target",
+            "project_corrections",
+            ("project_id", "target_type", "target_id"),
+        ),
     ),
 )
 

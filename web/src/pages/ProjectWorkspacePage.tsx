@@ -21,18 +21,18 @@ import { TimelineWorkspaceView } from "./TimelineWorkspaceView";
 import { WorldWorkspaceView } from "./WorldWorkspaceView";
 
 const workspaceTabs = [
-  { id: "overview", label: "Overview" },
-  { id: "monitoring", label: "Monitoring" },
-  { id: "story", label: "Story" },
-  { id: "import", label: "Import" },
-  { id: "characters", label: "Characters" },
-  { id: "world", label: "World" },
-  { id: "timeline", label: "Timeline" },
-  { id: "scenes", label: "Scenes" },
-  { id: "continuity", label: "Continuity" },
-  { id: "prompts", label: "Prompt Packs" },
-  { id: "exports", label: "Exports" },
-  { id: "settings", label: "Settings" },
+  { id: "overview", label: "Overview", shortLabel: "O" },
+  { id: "monitoring", label: "Monitoring", shortLabel: "M" },
+  { id: "story", label: "Story", shortLabel: "S" },
+  { id: "import", label: "Import", shortLabel: "I" },
+  { id: "characters", label: "Characters", shortLabel: "C" },
+  { id: "world", label: "World", shortLabel: "W" },
+  { id: "timeline", label: "Timeline", shortLabel: "T" },
+  { id: "scenes", label: "Scenes", shortLabel: "Sc" },
+  { id: "continuity", label: "Continuity", shortLabel: "Co" },
+  { id: "prompts", label: "Prompt Packs", shortLabel: "P" },
+  { id: "exports", label: "Exports", shortLabel: "E" },
+  { id: "settings", label: "Settings", shortLabel: "Se" },
 ] as const;
 
 type WorkspaceTabId = (typeof workspaceTabs)[number]["id"];
@@ -83,20 +83,30 @@ export function ProjectWorkspacePage() {
 
   return (
     <div className="workspace-shell">
-      <aside className="workspace-sidebar">
-        <div className="workspace-project">
-          <p className="eyebrow">Project</p>
-          <h1>{project.name}</h1>
-        </div>
-        <nav aria-label="Workspace sections" className="workspace-nav">
-          {visibleWorkspaceTabs.map((tab) => (
-            <NavLink key={tab.id} to={`/projects/${project.id}/${tab.id}`}>
-              {tab.label}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
+      <nav className="workspace-rail" aria-label="Workspace sections">
+        <img src="/assets/favicon-64.png" alt="" />
+        {visibleWorkspaceTabs.map((tab) => (
+          <NavLink
+            key={tab.id}
+            to={`/projects/${project.id}/${tab.id}`}
+            aria-label={tab.label}
+            title={tab.label}
+          >
+            {tab.shortLabel}
+          </NavLink>
+        ))}
+      </nav>
       <section className="workspace-content">
+        <header className="workspace-command-strip" aria-label="Workspace context">
+          <div className="workspace-project-title">
+            <p className="eyebrow">Project</p>
+            <h1>{project.name}</h1>
+          </div>
+          <div className="workspace-command-actions">
+            <span>Section</span>
+            <h2>{activeTab?.label ?? "Unknown"}</h2>
+          </div>
+        </header>
         {activeTab ? (
           <WorkspaceTabContent tabId={activeTab.id} label={activeTab.label} project={project} />
         ) : (

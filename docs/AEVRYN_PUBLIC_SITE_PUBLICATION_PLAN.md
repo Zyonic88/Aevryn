@@ -20,6 +20,10 @@ Public beta: Blocked
 
 The required contact aliases are verified. The initial public pages are implemented in the browser app and reachable on the production app domain. Public wording consistency review passed on 2026-08-02. Provider disclosure product-truth wording approval is recorded on 2026-08-02. Legal review where required, provider disclosure legal review, backup retention wording owner/legal review, and final public-beta signoff remain open. Owner review is tracked in `docs/AEVRYN_OWNER_PUBLIC_REVIEW_RECORD.md`.
 
+The static public marketing site source is implemented in `website/`. It is separate from the authenticated application at `https://app.aevryn.ai` and must remain limited to public-facing product explanation, conservative beta wording, and links to approved support/trust surfaces.
+
+Live browser review on 2026-08-08 found that `https://aevryn.ai` was still serving a generic placeholder/contact page instead of the repo-owned static website. The public apex domain must be re-routed to the approved static site before Aevryn can truthfully treat legal review as the only remaining public-facing blocker.
+
 ---
 
 # Core Rule
@@ -45,6 +49,46 @@ Public copy must not convert internal intent into public promises.
 | Security Disclosure | `/security/disclosure` | `docs/SECURITY_DISCLOSURE.md` | Implemented as draft; safe-harbor review required |
 | Terms | `/terms` | `docs/TERMS_OF_SERVICE.md` | Implemented as draft; attorney review required |
 | Acceptable Use | `/acceptable-use` | `docs/ACCEPTABLE_USE_POLICY.md` | Implemented as draft; attorney review required |
+
+---
+
+# Static Website Deployment
+
+The public marketing site for `https://aevryn.ai` should be deployed from `website/` as a static Cloudflare Pages site.
+
+Recommended settings:
+
+```text
+Root directory: website
+Build command: none
+Build output directory: .
+Production branch: master
+```
+
+The static site must not duplicate Aevryn app workflows, collect manuscripts, or imply public beta approval before final signoff. Product actions should route to `https://app.aevryn.ai`.
+
+Verification command:
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m aevryn.cli public-website-config-check
+```
+
+Expected metadata-only result:
+
+```text
+project=aevryn-public
+production_branch=master
+root_directory=verified
+build_command=static
+build_output=static_root
+production_deployments=enabled
+domain=verified
+secrets_printed=0
+ok=public_website_config_contract_checked
+```
+
+This command requires `AEVRYN_CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in the local environment. It must not print account IDs, tokens, Cloudflare hostnames, source prose, storage references, or other private deployment details.
 
 ---
 
@@ -101,6 +145,7 @@ Support, privacy, security, and abuse pages must tell users not to send:
 Public beta remains blocked until:
 
 * legal-sensitive pages receive owner and attorney review
+* `https://aevryn.ai` serves the repo-owned static website from `website/`, verified by `aevryn public-website-config-check`
 * production backup retention wording is verified against final production backup behavior
 * AI provider data-use disclosure is completed against the selected public-beta disclosure candidate or provider-backed extraction is disabled for public beta
 * support procedure owner review confirms metadata-first triage and escalation handling

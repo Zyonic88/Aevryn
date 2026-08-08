@@ -233,6 +233,42 @@ class ProjectSettingsResponse(BaseModel):
     locale: str
 
 
+class ProjectCorrectionRequest(BaseModel):
+    """Request to create or update a user-authored Canon correction."""
+
+    model_config = ConfigDict(frozen=True)
+
+    target_type: str = Field(min_length=1)
+    target_id: str = Field(min_length=1)
+    field_name: str = Field(min_length=1)
+    value: str = Field(min_length=1)
+    now: str = Field(min_length=1)
+
+
+class ProjectCorrectionOutput(BaseModel):
+    """Durable user-authored Canon correction returned by the API."""
+
+    model_config = ConfigDict(frozen=True)
+
+    correction_id: str
+    project_id: str
+    target_type: str
+    target_id: str
+    field_name: str
+    value: str
+    source_label: str
+    created_at: str
+    updated_at: str
+
+
+class ProjectCorrectionListResponse(BaseModel):
+    """Corrections inside an authenticated project."""
+
+    model_config = ConfigDict(frozen=True)
+
+    corrections: tuple[ProjectCorrectionOutput, ...]
+
+
 class StoryCreateRequest(BaseModel):
     """Request to create durable story metadata inside a project."""
 
@@ -364,6 +400,10 @@ class ProjectStatusWorker(BaseModel):
     succeeded_jobs: int = 0
     failed_jobs: int = 0
     next_job_id: str = ""
+    latest_job_status: str = ""
+    latest_job_queued_at: str = ""
+    latest_job_updated_at: str = ""
+    latest_job_duration_seconds: int | None = None
 
 
 class ProjectStatusSnapshots(BaseModel):

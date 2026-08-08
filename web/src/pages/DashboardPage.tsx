@@ -66,19 +66,38 @@ export function DashboardPage() {
         requireSessionToken(session),
         new Date().toISOString(),
       ),
-    onSuccess(_result, projectId) {
+    async onMutate(projectId) {
+      const projectListQueryKey = ["projects", session?.session_token] as const;
+      await queryClient.cancelQueries({ queryKey: projectListQueryKey });
+      const previousProjects = queryClient.getQueryData<ProjectList>(projectListQueryKey);
       setDeletedProjectIds((currentIds) => new Set(currentIds).add(projectId));
-      const projectListQueryKey = ["projects", session?.session_token];
       queryClient.setQueryData<ProjectList>(projectListQueryKey, (currentProjects) => {
         const projects = currentProjects?.projects ?? [];
         return {
           projects: projects.filter((project) => project.project_id !== projectId),
         };
       });
+      return { previousProjects, projectListQueryKey };
+    },
+    onError(_error, projectId, context) {
+      setDeletedProjectIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.delete(projectId);
+        return nextIds;
+      });
+      if (context?.previousProjects) {
+        queryClient.setQueryData(context.projectListQueryKey, context.previousProjects);
+      }
+    },
+    onSuccess(_result, projectId) {
       queryClient.removeQueries({ queryKey: ["project", projectId] });
       queryClient.removeQueries({ queryKey: ["project-status", projectId] });
       queryClient.removeQueries({ queryKey: ["project-outputs", projectId] });
-      void queryClient.invalidateQueries({ queryKey: projectListQueryKey });
+    },
+    onSettled(_result, _error, _projectId, context) {
+      void queryClient.invalidateQueries({
+        queryKey: context?.projectListQueryKey ?? ["projects", session?.session_token],
+      });
     },
   });
 
@@ -132,9 +151,16 @@ export function DashboardPage() {
 
   return (
     <div className="dashboard-grid">
-      <section className="page-heading">
-        <p className="eyebrow">Workspace</p>
-        <h1>Dashboard</h1>
+      <section className="page-heading dashboard-heading">
+        <div>
+          <p className="eyebrow">Workspace</p>
+          <h1>Project Dashboard</h1>
+        </div>
+        <div className="dashboard-signal-row" aria-label="Workspace status">
+          <span>Canon</span>
+          <span>Continuity</span>
+          <span>Prompt Packs</span>
+        </div>
       </section>
 
       <section className="project-panel">
@@ -201,9 +227,11 @@ export function DashboardPage() {
                       className="project-select-link"
                       aria-label={`${project.name} Updated ${formatDateTime(project.updatedAt)} Open workspace`}
                     >
-                      <strong>{project.name}</strong>
+                      <span className="project-row-title">
+                        <strong>{project.name}</strong>
+                        <small>Open workspace</small>
+                      </span>
                       <span>Updated {formatDateTime(project.updatedAt)}</span>
-                      <small>Open workspace</small>
                     </Link>
                     <button
                       type="button"

@@ -157,11 +157,6 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Exports</p>
-        <h2>Exports</h2>
-      </div>
-
       <ProjectOutputSummaryPanel project={project} surface="exports" />
 
       <ProjectStoredExportsPanel
@@ -185,7 +180,7 @@ export function ExportWorkspaceView({ project }: { project: ProjectSummary }) {
         <section>
           <h2>Export Preview</h2>
           <p className="field-note">
-            Technical review requires real source text and extraction JSON. It does not run with
+            Advanced preview requires real source text and extraction JSON. It does not run with
             simulated source, placeholder AI output, or empty success paths.
           </p>
           <form className="import-form" onSubmit={submit}>

@@ -43,6 +43,77 @@ Silent assumptions are not acceptable.
 
 ---
 
+# Product Standard
+
+```text
+Aevryn is a Canon IDE, not a generic dashboard with dark styling.
+```
+
+V2 public beta must feel and behave like an IDE-style creative workspace:
+
+* navigation should be compact, stable, and fast to scan
+* workers must be observable, reliable, retryable, and never appear stuck without explanation
+* wasted space should be converted into useful context or removed
+* panels should not be stacked inside panels as decorative structure
+* every visible surface should help the creator understand Canon, workflow state, or next action
+* fewer clicks are better when they do not remove necessary review or safety
+* UI polish matters, but Canon accuracy matters more
+
+The accuracy standard is:
+
+```text
+Canon truth is the product.
+```
+
+The pipeline standard is:
+
+```text
+Every downstream system should receive more structured information than the
+system before it.
+```
+
+V2 now treats this as the Structured Certainty Pipeline:
+
+```text
+Story Import
+-> Sentence Understanding
+-> Translation / Normalization
+-> Entity Extraction
+-> Entity Resolution
+-> Canon Updating / Canon
+-> Scene, Character, World, Timeline, Continuity
+-> Prompt Engine
+```
+
+The required identity boundary is:
+
+```text
+Extraction proposes.
+Resolution consolidates.
+Canon decides truth.
+```
+
+Tracking:
+
+* `docs/AEVRYN_STRUCTURED_CERTAINTY_PIPELINE.md`
+
+If Aevryn cannot reliably understand characters, world objects, skills, systems,
+scene state, and story changes, the frontend polish does not matter. Remaining V2
+hardening should prioritize story-neutral accuracy, evidence-backed presentation,
+and workflow clarity over decorative redesign.
+
+Prompt Packs are especially important because they are the first production-facing
+output creators may reuse outside Aevryn. A V2 prompt does not need to promise
+one-click perfect generation, but it must be materially better than manually
+pasting chapter text into a generic AI tool.
+
+Multiple prompts per chapter remain future production-batching scope unless
+explicitly re-scoped. V2 should still preserve the architecture needed for
+scene-level prompt expansion later by keeping prompts scene-bound, Canon-bound,
+and grounded in current character/world state.
+
+---
+
 # Public Beta Blockers
 
 These block public beta unless resolved or explicitly accepted as residual risk.
@@ -309,6 +380,44 @@ Acceptance:
 The release record truthfully says Public beta: Approved.
 ```
 
+## 7. Public Apex Website Routing
+
+Status:
+
+```text
+Open
+```
+
+Required:
+
+* deploy the repo-owned static public website from `website/`
+* route `https://aevryn.ai` to that deployed static site
+* keep `https://app.aevryn.ai` as the authenticated application domain
+* verify the Cloudflare Pages project uses root `website`, no build command,
+  static root output, production branch `master`, and the expected custom domain
+* confirm the public apex site does not collect manuscripts, imply public beta
+  approval before signoff, or contradict legal/trust wording
+
+Tracking:
+
+* `website/README.md`
+* `docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md`
+* `docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md`
+
+Verified evidence:
+
+* 2026-08-08 browser review found `https://aevryn.ai` serving a generic
+  placeholder/contact page rather than the repo-owned static website.
+* `aevryn public-website-config-check` now exists to verify the static website
+  Pages project contract with metadata-only output.
+
+Acceptance:
+
+```text
+https://aevryn.ai serves the approved static Aevryn website from website/, and
+aevryn public-website-config-check returns ok=public_website_config_contract_checked.
+```
+
 ---
 
 # Engineering Hardening Backlog
@@ -325,6 +434,14 @@ In progress
 
 Remaining hardening:
 
+* ~~verify Prompt Packs consume Character, World, Scene, Timeline, and Continuity
+  presentation state when building prompt context, not just scene summary text~~
+* keep prompts Canon-bound enough to preserve known character appearance,
+  setting, scene action, world objects, systems, skills, and current story state
+* ~~improve Prompt Packs layout so chapter/scene prompts are easy to follow without
+  endless scrolling~~
+* preserve scene-level prompt architecture so future multi-prompt-per-chapter and
+  production batching can be added without rewriting Canon or extraction
 * ~~run hosted browser validation against the current prompt-pack output~~
 * ~~confirm prompts include enough scene-specific action, setting, character, and object context~~
 * ~~ensure normal prompt-pack presentation does not include raw manuscript prose~~
@@ -367,11 +484,54 @@ Verified hardening:
 * hosted browser sweep verified current Prompt Packs output exposes collapsed,
   copyable prompt bodies without source text, source IDs, evidence anchors,
   import bundle IDs, machine chapter/scene fragments, or placeholder noise
+* prompt bodies now include a compact `Canon inputs` checklist that exposes
+  which prompt inputs were available from character sheets, world facts,
+  relationships, scene beats, visual anchors, and continuity notes without
+  printing source prose or internal IDs
+* verified with focused Canon Prompt Builder tests, presentation-engine tests,
+  and background-worker prompt-presentation tests
+* system and skill mechanics now remain prompt-visible as non-visual Canon
+  constraints instead of being treated as image props, scenery, or required
+  visual references unless Canon explicitly marks them visible
+* verified with focused Canon Prompt Builder tests
+* large prompt-pack outputs remain bounded at first render but expose a
+  user-controlled "show more scenes" path, so later prompt scenes from large
+  imports are reachable without dumping every prompt card onto the page
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
+* Prompt Packs now include scene search by chapter, scene, character, setting,
+  visual detail, and environment so large projects can reach specific prompt
+  scenes without manual scrolling
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
+* prompt-pack detail cards now show available/missing Canon input status for
+  characters, setting, visuals, continuity, and constraints with compact preview
+  details so users can judge prompt grounding without opening every prompt body
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
+* prompt-builder and presentation tests verify prompt text and prompt metadata
+  consume character cards, accepted character facts, world facts, relationships,
+  scene visual anchors, scene action beats, continuity notes, and missing-input
+  status instead of relying only on scene summary text
+* verified with focused Canon Prompt Builder, Prompt Engine, and Presentation
+  Engine tests
+* Prompt Packs selected-scene detail now includes previous/next scene navigation
+  and a filtered scene-position counter, reducing list-hopping while reviewing
+  production prompts scene by scene
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
+* project output prompt packs now append visible `User Edited Canon corrections`
+  context to image, narration, camera, and animation prompts when user-authored
+  Character or World corrections exist, without mutating extracted Canon or
+  exposing internal target IDs
+* verified with project output API regression coverage and the full Python test
+  suite
 
 Acceptance:
 
 ```text
-Prompt Packs are useful for beta without promising one-click perfect image/video generation.
+Prompt Packs are Canon-bound, scene-aware, and useful for beta without promising
+one-click perfect image/video generation.
 ```
 
 ## B. Continuity Readability
@@ -442,9 +602,17 @@ Verified evidence:
 
 Remaining hardening:
 
+* continue hosted duplicate-card review for title/name/alias/description cases
+  observed in alpha runs
+* ensure entity-resolution improvements remain story-neutral and never hardcoded
+  to a specific character name, title, or source novel
 * continue reducing duplicate character cards caused by aliases/titles/descriptions
 * keep ambiguous identity references visible for review instead of force-merging
 * ensure race/gender remain Canon-truthful and not story-specific guesses
+* run hosted browser validation that user-authored corrections show in Character
+  and World output panels with a visible `User Edited` label
+* ~~run isolated local browser validation that Character corrections save,
+  refresh, stay collapsed until opened, and show a visible `User Edited` label~~
 * ~~keep character card sections collapsed and readable~~
 * ~~ensure character portraits remain neutral placeholders until a real portrait/reference system exists~~
 * ~~verify no source-backed placeholder text leaks into user output~~
@@ -458,6 +626,9 @@ Verified hardening:
 * character cards and developer-preview cards use neutral initials placeholders
   without rendering fake portrait images before a real portrait/reference system
   exists
+* local browser validation confirmed collapsed correction editors do not leak
+  hidden form controls, saved Character corrections refresh output, and singular
+  profile counts render correctly
 * extraction rejects plural race/gender group phrases as character cards while
   preserving singular unnamed character candidates when evidence supports them
 * entity resolution keeps pronouns, shared honorifics, near-tied matches, and
@@ -465,6 +636,26 @@ Verified hardening:
 * entity resolution and project-runner tests resolve title-plus-name references
   such as General Charlotte to the existing Canon identity when the title/name
   support is explicit, while keeping shared titles ambiguous
+* entity resolution and project-runner tests resolve conservative rank/title
+  prefixes such as Captain Mira to a known Canon identity even before the title
+  has been stored as a prior fact, while rejecting ordinary descriptors such as
+  Wounded Mira
+* entity-resolution tests now cover punctuation, articles, hyphenation, and
+  possessive suffixes around supported title/name references so variants such
+  as "Captain Mira's" and "Captain-Mira" do not fragment identities
+* entity-resolution and project-runner tests now resolve conservative title
+  suffix variants such as "Mira, Captain" and "Mira the Captain" to the known
+  identity while leaving generic suffix descriptors unresolved
+* project-runner tests now verify same-scene title/name duplicate candidates
+  rewrite to the named Canon identity instead of producing an extra character
+  card
+* project-runner tests now verify same-scene exact visible-surface duplicates
+  collapse to the highest-confidence entity, preserving attached facts/state
+  changes under one Canon identity instead of creating duplicate cards
+* project-runner identity rewrites now flatten chained duplicate resolutions
+  before Canon update, so a descriptive duplicate that resolves to a title/name
+  duplicate still lands on the final Canon identity instead of leaving facts or
+  state changes attached to a removed intermediate character
 * project-runner identity profiles preserve explicit relationship labels such as
   "sister of Zhao Chen," allowing possessive references like "Zhao Chen's sister"
   to resolve to an existing identity without creating duplicate character cards
@@ -486,12 +677,30 @@ Verified hardening:
 * prompt packs omit negated visual identity facts from character detail lines
   and visual identity coverage, preventing denied race/species/gender evidence
   from becoming positive image or narration guidance
+* prompt packs add a bounded character-continuity lock when aliases, titles,
+  descriptions, or relationship labels are present, telling generation tools to
+  keep those surfaces attached to the same Canon identity instead of creating
+  extra people
+* entity resolution now supports conservative composite visual-description
+  matching from accepted visible traits, such as gender plus hair color, so
+  later references like "white-haired woman" can resolve to a unique prior
+  identity without making gender-only merges
+* backend persistence and API now define project-scoped user correction records
+  with a fixed `User Edited` source label, ownership checks, metadata-only audit
+  events, JSON/PostgreSQL schema support, and project-delete cleanup
+* project outputs now apply user-authored corrections to Character sections and
+  append World correction sections with a visible `User Edited` label instead
+  of pretending edited values are extracted evidence
+* frontend Character and World cards now expose compact user correction editors
+  for approved fields; saves round-trip through the correction API and refresh
+  processed outputs instead of rendering optimistic fake Canon
 * verified with the focused processed-character-panel frontend test
 
 Acceptance:
 
 ```text
-Characters are readable and honest even when identity resolution is uncertain.
+Characters are readable, Canon-truthful, and honest even when identity
+resolution is uncertain.
 ```
 
 ## D. World Classification
@@ -504,6 +713,8 @@ In progress
 
 Remaining hardening:
 
+* continue sentence-understanding hardening for item/skill/system boundaries
+  without over-tightening valid genre-specific world facts
 * reduce incorrect item/skill/location/organization categorization where evidence supports a better class
 * avoid tailoring classification to one novel
 * ~~preserve uncertain classifications as reviewable instead of pretending certainty~~
@@ -525,6 +736,14 @@ Verified hardening:
 * verified with readable-output frontend unit test, lint, and production build
 * sentence understanding routes item, skill, system, location, and organization
   cues as metadata-only guidance; mixed or ambiguous cues remain reviewable
+* production sentence-understanding cues were scanned for alpha-story proper
+  nouns and genericized, so world-routing metadata relies on reusable concepts
+  such as academy, department, empire, fleet, star system, and training room
+  instead of names from the "Sorry, my starfleet only recruits female soldiers"
+  test corpus
+* production AI extraction prompt wording was hardened to describe gender/race
+  rules generically instead of priming the model with alpha-story phrases such
+  as "Half-Beastman," "female soldiers," or "male recruits"
   instead of becoming Canon truth
 * sentence understanding flags genre power-system/body terms such as dantian,
   meridian, qi, and spiritual root as translation-review metadata without
@@ -533,11 +752,22 @@ Verified hardening:
   rather than a usable skill unless the evidence explicitly describes an ability
 * system UI plus skill/ability cues are marked reviewable instead of being treated
   as settled meaning
+* system UI phrases such as system window, status screen, and quest notification
+  route as system metadata; plain literal windows remain ordinary world context
+  unless a system UI phrase is present
+* extraction validation rejects system UI phrases when proposed as physical items
+  while accepting them as system entities when evidence supports that type
 * system-created physical objects such as technical blueprints remain item
   candidates when evidence supports a concrete object classification
 * physical skill-source phrases such as skill book, spell book, skill manual, and
   technique manual route as item context instead of automatically becoming usable
   skills, while separate skill cues in the same sentence remain reviewable
+* physical skill-card and ability-token phrases route as item context instead of
+  automatically becoming usable skills; separate skill evidence in the same
+  sentence remains visible and reviewable
+* deterministic extraction guards reject provider candidates that classify
+  physical skill containers such as skill cards as usable skills while accepting
+  the same containers as physical items when evidence supports them
 * system-resource phrases such as skill points and experience points route as
   system context rather than usable skills, while separate ability cues in the
   same sentence remain visible and reviewable
@@ -547,6 +777,10 @@ Verified hardening:
   ability crystals, skill crystals, and source crystals route as item context,
   while obvious AI attempts to classify crystals or slips as usable skills are
   rejected by deterministic extraction guards
+* physical-core phrases such as energy core, beast core, and reactor core route
+  as item context and are rejected when a provider tries to classify them as
+  usable skills or governing systems, while bare/genre core terms remain
+  translation-review metadata until evidence resolves meaning
 * the evidence-bounded AI extraction prompt tells the provider that manuals,
   scrolls, jade slips, and crystals are physical item containers unless evidence
   explicitly states a usable ability
@@ -601,6 +835,15 @@ Verified hardening:
   summaries instead of leaving durable runs pending forever
 * active processing displays API-backed states such as Queued, Processing,
   Snapshot, and Output ready without fake percentages
+* project run history now renders as a compact activity log with duration,
+  snapshot state, current state, and concise failure summaries, while the
+  detailed processing stepper stays reserved for the active run
+* source intake now labels the fast path as "Process chapters" and explains
+  that it inspects, saves, and submits processing, while keeping "Inspect only"
+  available for manual review without removing review/safety controls
+* source intake now keeps filename, title, import reference, and source
+  reference controls inside collapsible import details so the main path stays
+  focused on choosing source material and starting Canon processing
 * deferred source formats, source-format API failures, oversized pasted imports,
   and failed re-inspection paths show user-facing explanations and avoid stale
   import-structure output
@@ -778,6 +1021,36 @@ Acceptance:
 The full beta path works in browser without CLI knowledge.
 ```
 
+## J. Canon IDE Workspace UX
+
+Status:
+
+```text
+In progress
+```
+
+Remaining hardening:
+
+* keep workspace navigation compact and IDE-like instead of repeating equivalent
+  sidebar labels
+* reduce wasted workspace chrome while preserving orientation and readability
+* keep quick actions and command surfaces scannable at realistic desktop widths
+* continue hosted browser validation for visual noise, overlap, and cramped text
+
+Verified hardening:
+
+* overview quick-action tiles now preserve whole-word labels and no-wrap command
+  badges, wrapping cards before labels collapse into vertical text
+* import run history no longer repeats full processing steppers on every stored
+  run, reducing wasted vertical space while preserving the monitoring signal
+* verified with the full frontend test suite, lint, and production build
+
+Acceptance:
+
+```text
+Aevryn feels like a focused Canon IDE, not a generic dashboard with panels.
+```
+
 ---
 
 # Operational Hardening Backlog
@@ -905,13 +1178,27 @@ Track future ideas in:
 
 # Recommended Execution Order
 
-1. Finish engineering-owned UI hardening:
+1. Finish Canon IDE hardening:
+   * compact IDE navigation and workspace density
+   * remove or reuse wasted space
+   * avoid panels stacked inside panels unless the nested panel is a real tool
+   * keep worker state visible and API-backed
+   * reduce clicks in import and processing workflows where review/safety is preserved
+
+2. Finish accuracy hardening:
+   * duplicate character-card reduction for aliases, titles, and descriptions
+   * conservative race/gender handling backed by explicit Canon evidence
+   * item/skill/system/world classification backed by sentence understanding
+   * Prompt Packs grounded in Character, World, Scene, Timeline, and Continuity state
+
+3. Finish output UX hardening:
+   * Prompt Pack chapter/scene layout
    * Continuity readability
-   * Prompt Pack hosted validation and polish
    * Character/entity review readability
    * Settings honesty pass
+   * Exports clarity
 
-2. Run full local gates:
+4. Run full local gates:
    * backend tests
    * backend lint
    * backend typing
@@ -920,25 +1207,25 @@ Track future ideas in:
    * frontend build
    * release-readiness document tests
 
-3. Push and settle GitHub:
+5. Push and settle GitHub:
    * all branches/PRs understandable
    * required checks green
    * no stale blocking branches
 
-4. Run hosted browser pass:
+6. Run hosted browser pass:
    * 10-chapter canonical beta path
    * confirm export/download still works
    * deletion
    * session recovery
 
-5. Complete external reviews:
+7. Complete external reviews:
    * legal
    * provider
    * backup wording
    * support/trust pages
    * observability logs
 
-6. Update release-candidate record:
+8. Update release-candidate record:
    * final results
    * final residual risks
    * public-beta decision
@@ -955,6 +1242,9 @@ Stop and do not approve public beta if any of the following are true:
 * full AI payloads are logged
 * deleted project/story data remains visible in active product surfaces
 * cross-user project access succeeds
+* duplicate character-card behavior remains common enough to undermine Canon trust
+* Prompt Packs do not materially use accepted Canon state
+* worker state can appear stuck without API-backed explanation or recovery path
 * provider terms are not reviewed
 * public legal pages are not reviewed
 * the browser beta path requires CLI knowledge
@@ -966,13 +1256,14 @@ Stop and do not approve public beta if any of the following are true:
 Recommended next engineering slice:
 
 ```text
-Continue UX hardening on the processed-output surfaces, then commit each completed slice before moving on.
+Continue Canon IDE hardening one slice at a time, then commit each completed
+slice before moving on.
 ```
 
 The next best target is:
 
 ```text
-Full beta browser-path validation and remaining visible UI polish, starting
-with any remaining public-facing noise and hosted browser validation of the
-latest deletion/dashboard behavior.
+Prompt Pack Canon-context verification and layout hardening, followed by
+Character/entity duplicate-card hardening and a browser pass against the
+10-chapter canonical beta path.
 ```

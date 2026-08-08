@@ -12,7 +12,15 @@ from aevryn import (
     SceneContextBuilder,
     StoryImporter,
 )
-from aevryn.core import Character, Entity, Evidence, Fact, StateChange, TimelineEvent
+from aevryn.core import (
+    Character,
+    Entity,
+    Evidence,
+    Fact,
+    Relationship,
+    StateChange,
+    TimelineEvent,
+)
 from tests.test_scene_context_builder import build_database, build_imported_source
 
 
@@ -728,6 +736,56 @@ def test_canon_prompt_builder_carries_stable_identity_references_from_cards() ->
         assert "School Year: First Year" not in prompt
 
 
+def test_canon_prompt_builder_locks_character_identity_count() -> None:
+    """Production prompts should not turn aliases or titles into extra characters."""
+    imported_source = build_imported_source()
+    database = build_database()
+    for attribute, value in (
+        ("alias", "General Mark"),
+        ("title", "Commander"),
+        ("description", "White-haired academy officer"),
+    ):
+        fact_id = f"fact_001_identity_lock_{attribute}"
+        database.store_fact(
+            Fact(
+                fact_id=fact_id,
+                entity_id="character_mark",
+                attribute=attribute,
+                value=value,
+                evidence_id="evidence_001",
+            )
+        )
+        database.store_state_change(
+            StateChange(
+                state_change_id=f"state_001_identity_lock_{attribute}",
+                fact_id=fact_id,
+                valid_from_event_id="event_001_weapon",
+            )
+        )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+    builder = CanonPromptBuilder()
+
+    prompts = (
+        builder.build_image_prompt(context),
+        builder.build_narration_prompt(context),
+        builder.build_camera_prompt(context),
+        builder.build_animation_prompt(context),
+    )
+
+    for prompt in prompts:
+        assert "Character continuity lock:" in prompt
+        assert "- Exactly 1 confirmed character: Mark." in prompt
+        assert "not extra people" in prompt
+        assert "preserve accepted appearance facts" in prompt
+
+
 def test_canon_prompt_builder_omits_mechanical_metadata_from_character_details() -> None:
     """Prompt character details omit task math that belongs in audit views."""
     imported_source = build_imported_source()
@@ -835,6 +893,91 @@ def test_canon_prompt_builder_keeps_generation_context_in_every_prompt_type() ->
         assert "Iron Sword Visual Material: Dull iron blade with a worn leather grip" in (
             visual_prompt
         )
+
+
+def test_canon_prompt_builder_keeps_system_mechanics_out_of_visual_object_context() -> None:
+    """System facts should guide Canon state without becoming visible props."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_entity(
+        Entity(
+            entity_id="system_super_starfleet",
+            entity_type="system",
+            display_name="Super Starfleet System",
+        )
+    )
+    database.store_relationship(
+        Relationship(
+            relationship_id="relationship_mark_bound_to_system",
+            source_entity_id="character_mark",
+            relationship_type="bound_to_system",
+            target_entity_id="system_super_starfleet",
+            evidence_id="evidence_relationship",
+        )
+    )
+    database.store_fact(
+        Fact(
+            fact_id="fact_system_active_quest_status",
+            entity_id="system_super_starfleet",
+            attribute="system_status",
+            value="Active quest interface",
+            evidence_id="evidence_relationship",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_system_active_quest_status",
+            fact_id="fact_system_active_quest_status",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+    world_section = prompt.split("World and scene object context:", 1)[1].split(
+        "\n\n",
+        1,
+    )[0]
+
+    assert "System and non-visual canon constraints:" in prompt
+    assert "Super Starfleet Status: Active quest interface" in prompt
+    assert "do not depict them as visible UI, props, or scenery" in prompt
+    assert "Active quest interface" not in world_section
+    assert "Visual reference requirements:" not in prompt
+
+
+def test_canon_prompt_builder_declares_canon_context_inputs() -> None:
+    """Prompts should disclose the Canon surfaces used without leaking internals."""
+    context = build_context()
+    bundle = CanonPromptBuilder().build_bundle(context)
+
+    prompts = (
+        bundle.image_prompt,
+        bundle.narration_prompt,
+        bundle.camera_prompt,
+        bundle.animation_prompt,
+    )
+
+    for prompt in prompts:
+        assert "Canon inputs:" in prompt
+        assert "1 character" in prompt
+        assert "character fact" in prompt
+        assert "world fact" in prompt
+        assert "relationship" in prompt
+        assert "beat" in prompt
+        assert "anchor" in prompt
+        assert "note" in prompt
+        assert "Unknowns neutral." in prompt
+        assert context.scene.scene_id not in prompt
+        assert "source_demo_chapter_002_scene_001" not in prompt
+        assert "evidence_" not in prompt
 
 
 def test_canon_prompt_builder_rejects_duplicate_analysis_bullets() -> None:

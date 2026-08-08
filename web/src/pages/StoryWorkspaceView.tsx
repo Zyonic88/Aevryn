@@ -105,11 +105,6 @@ export function StoryWorkspaceView({ project }: { project: ProjectSummary }) {
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Story</p>
-        <h2>Story</h2>
-      </div>
-
       <section className="project-panel">
         <h2>Stories</h2>
         <form className="inline-form" onSubmit={submit}>

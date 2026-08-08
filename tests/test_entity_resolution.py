@@ -174,6 +174,47 @@ def test_resolves_supported_description_variant_to_same_identity() -> None:
     assert decision.candidates[0].match_kind == "description_variant"
 
 
+def test_resolves_composite_visual_description_to_same_identity() -> None:
+    """Separate visible-trait facts should support one later descriptive reference."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("the white-haired woman", "anchor_031b"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                descriptions=("Female", "White hair"),
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_mira"
+    assert decision.candidates[0].match_kind == "composite_description"
+
+
+def test_gender_only_description_variant_stays_unresolved() -> None:
+    """Generic gender words alone are not enough to merge a surface reference."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("the woman", "anchor_031c"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                descriptions=("Female",),
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+
+
 def test_resolves_title_name_variant_without_prebuilt_alias() -> None:
     """Title plus canonical name should resolve through explicit title/name support."""
     engine = EntityResolutionEngine()
@@ -194,6 +235,129 @@ def test_resolves_title_name_variant_without_prebuilt_alias() -> None:
     assert decision.entity_id == "character_charlotte"
     assert decision.confidence == 0.97
     assert decision.candidates[0].match_kind == "title_name"
+
+
+def test_resolves_supported_title_prefix_with_known_name() -> None:
+    """Generic rank/title prefixes should not create duplicate named identities."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Captain Mira", "anchor_032d"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_mira"
+    assert decision.confidence == 0.93
+    assert decision.candidates[0].match_kind == "title_prefix_name"
+
+
+@pytest.mark.parametrize(
+    "reference_text",
+    (
+        "Captain Mira's",
+        "the Captain Mira",
+        "Captain-Mira",
+        "Captain Mira,",
+    ),
+)
+def test_resolves_punctuated_title_prefix_with_known_name(
+    reference_text: str,
+) -> None:
+    """Punctuation and possessives should not fragment title/name identities."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference(reference_text, "anchor_032f"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_mira"
+    assert decision.candidates[0].match_kind == "title_prefix_name"
+
+
+def test_title_prefix_resolution_rejects_unknown_descriptors() -> None:
+    """Descriptors should not be treated as identity titles."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Wounded Mira", "anchor_032e"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.candidates == ()
+
+
+@pytest.mark.parametrize(
+    "reference_text",
+    (
+        "Mira the Captain",
+        "Mira, Captain",
+        "Mira-Captain",
+    ),
+)
+def test_resolves_supported_title_suffix_with_known_name(
+    reference_text: str,
+) -> None:
+    """Known names with conservative title suffixes should not fragment identities."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference(reference_text, "anchor_032g"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_mira"
+    assert decision.confidence == 0.93
+    assert decision.candidates[0].match_kind == "title_suffix_name"
+
+
+def test_title_suffix_resolution_rejects_unknown_descriptors() -> None:
+    """Generic suffix descriptors should not be treated as identity titles."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Mira Present", "anchor_032h"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mira",
+                canonical_name="Mira",
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.candidates == ()
 
 
 def test_resolves_explicit_relationship_label_variant() -> None:

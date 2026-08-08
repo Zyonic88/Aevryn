@@ -196,6 +196,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if command == "cloudflare-pages-config-check":
             _handle_cloudflare_pages_config_check(args)
             return 0
+        if command == "public-website-config-check":
+            _handle_public_website_config_check(args)
+            return 0
         if command == "worker-drain":
             _handle_worker_drain(args)
             return 0
@@ -783,6 +786,47 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Process environment variable containing the expected Supabase URL.",
     )
     cloudflare_pages_config_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=30.0,
+        help="HTTP timeout for the Cloudflare API request.",
+    )
+
+    public_website_config_parser = subcommands.add_parser(
+        "public-website-config-check",
+        help="Check the public Aevryn website Pages config without printing secrets.",
+        description=(
+            "Check the public Aevryn website Cloudflare Pages config without "
+            "printing secrets. The command reads Pages project metadata through "
+            "the Cloudflare API, confirms the static website root/build/output "
+            "contract, confirms production deployments are enabled, and verifies "
+            "that the expected public domain is attached. It never prints account "
+            "IDs, tokens, secret values, source prose, storage references, or "
+            "Cloudflare hostnames."
+        ),
+        formatter_class=_RawDefaultsHelpFormatter,
+    )
+    public_website_config_parser.add_argument(
+        "--account-id-env",
+        default="AEVRYN_CLOUDFLARE_ACCOUNT_ID",
+        help="Process environment variable containing the Cloudflare account ID.",
+    )
+    public_website_config_parser.add_argument(
+        "--api-token-env",
+        default="CLOUDFLARE_API_TOKEN",
+        help="Process environment variable containing the Cloudflare API token.",
+    )
+    public_website_config_parser.add_argument(
+        "--project-name",
+        default="aevryn-public",
+        help="Cloudflare Pages project name for the public website.",
+    )
+    public_website_config_parser.add_argument(
+        "--expected-domain",
+        default="aevryn.ai",
+        help="Expected custom domain attached to the public website Pages project.",
+    )
+    public_website_config_parser.add_argument(
         "--timeout-seconds",
         type=float,
         default=30.0,
@@ -1659,6 +1703,35 @@ def _handle_cloudflare_pages_config_check(args: argparse.Namespace) -> None:
         print(f"{key}={value}")
 
 
+def _handle_public_website_config_check(args: argparse.Namespace) -> None:
+    """Handle the public-website-config-check command."""
+    account_id_env = cast(str, args.account_id_env).strip()
+    api_token_env = cast(str, args.api_token_env).strip()
+    project_name = cast(str, args.project_name).strip()
+    expected_domain = cast(str, args.expected_domain).strip()
+    timeout_seconds = cast(float, args.timeout_seconds)
+    if not account_id_env:
+        raise ValueError("--account-id-env cannot be blank.")
+    if not api_token_env:
+        raise ValueError("--api-token-env cannot be blank.")
+    if not project_name:
+        raise ValueError("--project-name cannot be blank.")
+    if not expected_domain:
+        raise ValueError("--expected-domain cannot be blank.")
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be positive.")
+
+    summary = _run_public_website_config_check(
+        account_id=_required_process_env_value(account_id_env),
+        cloudflare_credential=_required_process_env_value(api_token_env),
+        project_name=project_name,
+        expected_domain=expected_domain,
+        timeout_seconds=timeout_seconds,
+    )
+    for key, value in summary.items():
+        print(f"{key}={value}")
+
+
 def _handle_worker_drain(args: argparse.Namespace) -> None:
     """Handle the worker-drain command."""
     api_url_env = cast(str, args.api_url_env).strip()
@@ -2396,6 +2469,72 @@ def _run_cloudflare_pages_config_check(
     }
 
 
+def _run_public_website_config_check(
+    *,
+    account_id: str,
+    cloudflare_credential: str,
+    project_name: str,
+    expected_domain: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Verify public website Pages config and return metadata only."""
+    normalized_account_id = account_id.strip()
+    normalized_cloudflare_credential = cloudflare_credential.strip()
+    normalized_project_name = project_name.strip()
+    normalized_expected_domain = _validated_public_hostname(expected_domain)
+    if not normalized_account_id:
+        raise ValueError("Cloudflare account ID cannot be blank.")
+    if not normalized_cloudflare_credential:
+        raise ValueError("Cloudflare API token cannot be blank.")
+    if not normalized_project_name:
+        raise ValueError("Cloudflare Pages project name cannot be blank.")
+    if timeout_seconds <= 0:
+        raise ValueError("Public website config timeout must be positive.")
+
+    payload = _cloudflare_pages_project(
+        account_id=normalized_account_id,
+        cloudflare_credential=normalized_cloudflare_credential,
+        project_name=normalized_project_name,
+        timeout_seconds=timeout_seconds,
+    )
+    build_config = _object_payload(payload.get("build_config"))
+    source = _object_payload(payload.get("source"))
+    source_config = _object_payload(source.get("config"))
+
+    _require_equal_metadata(
+        str(payload.get("production_branch") or ""),
+        "master",
+        "Public website production branch is not master.",
+    )
+    _require_equal_metadata(
+        str(build_config.get("root_dir") or ""),
+        "website",
+        "Public website root directory is not website.",
+    )
+    build_command = str(build_config.get("build_command") or "").strip()
+    if build_command.lower() not in {"", "none"}:
+        raise ValueError("Public website build command must be empty or none.")
+    destination_dir = str(build_config.get("destination_dir") or "").strip()
+    if destination_dir not in {"", "."}:
+        raise ValueError("Public website build output directory is not static root.")
+    if source_config.get("production_deployments_enabled") is False:
+        raise ValueError("Public website production branch deployments are disabled.")
+    if normalized_expected_domain not in _cloudflare_pages_domains(payload):
+        raise ValueError("Public website custom domain is not attached.")
+
+    return {
+        "project": normalized_project_name,
+        "production_branch": "master",
+        "root_directory": "verified",
+        "build_command": "static",
+        "build_output": "static_root",
+        "production_deployments": "enabled",
+        "domain": "verified",
+        "secrets_printed": 0,
+        "ok": "public_website_config_contract_checked",
+    }
+
+
 def _cloudflare_pages_project(
     *,
     account_id: str,
@@ -2428,6 +2567,32 @@ def _cloudflare_pages_project(
     return _object_payload(result)
 
 
+def _cloudflare_pages_domains(payload: dict[str, object]) -> set[str]:
+    """Return normalized custom domains from Cloudflare Pages metadata."""
+    domains: set[str] = set()
+    for key in ("domains", "custom_domains"):
+        value = payload.get(key)
+        if not isinstance(value, list):
+            continue
+        for item in value:
+            domain = _cloudflare_pages_domain_value(item)
+            if domain is not None:
+                domains.add(domain)
+    return domains
+
+
+def _cloudflare_pages_domain_value(value: object) -> str | None:
+    """Return one normalized domain value from Cloudflare metadata."""
+    if isinstance(value, str):
+        return _validated_public_hostname(value)
+    if isinstance(value, dict):
+        for key in ("name", "domain", "hostname"):
+            raw_value = value.get(key)
+            if isinstance(raw_value, str) and raw_value.strip():
+                return _validated_public_hostname(raw_value)
+    return None
+
+
 def _require_pages_plaintext_var(
     env_vars: dict[str, object],
     *,
@@ -2447,6 +2612,19 @@ def _require_pages_secret_var(env_vars: dict[str, object], *, name: str) -> None
     variable = _object_payload(env_vars.get(name))
     if variable.get("type") != "secret_text":
         raise ValueError(f"Cloudflare Pages {name} is not configured as a secret.")
+
+
+def _validated_public_hostname(value: str) -> str:
+    """Return a normalized public hostname or fail with a stable metadata error."""
+    hostname = value.strip().lower().rstrip(".")
+    if not hostname:
+        raise ValueError("Public website hostname cannot be blank.")
+    parsed = urllib.parse.urlparse(f"https://{hostname}")
+    if parsed.hostname != hostname or parsed.path not in {"", "/"}:
+        raise ValueError("Public website hostname is invalid.")
+    if hostname in {"localhost", "127.0.0.1"} or hostname.endswith(".local"):
+        raise ValueError("Public website hostname must be publicly routable.")
+    return hostname
 
 
 def _require_equal_metadata(actual: str, expected: str, message: str) -> None:

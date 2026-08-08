@@ -459,6 +459,10 @@ const projectStatusPayload = {
     succeeded_jobs: 1,
     failed_jobs: 0,
     next_job_id: "",
+    latest_job_status: "succeeded",
+    latest_job_queued_at: "2026-06-27T00:00:00.000Z",
+    latest_job_updated_at: "2026-06-27T00:30:00.000Z",
+    latest_job_duration_seconds: 1800,
   },
   snapshots: {
     available: true,
@@ -736,9 +740,15 @@ function projectOutputsPath(projectId: string): string {
   return `${API_PATHS.projects}/${projectId}/outputs`;
 }
 
+function projectCorrectionsPath(projectId: string): string {
+  return `${API_PATHS.projects}/${projectId}/corrections`;
+}
+
 describe("App shell routing", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -829,6 +839,28 @@ describe("App shell routing", () => {
         }
         if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
           return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+        }
+        if (
+          url.includes(`${projectCorrectionsPath(projectAlphaPayload.project_id)}/`) &&
+          init?.method === "PUT"
+        ) {
+          const body = JSON.parse(String(init.body));
+          const correctionId = decodeURIComponent(url.split("/").pop() ?? "");
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                correction_id: correctionId,
+                project_id: projectAlphaPayload.project_id,
+                target_type: body.target_type,
+                target_id: body.target_id,
+                field_name: body.field_name,
+                value: body.value,
+                source_label: "User Edited",
+                created_at: body.now,
+                updated_at: body.now,
+              }),
+            ),
+          );
         }
         if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/exports`)) {
           if (init?.method === "POST") {
@@ -974,7 +1006,7 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem("aevryn.session") ?? "{}")).toMatchObject({
       session_token: "session-token",
     });
@@ -1001,7 +1033,7 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("Session storage failed");
     expect(window.localStorage.getItem("aevryn.session")).toBeNull();
   });
@@ -1069,7 +1101,7 @@ describe("App shell routing", () => {
     await user.click(screen.getByLabelText(/Aevryn public beta is 18\+ only/u));
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     const registerCall = fetchMock.mock.calls.find(([input]) =>
       String(input).endsWith(API_PATHS.authRegister),
     );
@@ -1163,7 +1195,7 @@ describe("App shell routing", () => {
     await user.type(screen.getByLabelText("Password"), "StrongPass123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Monitoring" })).not.toBeInTheDocument();
   });
 
@@ -1338,7 +1370,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Log in" })).not.toBeInTheDocument();
   });
 
@@ -1351,7 +1383,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
   });
 
   it("redirects missing projects to the dashboard", async () => {
@@ -1363,7 +1395,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
   });
 
   it("opens direct workspace tab URLs and marks the active tab", async () => {
@@ -1385,13 +1417,12 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    const workspaceSidebar = await screen.findByRole("complementary");
-    expect(within(workspaceSidebar).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Characters" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Characters" })).toHaveAttribute(
       "aria-current",
       "page",
     );
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
 
   it("renders project monitoring from API-provided status", async () => {
@@ -1608,8 +1639,8 @@ describe("App shell routing", () => {
     );
 
     await user.click(await screen.findByRole("link", { name: /Alpha/ }));
-    const workspaceSidebar = await screen.findByRole("complementary");
-    expect(within(workspaceSidebar).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Import" }));
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
@@ -1632,7 +1663,7 @@ describe("App shell routing", () => {
     expect(screen.getByText("Showing 1 of 1 character profiles.")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Search characters"));
     expect(screen.getByLabelText("Source text")).not.toBeVisible();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview characters" }));
     expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
 
@@ -1652,7 +1683,7 @@ describe("App shell routing", () => {
       /source_alpha|location_hangar|organization_|item_|character_mark|_chapter_\d{3}_scene_\d{3}|source_alpha_anchor/u,
     );
     expect(screen.getByLabelText("AI response JSON")).not.toBeVisible();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview world" }));
     expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
     const previewWorldDetails = screen.getAllByText("World details")[0].closest("details");
@@ -1676,7 +1707,7 @@ describe("App shell routing", () => {
       /Chapter 1, Scene 1\s+-\s+Chapter 1 \/ Scene 1; 1 change/u,
     );
     timelineDetailRows.forEach((row) => expect(row).not.toHaveAttribute("open"));
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview timeline" }));
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
 
@@ -1694,7 +1725,7 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Characters Present",
     );
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview scene" }));
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
     const previewSceneDetails = screen.getAllByText("Scene details")[0].closest("details");
@@ -1721,7 +1752,7 @@ describe("App shell routing", () => {
       /source_alpha|fact_character_mark|record_|_chapter_\d{3}_scene_\d{3}|source_alpha_anchor/u,
     );
     expect(continuityOutput).toHaveTextContent("1 retained canon");
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview continuity" }));
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
     const previewContinuityDetails = screen.getAllByText("Continuity details")[0].closest("details");
@@ -1738,7 +1769,7 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "Image Prompt",
     );
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(await screen.findByRole("button", { name: "Preview prompt pack" }));
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
 
@@ -1752,7 +1783,7 @@ describe("App shell routing", () => {
     expect(screen.getByRole("region", { name: "Processed project output" })).toHaveTextContent(
       "MARKDOWN",
     );
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     fillExportDeveloperPreviewFields();
     await user.click(await screen.findByRole("button", { name: "Preview export" }));
     expect(
@@ -1810,7 +1841,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project Dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Demo User")).toBeInTheDocument();
     expect(await screen.findByText("Evidence in. Canon out.")).toBeInTheDocument();
     expect(await screen.findByText("No projects")).toBeInTheDocument();
@@ -1829,7 +1860,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    await screen.findByRole("heading", { name: "Dashboard" });
+    await screen.findByRole("heading", { name: "Project Dashboard" });
     await user.click(screen.getByRole("button", { name: "Log out" }));
 
     expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
@@ -1966,9 +1997,8 @@ describe("App shell routing", () => {
 
     await user.click(await screen.findByRole("link", { name: /Alpha Updated/u }));
 
-    const workspaceSidebar = await screen.findByRole("complementary");
-    expect(within(workspaceSidebar).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
     expect(screen.queryByText("Loading project.")).not.toBeInTheDocument();
   });
 
@@ -2218,7 +2248,7 @@ describe("App shell routing", () => {
     expect(await screen.findByText(".txt")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(screen.getByRole("button", { name: "Inspect only" }));
 
     expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
     expect(screen.getByText("Evidence anchors")).toBeInTheDocument();
@@ -2323,7 +2353,18 @@ describe("App shell routing", () => {
           1,
         ),
       );
-      await user.click(screen.getByRole("button", { name: "Inspect import" }));
+      if (index === 0) {
+        expect(screen.getByLabelText("Selected source")).toHaveTextContent(upload.filename);
+        expect(screen.queryByLabelText("Source text")).not.toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: "Clear selected file" }));
+        expect(screen.getByLabelText("Source text")).toHaveValue("");
+        await user.upload(
+          screen.getByLabelText("Source file"),
+          new File([content], upload.filename),
+        );
+        await screen.findByLabelText("Selected source");
+      }
+      await user.click(screen.getByRole("button", { name: "Inspect only" }));
       await waitFor(() => expect(inspectBodies).toHaveLength(index + 1));
 
       expect(inspectBodies[index]).toMatchObject({
@@ -2340,8 +2381,11 @@ describe("App shell routing", () => {
       new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
       new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
     ]);
-    await waitFor(() => expect(screen.getByText(/2 files \//u)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Selected source")).toHaveTextContent("2 files"),
+    );
+    expect(screen.getByLabelText("Selected source")).toHaveTextContent("bytes ready");
+    await user.click(screen.getByRole("button", { name: "Inspect only" }));
     await waitFor(() => expect(inspectBodies).toHaveLength(supportedUploads.length + 1));
     const bundledBody = inspectBodies[supportedUploads.length];
     expect(bundledBody).toMatchObject({
@@ -2440,13 +2484,13 @@ describe("App shell routing", () => {
       new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
       new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
     ]);
-    await user.click(await screen.findByRole("button", { name: "Inspect import" }));
+    await user.click(await screen.findByRole("button", { name: "Inspect only" }));
     expect(
       await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors."),
     ).toBeInTheDocument();
     expect(screen.queryByText("19 scenes ready for review.")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Save import" }));
+    await user.click(screen.getByRole("button", { name: "Save without processing" }));
 
     await waitFor(() => expect(savedImportId).toMatch(/^import_aevryn_import_bundle_/u));
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
@@ -2543,9 +2587,9 @@ describe("App shell routing", () => {
       new File(["Chapter 1\nMark arrived."], "chapter_001.txt"),
       new File(["Chapter 2\nLena answered."], "chapter_002.txt"),
     ]);
-    await user.click(await screen.findByRole("button", { name: "Inspect import" }));
+    await user.click(await screen.findByRole("button", { name: "Inspect only" }));
     await screen.findByText("10 chapters, 19 scenes, 513 evidence anchors.");
-    await user.click(screen.getByRole("button", { name: "Save import" }));
+    await user.click(screen.getByRole("button", { name: "Save without processing" }));
 
     await waitFor(() => expect(savedImportIds).toHaveLength(2));
     expect(savedImportIds[0]).toMatch(/^import_aevryn_import_bundle_/u);
@@ -2609,8 +2653,8 @@ describe("App shell routing", () => {
     expect(await screen.findByText("Chapter import")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 2{enter}Different opening.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await user.click(screen.getByRole("button", { name: "Inspect only" }));
+    await user.click(await screen.findByRole("button", { name: "Save without processing" }));
 
     expect(confirm).toHaveBeenCalledWith(
       "Alpha Story already has imported source. Only continue if this source belongs to the same story. Add it anyway?",
@@ -2713,31 +2757,35 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
     expect(await screen.findByText("No saved imports")).toBeInTheDocument();
-    expect(screen.getByText("Advanced import references")).toBeVisible();
+    expect(screen.getByText("Import details")).toBeVisible();
+    expect(screen.getByText("Advanced import references")).not.toBeVisible();
     expect(screen.getByLabelText("Import reference")).not.toBeVisible();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    expect(screen.getByText(/Process chapters runs the full intake path/u)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Process chapters" }));
 
     await screen.findByText("Chapter import");
+    expect(screen.queryByRole("button", { name: "Process reviewed import" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save without processing" })).not.toBeInTheDocument();
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
     expect(screen.queryByText("chapter_001.txt")).not.toBeInTheDocument();
     expect(screen.getAllByText("8 scenes").length).toBeGreaterThanOrEqual(1);
-    await user.click(screen.getByRole("button", { name: "Submit processing" }));
 
     expect(screen.queryByText("Processing started.")).not.toBeInTheDocument();
     expect(screen.queryByText("Processing completed.")).not.toBeInTheDocument();
-    expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
+    const runHistory = await screen.findByLabelText("Processing run history");
+    expect(runHistory).toHaveTextContent("Completed processing run");
+    expect(runHistory).toHaveTextContent("Snapshot pending");
     expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled();
 
     await user.clear(screen.getByLabelText("Source text"));
-    expect(screen.getByRole("button", { name: "Inspect import" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Inspect only" })).toBeDisabled();
     await user.upload(
       screen.getByLabelText("Source file"),
       new File(["Chapter 2\nA new import can begin."], "chapter_002.txt"),
     );
-    expect(await screen.findByRole("button", { name: "Inspect import" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Inspect only" })).toBeEnabled();
   });
 
   it("does not drain worker jobs from hosted browser sessions", async () => {
@@ -2824,12 +2872,13 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await user.click(screen.getByRole("button", { name: "Inspect only" }));
+    await user.click(await screen.findByRole("button", { name: "Process reviewed import" }));
     await screen.findByText("Chapter import");
-    await user.click(screen.getByRole("button", { name: "Submit processing" }));
 
-    expect(await screen.findByText("Pending run")).toBeInTheDocument();
+    const runHistory = await screen.findByLabelText("Processing run history");
+    expect(runHistory).toHaveTextContent("Active processing run");
+    expect(runHistory).toHaveTextContent("Queued");
     expect(screen.getByRole("button", { name: "Processing" })).toBeDisabled();
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.workerProcess)),
@@ -2983,10 +3032,14 @@ describe("App shell routing", () => {
         if (submittedRun) {
           runListReadsAfterSubmit += 1;
         }
-        const status = runListReadsAfterSubmit >= 2 ? "succeeded" : "pending";
+        const status = runListReadsAfterSubmit >= 3 ? "succeeded" : "pending";
+        const finishedAt =
+          status === "succeeded" && submittedRun
+            ? new Date(Date.parse(String(submittedRun.started_at)) + 5000).toISOString()
+            : null;
         const finishedFields =
           status === "succeeded"
-            ? { finished_at: "2026-06-27T00:00:05.000Z" }
+            ? { finished_at: finishedAt }
             : { finished_at: null };
         return Promise.resolve(
           new Response(
@@ -3005,7 +3058,7 @@ describe("App shell routing", () => {
           new Response(
             JSON.stringify({
               snapshots:
-                runListReadsAfterSubmit >= 2
+                runListReadsAfterSubmit >= 3
                   ? [{ ...snapshotPayload, run_id: submittedRun?.run_id }]
                   : [],
             }),
@@ -3035,7 +3088,28 @@ describe("App shell routing", () => {
         return Promise.resolve(new Response(JSON.stringify(importInspectPayload)));
       }
       if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/status`)) {
-        return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+        return Promise.resolve(
+          new Response(
+            JSON.stringify(
+              submittedRun
+                ? {
+                    ...projectStatusPayload,
+                    latest_engine_run: submittedRun,
+                    worker: {
+                      ...projectStatusPayload.worker,
+                      state: "queued",
+                      queued_jobs: 1,
+                      running_jobs: 0,
+                      latest_job_status: "queued",
+                      latest_job_queued_at: String(submittedRun.started_at),
+                      latest_job_updated_at: String(submittedRun.status_updated_at),
+                      latest_job_duration_seconds: null,
+                    },
+                  }
+                : projectStatusPayload,
+            ),
+          ),
+        );
       }
       if (url.endsWith(projectOutputsPath(projectAlphaPayload.project_id))) {
         return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
@@ -3053,21 +3127,26 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await user.click(screen.getByRole("button", { name: "Inspect only" }));
+    await user.click(await screen.findByRole("button", { name: "Save without processing" }));
     await screen.findByText("Chapter import");
     await user.click(screen.getAllByRole("button", { name: "Submit processing" })[0]);
 
     expect(await screen.findByRole("button", { name: "Processing" })).toBeDisabled();
-    const processingProgress = await screen.findByLabelText("Processing progress");
-    expect(processingProgress).toHaveTextContent("Queued");
-    expect(processingProgress).toHaveTextContent("Processing");
-    expect(processingProgress).not.toHaveTextContent(/%/u);
+    const statusDetails = await screen.findByLabelText("Processing status details");
+    expect(statusDetails).toHaveTextContent("Current step");
+    expect(statusDetails).toHaveTextContent("Queued");
+    expect(statusDetails).toHaveTextContent("Worker");
+    expect(statusDetails).toHaveTextContent("Queue");
+    expect(statusDetails).toHaveTextContent("1 queued / 0 running");
+    expect(statusDetails).not.toHaveTextContent(/%/u);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Processed" })).toBeDisabled());
-    expect(await screen.findByText("Succeeded run")).toBeInTheDocument();
-    expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();
-    expect(screen.getByText(/Canon output is ready/u)).toBeInTheDocument();
+    const runHistory = await screen.findByLabelText("Processing run history");
+    expect(runHistory).toHaveTextContent("Completed Canon build");
+    expect(runHistory).toHaveTextContent("Duration: 5s");
+    expect(runHistory).toHaveTextContent("Canon snapshot ready");
+    expect(screen.queryByLabelText("Current processing progress")).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.workerProcess)),
     ).toBe(false);
@@ -3178,8 +3257,8 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
-    await user.click(await screen.findByRole("button", { name: "Save import" }));
+    await user.click(screen.getByRole("button", { name: "Inspect only" }));
+    await user.click(await screen.findByRole("button", { name: "Save without processing" }));
 
     await waitFor(() => expect(createdStoryId).toBe("story_alpha_story"));
     expect(screen.queryByText("Import saved.")).not.toBeInTheDocument();
@@ -3282,16 +3361,93 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Saved Imports" })).toBeInTheDocument();
     expect(await screen.findByText("Chapter import")).toBeInTheDocument();
     expect(screen.getByText("8 scenes")).toBeInTheDocument();
-    expect(await screen.findByText("Failed run")).toBeInTheDocument();
-    expect(screen.getByText("Succeeded run")).toBeInTheDocument();
     const projectRunsSection = screen.getByRole("region", { name: "Project runs" });
-    const runStatuses = within(projectRunsSection).getAllByText(/^(Failed|Succeeded) run$/);
-    expect(runStatuses.map((status) => status.textContent)).toEqual([
-      "Failed run",
-      "Succeeded run",
-    ]);
-    expect(screen.getByText("No snapshot: run failed")).toBeInTheDocument();
-    expect(screen.getByText("Canon snapshot ready")).toBeInTheDocument();
+    await within(projectRunsSection).findByText("Processing run needs attention");
+    expect(projectRunsSection).toHaveTextContent("Completed Canon build");
+    expect(projectRunsSection).toHaveTextContent("No snapshot: run failed");
+    expect(projectRunsSection).toHaveTextContent("Canon snapshot ready");
+  });
+
+  it("labels stale active import runs as timed out and recoverable", async () => {
+    storeAuthenticatedProject();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories`)) {
+          return Promise.resolve(new Response(JSON.stringify({ stories: [storyAlphaPayload] })));
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/imports`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ imports: [importRecordPayload] })));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlphaPayload.project_id}/runs`)) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                runs: [
+                  {
+                    ...engineRunPayload,
+                    status: "pending",
+                    started_at: "2026-06-27T00:00:00.000Z",
+                    status_updated_at: "2026-06-27T00:00:00.000Z",
+                    finished_at: null,
+                  },
+                ],
+              }),
+            ),
+          );
+        }
+        if (
+          url.endsWith(
+            `${API_PATHS.projects}/${projectAlphaPayload.project_id}/stories/${storyAlphaPayload.story_id}/snapshots?snapshot_kind=canon`,
+          )
+        ) {
+          return Promise.resolve(new Response(JSON.stringify({ snapshots: [] })));
+        }
+        if (url.endsWith(API_PATHS.sourceFormats)) {
+          return Promise.resolve(new Response(JSON.stringify(sourceFormatsPayload)));
+        }
+        if (url.endsWith(API_PATHS.health)) {
+          return Promise.resolve(new Response(JSON.stringify(healthPayload)));
+        }
+        if (url.endsWith(API_PATHS.capabilities)) {
+          return Promise.resolve(new Response(JSON.stringify(capabilitiesPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectAlphaPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/status`)) {
+          return Promise.resolve(new Response(JSON.stringify(projectStatusPayload)));
+        }
+        if (url.endsWith(projectOutputsPath(projectAlpha.id))) {
+          return Promise.resolve(new Response(JSON.stringify(projectOutputsPayload)));
+        }
+        if (url.endsWith(`${API_PATHS.projects}/${projectAlpha.id}/exports`)) {
+          return Promise.resolve(new Response(JSON.stringify({ exports: [projectExportPayload] })));
+        }
+        return projectApiFallbackResponse(url);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/projects/project_alpha/import"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    const staleRunHistory = await screen.findByLabelText("Processing run history");
+    expect(staleRunHistory).toHaveTextContent("Processing run needs attention");
+    expect(staleRunHistory).toHaveTextContent("No snapshot: run timed out");
+    expect(screen.getByRole("button", { name: "Retry processing" })).toBeEnabled();
+    expect(screen.getByText("Run error: Processing timed out before completion.")).toBeInTheDocument();
+    expect(screen.queryByText("Pending run")).not.toBeInTheDocument();
   });
 
   it("shows persisted failed import runs without crashing after refresh", async () => {
@@ -3367,8 +3523,9 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Failed run")).toBeInTheDocument();
-    expect(screen.getByText("No snapshot: run failed")).toBeInTheDocument();
+    const failedRunHistory = await screen.findByLabelText("Processing run history");
+    expect(failedRunHistory).toHaveTextContent("Processing run needs attention");
+    expect(failedRunHistory).toHaveTextContent("No snapshot: run failed");
     expect(
       screen.getByText("Run error: Parser could not read chapter content."),
     ).toBeInTheDocument();
@@ -3470,7 +3627,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText("Failed run")).toHaveLength(4);
+    expect(await screen.findAllByText("Processing run needs attention")).toHaveLength(4);
     expect(
       screen.getByText(
         "Run error: Import evidence could not be matched during AI extraction. Review the import structure, then retry processing. If it repeats, split the import into smaller chapter batches.",
@@ -3510,7 +3667,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.clear(screen.getByLabelText("Character IDs"));
@@ -3548,10 +3705,24 @@ describe("App shell routing", () => {
     expect(characterCard?.querySelector("details.profile-disclosure")).not.toHaveAttribute("open");
     const markCard = within(characterCard as HTMLElement);
     expect(screen.getAllByRole("heading", { name: "Mark" })).toHaveLength(1);
+    const atAGlance = within(markCard.getByLabelText("Character at a glance"));
+    expect(atAGlance.getByText("Race")).toBeInTheDocument();
+    expect(atAGlance.getByText("Human")).toBeInTheDocument();
+    expect(atAGlance.getByText("Gender")).toBeInTheDocument();
+    expect(atAGlance.getByText("Male")).toBeInTheDocument();
+    expect(atAGlance.getByText("Status")).toBeInTheDocument();
+    expect(atAGlance.getByText("Alive")).toBeInTheDocument();
+    expect(atAGlance.getByText("Goal")).toBeInTheDocument();
+    expect(atAGlance.getByText("Find the Fortress")).toBeInTheDocument();
+    const identitySignals = within(markCard.getByLabelText("Character identity signals"));
+    expect(identitySignals.getByText("Aliases")).toBeInTheDocument();
+    expect(identitySignals.getByText("Titles")).toBeInTheDocument();
+    expect(identitySignals.getByText("Descriptions")).toBeInTheDocument();
+    expect(identitySignals.getAllByText("1 signal").length).toBeGreaterThanOrEqual(3);
     expect(markCard.getByRole("heading", { name: "Race" })).toBeInTheDocument();
-    expect(markCard.getByText("Human")).toBeInTheDocument();
+    expect(markCard.getAllByText("Human").length).toBeGreaterThanOrEqual(2);
     expect(markCard.getByRole("heading", { name: "Gender" })).toBeInTheDocument();
-    expect(markCard.getByText("Male")).toBeInTheDocument();
+    expect(markCard.getAllByText("Male").length).toBeGreaterThanOrEqual(2);
     expect(markCard.getByRole("heading", { name: "Aliases" })).toBeInTheDocument();
     expect(markCard.getByText("Captain Mark")).toBeInTheDocument();
     expect(markCard.getByRole("heading", { name: "Titles" })).toBeInTheDocument();
@@ -3576,6 +3747,25 @@ describe("App shell routing", () => {
       screen.getByText("1 review item; 2 review items need character review"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Glossary term needs review")).not.toBeInTheDocument();
+    const correctionDisclosure = markCard.getByText("User Edited correction").closest("details");
+    expect(correctionDisclosure).not.toBeNull();
+    await user.click(correctionDisclosure?.querySelector("summary") as HTMLElement);
+    const correctionForm = within(correctionDisclosure as HTMLElement);
+    await user.selectOptions(correctionForm.getByLabelText("Field"), "gender");
+    await user.type(correctionForm.getByLabelText("Correction"), "Male");
+    await user.click(correctionForm.getByRole("button", { name: "Save correction" }));
+    await waitFor(() => {
+      expect(
+        screen.getByText("Gender saved as User Edited."),
+      ).toBeInTheDocument();
+    });
+    const identityReviewDisclosure = document.querySelector(
+      "details.identity-review-panel",
+    ) as HTMLDetailsElement | null;
+    expect(identityReviewDisclosure).not.toBeNull();
+    expect(identityReviewDisclosure).not.toHaveAttribute("open");
+    await user.click(identityReviewDisclosure?.querySelector("summary") as HTMLElement);
+    expect(identityReviewDisclosure).toHaveAttribute("open");
     expect(
       screen.getAllByText(
         "Chapter 1, Scene 1; 2 possible matches; 87% confidence; Aevryn did not merge this reference",
@@ -3696,10 +3886,12 @@ describe("App shell routing", () => {
       "/projects/project_alpha/characters",
     );
     expect(screen.getByRole("heading", { name: "Quick Actions" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Prompt Packs 1 scenes ready/u })).toHaveAttribute(
+    const promptPacksAction = screen.getByRole("link", { name: /Prompt Packs 1 scenes ready/u });
+    expect(promptPacksAction).toHaveAttribute(
       "href",
       "/projects/project_alpha/prompts",
     );
+    expect(within(promptPacksAction).getByText("Open")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Exports Snapshot export available/u })).toHaveAttribute(
       "href",
       "/projects/project_alpha/exports",
@@ -3782,11 +3974,27 @@ describe("App shell routing", () => {
     expect(
       await screen.findByRole("region", { name: "Processed project output" }),
     ).toHaveTextContent("Showing 24 of 28 prompt scenes");
+    expect(screen.getByLabelText("Search prompt scenes")).toBeInTheDocument();
+    expect(screen.getByText(/load more scenes when needed/u)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Scene 24/u })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Scene 25/u })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Search prompt scenes"), "Scene 25");
+    expect(screen.getByText("Showing 1 of 28 prompt scenes.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Scene 25/u })).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Selected prompt pack" })).toHaveTextContent(
+      "Scene 25",
+    );
+    await user.clear(screen.getByLabelText("Search prompt scenes"));
+    expect(screen.queryByRole("button", { name: /Scene 25/u })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show 4 more scenes" }));
+    expect(screen.getByRole("button", { name: /Scene 25/u })).toBeInTheDocument();
 
     const selectedPack = screen.getByRole("article", { name: "Selected prompt pack" });
     expect(within(selectedPack).getByRole("heading", { name: "Scene 1" })).toBeInTheDocument();
+    const sceneNavigation = within(selectedPack).getByLabelText("Selected prompt scene navigation");
+    expect(sceneNavigation).toHaveTextContent("Scene 1 of 28");
+    expect(within(sceneNavigation).getByRole("button", { name: "Previous scene" })).toBeDisabled();
+    expect(within(sceneNavigation).getByRole("button", { name: "Next scene" })).toBeEnabled();
     const canonInputs = within(selectedPack).getByLabelText("Prompt canon inputs");
     expect(canonInputs).toHaveTextContent("Canon inputs");
     expect(canonInputs).toHaveTextContent("Characters");
@@ -3798,6 +4006,16 @@ describe("App shell routing", () => {
     expect(canonInputs).toHaveTextContent("Constraints");
     expect(canonInputs).toHaveTextContent("4 canon guardrails");
     expect(within(canonInputs).queryByText(/source_alpha_chapter/u)).not.toBeInTheDocument();
+    const sceneBrief = within(selectedPack).getByLabelText("Selected prompt scene brief");
+    expect(sceneBrief).toHaveTextContent("Characters");
+    expect(sceneBrief).toHaveTextContent("Mark");
+    expect(sceneBrief).toHaveTextContent("Setting");
+    expect(sceneBrief).toHaveTextContent("Hangar");
+    expect(sceneBrief).toHaveTextContent("Quiet hangar");
+    const canonContext = selectedPack.querySelector(
+      "details.prompt-context-disclosure",
+    ) as HTMLDetailsElement;
+    expect(canonContext.open).toBe(false);
     const imagePromptPreview = within(selectedPack).getByRole("list", {
       name: "Image Prompt preview",
     });
@@ -3827,12 +4045,21 @@ describe("App shell routing", () => {
     await user.click(screen.getByRole("button", { name: /^Scene 2\b/u }));
 
     expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
+    expect(sceneNavigation).toHaveTextContent("Scene 2 of 28");
     const updatedImagePromptPreview = within(selectedPack).getByRole("list", {
       name: "Image Prompt preview",
     });
     expect(
       within(updatedImagePromptPreview).getByText("Scene 2 image prompt detail."),
     ).toBeInTheDocument();
+    await user.click(within(sceneNavigation).getByRole("button", { name: "Next scene" }));
+    expect(within(selectedPack).getByRole("heading", { name: "Scene 3" })).toBeInTheDocument();
+    expect(sceneNavigation).toHaveTextContent("Scene 3 of 28");
+    await user.click(within(sceneNavigation).getByRole("button", { name: "Previous scene" }));
+    expect(within(selectedPack).getByRole("heading", { name: "Scene 2" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^Scene 25\b/u }));
+    expect(within(selectedPack).getByRole("heading", { name: "Scene 25" })).toBeInTheDocument();
   });
 
   it("clears stale character profiles when local AI JSON validation fails", async () => {
@@ -3846,7 +4073,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Characters" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview characters" }));
     expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
 
@@ -3904,7 +4131,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Characters" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview characters" }));
 
     expect(
@@ -3951,7 +4178,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Characters" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview characters" }));
     expect(await screen.findByRole("heading", { name: "Character Profiles" })).toBeInTheDocument();
 
@@ -3983,7 +4210,7 @@ describe("App shell routing", () => {
     expect(
       screen.getByText("1 review item; 2 review items need character review"),
     ).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}The hangar was quiet.");
     await user.clear(screen.getByLabelText("World entity IDs"));
@@ -4014,7 +4241,7 @@ describe("App shell routing", () => {
     expect(await screen.findByRole("heading", { name: "Timeline" })).toBeInTheDocument();
     expect(await screen.findByText("Chapter 1 / Scene 1; 1 change")).toBeInTheDocument();
     expect(await screen.findByText("Chapter 2 / Scene 1; 1 change")).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
@@ -4038,7 +4265,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Scenes" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.clear(screen.getByLabelText("Character IDs"));
@@ -4068,7 +4295,7 @@ describe("App shell routing", () => {
     expect(await screen.findByLabelText("Chapter 1, Scene 1 continuity details")).toBeInTheDocument();
     expect(await screen.findByLabelText("Chapter 2, Scene 1 continuity details")).toBeInTheDocument();
     expect(screen.queryByLabelText("Scene 1 continuity details")).not.toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
@@ -4156,7 +4383,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Continuity" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
@@ -4225,7 +4452,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Continuity" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
@@ -4291,7 +4518,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Prompt Packs" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.clear(screen.getByLabelText("Character IDs"));
@@ -4378,7 +4605,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Prompt Packs" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
 
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
@@ -4396,7 +4623,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Prompt Packs" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
 
@@ -4447,7 +4674,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Prompt Packs" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview prompt pack" }));
     expect(await screen.findByRole("heading", { name: "Production Pack" })).toBeInTheDocument();
 
@@ -4469,9 +4696,9 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Exports" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     expect(
-      screen.getByText(/Technical review requires real source text and extraction JSON/u),
+      screen.getByText(/Advanced preview requires real source text and extraction JSON/u),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Preview export" })).toBeDisabled();
     fillExportDeveloperPreviewFields();
@@ -4663,7 +4890,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Exports" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     fillExportDeveloperPreviewFields();
     await user.click(screen.getByRole("button", { name: "Preview export" }));
     expect(
@@ -4719,7 +4946,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Exports" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     fillExportDeveloperPreviewFields();
     await user.click(screen.getByRole("button", { name: "Preview export" }));
     expect(
@@ -4770,7 +4997,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Exports" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     fillExportDeveloperPreviewFields();
     await user.click(screen.getByRole("button", { name: "Preview export" }));
     expect(await screen.findByText("Export preview failed.")).toBeInTheDocument();
@@ -4820,7 +5047,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Continuity" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
 
     expect(
@@ -4839,7 +5066,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Continuity" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
 
@@ -4890,7 +5117,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Continuity" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview continuity" }));
     expect(await screen.findByRole("heading", { name: "Continuity Report" })).toBeInTheDocument();
 
@@ -4912,7 +5139,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Scenes" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview scene" }));
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
 
@@ -4962,7 +5189,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Scenes" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview scene" }));
 
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
@@ -5008,7 +5235,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Scenes" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview scene" }));
     expect(await screen.findByRole("heading", { name: "Scene 7" })).toBeInTheDocument();
 
@@ -5034,7 +5261,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Timeline" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
 
@@ -5081,7 +5308,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Timeline" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
 
     expect(await screen.findByRole("heading", { name: "No timeline scenes" })).toBeInTheDocument();
@@ -5127,7 +5354,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "Timeline" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview timeline" }));
     expect(await screen.findByRole("heading", { name: "Timeline Order" })).toBeInTheDocument();
 
@@ -5153,7 +5380,7 @@ describe("App shell routing", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "World" })).toBeInTheDocument();
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview world" }));
     expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
 
@@ -5199,7 +5426,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "World" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview world" }));
 
     expect(await screen.findByRole("heading", { name: "No world entities" })).toBeInTheDocument();
@@ -5244,7 +5471,7 @@ describe("App shell routing", () => {
     );
 
     await screen.findByRole("heading", { name: "World" });
-    await user.click(screen.getByText("Technical review"));
+    await user.click(screen.getByText("Advanced preview"));
     await user.click(screen.getByRole("button", { name: "Preview world" }));
     expect(await screen.findByRole("heading", { name: "World Sheet" })).toBeInTheDocument();
 
@@ -5299,13 +5526,13 @@ describe("App shell routing", () => {
 
     await screen.findByText(".txt");
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(screen.getByRole("button", { name: "Inspect only" }));
     expect(await screen.findByRole("heading", { name: "Import Structure" })).toBeInTheDocument();
 
     failImport = true;
     await user.clear(screen.getByLabelText("Filename"));
     await user.type(screen.getByLabelText("Filename"), "chapter.txt");
-    await user.click(screen.getByRole("button", { name: "Inspect import" }));
+    await user.click(screen.getByRole("button", { name: "Inspect only" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Import inspection failed.");
     expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();
@@ -5326,7 +5553,7 @@ describe("App shell routing", () => {
     await user.paste("a".repeat(MAX_IMPORT_SOURCE_CHARACTERS + 1));
 
     expect(await screen.findByText("500,001 / 500,000 characters")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Inspect import" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Inspect only" })).toBeDisabled();
   });
 
   it("shows source-format API failures on the import workspace tab", async () => {
@@ -5410,7 +5637,7 @@ describe("App shell routing", () => {
     for (const deferredInput of deferredInputs) {
       await user.clear(screen.getByLabelText("Filename"));
       await user.type(screen.getByLabelText("Filename"), deferredInput.filename);
-      await user.click(screen.getByRole("button", { name: "Inspect import" }));
+      await user.click(screen.getByRole("button", { name: "Inspect only" }));
 
       expect(await screen.findByRole("alert")).toHaveTextContent(deferredInput.message);
       expect(screen.queryByRole("heading", { name: "Import Structure" })).not.toBeInTheDocument();

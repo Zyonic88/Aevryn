@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 
 import { apiClient, type ImportInspectRequest } from "../api/client";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/useAuth";
-import { EmptyState, ErrorMessage, LoadingMessage, StatusPanel } from "../components/Feedback";
+import { EmptyState, ErrorMessage, LoadingMessage } from "../components/Feedback";
 import {
   MAX_IMPORT_SOURCE_CHARACTERS,
   buildImportInspectPayload,
@@ -22,6 +22,7 @@ import type {
   EngineRunList,
   ImportInspect,
   ImportRecord,
+  ProjectStatus,
   Snapshot,
   SnapshotList,
   Story,
@@ -31,7 +32,7 @@ import type { ProjectSummary } from "../projects/projectStore";
 import { readActiveStoryId, saveActiveStoryId } from "../stories/activeStory";
 
 const DEFAULT_IMPORT_TEXT = "";
-const DEFAULT_ACTIVE_RUN_POLL_INTERVAL_MS = 5000;
+const DEFAULT_ACTIVE_RUN_POLL_INTERVAL_MS = 2000;
 
 export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const { session } = useAuth();
@@ -49,7 +50,12 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const [isReadingSourceFile, setIsReadingSourceFile] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [inspectionResult, setInspectionResult] = useState<ImportInspect | null>(null);
+  const [inspectionResultMode, setInspectionResultMode] = useState<"review" | "process" | null>(
+    null,
+  );
   const [submittingImportId, setSubmittingImportId] = useState<string | null>(null);
+  const [importIntent, setImportIntent] = useState<"review" | "process" | null>(null);
+  const [processingClockMs, setProcessingClockMs] = useState(() => Date.now());
 
   const sourceFormats = useQuery({
     queryKey: ["source-formats"],
@@ -114,6 +120,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     },
     onError() {
       setInspectionResult(null);
+      setInspectionResultMode(null);
     },
   });
   const submitRun = useMutation({
@@ -141,7 +148,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         drainLocalWorker.mutate();
         return;
       }
-      void refreshProcessingState(queryClient, project.id, activeStoryId, session?.session_token);
+      void refreshProcessingState(queryClient, project.id, run.story_id, session?.session_token);
     },
     onError() {
       setSubmittingImportId(null);
@@ -229,6 +236,11 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     contentBase64: fileContentBase64,
   });
   const isInspectingImport = isReadingSourceFile || inspectImport.isPending;
+  const isImportActionBusy =
+    isInspectingImport ||
+    createImport.isPending ||
+    createDefaultStory.isPending ||
+    submitRun.isPending;
   const isSourceTextOversized = sourceText.length > MAX_IMPORT_SOURCE_CHARACTERS;
   const sourceFileAccept = sourceFormats.data
     ? sourceFormatAcceptValue(sourceFormats.data.supported)
@@ -253,13 +265,50 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
   const projectRunsForActiveStory = [
     ...(runsQuery.data?.runs ?? []).filter((run) => run.story_id === activeStoryId),
   ].sort((left, right) => runSortTimestamp(right).localeCompare(runSortTimestamp(left)));
+  const activeProcessingRun = projectRunsForActiveStory.find((run) => isActiveRun(run));
+  const activeProcessingSnapshot = activeProcessingRun
+    ? snapshotsByRun.get(activeProcessingRun.run_id)
+    : undefined;
+  const statusQuery = useQuery({
+    queryKey: projectStatusQueryKey(project.id, session?.session_token),
+    queryFn: () =>
+      apiClient.projectStatus(
+        project.id,
+        requireSessionToken(session),
+        new Date().toISOString(),
+      ),
+    enabled: session !== null && activeProcessingRun !== undefined,
+    refetchInterval: activeProcessingRun ? activeRunPollIntervalMs() : false,
+  });
+  const activeProcessingStatus =
+    statusQuery.data?.latest_engine_run?.run_id === activeProcessingRun?.run_id
+      ? statusQuery.data
+      : undefined;
+  useEffect(() => {
+    if (!activeProcessingRun) {
+      return undefined;
+    }
+    const intervalId = window.setInterval(() => {
+      setProcessingClockMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [activeProcessingRun]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    void inspectCurrentImport({ processAfterInspect: false });
+  }
+
+  async function inspectCurrentImport({
+    processAfterInspect,
+  }: {
+    processAfterInspect: boolean;
+  }): Promise<void> {
     inspectImport.reset();
     createImport.reset();
     submitRun.reset();
     drainLocalWorker.reset();
+    setImportIntent(processAfterInspect ? "process" : "review");
     try {
       const deferredFormatError = deferredFormatMessage(filename, sourceFormats.data);
       if (deferredFormatError) {
@@ -274,35 +323,53 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       });
       setFormError(null);
       setInspectionResult(null);
-      inspectImport.mutate(payload);
+      const result = await inspectImport.mutateAsync(payload);
+      setInspectionResult(result);
+      setInspectionResultMode(processAfterInspect ? "process" : "review");
+      if (processAfterInspect) {
+        await saveAndProcessImport(payload);
+      }
     } catch (error) {
       setInspectionResult(null);
-      setFormError(error instanceof Error ? error.message : "Import form is invalid.");
+      setInspectionResultMode(null);
+      setFormError(
+        error instanceof ApiError
+          ? null
+          : error instanceof Error
+            ? error.message
+            : "Import form is invalid.",
+      );
+    } finally {
+      setImportIntent(null);
     }
   }
 
-  async function saveImportMetadata() {
+  async function saveImportMetadata(
+    payloadOverride?: ImportInspectRequest,
+  ): Promise<ImportRecord | null> {
     createImport.reset();
     if (!importId.trim()) {
       setFormError("Import reference is required.");
-      return;
+      return null;
     }
     try {
       const deferredFormatError = deferredFormatMessage(filename, sourceFormats.data);
       if (deferredFormatError) {
         throw new Error(deferredFormatError);
       }
-      const payload = buildImportInspectPayload({
-        sourceId,
-        filename,
-        title,
-        sourceText,
-        contentBase64: fileContentBase64,
-      });
+      const payload =
+        payloadOverride ??
+        buildImportInspectPayload({
+          sourceId,
+          filename,
+          title,
+          sourceText,
+          contentBase64: fileContentBase64,
+        });
       setFormError(null);
       const storyId = activeStoryId || (await createDefaultStory.mutateAsync()).story_id;
       if (!confirmAdditionalStoryImport({ storyId })) {
-        return;
+        return null;
       }
       const importIdForSave = nextImportIdForSave({
         currentImportId: importId,
@@ -312,18 +379,34 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
       });
       setImportId(importIdForSave);
       try {
-        await createImport.mutateAsync({ importId: importIdForSave, payload, storyId });
+        return await createImport.mutateAsync({ importId: importIdForSave, payload, storyId });
       } catch (error) {
         if (!isImportIdAutoGenerated || !isDuplicateImportError(error)) {
           throw error;
         }
         const retryImportId = createImportId(payload.source_id);
         setImportId(retryImportId);
-        await createImport.mutateAsync({ importId: retryImportId, payload, storyId });
+        return await createImport.mutateAsync({ importId: retryImportId, payload, storyId });
       }
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Import form is invalid.");
+      return null;
     }
+  }
+
+  async function saveAndProcessImport(payloadOverride?: ImportInspectRequest) {
+    submitRun.reset();
+    drainLocalWorker.reset();
+    const importRecord = await saveImportMetadata(payloadOverride);
+    if (!importRecord) {
+      return;
+    }
+    setSubmittingImportId(importRecord.import_id);
+    if (payloadOverride) {
+      await submitRun.mutateAsync(importRecord);
+      return;
+    }
+    submitRun.mutate(importRecord);
   }
 
   function confirmAdditionalStoryImport({ storyId }: { storyId: string }): boolean {
@@ -410,16 +493,16 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
     submitRun.reset();
     drainLocalWorker.reset();
     setInspectionResult(null);
+    setInspectionResultMode(null);
   }
 
   return (
     <div className="workspace-view-stack">
-      <div>
-        <p className="eyebrow">Import</p>
-        <h2>Import</h2>
-      </div>
-
-      <StatusPanel title="Native Source Formats">
+      <details className="status-panel disclosure-panel" aria-label="Native Source Formats">
+        <summary>
+          <h2>Native Source Formats</h2>
+          <span>Supported files</span>
+        </summary>
         {sourceFormats.isLoading ? <LoadingMessage>Loading source formats.</LoadingMessage> : null}
         {sourceFormats.error ? <ErrorMessage>{sourceFormats.error.message}</ErrorMessage> : null}
         {sourceFormats.data ? (
@@ -434,7 +517,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             />
           </div>
         ) : null}
-      </StatusPanel>
+      </details>
 
       <section className="project-panel">
         <h2>Source Intake</h2>
@@ -463,34 +546,37 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               Aevryn will create the first story when you save this import.
             </p>
           )}
-          <div className="form-row-grid">
-            <label>
-              Filename
-              <input value={filename} onChange={(event) => setFilename(event.target.value)} />
-            </label>
-            <label>
-              Title
-              <input value={title} onChange={(event) => setTitle(event.target.value)} />
-            </label>
-          </div>
-          <details className="advanced-fields">
-            <summary>Advanced import references</summary>
+          <details className="advanced-fields import-details">
+            <summary>Import details</summary>
             <div className="form-row-grid">
               <label>
-                Import reference
-                <input
-                  value={importId}
-                  onChange={(event) => {
-                    setImportId(event.target.value);
-                    setIsImportIdAutoGenerated(false);
-                  }}
-                />
+                Filename
+                <input value={filename} onChange={(event) => setFilename(event.target.value)} />
               </label>
               <label>
-                Source reference
-                <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+                Title
+                <input value={title} onChange={(event) => setTitle(event.target.value)} />
               </label>
             </div>
+            <details className="advanced-fields nested-advanced-fields">
+              <summary>Advanced import references</summary>
+              <div className="form-row-grid">
+                <label>
+                  Import reference
+                  <input
+                    value={importId}
+                    onChange={(event) => {
+                      setImportId(event.target.value);
+                      setIsImportIdAutoGenerated(false);
+                    }}
+                  />
+                </label>
+                <label>
+                  Source reference
+                  <input value={sourceId} onChange={(event) => setSourceId(event.target.value)} />
+                </label>
+              </div>
+            </details>
           </details>
           <label>
             Source file
@@ -504,26 +590,37 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             />
           </label>
           {fileContentBase64 ? (
-            <button type="button" className="secondary-button" onClick={clearSelectedFile}>
-              Clear selected file
-            </button>
-          ) : null}
-          <label>
-            Source text
-            <textarea
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-              rows={10}
-              aria-describedby="source-text-count"
-              disabled={Boolean(fileContentBase64)}
-            />
-          </label>
-          <p
-            id="source-text-count"
-            className={isSourceTextOversized ? "field-note field-note-error" : "field-note"}
-          >
-            {sourceCountLabel}
-          </p>
+            <div className="selected-source-card" aria-label="Selected source">
+              <div>
+                <span>Selected source</span>
+                <strong>{selectedFileName}</strong>
+                <small>
+                  {selectedFileSize.toLocaleString()} bytes ready for structure review or processing
+                </small>
+              </div>
+              <button type="button" className="secondary-button" onClick={clearSelectedFile}>
+                Clear selected file
+              </button>
+            </div>
+          ) : (
+            <>
+              <label>
+                Source text
+                <textarea
+                  value={sourceText}
+                  onChange={(event) => setSourceText(event.target.value)}
+                  rows={10}
+                  aria-describedby="source-text-count"
+                />
+              </label>
+              <p
+                id="source-text-count"
+                className={isSourceTextOversized ? "field-note field-note-error" : "field-note"}
+              >
+                {sourceCountLabel}
+              </p>
+            </>
+          )}
           {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
           {inspectImport.error ? <ErrorMessage>{inspectImport.error.message}</ErrorMessage> : null}
           {createImport.error ? <ErrorMessage>{createImport.error.message}</ErrorMessage> : null}
@@ -534,22 +631,59 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           {canDrainWorkerFromBrowser() && drainLocalWorker.error ? (
             <ErrorMessage>{drainLocalWorker.error.message}</ErrorMessage>
           ) : null}
-          <button
-            type="submit"
-            className="primary-button"
-            aria-busy={isInspectingImport}
-            disabled={!canSubmit || isInspectingImport}
-          >
-            {importInspectButtonLabel({
-              isReading: isReadingSourceFile,
-              isInspecting: inspectImport.isPending,
-            })}
-          </button>
+          <div className="import-action-row">
+            <button
+              type="button"
+              className="primary-button"
+              aria-busy={importIntent === "process" && isImportActionBusy}
+              disabled={!canSubmit || isImportActionBusy}
+              onClick={() => {
+                void inspectCurrentImport({ processAfterInspect: true });
+              }}
+            >
+              {quickProcessButtonLabel({
+                intent: importIntent,
+                isReading: isReadingSourceFile,
+                isInspecting: inspectImport.isPending,
+                isSaving: createImport.isPending || createDefaultStory.isPending,
+                isSubmitting: submitRun.isPending && importIntent === "process",
+              })}
+            </button>
+            <button
+              type="submit"
+              className="secondary-button"
+              aria-busy={importIntent === "review" && isInspectingImport}
+              disabled={!canSubmit || isImportActionBusy}
+            >
+              {importInspectButtonLabel({
+                isReading: isReadingSourceFile,
+                isInspecting: inspectImport.isPending && importIntent === "review",
+              })}
+            </button>
+          </div>
+          <p className="import-fast-lane-note">
+            Process chapters runs the full intake path: inspect source structure, save the import,
+            then submit Canon processing. Inspect only is for manual review before processing.
+          </p>
         </form>
       </section>
 
-      <section className="project-panel" aria-label="Web import">
-        <h2>Web Import</h2>
+      <ImportProcessingPanel
+        isReadingSourceFile={isReadingSourceFile}
+        isInspecting={inspectImport.isPending}
+        isSaving={createImport.isPending || createDefaultStory.isPending}
+        isSubmitting={submitRun.isPending}
+        activeRun={activeProcessingRun}
+        activeSnapshot={activeProcessingSnapshot}
+        projectStatus={activeProcessingStatus}
+        nowMs={processingClockMs}
+      />
+
+      <details className="project-panel disclosure-panel" aria-label="Web import">
+        <summary>
+          <h2>Web Import</h2>
+          <span>Future intake</span>
+        </summary>
         <div className="import-form">
           <label>
             Source URL
@@ -562,9 +696,9 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
             Check permissions
           </button>
         </div>
-      </section>
+      </details>
 
-      {inspectionResult ? (
+      {inspectionResult && inspectionResultMode === "review" ? (
         <section className="project-panel" aria-label="Import inspection result">
           <h2>Import Structure</h2>
           <p className="result-summary">{importResultTotalsLabel(inspectionResult)}</p>
@@ -608,18 +742,34 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
               The import returned no scene map entries.
             </EmptyState>
           )}
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={createImport.isPending || createDefaultStory.isPending}
-            onClick={() => {
-              void saveImportMetadata();
-            }}
-          >
-            {createImport.isPending || createDefaultStory.isPending
-              ? "Saving import"
-              : "Save import"}
-          </button>
+          <div className="import-action-row">
+            <button
+              type="button"
+              className="primary-button"
+              disabled={createImport.isPending || createDefaultStory.isPending || submitRun.isPending}
+              onClick={() => {
+                void saveAndProcessImport();
+              }}
+            >
+              {createImport.isPending || createDefaultStory.isPending
+                ? "Saving import"
+                : submitRun.isPending
+                  ? "Submitting"
+                  : "Process reviewed import"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={createImport.isPending || createDefaultStory.isPending || submitRun.isPending}
+              onClick={() => {
+                void saveImportMetadata();
+              }}
+            >
+              {createImport.isPending || createDefaultStory.isPending
+                ? "Saving import"
+                : "Save without processing"}
+            </button>
+          </div>
         </section>
       ) : null}
 
@@ -679,23 +829,168 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           </EmptyState>
         ) : null}
         {projectRunsForActiveStory.length > 0 ? (
-          <div className="compact-list">
+          <div className="compact-list run-history-list" aria-label="Processing run history">
             {projectRunsForActiveStory.map((run) => {
               const errorLabel = runErrorLabel(run);
               const snapshot = snapshotsByRun.get(run.run_id);
               return (
-                <div key={run.run_id} className="compact-row">
-                  <strong>Processing run</strong>
-                  <span>{formatRunStatus(run.status)} run</span>
-                  <span>{runSnapshotLabel(run, snapshot)}</span>
-                  <ProcessingStepper run={run} snapshot={snapshot} />
-                  {errorLabel ? <span>{errorLabel}</span> : null}
+                <div
+                  key={run.run_id}
+                  className={`compact-row run-history-row run-history-row-${runHistoryState(
+                    run,
+                    snapshot,
+                  )}`}
+                >
+                  <div>
+                    <strong>{runHistoryTitle(run, snapshot)}</strong>
+                    <span>{runSnapshotLabel(run, snapshot)}</span>
+                  </div>
+                  <span>{runDurationSummary(run, processingClockMs)}</span>
+                  <span>{processingCurrentStepLabel(run, snapshot)}</span>
+                  {errorLabel ? <span className="run-history-error">{errorLabel}</span> : null}
                 </div>
               );
             })}
           </div>
         ) : null}
       </section>
+    </div>
+  );
+}
+
+function ImportProcessingPanel({
+  activeRun,
+  activeSnapshot,
+  isInspecting,
+  isReadingSourceFile,
+  isSaving,
+  isSubmitting,
+  nowMs,
+  projectStatus,
+}: {
+  activeRun: EngineRun | undefined;
+  activeSnapshot: Snapshot | undefined;
+  isInspecting: boolean;
+  isReadingSourceFile: boolean;
+  isSaving: boolean;
+  isSubmitting: boolean;
+  nowMs: number;
+  projectStatus: ProjectStatus | undefined;
+}) {
+  const hasLocalProgress = isReadingSourceFile || isInspecting || isSaving || isSubmitting;
+  if (!hasLocalProgress && !activeRun) {
+    return null;
+  }
+  return (
+    <section className="project-panel active-processing-panel" aria-label="Current import progress">
+      <header className="active-processing-header">
+        <div>
+          <p className="eyebrow">Processing</p>
+          <h2>{activeRun ? "Canon build in progress" : "Preparing import"}</h2>
+        </div>
+        <span>{activeRun ? formatRunStatus(activeRun.status) : "Working"}</span>
+      </header>
+      {activeRun ? (
+        <>
+          <ProcessingStatusStrip
+            run={activeRun}
+            snapshot={activeSnapshot}
+            projectStatus={projectStatus}
+            nowMs={nowMs}
+          />
+          <ProcessingStepper
+            run={activeRun}
+            snapshot={activeSnapshot}
+            label="Current processing progress"
+            nowMs={nowMs}
+            projectStatus={projectStatus}
+            showTiming
+          />
+        </>
+      ) : (
+        <ImportActionStepper
+          isReadingSourceFile={isReadingSourceFile}
+          isInspecting={isInspecting}
+          isSaving={isSaving}
+          isSubmitting={isSubmitting}
+        />
+      )}
+    </section>
+  );
+}
+
+function ProcessingStatusStrip({
+  nowMs,
+  projectStatus,
+  run,
+  snapshot,
+}: {
+  nowMs: number;
+  projectStatus: ProjectStatus | undefined;
+  run: EngineRun;
+  snapshot: Snapshot | undefined;
+}) {
+  const worker = projectStatus?.worker;
+  return (
+    <dl className="processing-status-strip" aria-label="Processing status details">
+      <div>
+        <dt>Current step</dt>
+        <dd>{processingCurrentStepLabel(run, snapshot)}</dd>
+      </div>
+      <div>
+        <dt>Worker</dt>
+        <dd>{worker ? formatRunStatus(worker.state) : "Checking"}</dd>
+      </div>
+      <div>
+        <dt>Queue</dt>
+        <dd>{worker ? workerQueueLabel(worker) : "Checking"}</dd>
+      </div>
+      <div>
+        <dt>Updated</dt>
+        <dd>{formatRunStatusAge(run, nowMs)}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function ImportActionStepper({
+  isInspecting,
+  isReadingSourceFile,
+  isSaving,
+  isSubmitting,
+}: {
+  isInspecting: boolean;
+  isReadingSourceFile: boolean;
+  isSaving: boolean;
+  isSubmitting: boolean;
+}) {
+  const steps = [
+    {
+      label: "Read source",
+      state: isReadingSourceFile ? "active" : isInspecting || isSaving || isSubmitting ? "done" : "waiting",
+    },
+    {
+      label: "Inspect structure",
+      state: isInspecting ? "active" : isSaving || isSubmitting ? "done" : "waiting",
+    },
+    {
+      label: "Save import",
+      state: isSaving ? "active" : isSubmitting ? "done" : "waiting",
+    },
+    {
+      label: "Submit processing",
+      state: isSubmitting ? "active" : "waiting",
+    },
+  ] satisfies Array<{ label: string; state: "active" | "done" | "waiting" }>;
+  return (
+    <div className="processing-stepper" aria-label="Import preparation progress">
+      {steps.map((step, index) => (
+        <div className={`processing-step processing-step-${step.state}`} key={step.label}>
+          <span aria-hidden="true">{step.state === "done" ? "ok" : index + 1}</span>
+          <strong>{step.label}</strong>
+        </div>
+      ))}
+      <p>Aevryn is preparing this source. The canon build will continue after processing is submitted.</p>
     </div>
   );
 }
@@ -819,7 +1114,35 @@ function importInspectButtonLabel({
   if (isReading) {
     return "Reading file";
   }
-  return isInspecting ? "Inspecting" : "Inspect import";
+  return isInspecting ? "Inspecting" : "Inspect only";
+}
+
+function quickProcessButtonLabel({
+  intent,
+  isReading,
+  isInspecting,
+  isSaving,
+  isSubmitting,
+}: {
+  intent: "review" | "process" | null;
+  isReading: boolean;
+  isInspecting: boolean;
+  isSaving: boolean;
+  isSubmitting: boolean;
+}): string {
+  if (isReading) {
+    return "Reading file";
+  }
+  if (isInspecting && intent === "process") {
+    return "Inspecting";
+  }
+  if (isSaving) {
+    return "Saving import";
+  }
+  if (isSubmitting) {
+    return "Submitting";
+  }
+  return "Process chapters";
 }
 
 function deferredFormatMessage(filename: string, formats: SourceFormats | undefined): string {
@@ -859,6 +1182,10 @@ function runQueryKey(projectId: string, sessionToken: string | undefined) {
 
 function snapshotQueryKey(projectId: string, storyId: string, sessionToken: string | undefined) {
   return ["story-snapshots", projectId, storyId, "canon", sessionToken] as const;
+}
+
+function projectStatusQueryKey(projectId: string, sessionToken: string | undefined) {
+  return ["project-status", projectId, sessionToken] as const;
 }
 
 function storyQueryKey(projectId: string, sessionToken: string | undefined) {
@@ -921,6 +1248,9 @@ function isDuplicateImportError(error: unknown): boolean {
 }
 
 function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (isStaleActiveRun(run)) {
+    return "No snapshot: run timed out";
+  }
   if (run.status === "failed") {
     return "No snapshot: run failed";
   }
@@ -933,18 +1263,82 @@ function runSnapshotLabel(run: EngineRun, snapshot: Snapshot | undefined): strin
   return "Snapshot waiting";
 }
 
-function ProcessingStepper({ run, snapshot }: { run: EngineRun; snapshot: Snapshot | undefined }) {
+function runDurationSummary(run: EngineRun, nowMs: number): string {
+  if (run.finished_at) {
+    return `Duration: ${formatDurationLabel(durationBetween(run.started_at, run.finished_at))}`;
+  }
+  if (run.status === "pending" || run.status === "running") {
+    return `Elapsed: ${formatDurationLabel(durationSince(run.started_at, nowMs))}`;
+  }
+  return "Duration unavailable";
+}
+
+function ProcessingStepper({
+  label = "Processing progress",
+  nowMs,
+  projectStatus,
+  run,
+  showTiming = false,
+  snapshot,
+}: {
+  label?: string;
+  nowMs?: number;
+  projectStatus?: ProjectStatus;
+  run: EngineRun;
+  showTiming?: boolean;
+  snapshot: Snapshot | undefined;
+}) {
   const steps = processingSteps(run, snapshot);
   return (
-    <div className="processing-stepper" aria-label="Processing progress">
+    <div className="processing-stepper" aria-label={label}>
       {steps.map((step) => (
         <div className={`processing-step processing-step-${step.state}`} key={step.label}>
           <span aria-hidden="true">{step.marker}</span>
           <strong>{step.label}</strong>
         </div>
       ))}
+      {showTiming && nowMs !== undefined ? (
+        <ProcessingTiming run={run} nowMs={nowMs} projectStatus={projectStatus} />
+      ) : null}
       <p>{processingHelpText(run, snapshot)}</p>
     </div>
+  );
+}
+
+function ProcessingTiming({
+  nowMs,
+  projectStatus,
+  run,
+}: {
+  nowMs: number;
+  projectStatus: ProjectStatus | undefined;
+  run: EngineRun;
+}) {
+  const worker = projectStatus?.worker;
+  return (
+    <dl className="processing-timing" aria-label="Processing timing">
+      <div>
+        <dt>Elapsed</dt>
+        <dd>{formatRunElapsed(run, nowMs)}</dd>
+      </div>
+      <div>
+        <dt>Last update</dt>
+        <dd>{formatRunStatusAge(run, nowMs)}</dd>
+      </div>
+      {worker?.latest_job_status ? (
+        <div>
+          <dt>Worker job</dt>
+          <dd>{formatRunStatus(worker.latest_job_status)}</dd>
+        </div>
+      ) : null}
+      {worker?.latest_job_duration_seconds !== undefined &&
+      worker.latest_job_duration_seconds !== null ? (
+        <div>
+          <dt>Job duration</dt>
+          <dd>{formatDurationLabel(worker.latest_job_duration_seconds * 1000)}</dd>
+        </div>
+      ) : null}
+    </dl>
   );
 }
 
@@ -952,33 +1346,37 @@ function processingSteps(
   run: EngineRun,
   snapshot: Snapshot | undefined,
 ): Array<{ label: string; state: "done" | "active" | "waiting" | "failed"; marker: string }> {
-  const failed = run.status === "failed";
+  const failed = run.status === "failed" || isStaleActiveRun(run);
   const succeeded = run.status === "succeeded";
+  const doneMarker = "ok";
   return [
     {
       label: "Queued",
       state: failed || succeeded || run.status === "running" ? "done" : "active",
-      marker: failed || succeeded || run.status === "running" ? "✓" : "1",
+      marker: failed || succeeded || run.status === "running" ? doneMarker : "1",
     },
     {
       label: "Processing",
       state: failed ? "failed" : succeeded ? "done" : run.status === "running" ? "active" : "waiting",
-      marker: failed ? "!" : succeeded ? "✓" : "2",
+      marker: failed ? "!" : succeeded ? doneMarker : "2",
     },
     {
       label: "Snapshot",
       state: failed ? "failed" : snapshot ? "done" : succeeded ? "active" : "waiting",
-      marker: failed ? "!" : snapshot ? "✓" : "3",
+      marker: failed ? "!" : snapshot ? doneMarker : "3",
     },
     {
       label: "Output ready",
       state: failed ? "failed" : snapshot ? "done" : "waiting",
-      marker: failed ? "!" : snapshot ? "✓" : "4",
+      marker: failed ? "!" : snapshot ? doneMarker : "4",
     },
   ];
 }
 
 function processingHelpText(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (isStaleActiveRun(run)) {
+    return "Processing has not updated recently. Retry this import when you are ready.";
+  }
   if (run.status === "failed") {
     return "Processing stopped before a canon snapshot was created.";
   }
@@ -989,6 +1387,104 @@ function processingHelpText(run: EngineRun, snapshot: Snapshot | undefined): str
     return "Processing finished. Aevryn is waiting for the canon snapshot to appear.";
   }
   return "You can leave this page. Aevryn will keep processing and update this run automatically.";
+}
+
+function processingCurrentStepLabel(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (isStaleActiveRun(run)) {
+    return "Needs retry";
+  }
+  if (run.status === "failed") {
+    return "Failed";
+  }
+  if (snapshot) {
+    return "Output ready";
+  }
+  if (run.status === "succeeded") {
+    return "Snapshot finalizing";
+  }
+  if (run.status === "running") {
+    return "Building Canon";
+  }
+  return "Queued";
+}
+
+function runHistoryTitle(run: EngineRun, snapshot: Snapshot | undefined): string {
+  if (isActiveRun(run)) {
+    return "Active processing run";
+  }
+  if (run.status === "failed" || isStaleActiveRun(run)) {
+    return "Processing run needs attention";
+  }
+  if (snapshot) {
+    return "Completed Canon build";
+  }
+  return "Completed processing run";
+}
+
+function runHistoryState(
+  run: EngineRun,
+  snapshot: Snapshot | undefined,
+): "active" | "failed" | "succeeded" | "waiting" {
+  if (isActiveRun(run)) {
+    return "active";
+  }
+  if (run.status === "failed" || isStaleActiveRun(run)) {
+    return "failed";
+  }
+  if (snapshot) {
+    return "succeeded";
+  }
+  return "waiting";
+}
+
+function workerQueueLabel(worker: ProjectStatus["worker"]): string {
+  const queued = worker.queued_jobs.toLocaleString();
+  const running = worker.running_jobs.toLocaleString();
+  if (worker.queued_jobs === 0 && worker.running_jobs === 0) {
+    return "No active jobs";
+  }
+  return `${queued} queued / ${running} running`;
+}
+
+function formatRunElapsed(run: EngineRun, nowMs: number): string {
+  return formatDurationLabel(durationSince(run.started_at, nowMs));
+}
+
+function formatRunStatusAge(run: EngineRun, nowMs: number): string {
+  const updatedAt = run.status_updated_at ?? run.started_at;
+  return `${formatDurationLabel(durationSince(updatedAt, nowMs))} ago`;
+}
+
+function durationSince(timestamp: string, nowMs: number): number {
+  const startedAt = Date.parse(timestamp);
+  if (!Number.isFinite(startedAt)) {
+    return 0;
+  }
+  return Math.max(0, nowMs - startedAt);
+}
+
+function durationBetween(startedAtTimestamp: string, finishedAtTimestamp: string): number {
+  const startedAt = Date.parse(startedAtTimestamp);
+  const finishedAt = Date.parse(finishedAtTimestamp);
+  if (!Number.isFinite(startedAt) || !Number.isFinite(finishedAt)) {
+    return 0;
+  }
+  return Math.max(0, finishedAt - startedAt);
+}
+
+function formatDurationLabel(durationMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes < 60) {
+    return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`;
 }
 
 function importCardTitle(index: number): string {

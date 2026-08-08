@@ -14,6 +14,7 @@ from aevryn.persistence.models import (
     EngineRunRecord,
     ExportRecord,
     ImportRecord,
+    ProjectCorrectionRecord,
     ProjectRecord,
     ProjectSettingsRecord,
     SnapshotRecord,
@@ -109,6 +110,12 @@ class JsonProjectRepository(InMemoryProjectRepository):
         """Persist project settings and flush the local store."""
         self._commit(lambda: super(JsonProjectRepository, self).save_project_settings(settings))
 
+    def save_project_correction(self, correction: ProjectCorrectionRecord) -> None:
+        """Persist a user-authored Canon correction and flush the local store."""
+        self._commit(
+            lambda: super(JsonProjectRepository, self).save_project_correction(correction)
+        )
+
     def _commit(self, mutation: Callable[[], None]) -> None:
         """Apply a mutation and rollback memory state if disk persistence fails."""
         state = self._snapshot_state()
@@ -130,6 +137,7 @@ class JsonProjectRepository(InMemoryProjectRepository):
             self._snapshots.copy(),
             self._exports.copy(),
             self._settings.copy(),
+            self._corrections.copy(),
         )
 
     def _restore_state(self, state: tuple[dict[str, Any], ...]) -> None:
@@ -143,6 +151,7 @@ class JsonProjectRepository(InMemoryProjectRepository):
             self._snapshots,
             self._exports,
             self._settings,
+            self._corrections,
         ) = state
 
     def _load(self) -> None:
@@ -171,6 +180,12 @@ class JsonProjectRepository(InMemoryProjectRepository):
             "project_settings",
             ProjectSettingsRecord,
             "project_id",
+        )
+        self._corrections = _load_records(
+            payload,
+            "project_corrections",
+            ProjectCorrectionRecord,
+            "correction_id",
         )
         self._validate_loaded_uniqueness()
         self._validate_loaded_relationships()
@@ -220,6 +235,8 @@ class JsonProjectRepository(InMemoryProjectRepository):
                     raise ValueError("Export kind must match snapshot kind.")
             for settings in self._settings.values():
                 self._get_required(self._projects, settings.project_id, "project")
+            for correction in self._corrections.values():
+                self._get_required(self._projects, correction.project_id, "project")
         except (RecordNotFoundError, ValueError) as error:
             raise PersistenceError("Project database relationships are invalid.") from error
 
@@ -236,6 +253,7 @@ class JsonProjectRepository(InMemoryProjectRepository):
             "snapshots": _dump_records(self._snapshots),
             "exports": _dump_records(self._exports),
             "project_settings": _dump_records(self._settings),
+            "project_corrections": _dump_records(self._corrections),
         }
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path = self._database_path.with_suffix(f"{self._database_path.suffix}.tmp")
@@ -259,6 +277,7 @@ def _require_payload_sections(payload: dict[str, Any]) -> None:
         "snapshots",
         "exports",
         "project_settings",
+        "project_corrections",
     }
     missing_sections = sorted(required_sections.difference(payload))
     if missing_sections:

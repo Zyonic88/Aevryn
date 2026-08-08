@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aevryn - Narrative Intelligence Platform</title>
+    <meta
+      name="description"
+      content="Aevryn is a narrative intelligence platform that turns long-form stories into evidence-backed canon, continuity, scene context, and production-ready prompt packs."
+    />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:title" content="Aevryn - Narrative Intelligence Platform" />
+    <meta
+      property="og:description"
+      content="Understand stories before you create from them. Evidence-backed canon, timeline-aware state, and production-ready context for creators."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://aevryn.ai" />
+    <meta property="og:image" content="https://aevryn.ai/assets/aevryn-logo-transparent.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png" />
+    <link rel="apple-touch-icon" sizes="256x256" href="assets/favicon-256.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Aevryn home">
+        <img src="assets/favicon-64.png" alt="" />
+        <span>Aevryn</span>
+      </a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="#platform">Platform</a>
+        <a href="#why">Why Aevryn</a>
+        <a href="#workspace">Workspace</a>
+        <a href="#trust">Trust</a>
+        <a href="#beta">Beta</a>
+      </nav>
+      <a class="header-action" href="https://app.aevryn.ai/login">Log in</a>
+    </header>
+
+    <main id="main">
+      <section id="top" class="hero" aria-labelledby="hero-title">
+        <div class="hero-panel" aria-label="Aevryn IDE-style workspace preview">
+          <div class="window-top" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+            <strong>Aevryn Workspace</strong>
+          </div>
+          <div class="ide-preview">
+            <aside class="side-rail" aria-label="Workspace tools">
+              <div class="rail-logo"><img src="assets/favicon-64.png" alt="" /></div>
+              <button class="active" type="button" aria-label="Story">S</button>
+              <button type="button" aria-label="Characters">C</button>
+              <button type="button" aria-label="World">W</button>
+              <button type="button" aria-label="Timeline">T</button>
+              <button type="button" aria-label="Prompt packs">P</button>
+            </aside>
+            <aside class="file-tree" aria-label="Project sections">
+              <h2>Project</h2>
+              <p class="tree-active">Story</p>
+              <p>Characters</p>
+              <p>World</p>
+              <p>Timeline</p>
+              <p>Scenes</p>
+              <p>Continuity</p>
+              <p>Prompt Packs</p>
+              <p>Exports</p>
+              <div class="locked">Images locked</div>
+              <div class="locked">Video locked</div>
+            </aside>
+            <section class="workspace-main" aria-label="Scene sheet preview">
+              <div class="tabs" aria-hidden="true">
+                <button class="tab active" type="button">Scene Sheet</button>
+                <button class="tab" type="button">Character Card</button>
+                <button class="tab" type="button">Continuity</button>
+              </div>
+              <div class="editor-card">
+                <p class="code-line"><span>scene</span>: Chapter 12, Scene 4</p>
+                <p class="code-line"><span>purpose</span>: Revelation under pressure</p>
+                <p class="code-line"><span>characters</span>: Known identities only</p>
+                <p class="code-line"><span>canon</span>: Evidence-backed facts</p>
+                <p class="code-line"><span>output</span>: Prompt pack ready</p>
+                <div class="progress" aria-label="Processing preview"><i></i></div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div class="hero-copy">
+          <p class="eyebrow">Built by Aetherra Labs</p>
+          <h1 id="hero-title">Aevryn</h1>
+          <p class="lead">
+            Aevryn is a Canon IDE for long-form stories. It imports chapters,
+            understands what is true, tracks how the story changes, and turns
+            that understanding into character sheets, world state, continuity,
+            scene context, and production-ready prompt packs.
+          </p>
+          <div class="why-strip" aria-label="Why creators use Aevryn">
+            <div>
+              <strong>Stop continuity drift</strong>
+              <span>Track what is true as the story grows.</span>
+            </div>
+            <div>
+              <strong>Reduce prompt cleanup</strong>
+              <span>Generate from accepted Canon, not memory.</span>
+            </div>
+          </div>
+          <div class="hero-actions" aria-label="Primary actions">
+            <a class="button primary" href="https://app.aevryn.ai/register">Create account</a>
+            <a class="button ghost" href="https://app.aevryn.ai/login">Log in</a>
+          </div>
+          <dl class="status-strip" aria-label="Aevryn platform status">
+            <div>
+              <dt>Canon</dt>
+              <dd>Evidence-backed</dd>
+            </div>
+            <div>
+              <dt>Timeline</dt>
+              <dd>Scene-aware</dd>
+            </div>
+            <div>
+              <dt>Prompts</dt>
+              <dd>Canon-bounded</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section id="platform" class="section">
+        <p class="eyebrow">Narrative intelligence</p>
+        <h2>Aevryn does not replace the story. It listens to it.</h2>
+        <div class="cards three">
+          <article class="card">
+            <h3>Evidence-backed canon</h3>
+            <p>
+              Accepted facts must trace back to the story. Unknown stays unknown,
+              and Aevryn treats uncertainty as a valid result.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Timeline-aware state</h3>
+            <p>
+              Character state, world state, relationships, equipment, injuries,
+              and scene context evolve as chapters move forward.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Production-ready context</h3>
+            <p>
+              Scene sheets, character cards, continuity reports, prompt packs, and
+              exports are generated from structured story understanding.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="why" class="section why">
+        <div>
+          <p class="eyebrow">Why use Aevryn</p>
+          <h2>Generic AI can respond. Aevryn remembers the story.</h2>
+          <p>
+            A single prompt can summarize a chapter, but it does not maintain a
+            durable model of Canon. Aevryn is built to preserve identity, state,
+            relationships, world facts, and scene meaning across the project so
+            production outputs stay grounded in the story.
+          </p>
+        </div>
+        <div class="why-grid" aria-label="Aevryn benefits">
+          <article>
+            <h3>For writers</h3>
+            <p>Review characters, world state, timeline changes, and continuity without rereading everything manually.</p>
+          </article>
+          <article>
+            <h3>For prompt work</h3>
+            <p>Build image, narration, camera, and animation prompts from structured Canon instead of loose notes.</p>
+          </article>
+          <article>
+            <h3>For long projects</h3>
+            <p>Keep chapter-by-chapter state visible so later outputs do not quietly contradict earlier evidence.</p>
+          </article>
+          <article>
+            <h3>For trust</h3>
+            <p>Unknown stays unknown. Aevryn separates imported evidence, accepted Canon, and user-edited corrections.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="workspace" class="section split">
+        <div>
+          <p class="eyebrow">IDE-style workspace</p>
+          <h2>Built like a focused production tool.</h2>
+          <p>
+            Aevryn is organized around projects, imports, processed outputs,
+            monitoring, settings, and exports. The app should feel like opening a
+            creative workspace, not wandering through a generic dashboard.
+          </p>
+        </div>
+        <div class="workflow-list" aria-label="Aevryn workflow">
+          <div><span>01</span> Create a private project</div>
+          <div><span>02</span> Import supported story files</div>
+          <div><span>03</span> Process through the platform workflow</div>
+          <div><span>04</span> Review canon-backed outputs</div>
+          <div><span>05</span> Export prompt packs and story sheets</div>
+        </div>
+      </section>
+
+      <section id="trust" class="section trust-panel">
+        <p class="eyebrow">Trust by design</p>
+        <h2>Your stories belong to you.</h2>
+        <p>
+          Aevryn is designed around private manuscripts, metadata-only monitoring,
+          evidence-backed outputs, and clear boundaries between storage, database,
+          engine, API, and frontend.
+        </p>
+        <div class="trust-grid">
+          <span>No training on user stories without explicit opt-in</span>
+          <span>Private manuscripts and generated exports</span>
+          <span>Metadata-only support and monitoring posture</span>
+          <span>Canon accepts evidence, not hidden assumptions</span>
+        </div>
+      </section>
+
+      <section id="beta" class="section beta">
+        <div>
+          <p class="eyebrow">Public beta preparation</p>
+          <h2>Aevryn is moving toward public beta deliberately.</h2>
+          <p>
+            The product is being hardened before outside users upload private work.
+            Legal review, final public-beta signoff, and production readiness checks
+            remain required before broad release.
+          </p>
+        </div>
+        <aside class="beta-card" aria-label="Beta access">
+          <h3>Account access</h3>
+          <p>
+            Create an account, log in, or contact support if you need help with
+            access, imports, exports, or project deletion.
+          </p>
+          <div class="beta-actions">
+            <a class="button primary" href="https://app.aevryn.ai/register">Create account</a>
+            <a class="button ghost" href="https://app.aevryn.ai/login">Log in</a>
+            <a class="button ghost" href="mailto:support@aevryn.ai">Email support</a>
+          </div>
+          <p class="form-note">
+            Do not email full manuscripts, chapters, passwords, API keys, tokens,
+            private URLs, or screenshots containing private story text.
+          </p>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div>
+        <strong>Aevryn</strong>
+        <span>Built by Aetherra Labs.</span>
+      </div>
+      <nav aria-label="Footer navigation">
+        <a href="https://app.aevryn.ai/trust">Trust</a>
+        <a href="https://app.aevryn.ai/privacy">Privacy</a>
+        <a href="https://app.aevryn.ai/security">Security</a>
+        <a href="https://app.aevryn.ai/support">Support</a>
+      </nav>
+      <span id="copyright"></span>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

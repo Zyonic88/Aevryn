@@ -285,6 +285,44 @@ class MisclassifiedPhysicalContainerSkillExtractor:
         )
 
 
+class MisclassifiedSkillCardExtractor:
+    """Extractor that labels a physical skill container as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious skill-card/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_shadow_step_card",
+                    entity_type="skill",
+                    display_name="Shadow Step skill card",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.94,
+                ),
+            ),
+        )
+
+
+class MisclassifiedPhysicalCoreSkillExtractor:
+    """Extractor that labels a physical core object as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious physical-core/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_energy_core",
+                    entity_type="skill",
+                    display_name="Energy Core",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.93,
+                ),
+            ),
+        )
+
+
 class ValidSkillExtractor:
     """Extractor that labels a named ability as a skill."""
 
@@ -513,6 +551,25 @@ class MisclassifiedSystemExtractor:
         )
 
 
+class MisclassifiedPhysicalCoreSystemExtractor:
+    """Extractor that labels a physical core object as a system."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious physical-core/system classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="system_energy_core",
+                    entity_type="system",
+                    display_name="Energy Core",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.93,
+                ),
+            ),
+        )
+
+
 class MisclassifiedSystemItemExtractor:
     """Extractor that labels a named governing system as a physical item."""
 
@@ -551,6 +608,44 @@ class ValidSystemExtractor:
         )
 
 
+class MisclassifiedSystemUiItemExtractor:
+    """Extractor that labels a game-like system UI phrase as a physical item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious system-ui/item classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_status_screen",
+                    entity_type="item",
+                    display_name="Status screen",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.92,
+                ),
+            ),
+        )
+
+
+class ValidSystemUiExtractor:
+    """Extractor that labels a game-like system UI phrase as system context."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid system UI candidate."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="system_status_screen",
+                    entity_type="system",
+                    display_name="Status screen",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.92,
+                ),
+            ),
+        )
+
+
 class AnonymousGroupCharacterExtractor:
     """Extractor that labels an anonymous group phrase as a character."""
 
@@ -584,6 +679,44 @@ class ValidSystemCreatedItemExtractor:
                     display_name=(
                         "T3 Blizzard-class Light Interstellar Battlecruiser technical blueprint"
                     ),
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
+class ValidPhysicalCoreItemExtractor:
+    """Extractor that labels a physical core phrase as an item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid physical core item."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_energy_core",
+                    entity_type="item",
+                    display_name="Energy Core",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.91,
+                ),
+            ),
+        )
+
+
+class ValidSkillCardItemExtractor:
+    """Extractor that labels a physical skill container as an item."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return a valid physical skill-container item."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="item_shadow_step_skill_card",
+                    entity_type="item",
+                    display_name="Shadow Step skill card",
                     evidence_anchor_id=scene.evidence_anchor_ids[0],
                     confidence=0.91,
                 ),
@@ -871,6 +1004,19 @@ def test_extraction_rejects_physical_containers_as_skills() -> None:
         engine.extract_imported_source(imported)
 
 
+def test_extraction_rejects_physical_core_phrases_as_skills() -> None:
+    """Physical core phrases must not be accepted as usable skills."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedPhysicalCoreSkillExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
 def test_extraction_accepts_explicit_skill_terms() -> None:
     """Named techniques remain valid skill entities."""
     imported = StoryImporter().import_text(
@@ -1032,6 +1178,32 @@ def test_extraction_rejects_obvious_physical_object_as_system() -> None:
         engine.extract_imported_source(imported)
 
 
+def test_extraction_rejects_physical_core_phrases_as_systems() -> None:
+    """Physical core phrases must not be accepted as governing systems."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedPhysicalCoreSystemExtractor())
+
+    with pytest.raises(ValueError, match="physical object cannot be system"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_physical_skill_containers_as_skills() -> None:
+    """Physical skill cards must not be accepted as usable skills."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSkillCardExtractor())
+
+    with pytest.raises(ValueError, match="container cannot be skill"):
+        engine.extract_imported_source(imported)
+
+
 def test_extraction_rejects_obvious_system_as_item() -> None:
     """Named governing systems must not be accepted as physical items."""
     imported = StoryImporter().import_text(
@@ -1059,6 +1231,33 @@ def test_extraction_accepts_explicit_system_terms() -> None:
     assert result.entities[0].entity_id == "system_super_starfleet"
 
 
+def test_extraction_rejects_system_ui_phrase_as_physical_item() -> None:
+    """System UI phrases must not be accepted as physical item entities."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSystemUiItemExtractor())
+
+    with pytest.raises(ValueError, match="governing system cannot be physical item"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_accepts_system_ui_phrase_as_system() -> None:
+    """Game-like UI phrases are valid system entities when typed as systems."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidSystemUiExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_id == "system_status_screen"
+
+
 def test_extraction_accepts_system_created_physical_items() -> None:
     """A system-created object should remain an item when it is physically concrete."""
     imported = StoryImporter().import_text(
@@ -1074,6 +1273,36 @@ def test_extraction_accepts_system_created_physical_items() -> None:
     assert result.entities[0].display_name == (
         "T3 Blizzard-class Light Interstellar Battlecruiser technical blueprint"
     )
+
+
+def test_extraction_accepts_physical_core_phrases_as_items() -> None:
+    """Physical core phrases remain valid item candidates."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidPhysicalCoreItemExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_type == "item"
+    assert result.entities[0].display_name == "Energy Core"
+
+
+def test_extraction_accepts_physical_skill_containers_as_items() -> None:
+    """Physical skill cards remain valid item candidates."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=ValidSkillCardItemExtractor())
+
+    result = engine.extract_imported_source(imported)[0]
+
+    assert result.entities[0].entity_type == "item"
+    assert result.entities[0].display_name == "Shadow Step skill card"
 
 
 def test_extraction_rejects_anonymous_group_phrase_as_character() -> None:

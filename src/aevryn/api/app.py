@@ -73,6 +73,9 @@ from aevryn.api.models import (
     ImportOutput,
     OutputSection,
     ProductionPackOutput,
+    ProjectCorrectionListResponse,
+    ProjectCorrectionOutput,
+    ProjectCorrectionRequest,
     ProjectCreateRequest,
     ProjectExportOptionOutput,
     ProjectIdentityReviewItem,
@@ -160,6 +163,8 @@ from aevryn.persistence import (
     JsonProjectRepository,
     PersistenceError,
     PostgresqlProjectRepository,
+    ProjectCorrectionRecord,
+    ProjectCorrectionTargetType,
     ProjectRecord,
     ProjectRepository,
     ProjectSettingsRecord,
@@ -934,6 +939,132 @@ def create_app(
         return _project_settings_output(settings)
 
     @app.get(
+        "/v2/projects/{project_id}/corrections",
+        response_model=ProjectCorrectionListResponse,
+        tags=["Projects"],
+        operation_id="getV2ProjectCorrections",
+    )
+    def list_project_corrections(
+        project_id: str,
+        request: Request,
+    ) -> ProjectCorrectionListResponse:
+        """Return user-authored Canon corrections inside an authenticated project."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            corrections = repository.list_project_corrections(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
+        except (AccessDeniedError, RecordNotFoundError) as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return ProjectCorrectionListResponse(
+            corrections=tuple(
+                _project_correction_output(correction)
+                for correction in corrections
+            )
+        )
+
+    @app.put(
+        "/v2/projects/{project_id}/corrections/{correction_id}",
+        response_model=ProjectCorrectionOutput,
+        tags=["Projects"],
+        operation_id="putV2ProjectCorrection",
+    )
+    def update_project_correction(
+        project_id: str,
+        correction_id: str,
+        request_body: ProjectCorrectionRequest,
+        request: Request,
+    ) -> ProjectCorrectionOutput:
+        """Create or update one user-authored Canon correction."""
+        repository = _require_project_repository(project_repository)
+        user = _authenticated_user(
+            request=request,
+            authentication_service=authentication_service,
+        )
+        try:
+            repository.get_project(user_id=user.user_id, project_id=project_id)
+            normalized_correction_id = _normalized_machine_token(
+                correction_id,
+                "Correction ID",
+            )
+            existing = {
+                correction.correction_id: correction
+                for correction in repository.list_project_corrections(
+                    user_id=user.user_id,
+                    project_id=project_id,
+                )
+            }.get(normalized_correction_id)
+            correction = ProjectCorrectionRecord(
+                correction_id=normalized_correction_id,
+                project_id=project_id,
+                target_type=_normalized_correction_target_type(
+                    request_body.target_type,
+                ),
+                target_id=_normalized_machine_token(
+                    request_body.target_id,
+                    "Correction target ID",
+                ),
+                field_name=_normalized_machine_token(
+                    request_body.field_name,
+                    "Correction field name",
+                ),
+                value=_normalized_correction_value(request_body.value),
+                created_at=existing.created_at if existing is not None else request_body.now,
+                updated_at=request_body.now,
+            )
+            repository.save_project_correction(correction)
+            _append_audit_event(
+                audit_ledger,
+                event_type="project_correction_changed",
+                occurred_at=request_body.now,
+                summary="User-edited Canon correction changed.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={
+                    "target_type": correction.target_type,
+                    "field_name": correction.field_name,
+                    "source_label": correction.source_label,
+                },
+            )
+        except AccessDeniedError as error:
+            _append_audit_event(
+                audit_ledger,
+                event_type="cross_user_access_attempt",
+                occurred_at=_audit_timestamp(),
+                summary="Cross-user project access denied.",
+                actor_id=user.user_id,
+                project_id=project_id,
+                metadata={"route": "project_corrections"},
+            )
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except RecordNotFoundError as error:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "project_not_found", "detail": "Project not found."},
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "project_correction_failed", "detail": str(error)},
+            ) from error
+        except PersistenceError as error:
+            raise _project_storage_error(error) from error
+        return _project_correction_output(correction)
+
+    @app.get(
         "/v2/projects/{project_id}/stories",
         response_model=StoryListResponse,
         tags=["Projects"],
@@ -1168,6 +1299,10 @@ def create_app(
                 user_id=user.user_id,
                 project_id=project_id,
             )
+            corrections = repository.list_project_corrections(
+                user_id=user.user_id,
+                project_id=project_id,
+            )
         except (AccessDeniedError, RecordNotFoundError) as error:
             raise HTTPException(
                 status_code=404,
@@ -1180,6 +1315,7 @@ def create_app(
             imports=imports,
             runs=runs,
             snapshots=snapshots,
+            corrections=corrections,
         )
 
     @app.post(
@@ -3104,6 +3240,23 @@ def _project_settings_output(settings: ProjectSettingsRecord) -> ProjectSettings
     )
 
 
+def _project_correction_output(
+    correction: ProjectCorrectionRecord,
+) -> ProjectCorrectionOutput:
+    """Convert persisted user-authored correction metadata to the API contract."""
+    return ProjectCorrectionOutput(
+        correction_id=correction.correction_id,
+        project_id=correction.project_id,
+        target_type=correction.target_type,
+        target_id=correction.target_id,
+        field_name=correction.field_name,
+        value=correction.value,
+        source_label=correction.source_label,
+        created_at=correction.created_at,
+        updated_at=correction.updated_at,
+    )
+
+
 def _story_output(story: StoryRecord) -> StoryOutput:
     """Convert persisted story metadata to the API contract."""
     return StoryOutput(
@@ -3206,6 +3359,7 @@ def _project_outputs_response(
     imports: Sequence[ImportRecord],
     runs: Sequence[EngineRunRecord],
     snapshots: Sequence[SnapshotRecord],
+    corrections: Sequence[ProjectCorrectionRecord] = (),
 ) -> ProjectOutputsResponse:
     """Build project output summaries from persisted snapshots without executing workflows."""
     latest_import = _latest_import(imports)
@@ -3214,6 +3368,11 @@ def _project_outputs_response(
     canon_summary = _project_output_canon_summary(latest_canon)
     canon_payload = _canon_snapshot_metadata(latest_canon) if latest_canon else {}
     display_names = _snapshot_display_names(canon_payload)
+    character_profiles = _snapshot_character_profiles(
+        canon_payload,
+        display_names=display_names,
+    )
+    world_sheet = _snapshot_world_sheet(canon_payload, display_names=display_names)
     return ProjectOutputsResponse(
         project_id=project_id,
         status=_project_workflow_state(runs=runs, imports=imports, snapshots=snapshots),
@@ -3222,14 +3381,18 @@ def _project_outputs_response(
         canon=canon_summary,
         surfaces=_project_output_surfaces(canon_summary),
         language_identity=_project_language_identity_summary(canon_payload),
-        character_profiles=_snapshot_character_profiles(
-            canon_payload,
-            display_names=display_names,
+        character_profiles=_with_character_corrections(
+            character_profiles,
+            corrections,
         ),
-        world_sheet=_snapshot_world_sheet(canon_payload, display_names=display_names),
+        world_sheet=_with_world_corrections(world_sheet, corrections),
         timeline_changes=_snapshot_timeline_changes(canon_payload),
         scene_sheets=_snapshot_scene_sheets(canon_payload, display_names=display_names),
-        prompt_packs=_snapshot_prompt_packs(canon_payload, display_names=display_names),
+        prompt_packs=_with_prompt_pack_corrections(
+            _snapshot_prompt_packs(canon_payload, display_names=display_names),
+            corrections,
+            display_names=display_names,
+        ),
         continuity_report=_snapshot_continuity_report(
             canon_payload,
             display_names=display_names,
@@ -3788,6 +3951,205 @@ def _snapshot_world_sheet(
         )
     except (ValueError, ValidationError):
         return None
+
+
+def _with_character_corrections(
+    profiles: Sequence[CharacterProfileOutput],
+    corrections: Sequence[ProjectCorrectionRecord],
+) -> tuple[CharacterProfileOutput, ...]:
+    """Return character profiles with user-authored corrections visibly labeled."""
+    corrections_by_character: dict[str, list[ProjectCorrectionRecord]] = {}
+    for correction in corrections:
+        if correction.target_type != "character":
+            continue
+        corrections_by_character.setdefault(correction.target_id, []).append(correction)
+    if not corrections_by_character:
+        return tuple(profiles)
+    corrected_profiles: list[CharacterProfileOutput] = []
+    for profile in profiles:
+        corrected_profile = profile
+        for correction in sorted(
+            corrections_by_character.get(profile.character_id, ()),
+            key=lambda item: (item.field_name, item.correction_id),
+        ):
+            corrected_profile = _with_character_profile_correction(
+                corrected_profile,
+                correction,
+            )
+        corrected_profiles.append(corrected_profile)
+    return tuple(corrected_profiles)
+
+
+def _with_character_profile_correction(
+    profile: CharacterProfileOutput,
+    correction: ProjectCorrectionRecord,
+) -> CharacterProfileOutput:
+    """Return one character profile with an editable section correction applied."""
+    section_by_field = {
+        "race": profile.race,
+        "gender": profile.gender,
+        "status": profile.status,
+        "current_goal": profile.current_goal,
+        "current_equipment": profile.current_equipment,
+        "current_abilities": profile.current_abilities,
+        "current_assets": profile.current_assets,
+        "territory": profile.territory,
+        "relationships": profile.relationships,
+        "current_limitations": profile.current_limitations,
+        "recent_changes": profile.recent_changes,
+    }
+    section = section_by_field.get(correction.field_name)
+    if section is None:
+        return profile
+    return profile.model_copy(
+        update={
+            correction.field_name: _user_edited_section(section, correction)
+        }
+    )
+
+
+def _with_world_corrections(
+    world_sheet: WorldSheetOutput | None,
+    corrections: Sequence[ProjectCorrectionRecord],
+) -> WorldSheetOutput | None:
+    """Return world output with user-authored corrections visibly labeled."""
+    world_corrections = tuple(
+        sorted(
+            (
+                correction
+                for correction in corrections
+                if correction.target_type == "world"
+            ),
+            key=lambda item: (item.target_id, item.field_name, item.correction_id),
+        )
+    )
+    if world_sheet is None or not world_corrections:
+        return world_sheet
+    edited_sections = tuple(
+        OutputSection(
+            title=f"User Edited: {_readable_correction_field(correction.field_name)}",
+            items=(_user_edited_item(correction),),
+        )
+        for correction in world_corrections
+    )
+    return world_sheet.model_copy(
+        update={"entity_sections": world_sheet.entity_sections + edited_sections}
+    )
+
+
+def _user_edited_section(
+    section: OutputSection,
+    correction: ProjectCorrectionRecord,
+) -> OutputSection:
+    """Return a section replaced by a clearly labeled user edit."""
+    return OutputSection(title=section.title, items=(_user_edited_item(correction),))
+
+
+def _user_edited_item(correction: ProjectCorrectionRecord) -> str:
+    """Return a human-readable user-edited value marker."""
+    return f"User Edited: {correction.value}"
+
+
+def _readable_correction_field(field_name: str) -> str:
+    """Return readable field text for user-authored corrections."""
+    return " ".join(part.capitalize() for part in field_name.split("_") if part)
+
+
+def _with_prompt_pack_corrections(
+    prompt_packs: Sequence[ProductionPackOutput],
+    corrections: Sequence[ProjectCorrectionRecord],
+    *,
+    display_names: Mapping[str, str],
+) -> tuple[ProductionPackOutput, ...]:
+    """Return prompt packs with visible user-authored correction context."""
+    correction_lines = _prompt_correction_lines(
+        corrections,
+        display_names=display_names,
+    )
+    if not correction_lines:
+        return tuple(prompt_packs)
+
+    return tuple(
+        ProductionPackOutput(
+            scene=pack.scene,
+            image_prompt=_with_prompt_section_corrections(
+                pack.image_prompt,
+                correction_lines,
+            ),
+            narration_prompt=_with_prompt_section_corrections(
+                pack.narration_prompt,
+                correction_lines,
+            ),
+            camera_prompt=_with_prompt_section_corrections(
+                pack.camera_prompt,
+                correction_lines,
+            ),
+            animation_prompt=_with_prompt_section_corrections(
+                pack.animation_prompt,
+                correction_lines,
+            ),
+        )
+        for pack in prompt_packs
+    )
+
+
+def _with_prompt_section_corrections(
+    section: OutputSection,
+    correction_lines: Sequence[str],
+) -> OutputSection:
+    """Append User Edited correction lines to a prompt output section."""
+    return OutputSection(
+        title=section.title,
+        items=(
+            *section.items,
+            "User Edited Canon corrections:",
+            *tuple(f"- {line}" for line in correction_lines),
+        ),
+    )
+
+
+def _prompt_correction_lines(
+    corrections: Sequence[ProjectCorrectionRecord],
+    *,
+    display_names: Mapping[str, str],
+) -> tuple[str, ...]:
+    """Return prompt-safe correction lines without exposing machine IDs."""
+    lines: list[str] = []
+    for correction in sorted(
+        corrections,
+        key=lambda item: (
+            item.target_type,
+            item.target_id,
+            item.field_name,
+            item.correction_id,
+        ),
+    ):
+        target_label = _readable_correction_target(
+            correction.target_id,
+            display_names=display_names,
+        )
+        target_type = correction.target_type.capitalize()
+        field_label = _readable_correction_field(correction.field_name)
+        lines.append(
+            f"{correction.source_label} {target_type} Correction: "
+            f"{target_label} {field_label} = {correction.value}"
+        )
+
+    return tuple(lines)
+
+
+def _readable_correction_target(
+    target_id: str,
+    *,
+    display_names: Mapping[str, str],
+) -> str:
+    """Return a readable correction target without exposing internal tokens."""
+    display_name = display_names.get(target_id) or display_names.get(target_id.lower())
+    if display_name:
+        return display_name
+    if re.fullmatch(r"[Ee]\d{1,4}", target_id.strip()):
+        return _snapshot_entity_label(target_id, display_names=display_names)
+    return _title_preserving_snapshot_acronyms(target_id.replace("_", " "))
 
 
 def _snapshot_scene_sheets(
@@ -4458,6 +4820,7 @@ def _project_status_worker(
     jobs = tuple(
         job for job in background_job_queue.list_jobs() if job.project_id == project_id
     )
+    latest_job = _latest_status_job_for_run(jobs=jobs, latest_run=latest_run)
     queued_jobs = sum(1 for job in jobs if job.status == "queued")
     running_jobs = sum(1 for job in jobs if job.status == "running")
     succeeded_jobs = sum(1 for job in jobs if job.status == "succeeded")
@@ -4479,7 +4842,47 @@ def _project_status_worker(
         succeeded_jobs=succeeded_jobs,
         failed_jobs=failed_jobs,
         next_job_id=next_job_id,
+        latest_job_status=latest_job.status if latest_job else "",
+        latest_job_queued_at=latest_job.queued_at if latest_job else "",
+        latest_job_updated_at=latest_job.status_updated_at if latest_job else "",
+        latest_job_duration_seconds=_terminal_job_duration_seconds(latest_job),
     )
+
+
+def _latest_status_job_for_run(
+    *,
+    jobs: Sequence[BackgroundJob],
+    latest_run: EngineRunRecord | None,
+) -> BackgroundJob | None:
+    """Return the queue job that best explains the latest project run."""
+    if latest_run is not None:
+        job_id = _job_id_from_ref(latest_run.job_ref)
+        if job_id:
+            matching_job = next((job for job in jobs if job.job_id == job_id), None)
+            if matching_job is not None:
+                return matching_job
+    if not jobs:
+        return None
+    return max(jobs, key=lambda job: (job.status_updated_at, job.queued_at, job.job_id))
+
+
+def _job_id_from_ref(job_ref: str) -> str:
+    """Return a queue job ID from a machine-readable job reference."""
+    prefix = "queue://"
+    if not job_ref.startswith(prefix):
+        return ""
+    return job_ref.removeprefix(prefix)
+
+
+def _terminal_job_duration_seconds(job: BackgroundJob | None) -> int | None:
+    """Return queued-to-terminal duration for completed jobs only."""
+    if job is None or job.status not in {"succeeded", "failed"}:
+        return None
+    queued_at = _parse_api_utc(job.queued_at)
+    updated_at = _parse_api_utc(job.status_updated_at)
+    if updated_at < queued_at:
+        return None
+    return int((updated_at - queued_at).total_seconds())
 
 
 def _project_status_worker_state(
@@ -4874,14 +5277,6 @@ def _queue_job_is_running(background_job_queue: BackgroundJobQueue, job_id: str)
         return False
 
 
-def _job_id_from_ref(job_ref: str) -> str:
-    """Return the queue job ID from a run job_ref."""
-    prefix = "queue://"
-    if not job_ref.startswith(prefix):
-        return ""
-    return job_ref[len(prefix):]
-
-
 def _active_or_completed_import_run(
     *,
     runs: Sequence[EngineRunRecord],
@@ -4970,6 +5365,22 @@ def _normalized_locale(value: str) -> str:
         raise ValueError("Settings locale cannot be blank.")
     if any(character.isspace() for character in normalized):
         raise ValueError("Settings locale cannot contain whitespace.")
+    return normalized
+
+
+def _normalized_correction_target_type(value: str) -> ProjectCorrectionTargetType:
+    """Return a normalized correction target type."""
+    normalized = _normalized_machine_token(value, "Correction target type")
+    if normalized not in {"character", "world"}:
+        raise ValueError("Correction target type must be character or world.")
+    return cast(ProjectCorrectionTargetType, normalized)
+
+
+def _normalized_correction_value(value: str) -> str:
+    """Return concise user-edited value text without changing its meaning."""
+    normalized = " ".join(value.split())
+    if not normalized:
+        raise ValueError("Correction value cannot be blank.")
     return normalized
 
 

@@ -63,6 +63,41 @@ def test_sentence_understanding_detects_system_ui_phrases() -> None:
     assert "quest reward" in understanding.cue_terms
 
 
+def test_sentence_understanding_detects_system_window_and_screen_phrases() -> None:
+    """Game-like UI window and screen phrases should route as system context."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_system_ui_surfaces",
+        title="Sentence System UI Surfaces",
+        text=(
+            "Chapter 1\n"
+            "A system window opened, then a status screen displayed a quest notification."
+        ),
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "system_reference" in understanding.signals
+    assert "system window" in understanding.cue_terms
+    assert "status screen" in understanding.cue_terms
+    assert "quest notification" in understanding.cue_terms
+
+
+def test_sentence_understanding_does_not_treat_plain_window_as_system_ui() -> None:
+    """A literal window should not become system context without a system UI phrase."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_plain_window",
+        title="Sentence Plain Window",
+        text="Chapter 1\nMira opened the window beside the classroom.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "location_reference" in understanding.signals
+    assert "system_reference" not in understanding.signals
+    assert "classroom" in understanding.cue_terms
+    assert "window" not in understanding.cue_terms
+
+
 def test_sentence_understanding_keeps_system_rewards_out_of_skill_context() -> None:
     """Quest, mission, points, and reward language are system context, not abilities."""
     imported = StoryImporter().import_text(
@@ -217,6 +252,92 @@ def test_sentence_understanding_treats_ability_crystal_as_item_context() -> None
     assert "system" in understanding.ambiguity_terms
 
 
+def test_sentence_understanding_treats_skill_card_as_item_context() -> None:
+    """A skill card is a knowledge/resource container, not a usable ability itself."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_card",
+        title="Sentence Skill Card",
+        text="Chapter 1\nThe system generated a skill card for Shadow Step.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "system_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "skill card" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
+def test_sentence_understanding_treats_ability_token_as_item_context() -> None:
+    """An ability token should stay item context until separate ability evidence appears."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_ability_token",
+        title="Sentence Ability Token",
+        text="Chapter 1\nMira placed the ability token beside the map.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "ability token" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_keeps_skill_card_and_separate_skill_reviewable() -> None:
+    """A physical skill card and separate skill evidence should both remain visible."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_skill_card_and_skill",
+        title="Sentence Skill Card And Skill",
+        text="Chapter 1\nThe skill card unlocked the Shadow Step skill.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "skill card" in understanding.cue_terms
+    assert "skill" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
+def test_sentence_understanding_treats_physical_core_phrase_as_item_context() -> None:
+    """A named physical core phrase is item context, not a settled power-system concept."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_energy_core",
+        title="Sentence Energy Core",
+        text="Chapter 1\nMira picked up the damaged energy core.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "action" in understanding.signals
+    assert "item_reference" in understanding.signals
+    assert "system_reference" not in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "energy core" in understanding.cue_terms
+    assert "core" in understanding.ambiguity_terms
+    assert understanding.review_required is True
+
+
+def test_sentence_understanding_keeps_bare_core_ambiguity_out_of_item_context() -> None:
+    """Bare genre core language should stay review metadata until context resolves it."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_dao_core",
+        title="Sentence Dao Core",
+        text="Chapter 1\nThe dao core reacted to qi.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "translation_ambiguity" in understanding.signals
+    assert "item_reference" not in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert understanding.ambiguity_terms == ("core", "dao", "qi")
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_keeps_manual_and_separate_skill_reviewable() -> None:
     """A technique manual can be an item while a separate skill cue still routes to review."""
     imported = StoryImporter().import_text(
@@ -339,8 +460,8 @@ def test_sentence_understanding_detects_location_and_organization_language() -> 
         title="Sentence World Context",
         text=(
             "Chapter 1\n"
-            "Zhao Chen stood inside the North Star Academy classroom while the "
-            "Starlight Empire fleet waited."
+            "Mira stood inside the coastal academy classroom while the "
+            "Azure Empire fleet waited."
         ),
     )
 
@@ -348,9 +469,9 @@ def test_sentence_understanding_detects_location_and_organization_language() -> 
 
     assert "location_reference" in understanding.signals
     assert "organization_reference" in understanding.signals
-    assert "north star academy" in understanding.cue_terms
+    assert "academy" in understanding.cue_terms
     assert "classroom" in understanding.cue_terms
-    assert "starlight empire" in understanding.cue_terms
+    assert "empire" in understanding.cue_terms
     assert "fleet" in understanding.cue_terms
 
 
