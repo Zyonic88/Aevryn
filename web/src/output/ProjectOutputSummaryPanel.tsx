@@ -570,7 +570,7 @@ function CharacterPanel({
       <CharacterIdentitySignals profile={profile} />
       <details className="profile-disclosure">
         <summary>Character details</summary>
-        <div className="profile-section-grid">
+        <div className="profile-section-grid character-detail-grid">
           <PanelSection section={profile.aliases} />
           <PanelSection section={profile.titles} />
           <PanelSection section={profile.descriptions} />
