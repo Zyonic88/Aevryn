@@ -24,8 +24,8 @@ from aevryn.cli import (
     _run_hosted_deployment_smoke,
     _run_observability_config_check,
     _run_production_config_check,
-    _run_public_website_config_check,
     _run_provider_config_check,
+    _run_public_website_config_check,
     main,
 )
 from aevryn.importing import StoryImporter

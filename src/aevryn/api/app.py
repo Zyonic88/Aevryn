@@ -4131,10 +4131,8 @@ def _prompt_correction_lines(
         target_type = correction.target_type.capitalize()
         field_label = _readable_correction_field(correction.field_name)
         lines.append(
-            (
-                f"{correction.source_label} {target_type} Correction: "
-                f"{target_label} {field_label} = {correction.value}"
-            )
+            f"{correction.source_label} {target_type} Correction: "
+            f"{target_label} {field_label} = {correction.value}"
         )
 
     return tuple(lines)
