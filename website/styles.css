@@ -222,6 +222,38 @@ h3 {
   margin: 32px 0;
 }
 
+.why-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.why-strip div {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: rgba(10, 18, 30, 0.7);
+}
+
+.why-strip strong,
+.why-strip span {
+  display: block;
+}
+
+.why-strip strong {
+  margin-bottom: 5px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.why-strip span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .button {
   min-height: 48px;
   display: inline-flex;
@@ -491,6 +523,43 @@ h3 {
   font-weight: 900;
 }
 
+.why {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: 42px;
+  align-items: start;
+}
+
+.why > div > p {
+  max-width: 760px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.why-grid article {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: rgba(13, 20, 32, 0.76);
+}
+
+.why-grid h3 {
+  font-size: 17px;
+}
+
+.why-grid p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .trust-panel {
   margin: 0 5vw;
   padding: 46px;
@@ -579,7 +648,8 @@ h3 {
   }
 
   .split,
-  .beta {
+  .beta,
+  .why {
     grid-template-columns: 1fr;
   }
 
@@ -602,6 +672,7 @@ h3 {
   }
 
   .cards.three,
+  .why-grid,
   .trust-grid,
   .footer {
     grid-template-columns: 1fr;
@@ -650,6 +721,10 @@ h3 {
 
   .lead {
     font-size: 18px;
+  }
+
+  .why-strip {
+    grid-template-columns: 1fr;
   }
 
   .editor-card {
