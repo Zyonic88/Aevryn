@@ -380,6 +380,44 @@ Acceptance:
 The release record truthfully says Public beta: Approved.
 ```
 
+## 7. Public Apex Website Routing
+
+Status:
+
+```text
+Open
+```
+
+Required:
+
+* deploy the repo-owned static public website from `website/`
+* route `https://aevryn.ai` to that deployed static site
+* keep `https://app.aevryn.ai` as the authenticated application domain
+* verify the Cloudflare Pages project uses root `website`, no build command,
+  static root output, production branch `master`, and the expected custom domain
+* confirm the public apex site does not collect manuscripts, imply public beta
+  approval before signoff, or contradict legal/trust wording
+
+Tracking:
+
+* `website/README.md`
+* `docs/AEVRYN_PUBLIC_SITE_PUBLICATION_PLAN.md`
+* `docs/AEVRYN_PUBLIC_BETA_SETUP_CHECKLIST.md`
+
+Verified evidence:
+
+* 2026-08-08 browser review found `https://aevryn.ai` serving a generic
+  placeholder/contact page rather than the repo-owned static website.
+* `aevryn public-website-config-check` now exists to verify the static website
+  Pages project contract with metadata-only output.
+
+Acceptance:
+
+```text
+https://aevryn.ai serves the approved static Aevryn website from website/, and
+aevryn public-website-config-check returns ok=public_website_config_contract_checked.
+```
+
 ---
 
 # Engineering Hardening Backlog
