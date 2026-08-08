@@ -24,6 +24,7 @@ from aevryn.cli import (
     _run_hosted_deployment_smoke,
     _run_observability_config_check,
     _run_production_config_check,
+    _run_public_website_config_check,
     _run_provider_config_check,
     main,
 )
@@ -1398,6 +1399,168 @@ def test_cloudflare_pages_config_check_rejects_env_mismatch_without_leaking_valu
     assert actual_api_url not in captured.err
 
 
+def test_public_website_config_check_help_describes_metadata_contract(
+    capsys: CaptureFixture[str],
+) -> None:
+    """Public website config help should describe the metadata-only gate."""
+    with pytest.raises(SystemExit) as error:
+        main(["public-website-config-check", "--help"])
+    output = capsys.readouterr().out
+
+    assert error.value.code == 0
+    assert "public Aevryn website Cloudflare Pages config" in output
+    assert "static website root/build/output contract" in output
+    assert "never prints account IDs" in output
+
+
+def test_public_website_config_check_cli_reports_metadata_only(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Public website config check should not print account, token, or domain."""
+    private_values = (
+        "cloudflare-account-id",
+        "cloudflare-api-token",
+        "aevryn.ai",
+    )
+    monkeypatch.setenv("AEVRYN_CLOUDFLARE_ACCOUNT_ID", private_values[0])
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", private_values[1])
+
+    def fake_check(
+        *,
+        account_id: str,
+        cloudflare_credential: str,
+        project_name: str,
+        expected_domain: str,
+        timeout_seconds: float,
+    ) -> dict[str, object]:
+        assert account_id == private_values[0]
+        assert cloudflare_credential == private_values[1]
+        assert project_name == "aevryn-public"
+        assert expected_domain == private_values[2]
+        assert timeout_seconds == 30.0
+        return {
+            "project": project_name,
+            "production_branch": "master",
+            "root_directory": "verified",
+            "build_command": "static",
+            "build_output": "static_root",
+            "production_deployments": "enabled",
+            "domain": "verified",
+            "secrets_printed": 0,
+            "ok": "public_website_config_contract_checked",
+        }
+
+    monkeypatch.setattr("aevryn.cli._run_public_website_config_check", fake_check)
+
+    exit_code = main(["public-website-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "project=aevryn-public" in captured.out
+    assert "production_branch=master" in captured.out
+    assert "domain=verified" in captured.out
+    assert "secrets_printed=0" in captured.out
+    assert "ok=public_website_config_contract_checked" in captured.out
+    for private_value in private_values:
+        assert private_value not in captured.out
+        assert private_value not in captured.err
+
+
+def test_public_website_config_check_verifies_static_site_contract(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Public website config check should verify the static website Pages project."""
+    requests: list[urllib.request.Request] = []
+
+    class FakeResponse:
+        """Minimal Cloudflare API response for public website config tests."""
+
+        def __init__(self, body: bytes) -> None:
+            self.status = 200
+            self._body = body
+            self.headers: dict[str, str] = {}
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return self._body
+
+    def fake_urlopen(
+        request: urllib.request.Request,
+        timeout: float,
+    ) -> FakeResponse:
+        requests.append(request)
+        assert timeout == 30.0
+        assert request.get_header("Authorization") == "Bearer cloudflare-token"
+        return FakeResponse(
+            json.dumps(_public_website_pages_project_payload()).encode("utf-8")
+        )
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    summary = _run_public_website_config_check(
+        account_id="cloudflare-account",
+        cloudflare_credential="cloudflare-token",
+        project_name="aevryn-public",
+        expected_domain="aevryn.ai",
+        timeout_seconds=30.0,
+    )
+
+    assert requests[0].full_url.endswith("/pages/projects/aevryn-public")
+    assert summary == {
+        "project": "aevryn-public",
+        "production_branch": "master",
+        "root_directory": "verified",
+        "build_command": "static",
+        "build_output": "static_root",
+        "production_deployments": "enabled",
+        "domain": "verified",
+        "secrets_printed": 0,
+        "ok": "public_website_config_contract_checked",
+    }
+
+
+def test_public_website_config_check_rejects_missing_domain_without_leaking_value(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Missing public custom domain should fail without printing the hostname."""
+    expected_domain = "aevryn.ai"
+    monkeypatch.setenv("AEVRYN_CLOUDFLARE_ACCOUNT_ID", "cloudflare-account")
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", "cloudflare-token")
+
+    class FakeResponse:
+        """Minimal response missing the public domain."""
+
+        status = 200
+        headers: dict[str, str] = {}
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            payload = _public_website_pages_project_payload(domains=["preview.example"])
+            return json.dumps(payload).encode("utf-8")
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *_args, **_kwargs: FakeResponse())
+
+    exit_code = main(["public-website-config-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Public website custom domain is not attached" in captured.err
+    assert expected_domain not in captured.out
+    assert expected_domain not in captured.err
+
+
 def _pages_project_payload(
     *,
     api_url: str = "https://api.aevryn.ai",
@@ -1434,6 +1597,30 @@ def _pages_project_payload(
                     }
                 }
             },
+        },
+    }
+
+
+def _public_website_pages_project_payload(
+    *,
+    domains: list[object] | None = None,
+) -> dict[str, object]:
+    """Return a valid public website Pages metadata payload."""
+    return {
+        "success": True,
+        "result": {
+            "production_branch": "master",
+            "build_config": {
+                "root_dir": "website",
+                "build_command": "",
+                "destination_dir": ".",
+            },
+            "source": {
+                "config": {
+                    "production_deployments_enabled": True,
+                }
+            },
+            "domains": domains if domains is not None else [{"name": "aevryn.ai"}],
         },
     }
 
