@@ -4036,6 +4036,7 @@ def _with_character_profile_correction(
     section_by_field = {
         "race": profile.race,
         "gender": profile.gender,
+        "appearance": profile.appearance,
         "status": profile.status,
         "current_goal": profile.current_goal,
         "current_equipment": profile.current_equipment,

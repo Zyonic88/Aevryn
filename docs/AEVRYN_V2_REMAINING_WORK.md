@@ -1137,6 +1137,11 @@ Verified hardening:
   visual continuity data is visible without opening the full details panel
 * appearance-at-a-glance presentation verified with focused processed character
   panel tests
+* User Edited character Appearance corrections now apply back onto character
+  profiles and appear in Prompt Pack correction context alongside other
+  user-authored Canon corrections
+* appearance correction propagation verified with focused authenticated project
+  output API tests and Ruff
 * verified with the full frontend test suite, lint, and production build
 
 Acceptance:
