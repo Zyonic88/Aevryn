@@ -1124,6 +1124,11 @@ Verified hardening:
 * workspace command strip now behaves like a compact IDE command bar: project
   context, active section, and diagnostics access without repeating the old
   label-heavy sidebar layout
+* import intake now presents the one-pass processing path as the recommended
+  action while preserving the explicit review-only path for scene-map inspection
+  before processing
+* import intake polish verified with focused import workspace tests, frontend
+  lint, and production build
 * verified with the full frontend test suite, lint, and production build
 
 Acceptance:

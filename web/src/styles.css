@@ -2981,9 +2981,40 @@ textarea::placeholder {
   gap: 10px;
 }
 
-.import-fast-lane-note {
+.import-intake-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(127, 178, 255, 0.2);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(127, 178, 255, 0.06), transparent),
+    rgba(5, 8, 14, 0.58);
+}
+
+.import-intake-copy {
+  min-width: 0;
+}
+
+.import-intake-copy span {
+  display: block;
+  color: var(--app-blue-2);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.import-intake-copy strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--app-text);
+}
+
+.import-intake-copy p {
   max-width: 760px;
-  margin: 0;
+  margin: 5px 0 0;
   color: var(--app-muted);
   font-size: 12px;
   line-height: 1.45;
@@ -3453,6 +3484,14 @@ textarea::placeholder {
   .prompt-scene-picker {
     position: static;
     max-height: none;
+  }
+
+  .import-intake-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .import-intake-actions .import-action-row {
+    justify-content: start;
   }
 }
 

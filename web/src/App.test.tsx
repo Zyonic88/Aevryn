@@ -2278,7 +2278,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     expect(await screen.findByText(".txt")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
@@ -2360,7 +2360,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     expect(await screen.findByText(".md/.markdown")).toBeInTheDocument();
     expect(screen.getByLabelText("Source text")).toHaveValue("");
     expect(screen.getByLabelText("Source file")).toHaveAttribute(
@@ -2789,14 +2789,15 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     expect(await screen.findByText("No saved imports")).toBeInTheDocument();
     expect(screen.getByText("Import details")).toBeVisible();
     expect(screen.getByText("Advanced import references")).not.toBeVisible();
     expect(screen.getByLabelText("Import reference")).not.toBeVisible();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    expect(screen.getByText(/Process chapters runs the full intake path/u)).toBeInTheDocument();
+    expect(screen.getByText("Recommended path")).toBeInTheDocument();
+    expect(screen.getByText("Process in one pass")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Process chapters" }));
 
     await screen.findByText("Chapter import");
@@ -2903,7 +2904,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect only" }));
@@ -3158,7 +3159,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect only" }));
