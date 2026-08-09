@@ -1197,9 +1197,8 @@ Remaining hardening:
 * ~~confirm app.aevryn.ai and api.aevryn.ai health~~
 * ~~confirm CORS stays explicit~~
 * ~~confirm frontend deploys from the intended branch~~
-* update production CORS deliberately before public beta if browser clients
-  must access the API from additional public origins such as `https://aevryn.ai`
-  or `https://www.aevryn.ai`
+* add `https://www.aevryn.ai` to production CORS only if that hostname is
+  deliberately routed as a browser client
 
 Verified hardening:
 
@@ -1207,6 +1206,13 @@ Verified hardening:
   public API health endpoint returns `ok`, CORS allows the configured frontend
   origin explicitly instead of using a wildcard, `X-Request-ID` is present, and
   the command prints metadata only
+* production CORS is now documented as explicit HTTPS-only access for
+  `https://app.aevryn.ai` and `https://aevryn.ai`; `https://www.aevryn.ai`
+  remains excluded until that hostname is intentionally routed and tested
+* production Cloud Run revision `aevryn-api-00038-qpf` now serves the explicit
+  app and apex CORS origins; hosted smoke confirmed both approved origins echo
+  matching `access-control-allow-origin` headers while `https://www.aevryn.ai`
+  receives no browser allow-origin header
 * `cloud-run-deployment-check` verifies that the latest ready Cloud Run API
   revision is serving 100 percent of traffic and that the serving container
   image matches the expected release-candidate image without printing project

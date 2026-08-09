@@ -126,6 +126,7 @@ Production CORS origins must be HTTPS only. Production also requires public edge
 ```text
 AEVRYN_PUBLIC_FRONTEND_BASE_URL=https://app.aevryn.ai
 AEVRYN_PUBLIC_API_BASE_URL=https://api.aevryn.ai
+AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai,https://aevryn.ai
 AEVRYN_HTTPS_ONLY=true
 AEVRYN_HSTS_ENABLED=true
 ```

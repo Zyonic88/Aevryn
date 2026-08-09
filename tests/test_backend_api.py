@@ -251,6 +251,35 @@ def test_create_app_from_env_configures_cors_origins() -> None:
     )
 
 
+def test_create_app_allows_public_and_app_cors_origins() -> None:
+    """Public beta CORS should allow only approved exact browser origins."""
+    allowed_origins = ("https://app.aevryn.ai", "https://aevryn.ai")
+    client = TestClient(create_app(allowed_origins=allowed_origins))
+
+    for origin in allowed_origins:
+        response = client.options(
+            "/v2/health",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == origin
+
+    denied_response = client.options(
+        "/v2/health",
+        headers={
+            "Origin": "https://www.aevryn.ai",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+
+    assert denied_response.status_code == 400
+    assert "access-control-allow-origin" not in denied_response.headers
+
+
 def test_create_app_from_env_configures_project_storage(
     tmp_path: Path,
 ) -> None:

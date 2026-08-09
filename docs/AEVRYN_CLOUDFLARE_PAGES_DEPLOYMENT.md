@@ -68,9 +68,10 @@ The Cloud Run API CORS policy currently allows:
 
 ```text
 https://app.aevryn.ai
+https://aevryn.ai
 ```
 
-Do not deploy a production frontend to another origin unless Cloud Run CORS is deliberately updated.
+Do not deploy a production browser client to another origin unless Cloud Run CORS is deliberately updated. Keep CORS exact and HTTPS-only; do not use wildcard CORS.
 
 ---
 
