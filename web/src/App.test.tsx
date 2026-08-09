@@ -3995,6 +3995,12 @@ describe("App shell routing", () => {
     expect(sceneNavigation).toHaveTextContent("Scene 1 of 28");
     expect(within(sceneNavigation).getByRole("button", { name: "Previous scene" })).toBeDisabled();
     expect(within(sceneNavigation).getByRole("button", { name: "Next scene" })).toBeEnabled();
+    const productionFocus = within(selectedPack).getByLabelText("Prompt production focus");
+    expect(productionFocus).toHaveTextContent("Scene priority");
+    expect(productionFocus).toHaveTextContent("Current scene before retained Canon");
+    expect(productionFocus).toHaveTextContent("Generation boundary");
+    expect(productionFocus).toHaveTextContent("4 canon guardrails; no unsupported additions");
+    expect(productionFocus).toHaveTextContent("Missing inputs");
     const canonInputs = within(selectedPack).getByLabelText("Prompt canon inputs");
     expect(canonInputs).toHaveTextContent("Canon inputs");
     expect(canonInputs).toHaveTextContent("Characters");
@@ -4052,6 +4058,11 @@ describe("App shell routing", () => {
     expect(
       within(updatedImagePromptPreview).getByText("Scene 2 image prompt detail."),
     ).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Search prompt scenes"));
+    await user.type(screen.getByLabelText("Search prompt scenes"), "dagger");
+    expect(screen.getByText("Showing 28 of 28 prompt scenes.")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Search prompt scenes"));
+    await user.click(screen.getByRole("button", { name: "Show 4 more scenes" }));
     await user.click(within(sceneNavigation).getByRole("button", { name: "Next scene" }));
     expect(within(selectedPack).getByRole("heading", { name: "Scene 3" })).toBeInTheDocument();
     expect(sceneNavigation).toHaveTextContent("Scene 3 of 28");

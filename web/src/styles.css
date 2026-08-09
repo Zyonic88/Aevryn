@@ -1916,10 +1916,48 @@ select:focus {
   min-width: 0;
 }
 
+.prompt-pack-dossier {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.86fr) minmax(0, 1.14fr);
+  gap: 12px;
+  align-items: stretch;
+  margin: 14px 0 16px;
+}
+
+.prompt-production-focus {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 0;
+}
+
+.prompt-production-focus div {
+  min-width: 0;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.prompt-production-focus dt {
+  color: #52647c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.prompt-production-focus dd {
+  margin: 4px 0 0;
+  color: #172033;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .prompt-canon-inputs {
   display: grid;
   gap: 10px;
-  margin: 14px 0 16px;
+  margin: 0;
   padding: 12px;
   border: 1px solid #dbe3ec;
   border-radius: 6px;
@@ -2712,6 +2750,20 @@ textarea::placeholder {
   border-color: rgba(127, 178, 255, 0.24);
 }
 
+.prompt-production-focus div {
+  border-color: rgba(127, 178, 255, 0.16);
+  background: rgba(5, 8, 14, 0.52);
+}
+
+.prompt-production-focus dt {
+  color: var(--app-blue-2);
+  text-transform: uppercase;
+}
+
+.prompt-production-focus dd {
+  color: var(--app-text);
+}
+
 .prompt-pack-header {
   display: flex;
   align-items: start;
@@ -2778,7 +2830,7 @@ textarea::placeholder {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin: 14px 0 16px;
+  margin: 0;
 }
 
 .prompt-scene-brief div {
@@ -3046,6 +3098,14 @@ textarea::placeholder {
 }
 
 @media (max-width: 980px) {
+  .prompt-pack-dossier {
+    grid-template-columns: 1fr;
+  }
+
+  .prompt-production-focus {
+    grid-template-columns: 1fr;
+  }
+
   .prompt-scene-brief {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

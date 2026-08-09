@@ -1280,8 +1280,11 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
               Next scene
             </button>
           </div>
-          <PromptCanonInputs pack={selectedPack} />
-          <PromptSceneBrief pack={selectedPack} />
+          <PromptProductionFocus pack={selectedPack} />
+          <div className="prompt-pack-dossier">
+            <PromptCanonInputs pack={selectedPack} />
+            <PromptSceneBrief pack={selectedPack} />
+          </div>
           <details className="prompt-context-disclosure detail-disclosure">
             <summary>
               <span>Canon context</span>
@@ -1345,9 +1348,38 @@ function searchablePromptPackText(pack: ProductionPack): string {
     ...readableOutputItems(pack.scene.location.items),
     ...readableOutputItems(pack.scene.visual_highlights.items),
     ...readableOutputItems(pack.scene.environment.items),
+    ...readableOutputItems(pack.scene.continuity_changes.items),
   ]
     .join(" ")
     .toLowerCase();
+}
+
+function PromptProductionFocus({ pack }: { pack: ProductionPack }) {
+  const guardrailCount = promptGuardrailCount(pack);
+  const missingInputs = promptMissingInputLabels(pack);
+  const missingLabel =
+    missingInputs.length > 0
+      ? `${missingInputs.join(", ")} stay neutral`
+      : "Known inputs are ready";
+  return (
+    <dl className="prompt-production-focus" aria-label="Prompt production focus">
+      <div>
+        <dt>Scene priority</dt>
+        <dd>Current scene before retained Canon</dd>
+      </div>
+      <div>
+        <dt>Generation boundary</dt>
+        <dd>
+          {guardrailCount.toLocaleString()} canon guardrail
+          {guardrailCount === 1 ? "" : "s"}; no unsupported additions
+        </dd>
+      </div>
+      <div>
+        <dt>Missing inputs</dt>
+        <dd>{missingLabel}</dd>
+      </div>
+    </dl>
+  );
 }
 
 function PromptSceneBrief({ pack }: { pack: ProductionPack }) {
@@ -1418,6 +1450,17 @@ function PromptCanonInputs({ pack }: { pack: ProductionPack }) {
       </dl>
     </div>
   );
+}
+
+function promptMissingInputLabels(pack: ProductionPack): string[] {
+  return [
+    promptInputStatus("Characters", pack.scene.characters_present),
+    promptInputStatus("Setting", pack.scene.location, pack.scene.environment),
+    promptInputStatus("Visual details", pack.scene.visual_highlights),
+    promptInputStatus("Continuity", pack.scene.continuity_changes),
+  ]
+    .filter((input) => input.status === "missing")
+    .map((input) => input.label.toLowerCase());
 }
 
 function promptInputStatus(

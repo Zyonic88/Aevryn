@@ -526,6 +526,15 @@ Verified hardening:
   exposing internal target IDs
 * verified with project output API regression coverage and the full Python test
   suite
+* Prompt Packs selected-scene detail now shows a compact production-focus strip
+  for scene priority, generation guardrails, and missing-input neutrality before
+  the prompt bodies, making prompt readiness scannable without opening every
+  collapsed prompt
+* prompt scene search now includes continuity-change text, so creators can find
+  prompt scenes by accepted scene state as well as chapter, scene, character,
+  setting, visual detail, and environment
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
 
 Acceptance:
 
