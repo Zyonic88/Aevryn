@@ -48,6 +48,7 @@ const CONTINUITY_SCENE_PAGE_SIZE = 24;
 const CHARACTER_CORRECTION_FIELDS = [
   { field: "race", label: "Race" },
   { field: "gender", label: "Gender" },
+  { field: "appearance", label: "Appearance" },
   { field: "status", label: "Status" },
   { field: "current_goal", label: "Current goal" },
   { field: "current_equipment", label: "Current equipment" },
@@ -69,6 +70,7 @@ const WORLD_CORRECTION_FIELDS = [
 ] as const;
 const CHARACTER_RECENT_CHANGE_PROFILE_LABELS = new Set([
   "alias",
+  "appearance",
   "description",
   "gender",
   "name",
@@ -494,6 +496,7 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
       aliases: mergeSection(existingProfile.aliases, profile.aliases),
       titles: mergeSection(existingProfile.titles, profile.titles),
       descriptions: mergeSection(existingProfile.descriptions, profile.descriptions),
+      appearance: mergeSection(existingProfile.appearance, profile.appearance),
       race: mergeSection(existingProfile.race, profile.race),
       gender: mergeSection(existingProfile.gender, profile.gender),
       status: mergeSection(existingProfile.status, profile.status),
@@ -506,6 +509,13 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
       current_limitations: mergeSection(
         existingProfile.current_limitations,
         profile.current_limitations,
+      ),
+      first_appearance: mergeSection(existingProfile.first_appearance, profile.first_appearance),
+      latest_appearance: mergeSection(existingProfile.latest_appearance, profile.latest_appearance),
+      timeline_history: mergeSection(existingProfile.timeline_history, profile.timeline_history),
+      evidence_references: mergeSection(
+        existingProfile.evidence_references,
+        profile.evidence_references,
       ),
       recent_changes: mergeSection(existingProfile.recent_changes, profile.recent_changes),
       evidence_summary: mergedEvidenceSummary(
@@ -574,6 +584,7 @@ function CharacterPanel({
           <PanelSection section={profile.aliases} />
           <PanelSection section={profile.titles} />
           <PanelSection section={profile.descriptions} />
+          <PanelSection section={profile.appearance} />
           <PanelSection section={profile.race} />
           <PanelSection section={profile.gender} />
           <PanelSection section={profile.status} />
@@ -584,6 +595,10 @@ function CharacterPanel({
           <PanelSection section={profile.territory} />
           <PanelSection section={profile.relationships} />
           <PanelSection section={profile.current_limitations} />
+          <PanelSection section={profile.first_appearance} />
+          <PanelSection section={profile.latest_appearance} />
+          <PanelSection section={profile.timeline_history} />
+          <PanelSection section={profile.evidence_references} />
           <PanelSection section={recentChanges} />
         </div>
       </details>
@@ -605,6 +620,7 @@ function CharacterIdentitySignals({ profile }: { profile: CharacterProfile }) {
     characterSignal("Aliases", profile.aliases),
     characterSignal("Titles", profile.titles),
     characterSignal("Descriptions", profile.descriptions),
+    characterSignal("Appearance", profile.appearance),
     characterSignal("Relationships", profile.relationships),
   ];
   return (
@@ -687,6 +703,7 @@ function representedCharacterProfileValues(profile: CharacterProfile): Set<strin
     profile.aliases,
     profile.titles,
     profile.descriptions,
+    profile.appearance,
     profile.race,
     profile.gender,
     profile.status,
@@ -697,6 +714,10 @@ function representedCharacterProfileValues(profile: CharacterProfile): Set<strin
     profile.territory,
     profile.relationships,
     profile.current_limitations,
+    profile.first_appearance,
+    profile.latest_appearance,
+    profile.timeline_history,
+    profile.evidence_references,
   ];
   return new Set(
     [

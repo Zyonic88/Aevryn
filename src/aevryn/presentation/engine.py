@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 _STATUS_ATTRIBUTES = ("status", "role", "academic_year", "year", "student_status")
 _ALIAS_ATTRIBUTES = ("display_name", "name", "alias")
 _TITLE_ATTRIBUTES = ("title", "noble_title")
-_DESCRIPTION_ATTRIBUTES = ("description", "appearance")
+_DESCRIPTION_ATTRIBUTES = ("description",)
+_APPEARANCE_ATTRIBUTES = ("appearance", "visual_description", "physical_description")
 _GOAL_EXACT_ATTRIBUTES = ("current_goal", "current_task", "next_semester_requirement", "intention")
 _GOAL_PARTIAL_ATTRIBUTES = (
     "goal",
@@ -184,6 +185,11 @@ class PresentationEngine:
                 facts_by_attribute,
                 _DESCRIPTION_ATTRIBUTES,
             ),
+            appearance=self._section(
+                "Appearance",
+                facts_by_attribute,
+                _APPEARANCE_ATTRIBUTES,
+            ),
             race=self._identity_section(
                 "Race",
                 facts_by_attribute,
@@ -240,6 +246,10 @@ class PresentationEngine:
                 exact_attributes=_LIMITATION_EXACT_ATTRIBUTES,
                 partial_attributes=_LIMITATION_PARTIAL_ATTRIBUTES,
             ),
+            first_appearance=self._first_appearance(card.facts),
+            latest_appearance=self._latest_appearance(card.facts),
+            timeline_history=self._timeline_history(card.facts),
+            evidence_references=self._evidence_references(card.facts),
             recent_changes=self._recent_changes(card.facts, facts_by_attribute),
             evidence_summary=self._evidence_summary(card.facts),
         )
@@ -495,6 +505,7 @@ class PresentationEngine:
         presented: set[str] = set()
         exact_groups = (
             (*_ALIAS_ATTRIBUTES, *_TITLE_ATTRIBUTES, *_DESCRIPTION_ATTRIBUTES),
+            _APPEARANCE_ATTRIBUTES,
             ("race", "species", "gender", "sex"),
             _STATUS_ATTRIBUTES,
             _TERRITORY_ATTRIBUTES,
@@ -793,6 +804,92 @@ class PresentationEngine:
 
         average_confidence = sum(fact.evidence.confidence for fact in facts) / len(facts)
         return f"{len(facts)} verified facts | Confidence {average_confidence:.0%}"
+
+    @staticmethod
+    def _first_appearance(facts: tuple[CanonCharacterFact, ...]) -> PresentationSection:
+        """Return the earliest known chapter/scene metadata for a character."""
+        ordered_facts = PresentationEngine._facts_in_story_order(facts)
+        if not ordered_facts:
+            return PresentationSection("First Appearance", ("Unknown",))
+
+        return PresentationSection(
+            "First Appearance",
+            (PresentationEngine._fact_scope_label(ordered_facts[0]),),
+        )
+
+    @staticmethod
+    def _latest_appearance(facts: tuple[CanonCharacterFact, ...]) -> PresentationSection:
+        """Return the latest known chapter/scene metadata for a character."""
+        ordered_facts = PresentationEngine._facts_in_story_order(facts)
+        if not ordered_facts:
+            return PresentationSection("Latest Appearance", ("Unknown",))
+
+        return PresentationSection(
+            "Latest Appearance",
+            (PresentationEngine._fact_scope_label(ordered_facts[-1]),),
+        )
+
+    @staticmethod
+    def _timeline_history(facts: tuple[CanonCharacterFact, ...]) -> PresentationSection:
+        """Return compact story-order checkpoints for this character."""
+        items = PresentationEngine._unique_values(
+            PresentationEngine._fact_scope_label(fact)
+            for fact in PresentationEngine._facts_in_story_order(facts)
+        )
+        return PresentationSection(
+            "Timeline History",
+            tuple(items[:8]) or ("Unknown",),
+        )
+
+    @staticmethod
+    def _evidence_references(facts: tuple[CanonCharacterFact, ...]) -> PresentationSection:
+        """Return metadata-only evidence references for this character."""
+        items = PresentationEngine._unique_values(
+            f"{PresentationEngine._fact_scope_label(fact)}: {fact.attribute}"
+            for fact in PresentationEngine._facts_in_story_order(facts)
+        )
+        return PresentationSection(
+            "Evidence References",
+            tuple(items[:12]) or ("Unknown",),
+        )
+
+    @staticmethod
+    def _facts_in_story_order(
+        facts: tuple[CanonCharacterFact, ...],
+    ) -> tuple[CanonCharacterFact, ...]:
+        """Return character facts sorted by chapter and scene metadata."""
+        return tuple(sorted(facts, key=PresentationEngine._fact_story_sort_key))
+
+    @staticmethod
+    def _fact_story_sort_key(fact: CanonCharacterFact) -> tuple[int, int, str, str]:
+        """Return sortable story metadata without relying on story-specific labels."""
+        chapter_index = PresentationEngine._last_integer(fact.valid_from_chapter_id)
+        scene_index = PresentationEngine._last_integer(fact.valid_from_scene_id)
+        return (
+            chapter_index,
+            scene_index,
+            fact.valid_from_chapter_id,
+            fact.valid_from_scene_id,
+        )
+
+    @staticmethod
+    def _fact_scope_label(fact: CanonCharacterFact) -> str:
+        """Return readable chapter/scene metadata for a character fact."""
+        chapter_index = PresentationEngine._last_integer(fact.valid_from_chapter_id)
+        scene_index = PresentationEngine._last_integer(fact.valid_from_scene_id)
+        if chapter_index > 0 and scene_index > 0:
+            return f"Chapter {chapter_index}, Scene {scene_index}"
+        if chapter_index > 0:
+            return f"Chapter {chapter_index}"
+        if fact.valid_from_scene_id:
+            return fact.valid_from_scene_id
+        return fact.valid_from_chapter_id
+
+    @staticmethod
+    def _last_integer(value: str) -> int:
+        """Return the last integer in a metadata token, or 0 when absent."""
+        matches = re.findall(r"\d+", value)
+        return int(matches[-1]) if matches else 0
 
     @staticmethod
     def _scene_evidence_summary(context: CanonSceneContext) -> str:

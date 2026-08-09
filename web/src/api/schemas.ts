@@ -405,6 +405,14 @@ const unknownGenderSection = { title: "Gender", items: ["Unknown"] };
 const unknownAliasesSection = { title: "Aliases", items: ["Unknown"] };
 const unknownTitlesSection = { title: "Titles", items: ["Unknown"] };
 const unknownDescriptionsSection = { title: "Descriptions", items: ["Unknown"] };
+const unknownAppearanceSection = { title: "Appearance", items: ["Unknown"] };
+const unknownFirstAppearanceSection = { title: "First Appearance", items: ["Unknown"] };
+const unknownLatestAppearanceSection = { title: "Latest Appearance", items: ["Unknown"] };
+const unknownTimelineHistorySection = { title: "Timeline History", items: ["Unknown"] };
+const unknownEvidenceReferencesSection = {
+  title: "Evidence References",
+  items: ["Unknown"],
+};
 
 export const characterProfileSchema = z
   .object({
@@ -414,6 +422,7 @@ export const characterProfileSchema = z
     aliases: outputSectionSchema.optional(),
     titles: outputSectionSchema.optional(),
     descriptions: outputSectionSchema.optional(),
+    appearance: outputSectionSchema.optional(),
     race: outputSectionSchema.optional(),
     gender: outputSectionSchema.optional(),
     status: outputSectionSchema,
@@ -424,6 +433,10 @@ export const characterProfileSchema = z
     territory: outputSectionSchema,
     relationships: outputSectionSchema,
     current_limitations: outputSectionSchema,
+    first_appearance: outputSectionSchema.optional(),
+    latest_appearance: outputSectionSchema.optional(),
+    timeline_history: outputSectionSchema.optional(),
+    evidence_references: outputSectionSchema.optional(),
     recent_changes: outputSectionSchema,
     evidence_summary: z.string(),
   })
@@ -432,8 +445,13 @@ export const characterProfileSchema = z
     aliases: profile.aliases ?? unknownAliasesSection,
     titles: profile.titles ?? unknownTitlesSection,
     descriptions: profile.descriptions ?? unknownDescriptionsSection,
+    appearance: profile.appearance ?? unknownAppearanceSection,
     race: profile.race ?? unknownRaceSection,
     gender: profile.gender ?? unknownGenderSection,
+    first_appearance: profile.first_appearance ?? unknownFirstAppearanceSection,
+    latest_appearance: profile.latest_appearance ?? unknownLatestAppearanceSection,
+    timeline_history: profile.timeline_history ?? unknownTimelineHistorySection,
+    evidence_references: profile.evidence_references ?? unknownEvidenceReferencesSection,
   }));
 
 export const characterPreviewSchema = z.object({

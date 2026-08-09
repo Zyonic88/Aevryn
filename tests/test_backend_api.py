@@ -2739,8 +2739,22 @@ def test_characters_preview_returns_character_profiles() -> None:
     assert payload["character_profiles"][0]["display_name"] == "Mark"
     assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
     assert payload["character_profiles"][0]["gender"]["items"] == ["Unknown"]
+    assert payload["character_profiles"][0]["appearance"]["items"] == ["Unknown"]
     assert payload["character_profiles"][0]["current_equipment"]["items"] == [
         "Rusty Dagger"
+    ]
+    assert payload["character_profiles"][0]["first_appearance"]["items"] == [
+        "Chapter 1, Scene 1"
+    ]
+    assert payload["character_profiles"][0]["latest_appearance"]["items"] == [
+        "Chapter 1, Scene 1"
+    ]
+    assert payload["character_profiles"][0]["timeline_history"]["items"] == [
+        "Chapter 1, Scene 1"
+    ]
+    assert payload["character_profiles"][0]["evidence_references"]["items"] == [
+        "Chapter 1, Scene 1: current_weapon",
+        "Chapter 1, Scene 1: display_name",
     ]
     assert "Mark carried a rusty dagger." not in response.text
 

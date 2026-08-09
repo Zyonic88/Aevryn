@@ -921,6 +921,11 @@ def _character_profile_payload(
             source_quotes=source_quotes,
             display_names=display_names,
         ),
+        "appearance": _section_payload(
+            profile.appearance,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
         "race": _section_payload(
             profile.race,
             source_quotes=source_quotes,
@@ -968,6 +973,26 @@ def _character_profile_payload(
         ),
         "current_limitations": _section_payload(
             profile.current_limitations,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "first_appearance": _section_payload(
+            profile.first_appearance,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "latest_appearance": _section_payload(
+            profile.latest_appearance,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "timeline_history": _section_payload(
+            profile.timeline_history,
+            source_quotes=source_quotes,
+            display_names=display_names,
+        ),
+        "evidence_references": _section_payload(
+            profile.evidence_references,
             source_quotes=source_quotes,
             display_names=display_names,
         ),

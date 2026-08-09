@@ -303,6 +303,10 @@ class ExportEngine:
             "",
         ]
         sections = (
+            profile.aliases,
+            profile.titles,
+            profile.descriptions,
+            profile.appearance,
             profile.race,
             profile.gender,
             profile.status,
@@ -313,6 +317,10 @@ class ExportEngine:
             profile.territory,
             profile.relationships,
             profile.current_limitations,
+            profile.first_appearance,
+            profile.latest_appearance,
+            profile.timeline_history,
+            profile.evidence_references,
             profile.recent_changes,
         )
         for section in sections:
