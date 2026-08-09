@@ -429,19 +429,19 @@ These are practical code/docs hardening items still worth doing before public be
 Status:
 
 ```text
-In progress
+Verified for V2
 ```
 
 Remaining hardening:
 
 * ~~verify Prompt Packs consume Character, World, Scene, Timeline, and Continuity
   presentation state when building prompt context, not just scene summary text~~
-* keep prompts Canon-bound enough to preserve known character appearance,
-  setting, scene action, world objects, systems, skills, and current story state
+* ~~keep prompts Canon-bound enough to preserve known character appearance,
+  setting, scene action, world objects, systems, skills, and current story state~~
 * ~~improve Prompt Packs layout so chapter/scene prompts are easy to follow without
   endless scrolling~~
-* preserve scene-level prompt architecture so future multi-prompt-per-chapter and
-  production batching can be added without rewriting Canon or extraction
+* ~~preserve scene-level prompt architecture so future multi-prompt-per-chapter and
+  production batching can be added without rewriting Canon or extraction~~
 * ~~run hosted browser validation against the current prompt-pack output~~
 * ~~confirm prompts include enough scene-specific action, setting, character, and object context~~
 * ~~ensure normal prompt-pack presentation does not include raw manuscript prose~~
@@ -560,6 +560,12 @@ Verified hardening:
   appearance/boundary line together, so collapsed prompt cards still expose the
   Canon-backed visual identity constraint before users open full prompt text
 * verified with focused Prompt Packs workspace regression coverage
+* V2 Prompt Packs remain scene-bound and Canon-bound while explicitly preserving
+  future multi-prompt-per-chapter and production-batching architecture as later
+  scope, not hidden V2 behavior
+* Prompt Packs are accepted for V2 beta readiness with the residual product risk
+  that AI image/video generators may still need iteration; Aevryn's V2 duty is
+  Canon-grounded production context, not one-click perfect generation
 
 Acceptance:
 
