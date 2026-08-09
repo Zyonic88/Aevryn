@@ -539,8 +539,13 @@ Verified hardening:
   the current render moment, confirmed subjects, visible objects/details,
   preservation rules, and neutral handling for unspecified traits before the
   longer Canon context sections
+* narration, camera, and animation prompts now include matching compact
+  generation handoffs that declare the immediate task, confirmed subjects,
+  relevant details, and prompt-type guardrails before the longer Canon context
+  sections
 * current-scene visual anchors remain ahead of retained/background object facts
-  in image prompts, preserving the current-scene-first rule for generation tools
+  in all prompt generation handoffs, preserving the current-scene-first rule for
+  generation tools
 * verified with focused Canon Prompt Builder regression tests
 
 Acceptance:

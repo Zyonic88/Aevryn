@@ -325,6 +325,7 @@ class CanonPromptBuilder:
                 ),
                 self._canon_context_checklist_section(context, analysis),
                 self._production_contract_section(context, analysis),
+                self._narration_generation_handoff_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
@@ -357,6 +358,7 @@ class CanonPromptBuilder:
                 ),
                 self._canon_context_checklist_section(context, analysis),
                 self._production_contract_section(context, analysis),
+                self._camera_generation_handoff_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
@@ -394,6 +396,7 @@ class CanonPromptBuilder:
                 ),
                 self._canon_context_checklist_section(context, analysis),
                 self._production_contract_section(context, analysis),
+                self._animation_generation_handoff_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
                 self._scene_directive_section(analysis),
@@ -577,6 +580,82 @@ class CanonPromptBuilder:
         analysis: SceneAnalysis,
     ) -> str:
         """Return a compact render brief for image and video generation tools."""
+        moment, subjects, details = self._prompt_handoff_parts(context, analysis)
+        return "\n".join(
+            [
+                "Image generation handoff:",
+                f"- Render now: {moment}",
+                f"- Confirmed subjects: {subjects}",
+                f"- Visible objects/details: {details}",
+                "- Preserve accepted appearance, setting, objects, and continuity.",
+                "- Keep unspecified traits, scenery, lighting, and labels neutral.",
+            ]
+        )
+
+    def _narration_generation_handoff_section(
+        self,
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return a compact narration brief before detailed Canon context."""
+        moment, subjects, details = self._prompt_handoff_parts(context, analysis)
+        return "\n".join(
+            [
+                "Narration generation handoff:",
+                f"- Narrate now: {moment}",
+                f"- Scene voice target: {analysis.mood}",
+                f"- Spoken focus: {analysis.purpose}",
+                f"- Characters to reference: {subjects}",
+                f"- Canon details to mention if relevant: {details}",
+                (
+                    "- Do not add inner thoughts, dialogue, or backstory unless "
+                    "accepted Canon states them."
+                ),
+            ]
+        )
+
+    def _camera_generation_handoff_section(
+        self,
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return a compact camera brief before detailed Canon context."""
+        moment, subjects, details = self._prompt_handoff_parts(context, analysis)
+        return "\n".join(
+            [
+                "Camera generation handoff:",
+                f"- Frame now: {moment}",
+                f"- Confirmed subjects: {subjects}",
+                f"- Camera-visible details: {details}",
+                "- Choose shot language from accepted setting, mood, and relationships.",
+                "- Do not add unconfirmed characters, labels, props, uniforms, or scenery.",
+            ]
+        )
+
+    def _animation_generation_handoff_section(
+        self,
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return a compact animation brief before detailed Canon context."""
+        moment, subjects, details = self._prompt_handoff_parts(context, analysis)
+        return "\n".join(
+            [
+                "Animation generation handoff:",
+                f"- Animate now: {moment}",
+                f"- Confirmed subjects: {subjects}",
+                f"- Motion-relevant details: {details}",
+                f"- Pacing: {self._shorten(analysis.mood, width=90)}",
+                "- Keep unspecified motion minimal and do not add unsupported action beats.",
+            ]
+        )
+
+    def _prompt_handoff_parts(
+        self,
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> tuple[str, str, str]:
+        """Return compact scene moment, subject, and detail text for prompt handoffs."""
         visual_anchors = self._scene_visual_anchors(context)
         action_beats = self._scene_action_beats(context, analysis)
         current_moment = (
@@ -593,21 +672,15 @@ class CanonPromptBuilder:
             if visual_anchors
             else (*analysis.important_objects, *analysis.visual_highlights)
         )
-        visible_details = self._unique_values(
+        details = self._unique_values(
             self._shorten(value, width=80)
             for value in detail_sources
             if value.strip()
         )
-        detail_text = "; ".join(visible_details[:3]) or "Unknown"
-        return "\n".join(
-            [
-                "Image generation handoff:",
-                f"- Render now: {self._shorten(current_moment, width=120)}",
-                f"- Confirmed subjects: {subject_text}",
-                f"- Visible objects/details: {detail_text}",
-                "- Preserve accepted appearance, setting, objects, and continuity.",
-                "- Keep unspecified traits, scenery, lighting, and labels neutral.",
-            ]
+        return (
+            self._shorten(current_moment, width=120),
+            subject_text,
+            "; ".join(details[:3]) or "Unknown",
         )
 
     def _character_identity_reference_section(self, context: CanonSceneContext) -> str:
@@ -900,7 +973,6 @@ class CanonPromptBuilder:
     def _visual_reference_requirements_section(self, context: CanonSceneContext) -> str:
         """Return mandatory visual references when Canon provides concrete details."""
         display_names = self._entity_display_names(context)
-        scene_fact_keys = self._scene_fact_keys(context.active_facts)
         lines: list[str] = []
         scene_anchors = self._scene_visual_anchors(context)
         if scene_anchors:

@@ -224,6 +224,40 @@ def test_canon_prompt_builder_adds_image_generation_handoff() -> None:
     )
 
 
+def test_canon_prompt_builder_adds_variant_generation_handoffs() -> None:
+    """Each non-image prompt declares its production task before detailed context."""
+    builder = CanonPromptBuilder()
+    context = build_context()
+
+    narration_prompt = builder.build_narration_prompt(context)
+    camera_prompt = builder.build_camera_prompt(context)
+    animation_prompt = builder.build_animation_prompt(context)
+
+    assert "Narration generation handoff:" in narration_prompt
+    assert "Narrate now: Mark Current Weapon: Iron Sword" in narration_prompt
+    assert "Characters to reference: Mark" in narration_prompt
+    assert "Do not add inner thoughts, dialogue, or backstory" in narration_prompt
+    assert narration_prompt.index("Narration generation handoff:") < (
+        narration_prompt.index("Scene production brief:")
+    )
+
+    assert "Camera generation handoff:" in camera_prompt
+    assert "Frame now: Mark Current Weapon: Iron Sword" in camera_prompt
+    assert "Confirmed subjects: Mark" in camera_prompt
+    assert "Do not add unconfirmed characters" in camera_prompt
+    assert camera_prompt.index("Camera generation handoff:") < camera_prompt.index(
+        "Scene production brief:"
+    )
+
+    assert "Animation generation handoff:" in animation_prompt
+    assert "Animate now: Mark Current Weapon: Iron Sword" in animation_prompt
+    assert "Confirmed subjects: Mark" in animation_prompt
+    assert "Keep unspecified motion minimal" in animation_prompt
+    assert animation_prompt.index("Animation generation handoff:") < (
+        animation_prompt.index("Scene production brief:")
+    )
+
+
 def test_canon_prompt_builder_adds_action_beats_to_all_prompt_types() -> None:
     """Every production prompt carries the same bounded scene moment context."""
     builder = CanonPromptBuilder()
