@@ -1159,6 +1159,10 @@ function ContinuityBucket({
 function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(MAX_VISIBLE_PROMPT_SCENES);
+  const [scenePackCopyState, setScenePackCopyState] = useState<{
+    sceneId: string;
+    status: "idle" | "copied" | "failed";
+  }>({ sceneId: "", status: "idle" });
   const normalizedQuery = query.trim().toLowerCase();
   const filteredPacks = normalizedQuery
     ? packs.filter((pack) => searchablePromptPackText(pack).includes(normalizedQuery))
@@ -1197,6 +1201,24 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
     selectedIndex >= 0 && selectedIndex < filteredPacks.length - 1
       ? filteredPacks[selectedIndex + 1]
       : null;
+  const selectedCopyStatus =
+    scenePackCopyState.sceneId === selectedPack.scene.scene_id
+      ? scenePackCopyState.status
+      : "idle";
+
+  async function copySelectedScenePack() {
+    const clipboard = navigator.clipboard;
+    if (!clipboard) {
+      setScenePackCopyState({ sceneId: selectedPack.scene.scene_id, status: "failed" });
+      return;
+    }
+    try {
+      await clipboard.writeText(readablePromptPackText(selectedPack));
+      setScenePackCopyState({ sceneId: selectedPack.scene.scene_id, status: "copied" });
+    } catch {
+      setScenePackCopyState({ sceneId: selectedPack.scene.scene_id, status: "failed" });
+    }
+  }
 
   return (
     <div className="prompt-pack-browser">
@@ -1248,7 +1270,18 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
               <h3>{selectedPack.scene.title}</h3>
               <p>{selectedPack.scene.chapter_label}</p>
             </div>
-            <span>{selectedPack.scene.evidence_summary}</span>
+            <div className="prompt-pack-header-actions">
+              {selectedCopyStatus === "copied" ? <span>Scene pack copied</span> : null}
+              {selectedCopyStatus === "failed" ? <span>Copy unavailable</span> : null}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void copySelectedScenePack()}
+              >
+                Copy scene pack
+              </button>
+              <small>{selectedPack.scene.evidence_summary}</small>
+            </div>
           </header>
           <div className="prompt-scene-navigation" aria-label="Selected prompt scene navigation">
             <button
@@ -1573,6 +1606,22 @@ function promptGuardrailCount(pack: ProductionPack): number {
     ...pack.camera_prompt.items,
     ...pack.animation_prompt.items,
   ]).filter((item) => guardrailPatterns.some((pattern) => pattern.test(item))).length;
+}
+
+function readablePromptPackText(pack: ProductionPack): string {
+  const sections = [
+    pack.image_prompt,
+    pack.narration_prompt,
+    pack.camera_prompt,
+    pack.animation_prompt,
+  ];
+  return [
+    `# ${pack.scene.title}`,
+    pack.scene.chapter_label,
+    pack.scene.evidence_summary,
+    "",
+    ...sections.flatMap((section) => [`## ${section.title}`, readablePromptText(section), ""]),
+  ].join("\n");
 }
 
 function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): string {

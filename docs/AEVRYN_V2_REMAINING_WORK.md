@@ -1129,6 +1129,10 @@ Verified hardening:
   before processing
 * import intake polish verified with focused import workspace tests, frontend
   lint, and production build
+* selected Prompt Pack scenes can now copy the full scene prompt bundle in one
+  action while preserving individual Image/Narration/Camera/Animation prompt
+  controls
+* prompt-pack bundle copy verified with focused prompt scene picker tests
 * verified with the full frontend test suite, lint, and production build
 
 Acceptance:

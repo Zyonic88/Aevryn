@@ -4103,6 +4103,16 @@ describe("App shell routing", () => {
       }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Production batch|Credits required|Subscribe|Buy credits/u)).not.toBeInTheDocument();
+    await user.click(within(selectedPack).getByRole("button", { name: "Copy scene pack" }));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        expect.stringContaining("## Animation Prompt"),
+      ),
+    );
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("## Image Prompt"));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("## Narration Prompt"));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("## Camera Prompt"));
+    expect(within(selectedPack).getByText("Scene pack copied")).toBeInTheDocument();
     await user.click(within(selectedPack).getByRole("button", { name: "Copy Image Prompt" }));
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Scene 1 image prompt detail")),
