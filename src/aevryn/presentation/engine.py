@@ -900,13 +900,64 @@ class PresentationEngine:
 
     @staticmethod
     def _location_items(context: CanonSceneContext) -> tuple[str, ...]:
-        """Return likely location labels from active facts."""
-        locations = tuple(
+        """Return accepted setting labels from location facts and relationships."""
+        location_ids = set(context.snapshot.location_ids)
+        display_names = {
+            fact.entity_id: fact.value
+            for fact in context.active_facts
+            if fact.attribute == "display_name"
+        }
+        location_facts = [
             fact.value
             for fact in context.active_facts
-            if fact.attribute in {"current_location", "location", "territory"}
+            if PresentationEngine._is_setting_attribute(fact.attribute)
+            and fact.attribute != "display_name"
+        ]
+        relationship_locations = [
+            display_names.get(entity_id)
+            or PresentationEngine._readable_entity_label(entity_id)
+            for relationship in context.relationships
+            for entity_id in (relationship.source_entity_id, relationship.target_entity_id)
+            if entity_id in location_ids
+        ]
+        locations = tuple(
+            PresentationEngine._unique_values((*relationship_locations, *location_facts))
         )
         return PresentationEngine._items_or_unknown(locations)
+
+    @staticmethod
+    def _is_setting_attribute(attribute: str) -> bool:
+        """Return whether an attribute can support scene setting generically."""
+        normalized_attribute = attribute.lower()
+        return any(
+            part in normalized_attribute
+            for part in (
+                "area",
+                "building",
+                "classroom",
+                "environment",
+                "facility",
+                "hangar",
+                "location",
+                "place",
+                "room",
+                "setting",
+                "site",
+                "territory",
+                "warehouse",
+                "world",
+            )
+        )
+
+    @staticmethod
+    def _readable_entity_label(entity_id: str) -> str:
+        """Return a human label from a machine entity ID."""
+        words = [
+            word
+            for word in re.split(r"[_\s]+", entity_id.strip())
+            if word and word not in {"entity", "item", "location", "skill", "system"}
+        ]
+        return " ".join(word.capitalize() for word in words) if words else entity_id
 
     @staticmethod
     def _prompt_lines(prompt: str) -> tuple[str, ...]:
@@ -973,6 +1024,7 @@ class PresentationEngine:
                 "do not invent",
                 "do not render",
                 "do not turn",
+                "extra characters",
                 "unless canon",
                 "unless exact text",
                 "unless listed",

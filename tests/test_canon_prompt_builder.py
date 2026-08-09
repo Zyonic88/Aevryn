@@ -7,6 +7,7 @@ from aevryn import (
     CanonPromptBuilder,
     CanonSceneContext,
     CharacterCardBuilder,
+    PresentationEngine,
     SceneAnalysis,
     SceneAnalyzer,
     SceneContextBuilder,
@@ -566,6 +567,98 @@ def test_canon_prompt_builder_separates_facts_composition_lighting_and_style() -
     assert prompt.index("Do not include unless supported by this scene:") < prompt.index(
         "Rendering style:"
     )
+
+
+def test_canon_prompt_builder_declares_scene_production_contract() -> None:
+    """Every prompt type should explain how Canon becomes production context."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_entity(
+        Entity(
+            entity_id="location_northern_fortress",
+            entity_type="location",
+            display_name="Northern Fortress",
+        )
+    )
+    database.store_evidence(
+        Evidence(
+            evidence_id="evidence_fortress_setting",
+            source_id="source_demo",
+            chapter_id="source_demo_chapter_002",
+            scene_id="source_demo_chapter_002_scene_001",
+            paragraph_index=1,
+            sentence_index=1,
+            quote="Mark bought an iron sword inside the northern fortress command room.",
+            confidence=1.0,
+        )
+    )
+    database.store_relationship(
+        Relationship(
+            relationship_id="relationship_mark_inside_fortress",
+            source_entity_id="character_mark",
+            relationship_type="located_at",
+            target_entity_id="location_northern_fortress",
+            evidence_id="evidence_fortress_setting",
+        )
+    )
+    database.store_fact(
+        Fact(
+            fact_id="fact_fortress_current_environment",
+            entity_id="location_northern_fortress",
+            attribute="current_environment",
+            value="Fortress command room",
+            evidence_id="evidence_fortress_setting",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_fortress_current_environment",
+            fact_id="fact_fortress_current_environment",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+    builder = CanonPromptBuilder()
+
+    prompts = (
+        builder.build_image_prompt(context),
+        builder.build_narration_prompt(context),
+        builder.build_camera_prompt(context),
+        builder.build_animation_prompt(context),
+    )
+
+    for prompt in prompts:
+        assert "Prompt production contract:" in prompt
+        assert "Inputs: verified Canon, scene context, character cards" in prompt
+        assert "Setting certainty: Location: Northern Fortress" in prompt
+        assert "Fortress command room" in prompt
+        assert "Current scene first; stable appearance persists" in prompt
+
+    scene_sheet = PresentationEngine().scene_sheet(
+        context=context,
+        analysis=SceneAnalyzer().analyze(context),
+    )
+    assert "Northern Fortress" in scene_sheet.location.items
+    assert "Fortress command room" in scene_sheet.location.items
+
+
+def test_canon_prompt_builder_marks_unconfirmed_setting_as_neutral() -> None:
+    """Prompts must not pretend a setting is confirmed when Canon lacks one."""
+    prompt = CanonPromptBuilder().build_image_prompt(build_context())
+
+    assert "Setting certainty: Setting is not confirmed" in prompt
+    assert (
+        "Confirmed setting: Unknown; use a neutral, non-specific environment "
+        "and do not invent scenery."
+    ) in prompt
+    assert "Scene environment cue:" in prompt
 
 
 def test_canon_prompt_builder_prevents_prompt_metadata_as_visible_text() -> None:
