@@ -949,6 +949,10 @@ Verified hardening:
 * invalid authenticated API sessions show a human-readable expired-session message
   and clear stored session data without displaying token/JWT internals
 * verified with focused session-recovery frontend tests
+* browser sessions now clear local session state after 30 minutes of inactivity,
+  show a human-readable login message, and do not render raw session tokens
+* verified with focused AuthProvider inactivity tests, backend authentication
+  tests, frontend lint, and production build
 
 Acceptance:
 

@@ -14,7 +14,10 @@ import {
 const SESSION_PERSISTENCE_ERROR =
   "Session storage failed. You are signed in for this tab, but may need to log in again after refresh.";
 const SESSION_REFRESH_ERROR = "Your session expired. Please log in again.";
+const SESSION_INACTIVITY_ERROR = "You were logged out after 30 minutes of inactivity.";
 const SESSION_REFRESH_LEEWAY_MS = 5 * 60 * 1000;
+const SESSION_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+const SESSION_ACTIVITY_EVENTS = ["pointerdown", "keydown", "scroll", "focus"] as const;
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSessionState] = useState<AuthSession | null>(() => readStoredSession());
@@ -58,6 +61,37 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       canceled = true;
       window.clearTimeout(timeout);
+    };
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    let timeout = window.setTimeout(expireInactiveSession, SESSION_INACTIVITY_TIMEOUT_MS);
+
+    function resetInactivityTimer() {
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(expireInactiveSession, SESSION_INACTIVITY_TIMEOUT_MS);
+    }
+
+    function expireInactiveSession() {
+      clearStoredSession();
+      setSessionPersistenceError(SESSION_INACTIVITY_ERROR);
+      setIsSessionRestoring(false);
+      setSessionState(null);
+    }
+
+    for (const eventName of SESSION_ACTIVITY_EVENTS) {
+      window.addEventListener(eventName, resetInactivityTimer, { passive: true });
+    }
+
+    return () => {
+      window.clearTimeout(timeout);
+      for (const eventName of SESSION_ACTIVITY_EVENTS) {
+        window.removeEventListener(eventName, resetInactivityTimer);
+      }
     };
   }, [session]);
 
