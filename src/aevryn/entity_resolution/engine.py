@@ -223,6 +223,13 @@ class EntityResolutionEngine:
         if title_suffix_name_score is not None:
             return title_suffix_name_score
 
+        embedded_name_score = _embedded_name_context_score(
+            normalized_reference,
+            profile,
+        )
+        if embedded_name_score is not None:
+            return embedded_name_score
+
         soft_score = _soft_description_score(normalized_reference, profile)
         if soft_score is not None and soft_score.confidence >= RESOLUTION_THRESHOLD:
             return soft_score
@@ -377,6 +384,8 @@ def _title_name_score(
         for name_tokens in name_token_sets:
             if not name_tokens or not name_tokens.issubset(reference_tokens):
                 continue
+            if reference_tokens != title_tokens.union(name_tokens):
+                continue
             return ResolutionCandidate(
                 entity_id=profile.entity_id,
                 confidence=0.97,
@@ -437,6 +446,68 @@ def _title_suffix_name_score(
             match_kind="title_suffix_name",
             matched_text=f"{profile.canonical_name} with title suffix",
         )
+    return None
+
+
+def _embedded_name_context_score(
+    normalized_reference: str,
+    profile: EntityIdentityProfile,
+) -> ResolutionCandidate | None:
+    """Resolve references that contain a known name plus profile-backed context."""
+    reference_tokens = tuple(normalized_reference.split())
+    if len(reference_tokens) < 2:
+        return None
+
+    support_tokens = _profile_context_tokens(profile)
+    if not support_tokens:
+        return None
+
+    for name in (profile.canonical_name, *profile.aliases):
+        name_tokens = tuple(_normalized_phrase(name).split())
+        if not name_tokens or len(reference_tokens) <= len(name_tokens):
+            continue
+        remaining_tokens = _remaining_tokens_after_subsequence(
+            reference_tokens,
+            name_tokens,
+        )
+        if remaining_tokens is None or not remaining_tokens:
+            continue
+        expanded_remaining_tokens = set(remaining_tokens)
+        for token in remaining_tokens:
+            expanded_remaining_tokens.update(_IDENTITY_TOKEN_EQUIVALENTS.get(token, ()))
+        if expanded_remaining_tokens.issubset(support_tokens):
+            return ResolutionCandidate(
+                entity_id=profile.entity_id,
+                confidence=0.94,
+                match_kind="embedded_name_context",
+                matched_text=f"{profile.canonical_name} with supported context",
+            )
+    return None
+
+
+def _profile_context_tokens(profile: EntityIdentityProfile) -> set[str]:
+    """Return explicit non-name identity tokens that may support embedded names."""
+    context_tokens: set[str] = set()
+    for surface in (
+        *profile.titles,
+        *profile.honorifics,
+        *profile.descriptions,
+        *profile.relationship_labels,
+    ):
+        context_tokens.update(_expanded_identity_tokens(_normalized_phrase(surface)))
+    return context_tokens
+
+
+def _remaining_tokens_after_subsequence(
+    tokens: tuple[str, ...],
+    subsequence: tuple[str, ...],
+) -> tuple[str, ...] | None:
+    """Remove one contiguous subsequence from tokens and return the remaining tokens."""
+    if len(subsequence) > len(tokens):
+        return None
+    for index in range(0, len(tokens) - len(subsequence) + 1):
+        if tokens[index : index + len(subsequence)] == subsequence:
+            return (*tokens[:index], *tokens[index + len(subsequence) :])
     return None
 
 

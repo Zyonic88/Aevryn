@@ -711,6 +711,12 @@ Verified hardening:
   matching from accepted visible traits, such as gender plus hair color, so
   later references like "white-haired woman" can resolve to a unique prior
   identity without making gender-only merges
+* entity resolution now resolves embedded known-name references only when the
+  surrounding title/description words are explicitly backed by that identity,
+  preventing duplicate cards such as "Female General Charlotte" while rejecting
+  unsupported descriptors around a known name
+* title/name matching was tightened so extra unsupported words no longer resolve
+  just because a known title and name both appear in the same surface reference
 * backend persistence and API now define project-scoped user correction records
   with a fixed `User Edited` source label, ownership checks, metadata-only audit
   events, JSON/PostgreSQL schema support, and project-delete cleanup

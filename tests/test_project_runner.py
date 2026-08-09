@@ -780,6 +780,84 @@ def test_runner_resolves_same_scene_title_name_duplicate_to_named_identity() -> 
     )
 
 
+def test_runner_resolves_same_scene_embedded_name_duplicate_to_named_identity() -> None:
+    """Description/title context around a known name should not duplicate a character."""
+    runner = AevrynProjectRunner()
+    imported_source = runner.import_text_file(
+        path=single_chapter_source_file(),
+        source_id="demo",
+    )
+    anchor_id = imported_source.anchors[-1].anchor_id
+
+    result = runner.run_imported_source_with_scene_payloads(
+        imported_source=imported_source,
+        payloads_by_scene_id={
+            "demo_chapter_001_scene_001": {
+                "entities": [
+                    {
+                        "entity_id": "character_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Charlotte",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "entity_id": "character_female_general_charlotte",
+                        "entity_type": "character",
+                        "display_name": "Female General Charlotte",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "facts": [
+                    {
+                        "fact_id": "fact_character_charlotte_gender_female",
+                        "entity_id": "character_charlotte",
+                        "attribute": "gender",
+                        "value": "Female",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_charlotte_title_general",
+                        "entity_id": "character_charlotte",
+                        "attribute": "title",
+                        "value": "General",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.95,
+                    },
+                    {
+                        "fact_id": "fact_character_female_general_charlotte_status_alert",
+                        "entity_id": "character_female_general_charlotte",
+                        "attribute": "status",
+                        "value": "Alert",
+                        "evidence_anchor_id": anchor_id,
+                        "confidence": 0.9,
+                    },
+                ],
+                "relationships": [],
+                "state_changes": [],
+            },
+        },
+    )
+
+    assert result.update_summaries[0].accepted_entities == ("character_charlotte",)
+    assert len(result.extraction_results[0].entities) == 1
+    assert result.extraction_results[0].entities[0].entity_id == "character_charlotte"
+    assert result.extraction_results[0].facts[2].entity_id == "character_charlotte"
+    assert result.database.retrieve_entity("character_female_general_charlotte") is None
+    status_fact = result.database.retrieve_current_fact("character_charlotte", "status")
+    assert status_fact is not None
+    assert status_fact.value == "Alert"
+    assert any(
+        decision.status == "resolved"
+        and decision.entity_id == "character_charlotte"
+        and decision.reference.text == "Female General Charlotte"
+        and decision.candidates[0].match_kind == "embedded_name_context"
+        for decision in result.identity_resolutions
+    )
+
+
 def test_runner_collapses_same_scene_exact_surface_duplicate_to_best_entity() -> None:
     """Same-scene exact surface duplicates should keep one Canon entity."""
     runner = AevrynProjectRunner()
