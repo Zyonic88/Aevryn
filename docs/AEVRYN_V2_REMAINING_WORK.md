@@ -756,6 +756,9 @@ Verified hardening:
   descriptions, relationships, timeline, evidence, recent changes, and other
   long accepted facts, preserving detail without turning prose into vertical
   text
+* duplicate-card review is explicitly review-only: same-name, alias, or
+  title/name signals are surfaced as possible duplicates while Aevryn keeps
+  separate Character cards intact because repeated names can be valid Canon
 * verified with the focused processed-character-panel frontend test
 * verified with the focused entity-resolution test suite and Ruff
 

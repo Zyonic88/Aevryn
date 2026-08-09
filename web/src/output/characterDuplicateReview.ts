@@ -31,6 +31,7 @@ export type CharacterDuplicateReviewItem = {
   leftId: string;
   rightId: string;
   reason: string;
+  reviewOnly: true;
 };
 
 export function characterDuplicateReviewItems(
@@ -62,7 +63,7 @@ function characterDuplicateReviewItem(
     return duplicateReviewItem(left, right, duplicateReviewReason(sharedSignal));
   }
   if (titleQualifiedIdentityOverlap(leftSignals, rightSignals)) {
-    return duplicateReviewItem(left, right, "Title plus name may refer to an existing card");
+    return duplicateReviewItem(left, right, "Possible title/name overlap");
   }
   return null;
 }
@@ -76,17 +77,18 @@ function duplicateReviewItem(
     leftId: left.character_id,
     rightId: right.character_id,
     reason,
+    reviewOnly: true,
   };
 }
 
 function duplicateReviewReason(sharedSignal: string): string {
   if (sharedSignal.includes("::display")) {
-    return "Matching display names";
+    return "Possible matching display names";
   }
   if (sharedSignal.includes("::alias")) {
-    return "Shared alias";
+    return "Possible shared alias";
   }
-  return "Shared name or alias";
+  return "Possible shared name or alias";
 }
 
 function characterIdentitySignals(profile: CharacterProfile): Set<string> {

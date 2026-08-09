@@ -872,7 +872,7 @@ function CharacterDuplicateReviewPanel({
           {items.length === 1
             ? "1 possible duplicate card needs review."
             : `${items.length.toLocaleString()} possible duplicate cards need review.`}{" "}
-          Aevryn did not merge them automatically.
+          Aevryn kept them separate until review.
         </span>
       </div>
       {items.map((item) => (

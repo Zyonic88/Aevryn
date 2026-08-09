@@ -49,7 +49,8 @@ describe("characterDuplicateReviewItems", () => {
       {
         leftId: "character_001",
         rightId: "character_002",
-        reason: "Matching display names",
+        reason: "Possible matching display names",
+        reviewOnly: true,
       },
     ]);
   });
@@ -68,7 +69,8 @@ describe("characterDuplicateReviewItems", () => {
       {
         leftId: "character_001",
         rightId: "character_002",
-        reason: "Shared name or alias",
+        reason: "Possible shared name or alias",
+        reviewOnly: true,
       },
     ]);
   });
@@ -83,7 +85,8 @@ describe("characterDuplicateReviewItems", () => {
       {
         leftId: "character_001",
         rightId: "character_002",
-        reason: "Title plus name may refer to an existing card",
+        reason: "Possible title/name overlap",
+        reviewOnly: true,
       },
     ]);
   });
