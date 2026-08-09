@@ -2791,6 +2791,7 @@ describe("App shell routing", () => {
 
     expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     expect(await screen.findByText("No saved imports")).toBeInTheDocument();
+    expect(screen.getByText(/Process chapters to create an import run/u)).toBeInTheDocument();
     expect(screen.getByText("Import details")).toBeVisible();
     expect(screen.getByText("Advanced import references")).not.toBeVisible();
     expect(screen.getByLabelText("Import reference")).not.toBeVisible();

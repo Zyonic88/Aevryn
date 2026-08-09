@@ -788,7 +788,8 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           !importsQuery.error &&
           (importsQuery.data?.imports.length ?? 0) === 0 ? (
             <EmptyState title="No saved imports">
-              Save an inspected import before processing chapters.
+              Process chapters to create an import run, or inspect first if you want to review the
+              scene map before processing.
             </EmptyState>
           ) : null}
           {(importsQuery.data?.imports ?? []).length > 0 ? (
@@ -831,7 +832,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         {snapshotsQuery.error ? <ErrorMessage>{snapshotsQuery.error.message}</ErrorMessage> : null}
         {!runsQuery.isLoading && !runsQuery.error && (runsQuery.data?.runs.length ?? 0) === 0 ? (
           <EmptyState title="No project runs">
-            Submit a saved import for background processing.
+            Process chapters from Source Intake to start the first Canon build.
           </EmptyState>
         ) : null}
         {projectRunsForActiveStory.length > 0 ? (
