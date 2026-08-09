@@ -1133,6 +1133,10 @@ Verified hardening:
   action while preserving individual Image/Narration/Camera/Animation prompt
   controls
 * prompt-pack bundle copy verified with focused prompt scene picker tests
+* character cards now surface accepted Appearance in the at-a-glance strip so
+  visual continuity data is visible without opening the full details panel
+* appearance-at-a-glance presentation verified with focused processed character
+  panel tests
 * verified with the full frontend test suite, lint, and production build
 
 Acceptance:

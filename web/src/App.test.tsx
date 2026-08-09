@@ -369,6 +369,7 @@ const characterPreviewPayload = {
       aliases: { title: "Aliases", items: ["Captain Mark"] },
       titles: { title: "Titles", items: ["Captain"] },
       descriptions: { title: "Descriptions", items: ["human male captain"] },
+      appearance: { title: "Appearance", items: ["Silver hair; blue eyes"] },
       race: { title: "Race", items: ["Human"] },
       gender: { title: "Gender", items: ["Male"] },
       status: { title: "Status", items: ["Alive"] },
@@ -3746,6 +3747,8 @@ describe("App shell routing", () => {
     expect(atAGlance.getByText("Human")).toBeInTheDocument();
     expect(atAGlance.getByText("Gender")).toBeInTheDocument();
     expect(atAGlance.getByText("Male")).toBeInTheDocument();
+    expect(atAGlance.getByText("Appearance")).toBeInTheDocument();
+    expect(atAGlance.getByText("Silver hair; blue eyes")).toBeInTheDocument();
     expect(atAGlance.getByText("Status")).toBeInTheDocument();
     expect(atAGlance.getByText("Alive")).toBeInTheDocument();
     expect(atAGlance.getByText("Goal")).toBeInTheDocument();

@@ -653,6 +653,7 @@ function CharacterAtAGlance({ profile }: { profile: CharacterProfile }) {
   const facts = [
     characterFact("Race", profile.race),
     characterFact("Gender", profile.gender),
+    characterFact("Appearance", profile.appearance),
     characterFact("Status", profile.status),
     characterFact("Goal", profile.current_goal),
   ];
