@@ -823,6 +823,11 @@ Verified hardening:
   ability crystals, skill crystals, and source crystals route as item context,
   while obvious AI attempts to classify crystals or slips as usable skills are
   rejected by deterministic extraction guards
+* physical spell/knowledge containers such as spell tomes, spell grimoires,
+  magic tomes, and technique books route as item context, while separate spell
+  or ability cues in the same sentence remain visible and reviewable
+* deterministic extraction guards reject provider candidates that classify
+  physical spell/knowledge containers such as grimoires as usable skills
 * physical-core phrases such as energy core, beast core, and reactor core route
   as item context and are rejected when a provider tries to classify them as
   usable skills or governing systems, while bare/genre core terms remain

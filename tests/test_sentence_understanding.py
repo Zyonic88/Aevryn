@@ -217,6 +217,39 @@ def test_sentence_understanding_treats_spell_scroll_as_item_context() -> None:
     assert understanding.review_required is False
 
 
+def test_sentence_understanding_treats_spell_tome_as_item_context() -> None:
+    """A physical spell tome is item context, not automatically a usable ability."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_spell_tome",
+        title="Sentence Spell Tome",
+        text="Chapter 1\nCharlotte opened the spell tome on the table.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "spell tome" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_keeps_grimoire_and_separate_spell_reviewable() -> None:
+    """A grimoire can be an item while separate spell evidence remains visible."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_grimoire_and_spell",
+        title="Sentence Grimoire And Spell",
+        text="Chapter 1\nThe spell grimoire recorded the Fireball spell.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "spell grimoire" in understanding.cue_terms
+    assert "spell" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_treats_jade_slip_as_item_context() -> None:
     """A jade slip is a physical knowledge container, not a skill by itself."""
     imported = StoryImporter().import_text(
