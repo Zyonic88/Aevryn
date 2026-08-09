@@ -639,6 +639,8 @@ Verified evidence:
 * character card bodies remain collapsed with neutral placeholder portraits
 * Recent Changes no longer repeats identity/profile facts already represented in card sections
 * identity/profile facts remain visible in their dedicated sections instead of being hidden
+* expanded character cards span the workspace row and use readable inspector
+  sections instead of cramped narrow text columns
 
 Remaining hardening:
 
@@ -740,6 +742,10 @@ Verified hardening:
 * frontend Character and World cards now expose compact user correction editors
   for approved fields; saves round-trip through the correction API and refresh
   processed outputs instead of rendering optimistic fake Canon
+* frontend character-detail sections automatically widen for appearance,
+  descriptions, relationships, timeline, evidence, recent changes, and other
+  long accepted facts, preserving detail without turning prose into vertical
+  text
 * verified with the focused processed-character-panel frontend test
 
 Acceptance:

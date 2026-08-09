@@ -3764,6 +3764,7 @@ describe("App shell routing", () => {
       (characterCard as HTMLElement).querySelectorAll(".profile-section"),
     ).find((section) => section.querySelector("h4")?.textContent === "Recent Changes");
     expect(recentChangesSection).toBeDefined();
+    expect(recentChangesSection).toHaveClass("profile-section-wide");
     expect(recentChangesSection).not.toHaveTextContent("Name: Mark");
     expect(recentChangesSection).not.toHaveTextContent("Gender: Male");
     expect(recentChangesSection).not.toHaveTextContent("Current Weapon: Rusty Dagger");

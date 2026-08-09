@@ -1784,8 +1784,14 @@ function machineToken(value: string): string {
 
 function PanelSection({ section }: { section: OutputSection }) {
   const items = readableOutputItems(section.items);
+  const className = [
+    "profile-section",
+    shouldUseWideProfileSection(section, items) ? "profile-section-wide" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <section className="profile-section">
+    <section className={className}>
       <h4>{section.title}</h4>
       <ul>
         {items.map((item) => (
@@ -1793,6 +1799,25 @@ function PanelSection({ section }: { section: OutputSection }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+function shouldUseWideProfileSection(section: OutputSection, items: string[]): boolean {
+  const wideSectionTitles = new Set([
+    "Appearance",
+    "Descriptions",
+    "Relationships",
+    "Current Assets",
+    "Current Abilities",
+    "Current Limitations",
+    "Timeline History",
+    "Evidence References",
+    "Recent Changes",
+  ]);
+  return (
+    wideSectionTitles.has(section.title) ||
+    items.length > 3 ||
+    items.some((item) => item.length > 72)
   );
 }
 

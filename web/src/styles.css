@@ -1362,19 +1362,26 @@ select:focus {
   overflow: hidden;
 }
 
+.character-profile-card:has(.profile-disclosure[open]) {
+  grid-column: 1 / -1;
+}
+
 .character-profile-card .character-detail-grid {
-  grid-template-columns: 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
 }
 
 .character-profile-card .character-detail-grid .profile-section {
   display: grid;
-  grid-template-columns: minmax(96px, 0.42fr) minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   align-items: start;
   padding: 10px;
   overflow-wrap: break-word;
   word-break: normal;
+}
+
+.character-profile-card .character-detail-grid .profile-section-wide {
+  grid-column: span 2;
 }
 
 .character-profile-card .character-detail-grid .profile-section h4 {
