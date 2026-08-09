@@ -279,11 +279,12 @@ class CanonPromptBuilder:
             (
                 (
                     "Generate this image using only accepted Aevryn canon. "
-                    "Use confirmed subjects, setting, mood, objects, and Canon "
-                    "limits; do not invent unlisted visuals."
+                    "Use confirmed subjects, setting, objects; "
+                    "do not invent visuals."
                 ),
                 self._canon_context_checklist_section(context, analysis),
                 self._production_contract_section(context, analysis),
+                self._image_generation_handoff_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_visual_anchor_section(context),
                 self._scene_action_beats_section(context, analysis),
@@ -510,8 +511,7 @@ class CanonPromptBuilder:
             "; ".join(setting_lines[:3])
             if setting_lines
             else (
-                "Setting is not confirmed; keep the background neutral and "
-                "non-specific."
+                "Setting is not confirmed; keep the background neutral."
             )
         )
         visual_identity_count = sum(
@@ -570,6 +570,45 @@ class CanonPromptBuilder:
             lines.append("- Unknown subjects.")
 
         return "\n".join(lines)
+
+    def _image_generation_handoff_section(
+        self,
+        context: CanonSceneContext,
+        analysis: SceneAnalysis,
+    ) -> str:
+        """Return a compact render brief for image and video generation tools."""
+        visual_anchors = self._scene_visual_anchors(context)
+        action_beats = self._scene_action_beats(context, analysis)
+        current_moment = (
+            visual_anchors[0]
+            if visual_anchors
+            else action_beats[0]
+            if action_beats
+            else analysis.summary
+        )
+        character_names = tuple(card.display_name for card in context.character_cards)
+        subject_text = ", ".join(character_names) if character_names else "Unknown"
+        detail_sources = (
+            visual_anchors
+            if visual_anchors
+            else (*analysis.important_objects, *analysis.visual_highlights)
+        )
+        visible_details = self._unique_values(
+            self._shorten(value, width=80)
+            for value in detail_sources
+            if value.strip()
+        )
+        detail_text = "; ".join(visible_details[:3]) or "Unknown"
+        return "\n".join(
+            [
+                "Image generation handoff:",
+                f"- Render now: {self._shorten(current_moment, width=120)}",
+                f"- Confirmed subjects: {subject_text}",
+                f"- Visible objects/details: {detail_text}",
+                "- Preserve accepted appearance, setting, objects, and continuity.",
+                "- Keep unspecified traits, scenery, lighting, and labels neutral.",
+            ]
+        )
 
     def _character_identity_reference_section(self, context: CanonSceneContext) -> str:
         """Return stable identity references from accepted character-card facts."""
@@ -700,8 +739,10 @@ class CanonPromptBuilder:
         return "\n".join(
             [
                 "Scene production brief:",
-                f"- Current scene moment: {CanonPromptBuilder._shorten(current_scene, width=190)}",
-                "- Scene Summary: Current scene moment plus accepted Canon state.",
+                (
+                    "- Scene Summary: "
+                    f"{CanonPromptBuilder._shorten(current_scene, width=170)}"
+                ),
                 (
                     "- Primary setting: "
                     f"{CanonPromptBuilder._shorten('; '.join(setting_lines[:2]))}"
@@ -709,7 +750,7 @@ class CanonPromptBuilder:
                     else "- Primary setting: Unknown; keep environment neutral."
                 ),
                 (
-                    "- Characters present: "
+                    "- Characters: "
                     f"{', '.join(character_names) if character_names else 'Unknown'}"
                 ),
                 f"- Purpose: {CanonPromptBuilder._shorten(analysis.purpose)}",
@@ -852,7 +893,7 @@ class CanonPromptBuilder:
         )
 
         if len(lines) == 1:
-            lines.append("- No scene-specific world details accepted yet.")
+            lines.append("- No scene-specific world details accepted.")
 
         return "\n".join(lines)
 
@@ -973,7 +1014,6 @@ class CanonPromptBuilder:
                 "- Canon-preserving production image.",
                 "- Clear subject and environment separation.",
                 "- Style must not override accepted Canon.",
-                "- Do not add watermark, credits, decorative text, or UI overlays.",
             ]
         )
 
@@ -985,11 +1025,11 @@ class CanonPromptBuilder:
                 "Visible text and labels:",
                 (
                     "- Do not render names, entity IDs, project labels, scene titles, "
-                    "prompt headings, captions, subtitles, or UI panels."
+                    "prompt headings, captions, subtitles, watermarks, or UI panels."
                 ),
                 (
-                    "- If a screen, sign, book, interface, or blueprint is canon, show it "
-                    "without readable text unless exact text is accepted canon."
+                    "- Canon screens, signs, books, interfaces, or blueprints may "
+                    "appear without readable text unless exact text is accepted canon."
                 ),
                 (
                     "- Do not turn department, role, goal, or asset names into badges, "
@@ -1184,8 +1224,7 @@ class CanonPromptBuilder:
             [
                 "Continuity Notes:",
                 *CanonPromptBuilder._bullet_lines(analysis.continuity_notes[:8]),
-                "Forbidden Elements:",
-                *CanonPromptBuilder._bullet_lines(analysis.forbidden_elements),
+                "- Treat continuity notes as constraints, not extra visual props.",
             ]
         )
 

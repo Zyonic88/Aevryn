@@ -535,6 +535,13 @@ Verified hardening:
   setting, visual detail, and environment
 * verified with focused Prompt Packs workspace test, full frontend test suite,
   lint, and production build
+* image prompts now include a compact `Image generation handoff` that summarizes
+  the current render moment, confirmed subjects, visible objects/details,
+  preservation rules, and neutral handling for unspecified traits before the
+  longer Canon context sections
+* current-scene visual anchors remain ahead of retained/background object facts
+  in image prompts, preserving the current-scene-first rule for generation tools
+* verified with focused Canon Prompt Builder regression tests
 
 Acceptance:
 

@@ -209,6 +209,21 @@ def test_canon_prompt_builder_includes_bounded_current_scene_action_beats() -> N
     assert action_section.count("\n- ") == 3
 
 
+def test_canon_prompt_builder_adds_image_generation_handoff() -> None:
+    """Image prompts expose a compact render brief before detailed context."""
+    prompt = CanonPromptBuilder().build_image_prompt(build_context())
+
+    assert "Image generation handoff:" in prompt
+    assert "Render now: Mark Current Weapon: Iron Sword" in prompt
+    assert "Confirmed subjects: Mark" in prompt
+    assert "Visible objects/details: Iron Sword" in prompt
+    assert "Preserve accepted appearance, setting, objects, and continuity." in prompt
+    assert "Keep unspecified traits, scenery, lighting, and labels neutral." in prompt
+    assert prompt.index("Image generation handoff:") < prompt.index(
+        "Scene production brief:"
+    )
+
+
 def test_canon_prompt_builder_adds_action_beats_to_all_prompt_types() -> None:
     """Every production prompt carries the same bounded scene moment context."""
     builder = CanonPromptBuilder()
