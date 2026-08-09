@@ -323,6 +323,25 @@ class MisclassifiedSpellGrimoireExtractor:
         )
 
 
+class MisclassifiedSpellDiagramExtractor:
+    """Extractor that labels a physical spell diagram as a skill."""
+
+    def extract_scene(self, scene: SceneExtractionInput) -> ExtractionResult:
+        """Return an obvious spell-diagram/skill classification conflict."""
+        return ExtractionResult(
+            scene_id=scene.scene_id,
+            entities=(
+                ExtractedEntity(
+                    entity_id="skill_fireball_diagram",
+                    entity_type="skill",
+                    display_name="Fireball spell diagram",
+                    evidence_anchor_id=scene.evidence_anchor_ids[0],
+                    confidence=0.94,
+                ),
+            ),
+        )
+
+
 class MisclassifiedPhysicalCoreSkillExtractor:
     """Extractor that labels a physical core object as a skill."""
 
@@ -1031,6 +1050,19 @@ def test_extraction_rejects_spell_containers_as_skills() -> None:
         text=imported_source_text(),
     )
     engine = EntityExtractionEngine(extractor=MisclassifiedSpellGrimoireExtractor())
+
+    with pytest.raises(ValueError, match="physical knowledge or resource container"):
+        engine.extract_imported_source(imported)
+
+
+def test_extraction_rejects_spell_diagrams_as_skills() -> None:
+    """Physical spell diagrams must not be accepted as usable skills."""
+    imported = StoryImporter().import_text(
+        source_id="source_demo",
+        title="Demo",
+        text=imported_source_text(),
+    )
+    engine = EntityExtractionEngine(extractor=MisclassifiedSpellDiagramExtractor())
 
     with pytest.raises(ValueError, match="physical knowledge or resource container"):
         engine.extract_imported_source(imported)

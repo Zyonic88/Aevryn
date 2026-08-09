@@ -828,13 +828,19 @@ Verified hardening:
   or ability cues in the same sentence remain visible and reviewable
 * deterministic extraction guards reject provider candidates that classify
   physical spell/knowledge containers such as grimoires as usable skills
+* visual and technical documents such as star maps, charts, schematics, and
+  spell or formation diagrams route as item context instead of becoming
+  locations or usable skills; separate spell/ability evidence in the same
+  sentence remains visible and reviewable
+* deterministic extraction guards reject provider candidates that classify
+  physical diagrams as usable skills
 * physical-core phrases such as energy core, beast core, and reactor core route
   as item context and are rejected when a provider tries to classify them as
   usable skills or governing systems, while bare/genre core terms remain
   translation-review metadata until evidence resolves meaning
 * the evidence-bounded AI extraction prompt tells the provider that manuals,
-  scrolls, jade slips, and crystals are physical item containers unless evidence
-  explicitly states a usable ability
+  scrolls, jade slips, crystals, maps, charts, diagrams, and schematics are
+  physical item containers unless evidence explicitly states a usable ability
 * deterministic extraction guards reject obvious place or institution heads such
   as academy, department, empire, room, and station when a provider tries to
   classify them as physical items or usable skills
