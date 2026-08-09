@@ -854,6 +854,12 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
                   </div>
                   <span>{runDurationSummary(run, processingClockMs)}</span>
                   <span>{processingCurrentStepLabel(run, snapshot)}</span>
+                  {snapshot ? (
+                    <div className="run-history-actions" aria-label="Canon output shortcuts">
+                      <NavLink to={`/projects/${project.id}/characters`}>Characters</NavLink>
+                      <NavLink to={`/projects/${project.id}/prompts`}>Prompt Packs</NavLink>
+                    </div>
+                  ) : null}
                   {errorLabel ? <span className="run-history-error">{errorLabel}</span> : null}
                 </div>
               );

@@ -3183,6 +3183,14 @@ describe("App shell routing", () => {
     expect(runHistory).toHaveTextContent("Completed Canon build");
     expect(runHistory).toHaveTextContent("Duration: 5s");
     expect(runHistory).toHaveTextContent("Canon snapshot ready");
+    expect(within(runHistory).getByRole("link", { name: "Characters" })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/characters",
+    );
+    expect(within(runHistory).getByRole("link", { name: "Prompt Packs" })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/prompts",
+    );
     expect(screen.queryByLabelText("Current processing progress")).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.workerProcess)),

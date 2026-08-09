@@ -1147,6 +1147,11 @@ Verified hardening:
   uncertain identities automatically
 * duplicate-card validation verified with focused character workspace tests,
   frontend lint, and production build
+* completed Canon build rows now provide direct IDE shortcuts into Characters
+  and Prompt Packs so Source Intake hands users to the next useful workspace
+  without extra navigation hunting
+* completed-build shortcuts verified with focused hosted import polling tests,
+  frontend lint, and production build
 * verified with the full frontend test suite, lint, and production build
 
 Acceptance:
