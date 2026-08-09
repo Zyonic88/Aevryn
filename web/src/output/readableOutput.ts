@@ -81,7 +81,7 @@ export function readablePromptPreview(
   options: { maxItems?: number } = {},
 ): { items: string[]; hiddenCount: number } {
   const maxItems = Math.max(1, options.maxItems ?? 3);
-  const items = readablePromptItems(section);
+  const items = readablePromptPreviewItems(readablePromptItems(section));
   return {
     items: items.slice(0, maxItems).map(toSentence),
     hiddenCount: Math.max(0, items.length - maxItems),
@@ -91,6 +91,29 @@ export function readablePromptPreview(
 function readablePromptItems(section: { items: string[] }): string[] {
   return readableOutputItems(section.items)
     .filter((item) => !/^Scene ID:/iu.test(item));
+}
+
+function readablePromptPreviewItems(items: string[]): string[] {
+  const previewItems: string[] = [];
+  let skippingHandoffBullets = false;
+  for (const item of items) {
+    const lines = item
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      if (/^(image|narration|camera|animation) generation handoff:?\s*$/iu.test(line)) {
+        skippingHandoffBullets = true;
+        continue;
+      }
+      if (skippingHandoffBullets && /^[-*]\s/u.test(line)) {
+        continue;
+      }
+      skippingHandoffBullets = false;
+      previewItems.push(line);
+    }
+  }
+  return previewItems;
 }
 
 export function readableOutputText(value: string): string {

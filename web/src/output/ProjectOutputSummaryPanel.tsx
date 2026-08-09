@@ -1281,6 +1281,7 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
             </button>
           </div>
           <PromptProductionFocus pack={selectedPack} />
+          <PromptHandoffSummary pack={selectedPack} />
           <div className="prompt-pack-dossier">
             <PromptCanonInputs pack={selectedPack} />
             <PromptSceneBrief pack={selectedPack} />
@@ -1380,6 +1381,58 @@ function PromptProductionFocus({ pack }: { pack: ProductionPack }) {
       </div>
     </dl>
   );
+}
+
+function PromptHandoffSummary({ pack }: { pack: ProductionPack }) {
+  const handoffs = [
+    promptHandoff("Image", pack.image_prompt, "Image generation handoff:"),
+    promptHandoff("Narration", pack.narration_prompt, "Narration generation handoff:"),
+    promptHandoff("Camera", pack.camera_prompt, "Camera generation handoff:"),
+    promptHandoff("Animation", pack.animation_prompt, "Animation generation handoff:"),
+  ];
+  return (
+    <section className="prompt-handoff-summary" aria-label="Prompt generation handoffs">
+      <header>
+        <strong>Prompt handoffs</strong>
+        <span>What each generator should produce from accepted Canon</span>
+      </header>
+      <dl>
+        {handoffs.map((handoff) => (
+          <div key={handoff.label}>
+            <dt>{handoff.label}</dt>
+            <dd>{handoff.detail}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function promptHandoff(
+  label: string,
+  section: OutputSection,
+  heading: string,
+): { label: string; detail: string } {
+  const lines = readableOutputItems(section.items)
+    .flatMap((item) => item.split(/\r?\n/u))
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const normalizedHeading = normalizePromptHandoffLine(heading);
+  const headingIndex = lines.findIndex(
+    (line) => normalizePromptHandoffLine(line) === normalizedHeading,
+  );
+  if (headingIndex < 0) {
+    return { label, detail: "Handoff unavailable" };
+  }
+  const firstInstruction = lines
+    .slice(headingIndex + 1)
+    .map((line) => line.replace(/^[-*]\s*/u, "").trim())
+    .find((line) => line.length > 0);
+  return { label, detail: firstInstruction ?? "Handoff available" };
+}
+
+function normalizePromptHandoffLine(value: string): string {
+  return value.trim().replace(/[.:]+$/u, "").toLowerCase();
 }
 
 function PromptSceneBrief({ pack }: { pack: ProductionPack }) {

@@ -547,6 +547,11 @@ Verified hardening:
   in all prompt generation handoffs, preserving the current-scene-first rule for
   generation tools
 * verified with focused Canon Prompt Builder regression tests
+* Prompt Packs selected-scene detail now surfaces compact image, narration,
+  camera, and animation handoff summaries before the longer collapsed prompt
+  bodies, so creators can scan each generation target without opening every
+  prompt
+* verified with focused Prompt Packs workspace regression coverage
 
 Acceptance:
 

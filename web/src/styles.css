@@ -2764,6 +2764,66 @@ textarea::placeholder {
   color: var(--app-text);
 }
 
+.prompt-handoff-summary {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid rgba(127, 178, 255, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(127, 178, 255, 0.08), transparent),
+    rgba(5, 8, 14, 0.52);
+}
+
+.prompt-handoff-summary header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.prompt-handoff-summary strong {
+  color: var(--app-text);
+}
+
+.prompt-handoff-summary header span {
+  color: var(--app-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.prompt-handoff-summary dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.prompt-handoff-summary div {
+  min-width: 0;
+  border: 1px solid rgba(127, 178, 255, 0.16);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.prompt-handoff-summary dt {
+  color: var(--app-blue-2);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.prompt-handoff-summary dd {
+  margin: 5px 0 0;
+  color: var(--app-text);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .prompt-pack-header {
   display: flex;
   align-items: start;
@@ -3106,6 +3166,10 @@ textarea::placeholder {
     grid-template-columns: 1fr;
   }
 
+  .prompt-handoff-summary dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .prompt-scene-brief {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3446,6 +3510,10 @@ textarea::placeholder {
   }
 
   .character-profile-card .character-detail-grid .profile-section {
+    grid-template-columns: 1fr;
+  }
+
+  .prompt-handoff-summary dl {
     grid-template-columns: 1fr;
   }
 

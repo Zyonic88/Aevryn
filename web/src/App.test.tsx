@@ -241,21 +241,40 @@ const promptPreviewPayload = {
     image_prompt: {
       title: "Image Prompt",
       items: [
+        "Image generation handoff:",
+        "- Render now: Mark prepares in the quiet hangar.",
+        "- Confirmed subjects: Mark.",
+        "- Visible objects/details: Rusty Dagger.",
         "Generate this image using only accepted Aevryn canon.",
         "Scene Summary: Mark prepares in the hangar.",
       ],
     },
     narration_prompt: {
       title: "Narration Prompt",
-      items: ["Narrate using only accepted canon facts."],
+      items: [
+        "Narration generation handoff:",
+        "- Narrate now: Mark prepares in the quiet hangar.",
+        "- Tone: Tense.",
+        "Narrate using only accepted canon facts.",
+      ],
     },
     camera_prompt: {
       title: "Camera Prompt",
-      items: ["Describe camera framing without inventing new canon."],
+      items: [
+        "Camera generation handoff:",
+        "- Frame now: Mark and the Rusty Dagger inside the hangar.",
+        "- Shot discipline: No unsupported characters.",
+        "Describe camera framing without inventing new canon.",
+      ],
     },
     animation_prompt: {
       title: "Animation Prompt",
-      items: ["Describe motion using only accepted scene facts."],
+      items: [
+        "Animation generation handoff:",
+        "- Animate now: Mark prepares without changing accepted Canon.",
+        "- Motion boundary: Preserve quiet hangar context.",
+        "Describe motion using only accepted scene facts.",
+      ],
     },
   },
 };
@@ -3999,8 +4018,20 @@ describe("App shell routing", () => {
     expect(productionFocus).toHaveTextContent("Scene priority");
     expect(productionFocus).toHaveTextContent("Current scene before retained Canon");
     expect(productionFocus).toHaveTextContent("Generation boundary");
-    expect(productionFocus).toHaveTextContent("4 canon guardrails; no unsupported additions");
+    expect(productionFocus).toHaveTextContent("5 canon guardrails; no unsupported additions");
     expect(productionFocus).toHaveTextContent("Missing inputs");
+    const promptHandoffs = within(selectedPack).getByLabelText("Prompt generation handoffs");
+    expect(promptHandoffs).toHaveTextContent("Prompt handoffs");
+    expect(promptHandoffs).toHaveTextContent("Image");
+    expect(promptHandoffs).toHaveTextContent("Render now: Mark prepares in the quiet hangar.");
+    expect(promptHandoffs).toHaveTextContent("Narration");
+    expect(promptHandoffs).toHaveTextContent("Narrate now: Mark prepares in the quiet hangar.");
+    expect(promptHandoffs).toHaveTextContent("Camera");
+    expect(promptHandoffs).toHaveTextContent("Frame now: Mark and the Rusty Dagger inside the hangar.");
+    expect(promptHandoffs).toHaveTextContent("Animation");
+    expect(promptHandoffs).toHaveTextContent(
+      "Animate now: Mark prepares without changing accepted Canon.",
+    );
     const canonInputs = within(selectedPack).getByLabelText("Prompt canon inputs");
     expect(canonInputs).toHaveTextContent("Canon inputs");
     expect(canonInputs).toHaveTextContent("Characters");
@@ -4010,7 +4041,7 @@ describe("App shell routing", () => {
     expect(canonInputs).toHaveTextContent("Visual details");
     expect(canonInputs).toHaveTextContent("Continuity");
     expect(canonInputs).toHaveTextContent("Constraints");
-    expect(canonInputs).toHaveTextContent("4 canon guardrails");
+    expect(canonInputs).toHaveTextContent("5 canon guardrails");
     expect(within(canonInputs).queryByText(/source_alpha_chapter/u)).not.toBeInTheDocument();
     const sceneBrief = within(selectedPack).getByLabelText("Selected prompt scene brief");
     expect(sceneBrief).toHaveTextContent("Characters");
