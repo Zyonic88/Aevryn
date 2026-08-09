@@ -216,9 +216,10 @@ def test_canon_prompt_builder_adds_image_generation_handoff() -> None:
     assert "Image generation handoff:" in prompt
     assert "Render now: Mark Current Weapon: Iron Sword" in prompt
     assert "Confirmed subjects: Mark" in prompt
+    assert "Appearance lock: Unknown; keep neutral." in prompt
     assert "Visible objects/details: Iron Sword" in prompt
-    assert "Preserve accepted appearance, setting, objects, and continuity." in prompt
-    assert "Keep unspecified traits, scenery, lighting, and labels neutral." in prompt
+    assert "Preserve accepted setting, objects, and continuity." in prompt
+    assert "Keep unspecified traits neutral." in prompt
     assert prompt.index("Image generation handoff:") < prompt.index(
         "Scene production brief:"
     )
@@ -236,6 +237,7 @@ def test_canon_prompt_builder_adds_variant_generation_handoffs() -> None:
     assert "Narration generation handoff:" in narration_prompt
     assert "Narrate now: Mark Current Weapon: Iron Sword" in narration_prompt
     assert "Characters to reference: Mark" in narration_prompt
+    assert "Description boundary: Unknown; keep neutral." in narration_prompt
     assert "Do not add inner thoughts, dialogue, or backstory" in narration_prompt
     assert narration_prompt.index("Narration generation handoff:") < (
         narration_prompt.index("Scene production brief:")
@@ -244,6 +246,7 @@ def test_canon_prompt_builder_adds_variant_generation_handoffs() -> None:
     assert "Camera generation handoff:" in camera_prompt
     assert "Frame now: Mark Current Weapon: Iron Sword" in camera_prompt
     assert "Confirmed subjects: Mark" in camera_prompt
+    assert "Appearance lock: Unknown; keep neutral." in camera_prompt
     assert "Do not add unconfirmed characters" in camera_prompt
     assert camera_prompt.index("Camera generation handoff:") < camera_prompt.index(
         "Scene production brief:"
@@ -252,6 +255,7 @@ def test_canon_prompt_builder_adds_variant_generation_handoffs() -> None:
     assert "Animation generation handoff:" in animation_prompt
     assert "Animate now: Mark Current Weapon: Iron Sword" in animation_prompt
     assert "Confirmed subjects: Mark" in animation_prompt
+    assert "Appearance lock: Unknown; keep neutral." in animation_prompt
     assert "Keep unspecified motion minimal" in animation_prompt
     assert animation_prompt.index("Animation generation handoff:") < (
         animation_prompt.index("Scene production brief:")
@@ -819,9 +823,21 @@ def test_canon_prompt_builder_carries_stable_character_appearance_from_cards() -
     assert "- Hair Color: Silver" in image_prompt
     assert "- Eye Color: Blue" in image_prompt
     assert "- Build: Lean" in image_prompt
+    assert (
+        "Appearance lock: Mark: Build: Lean; Eye Color: Blue; Hair Color: Silver"
+        in image_prompt
+    )
     assert "School Year: First Year" not in image_prompt
     assert "- Hair Color: Silver" in camera_prompt
+    assert (
+        "Appearance lock: Mark: Build: Lean; Eye Color: Blue; Hair Color: Silver"
+        in camera_prompt
+    )
     assert "- Eye Color: Blue" in animation_prompt
+    assert (
+        "Appearance lock: Mark: Build: Lean; Eye Color: Blue; Hair Color: Silver"
+        in animation_prompt
+    )
 
 
 def test_canon_prompt_builder_carries_stable_identity_references_from_cards() -> None:

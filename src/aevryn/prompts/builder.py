@@ -581,14 +581,16 @@ class CanonPromptBuilder:
     ) -> str:
         """Return a compact render brief for image and video generation tools."""
         moment, subjects, details = self._prompt_handoff_parts(context, analysis)
+        appearance_lock = self._prompt_handoff_appearance_lock(context)
         return "\n".join(
             [
                 "Image generation handoff:",
                 f"- Render now: {moment}",
                 f"- Confirmed subjects: {subjects}",
+                f"- Appearance lock: {appearance_lock}",
                 f"- Visible objects/details: {details}",
-                "- Preserve accepted appearance, setting, objects, and continuity.",
-                "- Keep unspecified traits, scenery, lighting, and labels neutral.",
+                "- Preserve accepted setting, objects, and continuity.",
+                "- Keep unspecified traits neutral.",
             ]
         )
 
@@ -599,6 +601,7 @@ class CanonPromptBuilder:
     ) -> str:
         """Return a compact narration brief before detailed Canon context."""
         moment, subjects, details = self._prompt_handoff_parts(context, analysis)
+        appearance_lock = self._prompt_handoff_appearance_lock(context)
         return "\n".join(
             [
                 "Narration generation handoff:",
@@ -606,6 +609,7 @@ class CanonPromptBuilder:
                 f"- Scene voice target: {analysis.mood}",
                 f"- Spoken focus: {analysis.purpose}",
                 f"- Characters to reference: {subjects}",
+                f"- Description boundary: {appearance_lock}",
                 f"- Canon details to mention if relevant: {details}",
                 (
                     "- Do not add inner thoughts, dialogue, or backstory unless "
@@ -621,11 +625,13 @@ class CanonPromptBuilder:
     ) -> str:
         """Return a compact camera brief before detailed Canon context."""
         moment, subjects, details = self._prompt_handoff_parts(context, analysis)
+        appearance_lock = self._prompt_handoff_appearance_lock(context)
         return "\n".join(
             [
                 "Camera generation handoff:",
                 f"- Frame now: {moment}",
                 f"- Confirmed subjects: {subjects}",
+                f"- Appearance lock: {appearance_lock}",
                 f"- Camera-visible details: {details}",
                 "- Choose shot language from accepted setting, mood, and relationships.",
                 "- Do not add unconfirmed characters, labels, props, uniforms, or scenery.",
@@ -639,11 +645,13 @@ class CanonPromptBuilder:
     ) -> str:
         """Return a compact animation brief before detailed Canon context."""
         moment, subjects, details = self._prompt_handoff_parts(context, analysis)
+        appearance_lock = self._prompt_handoff_appearance_lock(context)
         return "\n".join(
             [
                 "Animation generation handoff:",
                 f"- Animate now: {moment}",
                 f"- Confirmed subjects: {subjects}",
+                f"- Appearance lock: {appearance_lock}",
                 f"- Motion-relevant details: {details}",
                 f"- Pacing: {self._shorten(analysis.mood, width=90)}",
                 "- Keep unspecified motion minimal and do not add unsupported action beats.",
@@ -682,6 +690,26 @@ class CanonPromptBuilder:
             subject_text,
             "; ".join(details[:3]) or "Unknown",
         )
+
+    def _prompt_handoff_appearance_lock(self, context: CanonSceneContext) -> str:
+        """Return compact accepted appearance context for prompt handoffs."""
+        if not context.character_cards:
+            return "No confirmed character subjects; keep identity neutral."
+
+        appearance_lines: list[str] = []
+        for card in context.character_cards:
+            visual_lines = self._character_visual_reference_lines(card, context)[:3]
+            if visual_lines:
+                appearance_lines.append(
+                    f"{card.display_name}: " + "; ".join(visual_lines)
+                )
+            if len(appearance_lines) >= 3:
+                break
+
+        if appearance_lines:
+            return self._shorten(" | ".join(appearance_lines), width=210)
+
+        return "Unknown; keep neutral."
 
     def _character_identity_reference_section(self, context: CanonSceneContext) -> str:
         """Return stable identity references from accepted character-card facts."""

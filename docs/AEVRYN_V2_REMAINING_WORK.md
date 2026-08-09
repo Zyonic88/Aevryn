@@ -552,6 +552,10 @@ Verified hardening:
   bodies, so creators can scan each generation target without opening every
   prompt
 * verified with focused Prompt Packs workspace regression coverage
+* compact prompt handoffs now include an `Appearance lock` / `Description
+  boundary` line sourced from accepted character-card appearance facts, or an
+  explicit neutral-unknown instruction when no appearance facts are confirmed
+* verified with focused Canon Prompt Builder regression tests
 
 Acceptance:
 
