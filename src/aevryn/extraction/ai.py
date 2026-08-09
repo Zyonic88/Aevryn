@@ -315,12 +315,18 @@ class EvidenceBoundedAIExtractor:
                     "ability."
                 ),
                 (
+                    "Treat manuals/scrolls/jade slips/crystals as physical item "
+                    "or artifact candidates unless the sentence explicitly says "
+                    "they are usable abilities."
+                ),
+                (
                     "Use entity_type=skill only when the evidence describes an ability "
                     "that a character can use, activate, learn, cast, train, or possess "
                     "as a capability. Do not classify a product, blueprint, title, rank, "
                     "currency, reward, quest, ship, weapon, equipment, manual, tome, "
                     "grimoire, scroll, jade slip, crystal, map, chart, diagram, "
-                    "schematic, or physical core as a skill."
+                    "schematic, or physical core as a skill. Do not classify a manual, "
+                    "scroll, jade slip, crystal, or physical core as a skill."
                 ),
                 (
                     "Use entity_type=organization for factions, academies, clans, guilds, "

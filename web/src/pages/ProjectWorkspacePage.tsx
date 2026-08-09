@@ -110,7 +110,10 @@ export function ProjectWorkspacePage() {
           </div>
         </header>
         {activeTab ? (
-          <WorkspaceTabContent tabId={activeTab.id} label={activeTab.label} project={project} />
+          <>
+            <h2 className="sr-only">{activeTab.label}</h2>
+            <WorkspaceTabContent tabId={activeTab.id} label={activeTab.label} project={project} />
+          </>
         ) : (
           <EmptyState title="Unknown workspace section">
             This project exists, but that workspace section is not available.

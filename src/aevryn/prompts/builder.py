@@ -1291,6 +1291,7 @@ class CanonPromptBuilder:
         del context
         return "\n".join(
             [
+                "Forbidden Elements:",
                 "Do not include unless supported by this scene:",
                 "- Later canon objects or rewards that are not visible in the current scene.",
                 "- Extra characters, officers, crowds, logos, uniforms, or vehicles.",
@@ -1324,7 +1325,7 @@ class CanonPromptBuilder:
             [
                 "Continuity Notes:",
                 *CanonPromptBuilder._bullet_lines(analysis.continuity_notes[:8]),
-                "- Treat continuity notes as constraints, not extra visual props.",
+                "- Continuity notes constrain, not props.",
             ]
         )
 
