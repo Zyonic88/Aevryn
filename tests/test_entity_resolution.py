@@ -383,6 +383,29 @@ def test_resolves_embedded_name_with_supported_identity_context() -> None:
     assert decision.candidates[0].match_kind == "embedded_name_context"
 
 
+def test_resolves_embedded_alias_with_supported_identity_context() -> None:
+    """Known aliases plus supported roles should not create duplicate identities."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Captain Mark the engineer", "anchor_032k"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mark",
+                canonical_name="Mark",
+                aliases=("Captain Mark",),
+                descriptions=("Engineer",),
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "resolved"
+    assert decision.entity_id == "character_mark"
+    assert decision.confidence == 0.94
+    assert decision.candidates[0].match_kind == "embedded_name_context"
+
+
 def test_embedded_name_rejects_unsupported_identity_context() -> None:
     """Unknown descriptors around a known name should not force a merge."""
     engine = EntityResolutionEngine()
@@ -394,6 +417,28 @@ def test_embedded_name_rejects_unsupported_identity_context() -> None:
                 entity_id="character_charlotte",
                 canonical_name="Charlotte",
                 titles=("General",),
+                evidence_anchor_ids=("anchor_001",),
+            ),
+        ),
+    )
+
+    assert decision.status == "unresolved"
+    assert decision.entity_id is None
+    assert decision.candidates == ()
+
+
+def test_embedded_alias_rejects_unsupported_identity_context() -> None:
+    """Aliases do not make unsupported descriptors safe to merge."""
+    engine = EntityResolutionEngine()
+
+    decision = engine.resolve_reference(
+        SurfaceReference("Captain Mark the traitor", "anchor_032l"),
+        (
+            EntityIdentityProfile(
+                entity_id="character_mark",
+                canonical_name="Mark",
+                aliases=("Captain Mark",),
+                descriptions=("Engineer",),
                 evidence_anchor_ids=("anchor_001",),
             ),
         ),

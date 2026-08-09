@@ -737,6 +737,10 @@ Verified hardening:
   surrounding title/description words are explicitly backed by that identity,
   preventing duplicate cards such as "Female General Charlotte" while rejecting
   unsupported descriptors around a known name
+* entity-resolution validation now covers alias-plus-supported-context surfaces
+  such as "Captain Mark the engineer" so known aliases with backed roles do not
+  create duplicate cards, while unsupported extra descriptors still remain
+  unresolved
 * title/name matching was tightened so extra unsupported words no longer resolve
   just because a known title and name both appear in the same surface reference
 * backend persistence and API now define project-scoped user correction records
@@ -753,6 +757,7 @@ Verified hardening:
   long accepted facts, preserving detail without turning prose into vertical
   text
 * verified with the focused processed-character-panel frontend test
+* verified with the focused entity-resolution test suite and Ruff
 
 Acceptance:
 
