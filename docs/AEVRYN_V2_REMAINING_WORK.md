@@ -1145,8 +1145,9 @@ Verified hardening:
 * Character Cards now surface possible duplicate-card review items when accepted
   Canon output contains title/name or alias overlap, while refusing to merge
   uncertain identities automatically
-* duplicate-card validation verified with focused character workspace tests,
-  frontend lint, and production build
+* duplicate-card validation is now isolated in a focused output utility and
+  verified with exact-name, alias/display, title/name, non-match, and character
+  workspace tests plus frontend lint and production build
 * completed Canon build rows now provide direct IDE shortcuts into Characters
   and Prompt Packs so Source Intake hands users to the next useful workspace
   without extra navigation hunting

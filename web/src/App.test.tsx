@@ -3800,7 +3800,7 @@ describe("App shell routing", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Mark / Unknown character")).toBeInTheDocument();
     expect(screen.getByLabelText("Duplicate card review")).toHaveTextContent(
-      /Shared name or alias|Title plus name may refer to an existing card/u,
+      /Shared alias|Shared name or alias|Title plus name may refer to an existing card/u,
     );
     expect(screen.queryByText("Glossary term needs review")).not.toBeInTheDocument();
     const correctionDisclosure = markCard.getByText("User Edited correction").closest("details");
