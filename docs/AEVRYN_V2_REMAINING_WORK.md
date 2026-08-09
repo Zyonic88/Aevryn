@@ -1142,6 +1142,11 @@ Verified hardening:
   user-authored Canon corrections
 * appearance correction propagation verified with focused authenticated project
   output API tests and Ruff
+* Character Cards now surface possible duplicate-card review items when accepted
+  Canon output contains title/name or alias overlap, while refusing to merge
+  uncertain identities automatically
+* duplicate-card validation verified with focused character workspace tests,
+  frontend lint, and production build
 * verified with the full frontend test suite, lint, and production build
 
 Acceptance:

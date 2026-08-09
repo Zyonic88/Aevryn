@@ -3786,6 +3786,14 @@ describe("App shell routing", () => {
     expect(
       screen.getByText("1 review item; 2 review items need character review"),
     ).toBeInTheDocument();
+    expect(screen.getByText("Duplicate Card Review")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 possible duplicate card needs review. Aevryn did not merge them automatically."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Mark / Unknown character")).toBeInTheDocument();
+    expect(screen.getByLabelText("Duplicate card review")).toHaveTextContent(
+      /Shared name or alias|Title plus name may refer to an existing card/u,
+    );
     expect(screen.queryByText("Glossary term needs review")).not.toBeInTheDocument();
     const correctionDisclosure = markCard.getByText("User Edited correction").closest("details");
     expect(correctionDisclosure).not.toBeNull();
