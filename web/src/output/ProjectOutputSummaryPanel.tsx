@@ -1424,11 +1424,19 @@ function promptHandoff(
   if (headingIndex < 0) {
     return { label, detail: "Handoff unavailable" };
   }
-  const firstInstruction = lines
+  const handoffInstructions = lines
     .slice(headingIndex + 1)
     .map((line) => line.replace(/^[-*]\s*/u, "").trim())
-    .find((line) => line.length > 0);
-  return { label, detail: firstInstruction ?? "Handoff available" };
+    .filter((line) => line.length > 0);
+  const firstInstruction = handoffInstructions[0];
+  const appearanceInstruction = handoffInstructions.find((line) =>
+    /^(appearance lock|description boundary):/iu.test(line),
+  );
+  const detail = [firstInstruction, appearanceInstruction]
+    .filter((line): line is string => Boolean(line))
+    .filter((line, index, lines) => lines.indexOf(line) === index)
+    .join(" | ");
+  return { label, detail: detail || "Handoff available" };
 }
 
 function normalizePromptHandoffLine(value: string): string {

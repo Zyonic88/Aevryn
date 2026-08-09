@@ -556,6 +556,10 @@ Verified hardening:
   boundary` line sourced from accepted character-card appearance facts, or an
   explicit neutral-unknown instruction when no appearance facts are confirmed
 * verified with focused Canon Prompt Builder regression tests
+* Prompt Packs UI handoff summaries now display the compact task and
+  appearance/boundary line together, so collapsed prompt cards still expose the
+  Canon-backed visual identity constraint before users open full prompt text
+* verified with focused Prompt Packs workspace regression coverage
 
 Acceptance:
 

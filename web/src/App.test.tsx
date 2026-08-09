@@ -244,6 +244,7 @@ const promptPreviewPayload = {
         "Image generation handoff:",
         "- Render now: Mark prepares in the quiet hangar.",
         "- Confirmed subjects: Mark.",
+        "- Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
         "- Visible objects/details: Rusty Dagger.",
         "Generate this image using only accepted Aevryn canon.",
         "Scene Summary: Mark prepares in the hangar.",
@@ -254,6 +255,7 @@ const promptPreviewPayload = {
       items: [
         "Narration generation handoff:",
         "- Narrate now: Mark prepares in the quiet hangar.",
+        "- Description boundary: Mark: Hair Color: Silver; Eye Color: Blue.",
         "- Tone: Tense.",
         "Narrate using only accepted canon facts.",
       ],
@@ -263,6 +265,7 @@ const promptPreviewPayload = {
       items: [
         "Camera generation handoff:",
         "- Frame now: Mark and the Rusty Dagger inside the hangar.",
+        "- Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
         "- Shot discipline: No unsupported characters.",
         "Describe camera framing without inventing new canon.",
       ],
@@ -272,6 +275,7 @@ const promptPreviewPayload = {
       items: [
         "Animation generation handoff:",
         "- Animate now: Mark prepares without changing accepted Canon.",
+        "- Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
         "- Motion boundary: Preserve quiet hangar context.",
         "Describe motion using only accepted scene facts.",
       ],
@@ -4024,8 +4028,14 @@ describe("App shell routing", () => {
     expect(promptHandoffs).toHaveTextContent("Prompt handoffs");
     expect(promptHandoffs).toHaveTextContent("Image");
     expect(promptHandoffs).toHaveTextContent("Render now: Mark prepares in the quiet hangar.");
+    expect(promptHandoffs).toHaveTextContent(
+      "Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
+    );
     expect(promptHandoffs).toHaveTextContent("Narration");
     expect(promptHandoffs).toHaveTextContent("Narrate now: Mark prepares in the quiet hangar.");
+    expect(promptHandoffs).toHaveTextContent(
+      "Description boundary: Mark: Hair Color: Silver; Eye Color: Blue.",
+    );
     expect(promptHandoffs).toHaveTextContent("Camera");
     expect(promptHandoffs).toHaveTextContent("Frame now: Mark and the Rusty Dagger inside the hangar.");
     expect(promptHandoffs).toHaveTextContent("Animation");
