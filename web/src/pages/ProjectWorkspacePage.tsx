@@ -102,9 +102,11 @@ export function ProjectWorkspacePage() {
             <p className="eyebrow">Project</p>
             <h1>{project.name}</h1>
           </div>
-          <div className="workspace-command-actions">
-            <span>Section</span>
-            <h2>{activeTab?.label ?? "Unknown"}</h2>
+          <div className="workspace-command-actions" aria-label="Workspace command bar">
+            <span className="workspace-section-chip">{activeTab?.label ?? "Unknown"}</span>
+            <NavLink className="workspace-command-link" to={`/projects/${project.id}/monitoring`}>
+              Diagnostics
+            </NavLink>
           </div>
         </header>
         {activeTab ? (

@@ -1104,6 +1104,9 @@ Verified hardening:
   badges, wrapping cards before labels collapse into vertical text
 * import run history no longer repeats full processing steppers on every stored
   run, reducing wasted vertical space while preserving the monitoring signal
+* workspace command strip now behaves like a compact IDE command bar: project
+  context, active section, and diagnostics access without repeating the old
+  label-heavy sidebar layout
 * verified with the full frontend test suite, lint, and production build
 
 Acceptance:
@@ -1145,6 +1148,9 @@ Remaining hardening:
 * ~~confirm app.aevryn.ai and api.aevryn.ai health~~
 * ~~confirm CORS stays explicit~~
 * ~~confirm frontend deploys from the intended branch~~
+* update production CORS deliberately before public beta if browser clients
+  must access the API from additional public origins such as `https://aevryn.ai`
+  or `https://www.aevryn.ai`
 
 Verified hardening:
 

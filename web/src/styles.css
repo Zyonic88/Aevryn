@@ -2411,13 +2411,22 @@ textarea::placeholder {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 0 0 10px;
+  gap: 12px;
+  padding: 0 0 8px;
   border-bottom: 1px solid rgba(127, 178, 255, 0.16);
 }
 
 .workspace-project-title {
+  display: flex;
   min-width: 0;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.workspace-project-title .eyebrow::after {
+  content: "/";
+  margin-left: 10px;
+  color: rgba(179, 202, 232, 0.4);
 }
 
 .workspace-command-strip .eyebrow {
@@ -2427,10 +2436,10 @@ textarea::placeholder {
 
 .workspace-command-strip h1 {
   max-width: min(54vw, 760px);
-  margin: 2px 0 0;
+  margin: 0;
   overflow: hidden;
   color: var(--app-text);
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2443,24 +2452,32 @@ textarea::placeholder {
   flex: 0 0 auto;
 }
 
-.workspace-command-actions span {
-  color: var(--app-muted);
-  font-size: 10px;
+.workspace-section-chip,
+.workspace-command-link {
+  border: 1px solid var(--app-line);
+  border-radius: 7px;
+  padding: 6px 9px;
+  font-size: 11px;
+  line-height: 1;
   font-weight: 900;
+  white-space: nowrap;
+}
+
+.workspace-section-chip {
+  color: var(--app-muted);
+  background: rgba(127, 178, 255, 0.08);
   text-transform: uppercase;
 }
 
-.workspace-command-actions h2 {
-  min-width: 0;
-  margin: 0;
-  border: 1px solid var(--app-line);
-  border-radius: 8px;
-  padding: 6px 10px;
+.workspace-command-link {
+  color: var(--app-blue-2);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.workspace-command-link:hover,
+.workspace-command-link:focus {
   color: var(--app-text);
   background: rgba(127, 178, 255, 0.12);
-  font-size: 12px;
-  line-height: 1;
-  font-weight: 900;
 }
 
 .dashboard-heading {

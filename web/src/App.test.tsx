@@ -1445,6 +1445,14 @@ describe("App shell routing", () => {
       "aria-current",
       "page",
     );
+    const workspaceContext = screen.getByRole("banner", { name: "Workspace context" });
+    expect(within(workspaceContext).getByText("Project")).toBeInTheDocument();
+    expect(within(workspaceContext).getByText("Characters")).toBeInTheDocument();
+    expect(within(workspaceContext).getByRole("link", { name: "Diagnostics" })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/monitoring",
+    );
+    expect(within(workspaceContext).queryByText("Section")).not.toBeInTheDocument();
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
 
