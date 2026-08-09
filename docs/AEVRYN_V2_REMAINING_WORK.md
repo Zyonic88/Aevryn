@@ -560,6 +560,12 @@ Verified hardening:
   appearance/boundary line together, so collapsed prompt cards still expose the
   Canon-backed visual identity constraint before users open full prompt text
 * verified with focused Prompt Packs workspace regression coverage
+* Prompt Packs UI handoff summaries now also expose generator-specific detail
+  lines such as visible objects/details, camera-visible details, narration
+  details, and motion-relevant details when the backend prompt provides them,
+  making Canon grounding easier to verify before expanding full prompt bodies
+* verified with focused Prompt Packs workspace regression coverage, lint, and
+  production build
 * V2 Prompt Packs remain scene-bound and Canon-bound while explicitly preserving
   future multi-prompt-per-chapter and production-batching architecture as later
   scope, not hidden V2 behavior

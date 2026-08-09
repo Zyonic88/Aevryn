@@ -256,6 +256,7 @@ const promptPreviewPayload = {
         "Narration generation handoff:",
         "- Narrate now: Mark prepares in the quiet hangar.",
         "- Description boundary: Mark: Hair Color: Silver; Eye Color: Blue.",
+        "- Canon details to mention if relevant: Rusty Dagger.",
         "- Tone: Tense.",
         "Narrate using only accepted canon facts.",
       ],
@@ -266,6 +267,7 @@ const promptPreviewPayload = {
         "Camera generation handoff:",
         "- Frame now: Mark and the Rusty Dagger inside the hangar.",
         "- Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
+        "- Camera-visible details: Rusty Dagger.",
         "- Shot discipline: No unsupported characters.",
         "Describe camera framing without inventing new canon.",
       ],
@@ -276,6 +278,7 @@ const promptPreviewPayload = {
         "Animation generation handoff:",
         "- Animate now: Mark prepares without changing accepted Canon.",
         "- Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
+        "- Motion-relevant details: Rusty Dagger.",
         "- Motion boundary: Preserve quiet hangar context.",
         "Describe motion using only accepted scene facts.",
       ],
@@ -4040,17 +4043,23 @@ describe("App shell routing", () => {
     expect(promptHandoffs).toHaveTextContent(
       "Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
     );
+    expect(promptHandoffs).toHaveTextContent("Visible objects/details: Rusty Dagger.");
     expect(promptHandoffs).toHaveTextContent("Narration");
     expect(promptHandoffs).toHaveTextContent("Narrate now: Mark prepares in the quiet hangar.");
     expect(promptHandoffs).toHaveTextContent(
       "Description boundary: Mark: Hair Color: Silver; Eye Color: Blue.",
     );
+    expect(promptHandoffs).toHaveTextContent(
+      "Canon details to mention if relevant: Rusty Dagger.",
+    );
     expect(promptHandoffs).toHaveTextContent("Camera");
     expect(promptHandoffs).toHaveTextContent("Frame now: Mark and the Rusty Dagger inside the hangar.");
+    expect(promptHandoffs).toHaveTextContent("Camera-visible details: Rusty Dagger.");
     expect(promptHandoffs).toHaveTextContent("Animation");
     expect(promptHandoffs).toHaveTextContent(
       "Animate now: Mark prepares without changing accepted Canon.",
     );
+    expect(promptHandoffs).toHaveTextContent("Motion-relevant details: Rusty Dagger.");
     const canonInputs = within(selectedPack).getByLabelText("Prompt canon inputs");
     expect(canonInputs).toHaveTextContent("Canon inputs");
     expect(canonInputs).toHaveTextContent("Characters");

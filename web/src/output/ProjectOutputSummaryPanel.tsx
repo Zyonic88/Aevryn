@@ -1432,7 +1432,12 @@ function promptHandoff(
   const appearanceInstruction = handoffInstructions.find((line) =>
     /^(appearance lock|description boundary):/iu.test(line),
   );
-  const detail = [firstInstruction, appearanceInstruction]
+  const sceneDetailInstruction = handoffInstructions.find((line) =>
+    /^(visible objects\/details|camera-visible details|canon details to mention if relevant|motion-relevant details):/iu.test(
+      line,
+    ),
+  );
+  const detail = [firstInstruction, appearanceInstruction, sceneDetailInstruction]
     .filter((line): line is string => Boolean(line))
     .filter((line, index, lines) => lines.indexOf(line) === index)
     .join(" | ");
