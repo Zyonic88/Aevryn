@@ -26,6 +26,10 @@ import {
   reviewItemCountLabel,
 } from "./languageIdentityDisplay";
 import {
+  characterDuplicateReviewItems,
+  type CharacterDuplicateReviewItem,
+} from "./characterDuplicateReview";
+import {
   isInternalOutputPlaceholder,
   readableOutputItems,
   readableOutputText,
@@ -48,6 +52,7 @@ const CONTINUITY_SCENE_PAGE_SIZE = 24;
 const CHARACTER_CORRECTION_FIELDS = [
   { field: "race", label: "Race" },
   { field: "gender", label: "Gender" },
+  { field: "appearance", label: "Appearance" },
   { field: "status", label: "Status" },
   { field: "current_goal", label: "Current goal" },
   { field: "current_equipment", label: "Current equipment" },
@@ -69,6 +74,7 @@ const WORLD_CORRECTION_FIELDS = [
 ] as const;
 const CHARACTER_RECENT_CHANGE_PROFILE_LABELS = new Set([
   "alias",
+  "appearance",
   "description",
   "gender",
   "name",
@@ -441,9 +447,11 @@ function ReadableSurfacePanels({
 }) {
   if (surface === "characters" && outputs.character_profiles.length > 0) {
     const characterProfiles = mergeCharacterProfiles(outputs.character_profiles);
+    const duplicateReviewItems = characterDuplicateReviewItems(outputs.character_profiles);
     return (
       <CharacterPanels
         profiles={characterProfiles}
+        duplicateReviewItems={duplicateReviewItems}
         projectId={projectId}
         sessionToken={sessionToken}
       />
@@ -494,6 +502,7 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
       aliases: mergeSection(existingProfile.aliases, profile.aliases),
       titles: mergeSection(existingProfile.titles, profile.titles),
       descriptions: mergeSection(existingProfile.descriptions, profile.descriptions),
+      appearance: mergeSection(existingProfile.appearance, profile.appearance),
       race: mergeSection(existingProfile.race, profile.race),
       gender: mergeSection(existingProfile.gender, profile.gender),
       status: mergeSection(existingProfile.status, profile.status),
@@ -506,6 +515,13 @@ function mergeCharacterProfiles(profiles: CharacterProfile[]): CharacterProfile[
       current_limitations: mergeSection(
         existingProfile.current_limitations,
         profile.current_limitations,
+      ),
+      first_appearance: mergeSection(existingProfile.first_appearance, profile.first_appearance),
+      latest_appearance: mergeSection(existingProfile.latest_appearance, profile.latest_appearance),
+      timeline_history: mergeSection(existingProfile.timeline_history, profile.timeline_history),
+      evidence_references: mergeSection(
+        existingProfile.evidence_references,
+        profile.evidence_references,
       ),
       recent_changes: mergeSection(existingProfile.recent_changes, profile.recent_changes),
       evidence_summary: mergedEvidenceSummary(
@@ -574,6 +590,7 @@ function CharacterPanel({
           <PanelSection section={profile.aliases} />
           <PanelSection section={profile.titles} />
           <PanelSection section={profile.descriptions} />
+          <PanelSection section={profile.appearance} />
           <PanelSection section={profile.race} />
           <PanelSection section={profile.gender} />
           <PanelSection section={profile.status} />
@@ -584,6 +601,10 @@ function CharacterPanel({
           <PanelSection section={profile.territory} />
           <PanelSection section={profile.relationships} />
           <PanelSection section={profile.current_limitations} />
+          <PanelSection section={profile.first_appearance} />
+          <PanelSection section={profile.latest_appearance} />
+          <PanelSection section={profile.timeline_history} />
+          <PanelSection section={profile.evidence_references} />
           <PanelSection section={recentChanges} />
         </div>
       </details>
@@ -605,6 +626,7 @@ function CharacterIdentitySignals({ profile }: { profile: CharacterProfile }) {
     characterSignal("Aliases", profile.aliases),
     characterSignal("Titles", profile.titles),
     characterSignal("Descriptions", profile.descriptions),
+    characterSignal("Appearance", profile.appearance),
     characterSignal("Relationships", profile.relationships),
   ];
   return (
@@ -637,6 +659,7 @@ function CharacterAtAGlance({ profile }: { profile: CharacterProfile }) {
   const facts = [
     characterFact("Race", profile.race),
     characterFact("Gender", profile.gender),
+    characterFact("Appearance", profile.appearance),
     characterFact("Status", profile.status),
     characterFact("Goal", profile.current_goal),
   ];
@@ -687,6 +710,7 @@ function representedCharacterProfileValues(profile: CharacterProfile): Set<strin
     profile.aliases,
     profile.titles,
     profile.descriptions,
+    profile.appearance,
     profile.race,
     profile.gender,
     profile.status,
@@ -697,6 +721,10 @@ function representedCharacterProfileValues(profile: CharacterProfile): Set<strin
     profile.territory,
     profile.relationships,
     profile.current_limitations,
+    profile.first_appearance,
+    profile.latest_appearance,
+    profile.timeline_history,
+    profile.evidence_references,
   ];
   return new Set(
     [
@@ -754,10 +782,12 @@ function readableCharacterName(name: string): string {
 
 function CharacterPanels({
   profiles,
+  duplicateReviewItems,
   projectId,
   sessionToken,
 }: {
   profiles: CharacterProfile[];
+  duplicateReviewItems: CharacterDuplicateReviewItem[];
   projectId: string;
   sessionToken: string;
 }) {
@@ -779,6 +809,7 @@ function CharacterPanels({
 
   return (
     <div className="large-output-stack">
+      <CharacterDuplicateReviewPanel items={duplicateReviewItems} profiles={profiles} />
       <div className="large-output-controls">
         <label>
           Search characters
@@ -818,6 +849,49 @@ function CharacterPanels({
       />
     </div>
   );
+}
+
+function CharacterDuplicateReviewPanel({
+  items,
+  profiles,
+}: {
+  items: CharacterDuplicateReviewItem[];
+  profiles: CharacterProfile[];
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+  const profileNamesById = new Map(
+    profiles.map((profile) => [profile.character_id, readableCharacterName(profile.display_name)]),
+  );
+  return (
+    <section className="compact-list duplicate-card-review-panel" aria-label="Duplicate card review">
+      <div className="compact-row">
+        <strong>Duplicate Card Review</strong>
+        <span>
+          {items.length === 1
+            ? "1 possible duplicate card needs review."
+            : `${items.length.toLocaleString()} possible duplicate cards need review.`}{" "}
+          Aevryn kept them separate until review.
+        </span>
+      </div>
+      {items.map((item) => (
+        <div className="compact-row" key={`${item.leftId}:${item.rightId}`}>
+          <strong>{duplicateReviewPairLabel(item, profileNamesById)}</strong>
+          <span>{item.reason}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function duplicateReviewPairLabel(
+  item: CharacterDuplicateReviewItem,
+  profileNamesById: Map<string, string>,
+): string {
+  const leftProfile = profileNamesById.get(item.leftId);
+  const rightProfile = profileNamesById.get(item.rightId);
+  return `${leftProfile ?? item.leftId} / ${rightProfile ?? item.rightId}`;
 }
 
 function searchableCharacterText(profile: CharacterProfile): string {
@@ -1138,6 +1212,10 @@ function ContinuityBucket({
 function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(MAX_VISIBLE_PROMPT_SCENES);
+  const [scenePackCopyState, setScenePackCopyState] = useState<{
+    sceneId: string;
+    status: "idle" | "copied" | "failed";
+  }>({ sceneId: "", status: "idle" });
   const normalizedQuery = query.trim().toLowerCase();
   const filteredPacks = normalizedQuery
     ? packs.filter((pack) => searchablePromptPackText(pack).includes(normalizedQuery))
@@ -1176,6 +1254,24 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
     selectedIndex >= 0 && selectedIndex < filteredPacks.length - 1
       ? filteredPacks[selectedIndex + 1]
       : null;
+  const selectedCopyStatus =
+    scenePackCopyState.sceneId === selectedPack.scene.scene_id
+      ? scenePackCopyState.status
+      : "idle";
+
+  async function copySelectedScenePack() {
+    const clipboard = navigator.clipboard;
+    if (!clipboard) {
+      setScenePackCopyState({ sceneId: selectedPack.scene.scene_id, status: "failed" });
+      return;
+    }
+    try {
+      await clipboard.writeText(readablePromptPackText(selectedPack));
+      setScenePackCopyState({ sceneId: selectedPack.scene.scene_id, status: "copied" });
+    } catch {
+      setScenePackCopyState({ sceneId: selectedPack.scene.scene_id, status: "failed" });
+    }
+  }
 
   return (
     <div className="prompt-pack-browser">
@@ -1227,7 +1323,18 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
               <h3>{selectedPack.scene.title}</h3>
               <p>{selectedPack.scene.chapter_label}</p>
             </div>
-            <span>{selectedPack.scene.evidence_summary}</span>
+            <div className="prompt-pack-header-actions">
+              {selectedCopyStatus === "copied" ? <span>Scene pack copied</span> : null}
+              {selectedCopyStatus === "failed" ? <span>Copy unavailable</span> : null}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void copySelectedScenePack()}
+              >
+                Copy scene pack
+              </button>
+              <small>{selectedPack.scene.evidence_summary}</small>
+            </div>
           </header>
           <div className="prompt-scene-navigation" aria-label="Selected prompt scene navigation">
             <button
@@ -1259,8 +1366,12 @@ function PromptPacksPanel({ packs }: { packs: ProductionPack[] }) {
               Next scene
             </button>
           </div>
-          <PromptCanonInputs pack={selectedPack} />
-          <PromptSceneBrief pack={selectedPack} />
+          <PromptProductionFocus pack={selectedPack} />
+          <PromptHandoffSummary pack={selectedPack} />
+          <div className="prompt-pack-dossier">
+            <PromptCanonInputs pack={selectedPack} />
+            <PromptSceneBrief pack={selectedPack} />
+          </div>
           <details className="prompt-context-disclosure detail-disclosure">
             <summary>
               <span>Canon context</span>
@@ -1324,9 +1435,103 @@ function searchablePromptPackText(pack: ProductionPack): string {
     ...readableOutputItems(pack.scene.location.items),
     ...readableOutputItems(pack.scene.visual_highlights.items),
     ...readableOutputItems(pack.scene.environment.items),
+    ...readableOutputItems(pack.scene.continuity_changes.items),
   ]
     .join(" ")
     .toLowerCase();
+}
+
+function PromptProductionFocus({ pack }: { pack: ProductionPack }) {
+  const guardrailCount = promptGuardrailCount(pack);
+  const missingInputs = promptMissingInputLabels(pack);
+  const missingLabel =
+    missingInputs.length > 0
+      ? `${missingInputs.join(", ")} stay neutral`
+      : "Known inputs are ready";
+  return (
+    <dl className="prompt-production-focus" aria-label="Prompt production focus">
+      <div>
+        <dt>Scene priority</dt>
+        <dd>Current scene before retained Canon</dd>
+      </div>
+      <div>
+        <dt>Generation boundary</dt>
+        <dd>
+          {guardrailCount.toLocaleString()} canon guardrail
+          {guardrailCount === 1 ? "" : "s"}; no unsupported additions
+        </dd>
+      </div>
+      <div>
+        <dt>Missing inputs</dt>
+        <dd>{missingLabel}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function PromptHandoffSummary({ pack }: { pack: ProductionPack }) {
+  const handoffs = [
+    promptHandoff("Image", pack.image_prompt, "Image generation handoff:"),
+    promptHandoff("Narration", pack.narration_prompt, "Narration generation handoff:"),
+    promptHandoff("Camera", pack.camera_prompt, "Camera generation handoff:"),
+    promptHandoff("Animation", pack.animation_prompt, "Animation generation handoff:"),
+  ];
+  return (
+    <section className="prompt-handoff-summary" aria-label="Prompt generation handoffs">
+      <header>
+        <strong>Prompt handoffs</strong>
+        <span>What each generator should produce from accepted Canon</span>
+      </header>
+      <dl>
+        {handoffs.map((handoff) => (
+          <div key={handoff.label}>
+            <dt>{handoff.label}</dt>
+            <dd>{handoff.detail}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function promptHandoff(
+  label: string,
+  section: OutputSection,
+  heading: string,
+): { label: string; detail: string } {
+  const lines = readableOutputItems(section.items)
+    .flatMap((item) => item.split(/\r?\n/u))
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const normalizedHeading = normalizePromptHandoffLine(heading);
+  const headingIndex = lines.findIndex(
+    (line) => normalizePromptHandoffLine(line) === normalizedHeading,
+  );
+  if (headingIndex < 0) {
+    return { label, detail: "Handoff unavailable" };
+  }
+  const handoffInstructions = lines
+    .slice(headingIndex + 1)
+    .map((line) => line.replace(/^[-*]\s*/u, "").trim())
+    .filter((line) => line.length > 0);
+  const firstInstruction = handoffInstructions[0];
+  const appearanceInstruction = handoffInstructions.find((line) =>
+    /^(appearance lock|description boundary):/iu.test(line),
+  );
+  const sceneDetailInstruction = handoffInstructions.find((line) =>
+    /^(visible objects\/details|camera-visible details|canon details to mention if relevant|motion-relevant details):/iu.test(
+      line,
+    ),
+  );
+  const detail = [firstInstruction, appearanceInstruction, sceneDetailInstruction]
+    .filter((line): line is string => Boolean(line))
+    .filter((line, index, lines) => lines.indexOf(line) === index)
+    .join(" | ");
+  return { label, detail: detail || "Handoff available" };
+}
+
+function normalizePromptHandoffLine(value: string): string {
+  return value.trim().replace(/[.:]+$/u, "").toLowerCase();
 }
 
 function PromptSceneBrief({ pack }: { pack: ProductionPack }) {
@@ -1399,6 +1604,17 @@ function PromptCanonInputs({ pack }: { pack: ProductionPack }) {
   );
 }
 
+function promptMissingInputLabels(pack: ProductionPack): string[] {
+  return [
+    promptInputStatus("Characters", pack.scene.characters_present),
+    promptInputStatus("Setting", pack.scene.location, pack.scene.environment),
+    promptInputStatus("Visual details", pack.scene.visual_highlights),
+    promptInputStatus("Continuity", pack.scene.continuity_changes),
+  ]
+    .filter((input) => input.status === "missing")
+    .map((input) => input.label.toLowerCase());
+}
+
 function promptInputStatus(
   label: string,
   ...sections: OutputSection[]
@@ -1443,6 +1659,22 @@ function promptGuardrailCount(pack: ProductionPack): number {
     ...pack.camera_prompt.items,
     ...pack.animation_prompt.items,
   ]).filter((item) => guardrailPatterns.some((pattern) => pattern.test(item))).length;
+}
+
+function readablePromptPackText(pack: ProductionPack): string {
+  const sections = [
+    pack.image_prompt,
+    pack.narration_prompt,
+    pack.camera_prompt,
+    pack.animation_prompt,
+  ];
+  return [
+    `# ${pack.scene.title}`,
+    pack.scene.chapter_label,
+    pack.scene.evidence_summary,
+    "",
+    ...sections.flatMap((section) => [`## ${section.title}`, readablePromptText(section), ""]),
+  ].join("\n");
 }
 
 function continuitySceneSummary(scene: ContinuityReport["scenes"][number]): string {
@@ -1659,8 +1891,14 @@ function machineToken(value: string): string {
 
 function PanelSection({ section }: { section: OutputSection }) {
   const items = readableOutputItems(section.items);
+  const className = [
+    "profile-section",
+    shouldUseWideProfileSection(section, items) ? "profile-section-wide" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <section className="profile-section">
+    <section className={className}>
       <h4>{section.title}</h4>
       <ul>
         {items.map((item) => (
@@ -1668,6 +1906,25 @@ function PanelSection({ section }: { section: OutputSection }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+function shouldUseWideProfileSection(section: OutputSection, items: string[]): boolean {
+  const wideSectionTitles = new Set([
+    "Appearance",
+    "Descriptions",
+    "Relationships",
+    "Current Assets",
+    "Current Abilities",
+    "Current Limitations",
+    "Timeline History",
+    "Evidence References",
+    "Recent Changes",
+  ]);
+  return (
+    wideSectionTitles.has(section.title) ||
+    items.length > 3 ||
+    items.some((item) => item.length > 72)
   );
 }
 

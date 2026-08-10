@@ -194,6 +194,7 @@ function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
           <ProfileSection section={profile.aliases} />
           <ProfileSection section={profile.titles} />
           <ProfileSection section={profile.descriptions} />
+          <ProfileSection section={profile.appearance} />
           <ProfileSection section={profile.status} />
           <ProfileSection section={profile.current_goal} />
           <ProfileSection section={profile.current_equipment} />
@@ -202,6 +203,10 @@ function CharacterProfileCard({ profile }: { profile: CharacterProfile }) {
           <ProfileSection section={profile.territory} />
           <ProfileSection section={profile.relationships} />
           <ProfileSection section={profile.current_limitations} />
+          <ProfileSection section={profile.first_appearance} />
+          <ProfileSection section={profile.latest_appearance} />
+          <ProfileSection section={profile.timeline_history} />
+          <ProfileSection section={profile.evidence_references} />
           <ProfileSection section={profile.recent_changes} />
         </div>
       </details>

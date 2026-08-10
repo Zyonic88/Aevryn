@@ -35,6 +35,7 @@ class CharacterProfileView:
     aliases: PresentationSection
     titles: PresentationSection
     descriptions: PresentationSection
+    appearance: PresentationSection
     race: PresentationSection
     gender: PresentationSection
     status: PresentationSection
@@ -45,6 +46,10 @@ class CharacterProfileView:
     territory: PresentationSection
     relationships: PresentationSection
     current_limitations: PresentationSection
+    first_appearance: PresentationSection
+    latest_appearance: PresentationSection
+    timeline_history: PresentationSection
+    evidence_references: PresentationSection
     recent_changes: PresentationSection
     evidence_summary: str
 

@@ -251,6 +251,35 @@ def test_create_app_from_env_configures_cors_origins() -> None:
     )
 
 
+def test_create_app_allows_public_and_app_cors_origins() -> None:
+    """Public beta CORS should allow only approved exact browser origins."""
+    allowed_origins = ("https://app.aevryn.ai", "https://aevryn.ai")
+    client = TestClient(create_app(allowed_origins=allowed_origins))
+
+    for origin in allowed_origins:
+        response = client.options(
+            "/v2/health",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == origin
+
+    denied_response = client.options(
+        "/v2/health",
+        headers={
+            "Origin": "https://www.aevryn.ai",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+
+    assert denied_response.status_code == 400
+    assert "access-control-allow-origin" not in denied_response.headers
+
+
 def test_create_app_from_env_configures_project_storage(
     tmp_path: Path,
 ) -> None:
@@ -2739,8 +2768,22 @@ def test_characters_preview_returns_character_profiles() -> None:
     assert payload["character_profiles"][0]["display_name"] == "Mark"
     assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
     assert payload["character_profiles"][0]["gender"]["items"] == ["Unknown"]
+    assert payload["character_profiles"][0]["appearance"]["items"] == ["Unknown"]
     assert payload["character_profiles"][0]["current_equipment"]["items"] == [
         "Rusty Dagger"
+    ]
+    assert payload["character_profiles"][0]["first_appearance"]["items"] == [
+        "Chapter 1, Scene 1"
+    ]
+    assert payload["character_profiles"][0]["latest_appearance"]["items"] == [
+        "Chapter 1, Scene 1"
+    ]
+    assert payload["character_profiles"][0]["timeline_history"]["items"] == [
+        "Chapter 1, Scene 1"
+    ]
+    assert payload["character_profiles"][0]["evidence_references"]["items"] == [
+        "Chapter 1, Scene 1: current_weapon",
+        "Chapter 1, Scene 1: display_name",
     ]
     assert "Mark carried a rusty dagger." not in response.text
 

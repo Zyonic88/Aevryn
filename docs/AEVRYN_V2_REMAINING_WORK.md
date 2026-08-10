@@ -429,19 +429,19 @@ These are practical code/docs hardening items still worth doing before public be
 Status:
 
 ```text
-In progress
+Verified for V2
 ```
 
 Remaining hardening:
 
 * ~~verify Prompt Packs consume Character, World, Scene, Timeline, and Continuity
   presentation state when building prompt context, not just scene summary text~~
-* keep prompts Canon-bound enough to preserve known character appearance,
-  setting, scene action, world objects, systems, skills, and current story state
+* ~~keep prompts Canon-bound enough to preserve known character appearance,
+  setting, scene action, world objects, systems, skills, and current story state~~
 * ~~improve Prompt Packs layout so chapter/scene prompts are easy to follow without
   endless scrolling~~
-* preserve scene-level prompt architecture so future multi-prompt-per-chapter and
-  production batching can be added without rewriting Canon or extraction
+* ~~preserve scene-level prompt architecture so future multi-prompt-per-chapter and
+  production batching can be added without rewriting Canon or extraction~~
 * ~~run hosted browser validation against the current prompt-pack output~~
 * ~~confirm prompts include enough scene-specific action, setting, character, and object context~~
 * ~~ensure normal prompt-pack presentation does not include raw manuscript prose~~
@@ -526,6 +526,52 @@ Verified hardening:
   exposing internal target IDs
 * verified with project output API regression coverage and the full Python test
   suite
+* Prompt Packs selected-scene detail now shows a compact production-focus strip
+  for scene priority, generation guardrails, and missing-input neutrality before
+  the prompt bodies, making prompt readiness scannable without opening every
+  collapsed prompt
+* prompt scene search now includes continuity-change text, so creators can find
+  prompt scenes by accepted scene state as well as chapter, scene, character,
+  setting, visual detail, and environment
+* verified with focused Prompt Packs workspace test, full frontend test suite,
+  lint, and production build
+* image prompts now include a compact `Image generation handoff` that summarizes
+  the current render moment, confirmed subjects, visible objects/details,
+  preservation rules, and neutral handling for unspecified traits before the
+  longer Canon context sections
+* narration, camera, and animation prompts now include matching compact
+  generation handoffs that declare the immediate task, confirmed subjects,
+  relevant details, and prompt-type guardrails before the longer Canon context
+  sections
+* current-scene visual anchors remain ahead of retained/background object facts
+  in all prompt generation handoffs, preserving the current-scene-first rule for
+  generation tools
+* verified with focused Canon Prompt Builder regression tests
+* Prompt Packs selected-scene detail now surfaces compact image, narration,
+  camera, and animation handoff summaries before the longer collapsed prompt
+  bodies, so creators can scan each generation target without opening every
+  prompt
+* verified with focused Prompt Packs workspace regression coverage
+* compact prompt handoffs now include an `Appearance lock` / `Description
+  boundary` line sourced from accepted character-card appearance facts, or an
+  explicit neutral-unknown instruction when no appearance facts are confirmed
+* verified with focused Canon Prompt Builder regression tests
+* Prompt Packs UI handoff summaries now display the compact task and
+  appearance/boundary line together, so collapsed prompt cards still expose the
+  Canon-backed visual identity constraint before users open full prompt text
+* verified with focused Prompt Packs workspace regression coverage
+* Prompt Packs UI handoff summaries now also expose generator-specific detail
+  lines such as visible objects/details, camera-visible details, narration
+  details, and motion-relevant details when the backend prompt provides them,
+  making Canon grounding easier to verify before expanding full prompt bodies
+* verified with focused Prompt Packs workspace regression coverage, lint, and
+  production build
+* V2 Prompt Packs remain scene-bound and Canon-bound while explicitly preserving
+  future multi-prompt-per-chapter and production-batching architecture as later
+  scope, not hidden V2 behavior
+* Prompt Packs are accepted for V2 beta readiness with the residual product risk
+  that AI image/video generators may still need iteration; Aevryn's V2 duty is
+  Canon-grounded production context, not one-click perfect generation
 
 Acceptance:
 
@@ -599,6 +645,8 @@ Verified evidence:
 * character card bodies remain collapsed with neutral placeholder portraits
 * Recent Changes no longer repeats identity/profile facts already represented in card sections
 * identity/profile facts remain visible in their dedicated sections instead of being hidden
+* expanded character cards span the workspace row and use readable inspector
+  sections instead of cramped narrow text columns
 
 Remaining hardening:
 
@@ -685,6 +733,16 @@ Verified hardening:
   matching from accepted visible traits, such as gender plus hair color, so
   later references like "white-haired woman" can resolve to a unique prior
   identity without making gender-only merges
+* entity resolution now resolves embedded known-name references only when the
+  surrounding title/description words are explicitly backed by that identity,
+  preventing duplicate cards such as "Female General Charlotte" while rejecting
+  unsupported descriptors around a known name
+* entity-resolution validation now covers alias-plus-supported-context surfaces
+  such as "Captain Mark the engineer" so known aliases with backed roles do not
+  create duplicate cards, while unsupported extra descriptors still remain
+  unresolved
+* title/name matching was tightened so extra unsupported words no longer resolve
+  just because a known title and name both appear in the same surface reference
 * backend persistence and API now define project-scoped user correction records
   with a fixed `User Edited` source label, ownership checks, metadata-only audit
   events, JSON/PostgreSQL schema support, and project-delete cleanup
@@ -694,7 +752,15 @@ Verified hardening:
 * frontend Character and World cards now expose compact user correction editors
   for approved fields; saves round-trip through the correction API and refresh
   processed outputs instead of rendering optimistic fake Canon
+* frontend character-detail sections automatically widen for appearance,
+  descriptions, relationships, timeline, evidence, recent changes, and other
+  long accepted facts, preserving detail without turning prose into vertical
+  text
+* duplicate-card review is explicitly review-only: same-name, alias, or
+  title/name signals are surfaced as possible duplicates while Aevryn keeps
+  separate Character cards intact because repeated names can be valid Canon
 * verified with the focused processed-character-panel frontend test
+* verified with the focused entity-resolution test suite and Ruff
 
 Acceptance:
 
@@ -777,13 +843,24 @@ Verified hardening:
   ability crystals, skill crystals, and source crystals route as item context,
   while obvious AI attempts to classify crystals or slips as usable skills are
   rejected by deterministic extraction guards
+* physical spell/knowledge containers such as spell tomes, spell grimoires,
+  magic tomes, and technique books route as item context, while separate spell
+  or ability cues in the same sentence remain visible and reviewable
+* deterministic extraction guards reject provider candidates that classify
+  physical spell/knowledge containers such as grimoires as usable skills
+* visual and technical documents such as star maps, charts, schematics, and
+  spell or formation diagrams route as item context instead of becoming
+  locations or usable skills; separate spell/ability evidence in the same
+  sentence remains visible and reviewable
+* deterministic extraction guards reject provider candidates that classify
+  physical diagrams as usable skills
 * physical-core phrases such as energy core, beast core, and reactor core route
   as item context and are rejected when a provider tries to classify them as
   usable skills or governing systems, while bare/genre core terms remain
   translation-review metadata until evidence resolves meaning
 * the evidence-bounded AI extraction prompt tells the provider that manuals,
-  scrolls, jade slips, and crystals are physical item containers unless evidence
-  explicitly states a usable ability
+  scrolls, jade slips, crystals, maps, charts, diagrams, and schematics are
+  physical item containers unless evidence explicitly states a usable ability
 * deterministic extraction guards reject obvious place or institution heads such
   as academy, department, empire, room, and station when a provider tries to
   classify them as physical items or usable skills
@@ -892,6 +969,10 @@ Verified hardening:
 * invalid authenticated API sessions show a human-readable expired-session message
   and clear stored session data without displaying token/JWT internals
 * verified with focused session-recovery frontend tests
+* browser sessions now clear local session state after 30 minutes of inactivity,
+  show a human-readable login message, and do not render raw session tokens
+* verified with focused AuthProvider inactivity tests, backend authentication
+  tests, frontend lint, and production build
 
 Acceptance:
 
@@ -1043,6 +1124,38 @@ Verified hardening:
   badges, wrapping cards before labels collapse into vertical text
 * import run history no longer repeats full processing steppers on every stored
   run, reducing wasted vertical space while preserving the monitoring signal
+* workspace command strip now behaves like a compact IDE command bar: project
+  context, active section, and diagnostics access without repeating the old
+  label-heavy sidebar layout
+* import intake now presents the one-pass processing path as the recommended
+  action while preserving the explicit review-only path for scene-map inspection
+  before processing
+* import intake polish verified with focused import workspace tests, frontend
+  lint, and production build
+* selected Prompt Pack scenes can now copy the full scene prompt bundle in one
+  action while preserving individual Image/Narration/Camera/Animation prompt
+  controls
+* prompt-pack bundle copy verified with focused prompt scene picker tests
+* character cards now surface accepted Appearance in the at-a-glance strip so
+  visual continuity data is visible without opening the full details panel
+* appearance-at-a-glance presentation verified with focused processed character
+  panel tests
+* User Edited character Appearance corrections now apply back onto character
+  profiles and appear in Prompt Pack correction context alongside other
+  user-authored Canon corrections
+* appearance correction propagation verified with focused authenticated project
+  output API tests and Ruff
+* Character Cards now surface possible duplicate-card review items when accepted
+  Canon output contains title/name or alias overlap, while refusing to merge
+  uncertain identities automatically
+* duplicate-card validation is now isolated in a focused output utility and
+  verified with exact-name, alias/display, title/name, non-match, and character
+  workspace tests plus frontend lint and production build
+* completed Canon build rows now provide direct IDE shortcuts into Characters
+  and Prompt Packs so Source Intake hands users to the next useful workspace
+  without extra navigation hunting
+* completed-build shortcuts verified with focused hosted import polling tests,
+  frontend lint, and production build
 * verified with the full frontend test suite, lint, and production build
 
 Acceptance:
@@ -1084,6 +1197,8 @@ Remaining hardening:
 * ~~confirm app.aevryn.ai and api.aevryn.ai health~~
 * ~~confirm CORS stays explicit~~
 * ~~confirm frontend deploys from the intended branch~~
+* add `https://www.aevryn.ai` to production CORS only if that hostname is
+  deliberately routed as a browser client
 
 Verified hardening:
 
@@ -1091,6 +1206,13 @@ Verified hardening:
   public API health endpoint returns `ok`, CORS allows the configured frontend
   origin explicitly instead of using a wildcard, `X-Request-ID` is present, and
   the command prints metadata only
+* production CORS is now documented as explicit HTTPS-only access for
+  `https://app.aevryn.ai` and `https://aevryn.ai`; `https://www.aevryn.ai`
+  remains excluded until that hostname is intentionally routed and tested
+* production Cloud Run revision `aevryn-api-00038-qpf` now serves the explicit
+  app and apex CORS origins; hosted smoke confirmed both approved origins echo
+  matching `access-control-allow-origin` headers while `https://www.aevryn.ai`
+  receives no browser allow-origin header
 * `cloud-run-deployment-check` verifies that the latest ready Cloud Run API
   revision is serving 100 percent of traffic and that the serving container
   image matches the expected release-candidate image without printing project

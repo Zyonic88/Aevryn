@@ -165,7 +165,7 @@ AEVRYN_R2_ACCOUNT_ID=<account-id>
 AEVRYN_R2_ENDPOINT_URL=https://<account-id>.r2.cloudflarestorage.com
 AEVRYN_PUBLIC_FRONTEND_BASE_URL=https://app.aevryn.ai
 AEVRYN_PUBLIC_API_BASE_URL=https://api.aevryn.ai
-AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai
+AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai,https://aevryn.ai
 AEVRYN_HTTPS_ONLY=true
 AEVRYN_HSTS_ENABLED=true
 AEVRYN_IDENTITY_PROVIDER=managed
@@ -291,7 +291,7 @@ gcloud run deploy aevryn-api `
   --platform managed `
   --port 8080 `
   --allow-unauthenticated `
-  --set-env-vars AEVRYN_DEPLOYMENT_ENV=production,AEVRYN_ENVIRONMENT_NAME=production,AEVRYN_SECRET_MANAGER=deployment,AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql,AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false,AEVRYN_STORAGE_PROVIDER=r2,AEVRYN_R2_BUCKET=aevryn-dev,AEVRYN_R2_ACCOUNT_ID=YOUR_R2_ACCOUNT_ID,AEVRYN_R2_ENDPOINT_URL=https://YOUR_R2_ACCOUNT_ID.r2.cloudflarestorage.com,AEVRYN_PUBLIC_FRONTEND_BASE_URL=https://app.aevryn.ai,AEVRYN_PUBLIC_API_BASE_URL=https://api.aevryn.ai,AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai,AEVRYN_HTTPS_ONLY=true,AEVRYN_HSTS_ENABLED=true,AEVRYN_IDENTITY_PROVIDER=managed,AEVRYN_IDENTITY_PROVIDER_NAME=supabase,AEVRYN_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co,AEVRYN_SUPABASE_JWT_ALGORITHM=es256,AEVRYN_SUPABASE_JWKS_URL=https://YOUR_PROJECT_REF.supabase.co/auth/v1/.well-known/jwks.json,AEVRYN_SESSION_AUTHORITY=bearer,AEVRYN_PASSWORD_RESET_ENABLED=true,AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true,AEVRYN_WORKER_RUNTIME=managed,AEVRYN_WORKER_QUEUE_PROVIDER=managed,AEVRYN_WORKER_TIMEOUT_SECONDS=120,AEVRYN_WORKER_MAX_RETRIES=3,AEVRYN_WORKER_CONCURRENCY=1,AEVRYN_EXTRACTION_MODE=openai,AEVRYN_OPENAI_MODEL=YOUR_APPROVED_MODEL,AEVRYN_OPENAI_TIMEOUT_SECONDS=90,AEVRYN_OPENAI_MAX_RESPONSE_BYTES=1048576,AEVRYN_LOG_DESTINATION=hosted,AEVRYN_MONITORING_DESTINATION=hosted,AEVRYN_LOG_RETENTION_DAYS=30,AEVRYN_MONITORING_RETENTION_DAYS=30,AEVRYN_SECURITY_ALERTS_ENABLED=true,AEVRYN_METADATA_ONLY_LOGGING=true `
+  --set-env-vars "^@^AEVRYN_DEPLOYMENT_ENV=production@AEVRYN_ENVIRONMENT_NAME=production@AEVRYN_SECRET_MANAGER=deployment@AEVRYN_PROJECT_DATABASE_ADAPTER=postgresql@AEVRYN_PROJECT_DATABASE_BOOTSTRAP=false@AEVRYN_STORAGE_PROVIDER=r2@AEVRYN_R2_BUCKET=aevryn-dev@AEVRYN_R2_ACCOUNT_ID=YOUR_R2_ACCOUNT_ID@AEVRYN_R2_ENDPOINT_URL=https://YOUR_R2_ACCOUNT_ID.r2.cloudflarestorage.com@AEVRYN_PUBLIC_FRONTEND_BASE_URL=https://app.aevryn.ai@AEVRYN_PUBLIC_API_BASE_URL=https://api.aevryn.ai@AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai,https://aevryn.ai@AEVRYN_HTTPS_ONLY=true@AEVRYN_HSTS_ENABLED=true@AEVRYN_IDENTITY_PROVIDER=managed@AEVRYN_IDENTITY_PROVIDER_NAME=supabase@AEVRYN_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co@AEVRYN_SUPABASE_JWT_ALGORITHM=es256@AEVRYN_SUPABASE_JWKS_URL=https://YOUR_PROJECT_REF.supabase.co/auth/v1/.well-known/jwks.json@AEVRYN_SESSION_AUTHORITY=bearer@AEVRYN_PASSWORD_RESET_ENABLED=true@AEVRYN_ACCOUNT_DELETION_HANDOFF_CONFIGURED=true@AEVRYN_WORKER_RUNTIME=managed@AEVRYN_WORKER_QUEUE_PROVIDER=managed@AEVRYN_WORKER_TIMEOUT_SECONDS=120@AEVRYN_WORKER_MAX_RETRIES=3@AEVRYN_WORKER_CONCURRENCY=1@AEVRYN_EXTRACTION_MODE=openai@AEVRYN_OPENAI_MODEL=YOUR_APPROVED_MODEL@AEVRYN_OPENAI_TIMEOUT_SECONDS=90@AEVRYN_OPENAI_MAX_RESPONSE_BYTES=1048576@AEVRYN_LOG_DESTINATION=hosted@AEVRYN_MONITORING_DESTINATION=hosted@AEVRYN_LOG_RETENTION_DAYS=30@AEVRYN_MONITORING_RETENTION_DAYS=30@AEVRYN_SECURITY_ALERTS_ENABLED=true@AEVRYN_METADATA_ONLY_LOGGING=true" `
   --set-secrets AEVRYN_PROJECT_DATABASE_URL=AEVRYN_PROJECT_DATABASE_URL:latest,AEVRYN_API_KEYS=AEVRYN_API_KEYS:latest,AEVRYN_R2_ACCESS_KEY_ID=AEVRYN_R2_ACCESS_KEY_ID:latest,AEVRYN_R2_SECRET_ACCESS_KEY=AEVRYN_R2_SECRET_ACCESS_KEY:latest,AEVRYN_SUPABASE_ANON_KEY=AEVRYN_SUPABASE_ANON_KEY:latest,AEVRYN_SUPABASE_SERVICE_ROLE_KEY=AEVRYN_SUPABASE_SERVICE_ROLE_KEY:latest,AEVRYN_SESSION_SECRET=AEVRYN_SESSION_SECRET:latest,AEVRYN_WORKER_API_KEY=AEVRYN_WORKER_API_KEY:latest,AEVRYN_OPENAI_API_KEY=AEVRYN_OPENAI_API_KEY:latest
 ```
 
@@ -350,7 +350,7 @@ storage references, source prose, or provider payloads.
 The hosted smoke must verify:
 
 * `/v2/health` works over HTTPS
-* CORS allows only `https://app.aevryn.ai`
+* CORS allows only `https://app.aevryn.ai` and `https://aevryn.ai`
 * the latest ready Cloud Run revision serves all API traffic
 * the serving container image matches the expected release-candidate image
 * protected routes still require managed identity
@@ -384,12 +384,35 @@ Header/status check: HTTP OK
 Secrets printed: 0
 ```
 
+Public apex CORS update result:
+
+```text
+Date: 2026-08-09
+Service revision: aevryn-api-00038-qpf
+Allowed origins:
+- https://app.aevryn.ai
+- https://aevryn.ai
+Rejected browser origin:
+- https://www.aevryn.ai
+Result: app and apex origins returned matching access-control-allow-origin headers.
+Result: www health returned OK but no access-control-allow-origin header.
+Secrets printed: 0
+```
+
+PowerShell command used for the CORS-only update:
+
+```powershell
+& "$env:LOCALAPPDATA\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.ps1" run services update aevryn-api `
+  --region us-central1 `
+  --update-env-vars "^@^AEVRYN_API_ALLOWED_ORIGINS=https://app.aevryn.ai,https://aevryn.ai"
+```
+
 Remaining hosted smoke:
 
 ```text
 Local frontend production build passed with VITE_AEVRYN_API_URL=https://api.aevryn.ai.
 Cloudflare Pages frontend is deployed at https://app.aevryn.ai.
-API CORS allows Origin https://app.aevryn.ai.
+API CORS allows Origin https://app.aevryn.ai and https://aevryn.ai.
 Login/register pages load at https://app.aevryn.ai.
 Unauthenticated /dashboard redirects to /login.
 Unauthenticated GET /v2/projects returns 401 session_required.

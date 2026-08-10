@@ -217,6 +217,39 @@ def test_sentence_understanding_treats_spell_scroll_as_item_context() -> None:
     assert understanding.review_required is False
 
 
+def test_sentence_understanding_treats_spell_tome_as_item_context() -> None:
+    """A physical spell tome is item context, not automatically a usable ability."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_spell_tome",
+        title="Sentence Spell Tome",
+        text="Chapter 1\nCharlotte opened the spell tome on the table.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "spell tome" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_keeps_grimoire_and_separate_spell_reviewable() -> None:
+    """A grimoire can be an item while separate spell evidence remains visible."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_grimoire_and_spell",
+        title="Sentence Grimoire And Spell",
+        text="Chapter 1\nThe spell grimoire recorded the Fireball spell.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "spell grimoire" in understanding.cue_terms
+    assert "spell" in understanding.cue_terms
+    assert understanding.review_required is True
+
+
 def test_sentence_understanding_treats_jade_slip_as_item_context() -> None:
     """A jade slip is a physical knowledge container, not a skill by itself."""
     imported = StoryImporter().import_text(
@@ -283,6 +316,41 @@ def test_sentence_understanding_treats_ability_token_as_item_context() -> None:
     assert "skill_reference" not in understanding.signals
     assert "ability token" in understanding.cue_terms
     assert understanding.review_required is False
+
+
+def test_sentence_understanding_treats_maps_and_schematics_as_item_context() -> None:
+    """Visual planning documents are item context, not locations or abilities."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_map_schematic",
+        title="Sentence Map Schematic",
+        text="Chapter 1\nMira studied the star map beside the engine schematic.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "location_reference" not in understanding.signals
+    assert "skill_reference" not in understanding.signals
+    assert "star map" in understanding.cue_terms
+    assert "engine schematic" in understanding.cue_terms
+    assert understanding.review_required is False
+
+
+def test_sentence_understanding_keeps_diagram_and_spell_reviewable() -> None:
+    """A diagram can be an item while separate spell evidence remains visible."""
+    imported = StoryImporter().import_text(
+        source_id="source_sentence_diagram_and_spell",
+        title="Sentence Diagram And Spell",
+        text="Chapter 1\nThe spell diagram described the Fireball spell.",
+    )
+
+    understanding = SentenceUnderstandingEngine().analyze_imported_source(imported)[0]
+
+    assert "item_reference" in understanding.signals
+    assert "skill_reference" in understanding.signals
+    assert "spell diagram" in understanding.cue_terms
+    assert "spell" in understanding.cue_terms
+    assert understanding.review_required is True
 
 
 def test_sentence_understanding_keeps_skill_card_and_separate_skill_reviewable() -> None:

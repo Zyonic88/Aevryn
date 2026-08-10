@@ -7,6 +7,7 @@ from aevryn import (
     CanonPromptBuilder,
     CanonSceneContext,
     CharacterCardBuilder,
+    PresentationEngine,
     SceneAnalysis,
     SceneAnalyzer,
     SceneContextBuilder,
@@ -206,6 +207,59 @@ def test_canon_prompt_builder_includes_bounded_current_scene_action_beats() -> N
     assert "Scene purpose:" in action_section
     assert "Mark wakes in the forest" not in action_section
     assert action_section.count("\n- ") == 3
+
+
+def test_canon_prompt_builder_adds_image_generation_handoff() -> None:
+    """Image prompts expose a compact render brief before detailed context."""
+    prompt = CanonPromptBuilder().build_image_prompt(build_context())
+
+    assert "Image generation handoff:" in prompt
+    assert "Render now: Mark Current Weapon: Iron Sword" in prompt
+    assert "Confirmed subjects: Mark" in prompt
+    assert "Appearance lock: Unknown; keep neutral." in prompt
+    assert "Visible objects/details: Iron Sword" in prompt
+    assert "Preserve accepted setting, objects, and continuity." in prompt
+    assert "Keep unspecified traits neutral." in prompt
+    assert prompt.index("Image generation handoff:") < prompt.index(
+        "Scene production brief:"
+    )
+
+
+def test_canon_prompt_builder_adds_variant_generation_handoffs() -> None:
+    """Each non-image prompt declares its production task before detailed context."""
+    builder = CanonPromptBuilder()
+    context = build_context()
+
+    narration_prompt = builder.build_narration_prompt(context)
+    camera_prompt = builder.build_camera_prompt(context)
+    animation_prompt = builder.build_animation_prompt(context)
+
+    assert "Narration generation handoff:" in narration_prompt
+    assert "Narrate now: Mark Current Weapon: Iron Sword" in narration_prompt
+    assert "Characters to reference: Mark" in narration_prompt
+    assert "Description boundary: Unknown; keep neutral." in narration_prompt
+    assert "Do not add inner thoughts, dialogue, or backstory" in narration_prompt
+    assert narration_prompt.index("Narration generation handoff:") < (
+        narration_prompt.index("Scene production brief:")
+    )
+
+    assert "Camera generation handoff:" in camera_prompt
+    assert "Frame now: Mark Current Weapon: Iron Sword" in camera_prompt
+    assert "Confirmed subjects: Mark" in camera_prompt
+    assert "Appearance lock: Unknown; keep neutral." in camera_prompt
+    assert "Do not add unconfirmed characters" in camera_prompt
+    assert camera_prompt.index("Camera generation handoff:") < camera_prompt.index(
+        "Scene production brief:"
+    )
+
+    assert "Animation generation handoff:" in animation_prompt
+    assert "Animate now: Mark Current Weapon: Iron Sword" in animation_prompt
+    assert "Confirmed subjects: Mark" in animation_prompt
+    assert "Appearance lock: Unknown; keep neutral." in animation_prompt
+    assert "Keep unspecified motion minimal" in animation_prompt
+    assert animation_prompt.index("Animation generation handoff:") < (
+        animation_prompt.index("Scene production brief:")
+    )
 
 
 def test_canon_prompt_builder_adds_action_beats_to_all_prompt_types() -> None:
@@ -568,6 +622,98 @@ def test_canon_prompt_builder_separates_facts_composition_lighting_and_style() -
     )
 
 
+def test_canon_prompt_builder_declares_scene_production_contract() -> None:
+    """Every prompt type should explain how Canon becomes production context."""
+    imported_source = build_imported_source()
+    database = build_database()
+    database.store_entity(
+        Entity(
+            entity_id="location_northern_fortress",
+            entity_type="location",
+            display_name="Northern Fortress",
+        )
+    )
+    database.store_evidence(
+        Evidence(
+            evidence_id="evidence_fortress_setting",
+            source_id="source_demo",
+            chapter_id="source_demo_chapter_002",
+            scene_id="source_demo_chapter_002_scene_001",
+            paragraph_index=1,
+            sentence_index=1,
+            quote="Mark bought an iron sword inside the northern fortress command room.",
+            confidence=1.0,
+        )
+    )
+    database.store_relationship(
+        Relationship(
+            relationship_id="relationship_mark_inside_fortress",
+            source_entity_id="character_mark",
+            relationship_type="located_at",
+            target_entity_id="location_northern_fortress",
+            evidence_id="evidence_fortress_setting",
+        )
+    )
+    database.store_fact(
+        Fact(
+            fact_id="fact_fortress_current_environment",
+            entity_id="location_northern_fortress",
+            attribute="current_environment",
+            value="Fortress command room",
+            evidence_id="evidence_fortress_setting",
+        )
+    )
+    database.store_state_change(
+        StateChange(
+            state_change_id="state_fortress_current_environment",
+            fact_id="fact_fortress_current_environment",
+            valid_from_event_id="event_008_weapon",
+        )
+    )
+    context = SceneContextBuilder(
+        database=database,
+        character_cards=CharacterCardBuilder(database=database),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id="source_demo_chapter_002_scene_001",
+        character_ids=("character_mark",),
+    )
+    builder = CanonPromptBuilder()
+
+    prompts = (
+        builder.build_image_prompt(context),
+        builder.build_narration_prompt(context),
+        builder.build_camera_prompt(context),
+        builder.build_animation_prompt(context),
+    )
+
+    for prompt in prompts:
+        assert "Prompt production contract:" in prompt
+        assert "Inputs: verified Canon, scene context, character cards" in prompt
+        assert "Setting certainty: Location: Northern Fortress" in prompt
+        assert "Fortress command room" in prompt
+        assert "Current scene first; stable appearance persists" in prompt
+
+    scene_sheet = PresentationEngine().scene_sheet(
+        context=context,
+        analysis=SceneAnalyzer().analyze(context),
+    )
+    assert "Northern Fortress" in scene_sheet.location.items
+    assert "Fortress command room" in scene_sheet.location.items
+
+
+def test_canon_prompt_builder_marks_unconfirmed_setting_as_neutral() -> None:
+    """Prompts must not pretend a setting is confirmed when Canon lacks one."""
+    prompt = CanonPromptBuilder().build_image_prompt(build_context())
+
+    assert "Setting certainty: Setting is not confirmed" in prompt
+    assert (
+        "Confirmed setting: Unknown; use a neutral, non-specific environment "
+        "and do not invent scenery."
+    ) in prompt
+    assert "Scene environment cue:" in prompt
+
+
 def test_canon_prompt_builder_prevents_prompt_metadata_as_visible_text() -> None:
     """Image prompts prevent Canon metadata from becoming generated image labels."""
     prompt = CanonPromptBuilder().build_image_prompt(build_context())
@@ -677,9 +823,21 @@ def test_canon_prompt_builder_carries_stable_character_appearance_from_cards() -
     assert "- Hair Color: Silver" in image_prompt
     assert "- Eye Color: Blue" in image_prompt
     assert "- Build: Lean" in image_prompt
+    assert (
+        "Appearance lock: Mark: Build: Lean; Eye Color: Blue; Hair Color: Silver"
+        in image_prompt
+    )
     assert "School Year: First Year" not in image_prompt
     assert "- Hair Color: Silver" in camera_prompt
+    assert (
+        "Appearance lock: Mark: Build: Lean; Eye Color: Blue; Hair Color: Silver"
+        in camera_prompt
+    )
     assert "- Eye Color: Blue" in animation_prompt
+    assert (
+        "Appearance lock: Mark: Build: Lean; Eye Color: Blue; Hair Color: Silver"
+        in animation_prompt
+    )
 
 
 def test_canon_prompt_builder_carries_stable_identity_references_from_cards() -> None:

@@ -76,4 +76,25 @@ describe("readableOutputItem", () => {
       ].join("\n\n"),
     );
   });
+
+  it("keeps compact generation handoffs out of prompt previews", () => {
+    const section = {
+      items: [
+        "Image generation handoff:",
+        "- Render now: Zhao Chen studies the blueprint.",
+        "- Confirmed subjects: Zhao Chen.",
+        "Generate this image using only accepted Aevryn canon",
+        "Scene Summary: Zhao Chen studies the starship blueprint.",
+      ],
+    };
+
+    expect(readablePromptPreview(section, { maxItems: 3 })).toEqual({
+      items: [
+        "Generate this image using only accepted Aevryn canon.",
+        "Scene Summary: Zhao Chen studies the starship blueprint.",
+      ],
+      hiddenCount: 0,
+    });
+    expect(readablePromptText(section)).toContain("Render now: Zhao Chen studies the blueprint.");
+  });
 });

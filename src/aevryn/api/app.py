@@ -3860,6 +3860,30 @@ def _snapshot_character_profiles(
                         _string_payload_value(character, "subtitle"),
                         display_names=display_names,
                     ),
+                    aliases=_snapshot_section_or_unknown(
+                        character,
+                        "aliases",
+                        "Aliases",
+                        display_names=display_names,
+                    ),
+                    titles=_snapshot_section_or_unknown(
+                        character,
+                        "titles",
+                        "Titles",
+                        display_names=display_names,
+                    ),
+                    descriptions=_snapshot_section_or_unknown(
+                        character,
+                        "descriptions",
+                        "Descriptions",
+                        display_names=display_names,
+                    ),
+                    appearance=_snapshot_section_or_unknown(
+                        character,
+                        "appearance",
+                        "Appearance",
+                        display_names=display_names,
+                    ),
                     race=_snapshot_section_or_unknown(
                         character,
                         "race",
@@ -3910,6 +3934,30 @@ def _snapshot_character_profiles(
                     current_limitations=_snapshot_section(
                         character,
                         "current_limitations",
+                        display_names=display_names,
+                    ),
+                    first_appearance=_snapshot_section_or_unknown(
+                        character,
+                        "first_appearance",
+                        "First Appearance",
+                        display_names=display_names,
+                    ),
+                    latest_appearance=_snapshot_section_or_unknown(
+                        character,
+                        "latest_appearance",
+                        "Latest Appearance",
+                        display_names=display_names,
+                    ),
+                    timeline_history=_snapshot_section_or_unknown(
+                        character,
+                        "timeline_history",
+                        "Timeline History",
+                        display_names=display_names,
+                    ),
+                    evidence_references=_snapshot_section_or_unknown(
+                        character,
+                        "evidence_references",
+                        "Evidence References",
                         display_names=display_names,
                     ),
                     recent_changes=_snapshot_section(
@@ -3988,6 +4036,7 @@ def _with_character_profile_correction(
     section_by_field = {
         "race": profile.race,
         "gender": profile.gender,
+        "appearance": profile.appearance,
         "status": profile.status,
         "current_goal": profile.current_goal,
         "current_equipment": profile.current_equipment,
@@ -6296,6 +6345,10 @@ def _character_profile_output(
         character_id=profile.character_id,
         display_name=profile.display_name,
         subtitle=profile.subtitle,
+        aliases=_section_output(profile.aliases),
+        titles=_section_output(profile.titles),
+        descriptions=_section_output(profile.descriptions),
+        appearance=_section_output(profile.appearance),
         race=_section_output(profile.race),
         gender=_section_output(profile.gender),
         status=_section_output(profile.status),
@@ -6306,6 +6359,10 @@ def _character_profile_output(
         territory=_section_output(profile.territory),
         relationships=_section_output(profile.relationships),
         current_limitations=_section_output(profile.current_limitations),
+        first_appearance=_section_output(profile.first_appearance),
+        latest_appearance=_section_output(profile.latest_appearance),
+        timeline_history=_section_output(profile.timeline_history),
+        evidence_references=_section_output(profile.evidence_references),
         recent_changes=_section_output(profile.recent_changes),
         evidence_summary=profile.evidence_summary,
     )

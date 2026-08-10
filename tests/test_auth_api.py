@@ -2366,6 +2366,18 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     )
     repository.save_project_correction(
         ProjectCorrectionRecord(
+            correction_id="correction_mark_appearance",
+            project_id="project_alpha",
+            target_type="character",
+            target_id="character_mark",
+            field_name="appearance",
+            value="Silver hair and blue eyes",
+            created_at=SOON,
+            updated_at=SOON,
+        )
+    )
+    repository.save_project_correction(
+        ProjectCorrectionRecord(
             correction_id="correction_world_item",
             project_id="project_alpha",
             target_type="world",
@@ -2447,6 +2459,9 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
     assert payload["character_profiles"][0]["display_name"] == "Mark"
     assert payload["character_profiles"][0]["race"]["items"] == ["Unknown"]
     assert payload["character_profiles"][0]["gender"]["items"] == ["User Edited: Male"]
+    assert payload["character_profiles"][0]["appearance"]["items"] == [
+        "User Edited: Silver hair and blue eyes"
+    ]
     assert payload["character_profiles"][0]["status"]["items"] == ["Unknown"]
     assert payload["world_sheet"]["entity_sections"] == [
         {
@@ -2471,6 +2486,10 @@ def test_project_outputs_summarize_latest_canon_snapshot_without_source_prose() 
         assert "User Edited Canon corrections:" in prompt_items
         assert (
             "- User Edited Character Correction: Mark Gender = Male"
+            in prompt_items
+        )
+        assert (
+            "- User Edited Character Correction: Mark Appearance = Silver hair and blue eyes"
             in prompt_items
         )
         assert (

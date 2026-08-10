@@ -631,40 +631,46 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           {canDrainWorkerFromBrowser() && drainLocalWorker.error ? (
             <ErrorMessage>{drainLocalWorker.error.message}</ErrorMessage>
           ) : null}
-          <div className="import-action-row">
-            <button
-              type="button"
-              className="primary-button"
-              aria-busy={importIntent === "process" && isImportActionBusy}
-              disabled={!canSubmit || isImportActionBusy}
-              onClick={() => {
-                void inspectCurrentImport({ processAfterInspect: true });
-              }}
-            >
-              {quickProcessButtonLabel({
-                intent: importIntent,
-                isReading: isReadingSourceFile,
-                isInspecting: inspectImport.isPending,
-                isSaving: createImport.isPending || createDefaultStory.isPending,
-                isSubmitting: submitRun.isPending && importIntent === "process",
-              })}
-            </button>
-            <button
-              type="submit"
-              className="secondary-button"
-              aria-busy={importIntent === "review" && isInspectingImport}
-              disabled={!canSubmit || isImportActionBusy}
-            >
-              {importInspectButtonLabel({
-                isReading: isReadingSourceFile,
-                isInspecting: inspectImport.isPending && importIntent === "review",
-              })}
-            </button>
+          <div className="import-intake-actions" aria-label="Import intake actions">
+            <div className="import-intake-copy">
+              <span>Recommended path</span>
+              <strong>Process in one pass</strong>
+              <p>
+                Inspect structure, save the import, and submit Canon processing. Use review only
+                when you want to inspect the scene map before processing.
+              </p>
+            </div>
+            <div className="import-action-row">
+              <button
+                type="button"
+                className="primary-button"
+                aria-busy={importIntent === "process" && isImportActionBusy}
+                disabled={!canSubmit || isImportActionBusy}
+                onClick={() => {
+                  void inspectCurrentImport({ processAfterInspect: true });
+                }}
+              >
+                {quickProcessButtonLabel({
+                  intent: importIntent,
+                  isReading: isReadingSourceFile,
+                  isInspecting: inspectImport.isPending,
+                  isSaving: createImport.isPending || createDefaultStory.isPending,
+                  isSubmitting: submitRun.isPending && importIntent === "process",
+                })}
+              </button>
+              <button
+                type="submit"
+                className="secondary-button"
+                aria-busy={importIntent === "review" && isInspectingImport}
+                disabled={!canSubmit || isImportActionBusy}
+              >
+                {importInspectButtonLabel({
+                  isReading: isReadingSourceFile,
+                  isInspecting: inspectImport.isPending && importIntent === "review",
+                })}
+              </button>
+            </div>
           </div>
-          <p className="import-fast-lane-note">
-            Process chapters runs the full intake path: inspect source structure, save the import,
-            then submit Canon processing. Inspect only is for manual review before processing.
-          </p>
         </form>
       </section>
 
@@ -782,7 +788,8 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
           !importsQuery.error &&
           (importsQuery.data?.imports.length ?? 0) === 0 ? (
             <EmptyState title="No saved imports">
-              Save an inspected import before processing chapters.
+              Process chapters to create an import run, or inspect first if you want to review the
+              scene map before processing.
             </EmptyState>
           ) : null}
           {(importsQuery.data?.imports ?? []).length > 0 ? (
@@ -825,7 +832,7 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
         {snapshotsQuery.error ? <ErrorMessage>{snapshotsQuery.error.message}</ErrorMessage> : null}
         {!runsQuery.isLoading && !runsQuery.error && (runsQuery.data?.runs.length ?? 0) === 0 ? (
           <EmptyState title="No project runs">
-            Submit a saved import for background processing.
+            Process chapters from Source Intake to start the first Canon build.
           </EmptyState>
         ) : null}
         {projectRunsForActiveStory.length > 0 ? (
@@ -847,6 +854,12 @@ export function ImportWorkspaceView({ project }: { project: ProjectSummary }) {
                   </div>
                   <span>{runDurationSummary(run, processingClockMs)}</span>
                   <span>{processingCurrentStepLabel(run, snapshot)}</span>
+                  {snapshot ? (
+                    <div className="run-history-actions" aria-label="Canon output shortcuts">
+                      <NavLink to={`/projects/${project.id}/characters`}>Characters</NavLink>
+                      <NavLink to={`/projects/${project.id}/prompts`}>Prompt Packs</NavLink>
+                    </div>
+                  ) : null}
                   {errorLabel ? <span className="run-history-error">{errorLabel}</span> : null}
                 </div>
               );

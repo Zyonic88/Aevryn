@@ -209,6 +209,14 @@ def test_presentation_engine_routes_identity_and_profile_facts() -> None:
                 valid_from_scene_id="source_demo_chapter_001_scene_001",
             ),
             CanonCharacterFact(
+                attribute="appearance",
+                value="silver hair and blue eyes",
+                previous_value=None,
+                evidence=evidence,
+                valid_from_chapter_id="source_demo_chapter_001",
+                valid_from_scene_id="source_demo_chapter_001_scene_001",
+            ),
+            CanonCharacterFact(
                 attribute="family_background",
                 value="Merchant family",
                 previous_value=None,
@@ -234,8 +242,25 @@ def test_presentation_engine_routes_identity_and_profile_facts() -> None:
     assert profile.aliases.items == ("Captain Mark",)
     assert profile.titles.items == ("Captain",)
     assert profile.descriptions.items == ("human male captain",)
+    assert profile.appearance.items == ("silver hair and blue eyes",)
     assert profile.relationships.items == ("Merchant family",)
     assert profile.current_equipment.items == ("Iron Sword",)
+    assert profile.first_appearance.items == ("Chapter 1, Scene 1",)
+    assert profile.latest_appearance.items == ("Chapter 2, Scene 1",)
+    assert profile.timeline_history.items == (
+        "Chapter 1, Scene 1",
+        "Chapter 2, Scene 1",
+    )
+    assert profile.evidence_references.items == (
+        "Chapter 1, Scene 1: race",
+        "Chapter 1, Scene 1: gender",
+        "Chapter 1, Scene 1: alias",
+        "Chapter 1, Scene 1: title",
+        "Chapter 1, Scene 1: description",
+        "Chapter 1, Scene 1: appearance",
+        "Chapter 1, Scene 1: family_background",
+        "Chapter 2, Scene 1: current_weapon",
+    )
     assert profile.recent_changes.items == (
         "source_demo_chapter_002: current_weapon -> Iron Sword",
     )

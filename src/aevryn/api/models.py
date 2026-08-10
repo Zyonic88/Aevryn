@@ -921,6 +921,10 @@ class CharacterProfileOutput(BaseModel):
     character_id: str
     display_name: str
     subtitle: str
+    aliases: OutputSection
+    titles: OutputSection
+    descriptions: OutputSection
+    appearance: OutputSection
     race: OutputSection
     gender: OutputSection
     status: OutputSection
@@ -931,6 +935,10 @@ class CharacterProfileOutput(BaseModel):
     territory: OutputSection
     relationships: OutputSection
     current_limitations: OutputSection
+    first_appearance: OutputSection
+    latest_appearance: OutputSection
+    timeline_history: OutputSection
+    evidence_references: OutputSection
     recent_changes: OutputSection
     evidence_summary: str
 

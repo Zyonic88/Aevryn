@@ -241,21 +241,47 @@ const promptPreviewPayload = {
     image_prompt: {
       title: "Image Prompt",
       items: [
+        "Image generation handoff:",
+        "- Render now: Mark prepares in the quiet hangar.",
+        "- Confirmed subjects: Mark.",
+        "- Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
+        "- Visible objects/details: Rusty Dagger.",
         "Generate this image using only accepted Aevryn canon.",
         "Scene Summary: Mark prepares in the hangar.",
       ],
     },
     narration_prompt: {
       title: "Narration Prompt",
-      items: ["Narrate using only accepted canon facts."],
+      items: [
+        "Narration generation handoff:",
+        "- Narrate now: Mark prepares in the quiet hangar.",
+        "- Description boundary: Mark: Hair Color: Silver; Eye Color: Blue.",
+        "- Canon details to mention if relevant: Rusty Dagger.",
+        "- Tone: Tense.",
+        "Narrate using only accepted canon facts.",
+      ],
     },
     camera_prompt: {
       title: "Camera Prompt",
-      items: ["Describe camera framing without inventing new canon."],
+      items: [
+        "Camera generation handoff:",
+        "- Frame now: Mark and the Rusty Dagger inside the hangar.",
+        "- Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
+        "- Camera-visible details: Rusty Dagger.",
+        "- Shot discipline: No unsupported characters.",
+        "Describe camera framing without inventing new canon.",
+      ],
     },
     animation_prompt: {
       title: "Animation Prompt",
-      items: ["Describe motion using only accepted scene facts."],
+      items: [
+        "Animation generation handoff:",
+        "- Animate now: Mark prepares without changing accepted Canon.",
+        "- Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
+        "- Motion-relevant details: Rusty Dagger.",
+        "- Motion boundary: Preserve quiet hangar context.",
+        "Describe motion using only accepted scene facts.",
+      ],
     },
   },
 };
@@ -343,6 +369,7 @@ const characterPreviewPayload = {
       aliases: { title: "Aliases", items: ["Captain Mark"] },
       titles: { title: "Titles", items: ["Captain"] },
       descriptions: { title: "Descriptions", items: ["human male captain"] },
+      appearance: { title: "Appearance", items: ["Silver hair; blue eyes"] },
       race: { title: "Race", items: ["Human"] },
       gender: { title: "Gender", items: ["Male"] },
       status: { title: "Status", items: ["Alive"] },
@@ -1422,6 +1449,14 @@ describe("App shell routing", () => {
       "aria-current",
       "page",
     );
+    const workspaceContext = screen.getByRole("banner", { name: "Workspace context" });
+    expect(within(workspaceContext).getByText("Project")).toBeInTheDocument();
+    expect(within(workspaceContext).getByText("Characters")).toBeInTheDocument();
+    expect(within(workspaceContext).getByRole("link", { name: "Diagnostics" })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/monitoring",
+    );
+    expect(within(workspaceContext).queryByText("Section")).not.toBeInTheDocument();
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
 
@@ -2244,7 +2279,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     expect(await screen.findByText(".txt")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
@@ -2326,7 +2361,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     expect(await screen.findByText(".md/.markdown")).toBeInTheDocument();
     expect(screen.getByLabelText("Source text")).toHaveValue("");
     expect(screen.getByLabelText("Source file")).toHaveAttribute(
@@ -2755,14 +2790,16 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     expect(await screen.findByText("No saved imports")).toBeInTheDocument();
+    expect(screen.getByText(/Process chapters to create an import run/u)).toBeInTheDocument();
     expect(screen.getByText("Import details")).toBeVisible();
     expect(screen.getByText("Advanced import references")).not.toBeVisible();
     expect(screen.getByLabelText("Import reference")).not.toBeVisible();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
-    expect(screen.getByText(/Process chapters runs the full intake path/u)).toBeInTheDocument();
+    expect(screen.getByText("Recommended path")).toBeInTheDocument();
+    expect(screen.getByText("Process in one pass")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Process chapters" }));
 
     await screen.findByText("Chapter import");
@@ -2869,7 +2906,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect only" }));
@@ -3124,7 +3161,7 @@ describe("App shell routing", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Import" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Source Intake" })).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Source text"));
     await user.type(screen.getByLabelText("Source text"), "Chapter 1{enter}Mark carried a dagger.");
     await user.click(screen.getByRole("button", { name: "Inspect only" }));
@@ -3146,6 +3183,14 @@ describe("App shell routing", () => {
     expect(runHistory).toHaveTextContent("Completed Canon build");
     expect(runHistory).toHaveTextContent("Duration: 5s");
     expect(runHistory).toHaveTextContent("Canon snapshot ready");
+    expect(within(runHistory).getByRole("link", { name: "Characters" })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/characters",
+    );
+    expect(within(runHistory).getByRole("link", { name: "Prompt Packs" })).toHaveAttribute(
+      "href",
+      "/projects/project_alpha/prompts",
+    );
     expect(screen.queryByLabelText("Current processing progress")).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).endsWith(API_PATHS.workerProcess)),
@@ -3710,6 +3755,8 @@ describe("App shell routing", () => {
     expect(atAGlance.getByText("Human")).toBeInTheDocument();
     expect(atAGlance.getByText("Gender")).toBeInTheDocument();
     expect(atAGlance.getByText("Male")).toBeInTheDocument();
+    expect(atAGlance.getByText("Appearance")).toBeInTheDocument();
+    expect(atAGlance.getByText("Silver hair; blue eyes")).toBeInTheDocument();
     expect(atAGlance.getByText("Status")).toBeInTheDocument();
     expect(atAGlance.getByText("Alive")).toBeInTheDocument();
     expect(atAGlance.getByText("Goal")).toBeInTheDocument();
@@ -3733,6 +3780,7 @@ describe("App shell routing", () => {
       (characterCard as HTMLElement).querySelectorAll(".profile-section"),
     ).find((section) => section.querySelector("h4")?.textContent === "Recent Changes");
     expect(recentChangesSection).toBeDefined();
+    expect(recentChangesSection).toHaveClass("profile-section-wide");
     expect(recentChangesSection).not.toHaveTextContent("Name: Mark");
     expect(recentChangesSection).not.toHaveTextContent("Gender: Male");
     expect(recentChangesSection).not.toHaveTextContent("Current Weapon: Rusty Dagger");
@@ -3746,6 +3794,14 @@ describe("App shell routing", () => {
     expect(
       screen.getByText("1 review item; 2 review items need character review"),
     ).toBeInTheDocument();
+    expect(screen.getByText("Duplicate Card Review")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 possible duplicate card needs review. Aevryn kept them separate until review."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Mark / Unknown character")).toBeInTheDocument();
+    expect(screen.getByLabelText("Duplicate card review")).toHaveTextContent(
+      /Possible shared alias|Possible shared name or alias|Possible title\/name overlap/u,
+    );
     expect(screen.queryByText("Glossary term needs review")).not.toBeInTheDocument();
     const correctionDisclosure = markCard.getByText("User Edited correction").closest("details");
     expect(correctionDisclosure).not.toBeNull();
@@ -3995,6 +4051,36 @@ describe("App shell routing", () => {
     expect(sceneNavigation).toHaveTextContent("Scene 1 of 28");
     expect(within(sceneNavigation).getByRole("button", { name: "Previous scene" })).toBeDisabled();
     expect(within(sceneNavigation).getByRole("button", { name: "Next scene" })).toBeEnabled();
+    const productionFocus = within(selectedPack).getByLabelText("Prompt production focus");
+    expect(productionFocus).toHaveTextContent("Scene priority");
+    expect(productionFocus).toHaveTextContent("Current scene before retained Canon");
+    expect(productionFocus).toHaveTextContent("Generation boundary");
+    expect(productionFocus).toHaveTextContent("5 canon guardrails; no unsupported additions");
+    expect(productionFocus).toHaveTextContent("Missing inputs");
+    const promptHandoffs = within(selectedPack).getByLabelText("Prompt generation handoffs");
+    expect(promptHandoffs).toHaveTextContent("Prompt handoffs");
+    expect(promptHandoffs).toHaveTextContent("Image");
+    expect(promptHandoffs).toHaveTextContent("Render now: Mark prepares in the quiet hangar.");
+    expect(promptHandoffs).toHaveTextContent(
+      "Appearance lock: Mark: Hair Color: Silver; Eye Color: Blue.",
+    );
+    expect(promptHandoffs).toHaveTextContent("Visible objects/details: Rusty Dagger.");
+    expect(promptHandoffs).toHaveTextContent("Narration");
+    expect(promptHandoffs).toHaveTextContent("Narrate now: Mark prepares in the quiet hangar.");
+    expect(promptHandoffs).toHaveTextContent(
+      "Description boundary: Mark: Hair Color: Silver; Eye Color: Blue.",
+    );
+    expect(promptHandoffs).toHaveTextContent(
+      "Canon details to mention if relevant: Rusty Dagger.",
+    );
+    expect(promptHandoffs).toHaveTextContent("Camera");
+    expect(promptHandoffs).toHaveTextContent("Frame now: Mark and the Rusty Dagger inside the hangar.");
+    expect(promptHandoffs).toHaveTextContent("Camera-visible details: Rusty Dagger.");
+    expect(promptHandoffs).toHaveTextContent("Animation");
+    expect(promptHandoffs).toHaveTextContent(
+      "Animate now: Mark prepares without changing accepted Canon.",
+    );
+    expect(promptHandoffs).toHaveTextContent("Motion-relevant details: Rusty Dagger.");
     const canonInputs = within(selectedPack).getByLabelText("Prompt canon inputs");
     expect(canonInputs).toHaveTextContent("Canon inputs");
     expect(canonInputs).toHaveTextContent("Characters");
@@ -4004,7 +4090,7 @@ describe("App shell routing", () => {
     expect(canonInputs).toHaveTextContent("Visual details");
     expect(canonInputs).toHaveTextContent("Continuity");
     expect(canonInputs).toHaveTextContent("Constraints");
-    expect(canonInputs).toHaveTextContent("4 canon guardrails");
+    expect(canonInputs).toHaveTextContent("5 canon guardrails");
     expect(within(canonInputs).queryByText(/source_alpha_chapter/u)).not.toBeInTheDocument();
     const sceneBrief = within(selectedPack).getByLabelText("Selected prompt scene brief");
     expect(sceneBrief).toHaveTextContent("Characters");
@@ -4036,6 +4122,16 @@ describe("App shell routing", () => {
       }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Production batch|Credits required|Subscribe|Buy credits/u)).not.toBeInTheDocument();
+    await user.click(within(selectedPack).getByRole("button", { name: "Copy scene pack" }));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        expect.stringContaining("## Animation Prompt"),
+      ),
+    );
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("## Image Prompt"));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("## Narration Prompt"));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("## Camera Prompt"));
+    expect(within(selectedPack).getByText("Scene pack copied")).toBeInTheDocument();
     await user.click(within(selectedPack).getByRole("button", { name: "Copy Image Prompt" }));
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Scene 1 image prompt detail")),
@@ -4052,6 +4148,11 @@ describe("App shell routing", () => {
     expect(
       within(updatedImagePromptPreview).getByText("Scene 2 image prompt detail."),
     ).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Search prompt scenes"));
+    await user.type(screen.getByLabelText("Search prompt scenes"), "dagger");
+    expect(screen.getByText("Showing 28 of 28 prompt scenes.")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Search prompt scenes"));
+    await user.click(screen.getByRole("button", { name: "Show 4 more scenes" }));
     await user.click(within(sceneNavigation).getByRole("button", { name: "Next scene" }));
     expect(within(selectedPack).getByRole("heading", { name: "Scene 3" })).toBeInTheDocument();
     expect(sceneNavigation).toHaveTextContent("Scene 3 of 28");
