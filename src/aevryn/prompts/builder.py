@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 PROMPT_METADATA_ATTRIBUTE_PARTS = frozenset(
     {
+        "display_name",
         "failure_penalty",
         "penalty",
         "reward",
@@ -328,7 +329,6 @@ class CanonPromptBuilder:
                 self._narration_generation_handoff_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
-                self._scene_directive_section(analysis),
                 self._narration_direction_section(analysis),
                 self._character_identity_reference_section(context),
                 self._character_continuity_lock_section(context),
@@ -361,7 +361,6 @@ class CanonPromptBuilder:
                 self._camera_generation_handoff_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
-                self._scene_directive_section(analysis),
                 self._composition_section(context, analysis),
                 self._camera_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
@@ -399,7 +398,6 @@ class CanonPromptBuilder:
                 self._animation_generation_handoff_section(context, analysis),
                 self._scene_production_brief_section(context, analysis),
                 self._scene_action_beats_section(context, analysis),
-                self._scene_directive_section(analysis),
                 self._animation_direction_section(analysis),
                 self._scene_visual_anchor_section(context),
                 self._character_identity_reference_section(context),
@@ -683,7 +681,7 @@ class CanonPromptBuilder:
         details = self._unique_values(
             self._shorten(value, width=80)
             for value in detail_sources
-            if value.strip()
+            if value.strip() and not self._is_prompt_metadata_text(value)
         )
         return (
             self._shorten(current_moment, width=120),
@@ -884,12 +882,27 @@ class CanonPromptBuilder:
         anchors: list[str] = []
         for sentence in CanonPromptBuilder._scene_sentences(context.scene.paragraphs):
             normalized_sentence = sentence.lower()
-            if any(term in normalized_sentence for term in SCENE_VISUAL_ANCHOR_TERMS):
+            if (
+                any(term in normalized_sentence for term in SCENE_VISUAL_ANCHOR_TERMS)
+                and CanonPromptBuilder._is_current_scene_visual_sentence(
+                    normalized_sentence
+                )
+            ):
                 anchors.append(CanonPromptBuilder._shorten(sentence, width=170))
             if len(anchors) >= 6:
                 break
 
         return tuple(CanonPromptBuilder._unique_values(anchors))
+
+    @staticmethod
+    def _is_current_scene_visual_sentence(normalized_sentence: str) -> bool:
+        """Return whether a sentence describes the current visible scene."""
+        if re.search(
+            r"\b(can only|up to now|one-third|therefore|in history)\b",
+            normalized_sentence,
+        ):
+            return False
+        return True
 
     @staticmethod
     def _scene_action_beats_section(
@@ -957,13 +970,13 @@ class CanonPromptBuilder:
         lines: list[str] = ["Visual production details:"]
         if analysis.visual_highlights:
             lines.append("Visual Highlights:")
-            lines.extend(CanonPromptBuilder._bullet_lines(analysis.visual_highlights))
+            lines.extend(CanonPromptBuilder._production_bullet_lines(analysis.visual_highlights))
         if analysis.important_objects:
             lines.append("Important Objects:")
-            lines.extend(CanonPromptBuilder._bullet_lines(analysis.important_objects))
+            lines.extend(CanonPromptBuilder._production_bullet_lines(analysis.important_objects))
         if analysis.character_goals:
             lines.append("Character Goals:")
-            lines.extend(CanonPromptBuilder._bullet_lines(analysis.character_goals))
+            lines.extend(CanonPromptBuilder._production_bullet_lines(analysis.character_goals))
         if len(lines) == 1:
             return ""
 
@@ -1189,7 +1202,7 @@ class CanonPromptBuilder:
                 f"- Support the mood: {CanonPromptBuilder._shorten(analysis.mood)}",
                 "- Use neutral shot language when canon does not specify exact layout.",
                 "Camera-visible details:",
-                *CanonPromptBuilder._bullet_lines(
+                *CanonPromptBuilder._production_bullet_lines(
                     (
                         *analysis.visual_highlights,
                         *analysis.important_objects,
@@ -1208,7 +1221,7 @@ class CanonPromptBuilder:
                 f"- Pacing and tone: {CanonPromptBuilder._shorten(analysis.mood)}",
                 f"- Scene pressure: {CanonPromptBuilder._shorten(analysis.conflict)}",
                 "Animate only known changes and details:",
-                *CanonPromptBuilder._bullet_lines(
+                *CanonPromptBuilder._production_bullet_lines(
                     (
                         *analysis.changes_introduced,
                         *analysis.visual_highlights,
@@ -1324,7 +1337,7 @@ class CanonPromptBuilder:
         return "\n".join(
             [
                 "Continuity Notes:",
-                *CanonPromptBuilder._bullet_lines(analysis.continuity_notes[:8]),
+                *CanonPromptBuilder._production_bullet_lines(analysis.continuity_notes[:8]),
                 "- Continuity notes constrain, not props.",
             ]
         )
@@ -1340,6 +1353,15 @@ class CanonPromptBuilder:
             return ["- Unknown"]
 
         return lines
+
+    @staticmethod
+    def _production_bullet_lines(values: Iterable[str]) -> list[str]:
+        """Return prompt-facing bullets without machine metadata rows."""
+        return CanonPromptBuilder._bullet_lines(
+            value
+            for value in values
+            if not CanonPromptBuilder._is_prompt_metadata_text(value)
+        )
 
     def _character_section(self, context: CanonSceneContext) -> str:
         """Return character section."""
@@ -1439,6 +1461,17 @@ class CanonPromptBuilder:
         return any(
             part in normalized_attribute
             for part in PROMPT_METADATA_ATTRIBUTE_PARTS
+        )
+
+    @staticmethod
+    def _is_prompt_metadata_text(value: str) -> bool:
+        """Return whether generated analysis text is machine metadata."""
+        normalized_value = value.lower()
+        return (
+            " display name =" in normalized_value
+            or normalized_value.startswith("display name =")
+            or " display_name " in normalized_value
+            or normalized_value.startswith("display_name ")
         )
 
     @staticmethod

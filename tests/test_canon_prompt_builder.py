@@ -195,6 +195,41 @@ def test_canon_prompt_builder_includes_current_scene_visual_anchors() -> None:
     )
 
 
+def test_canon_prompt_builder_excludes_lore_exposition_from_visual_anchors() -> None:
+    """Worldbuilding exposition should not become the visual scene brief."""
+    imported_source = StoryImporter().import_text(
+        source_id="source_lore_visual",
+        title="Lore Visual Story",
+        text=(
+            "Chapter 1\n"
+            "Star Gates can only be built in star systems that possess two stars, "
+            "so up to now, one-third of star systems are still isolated. "
+            "The classroom desks were pure white and every student had a "
+            "holographic projection screen."
+        ),
+    )
+    scene = imported_source.story.chapters[0].scenes[0]
+    context = SceneContextBuilder(
+        database=CanonDatabase(),
+        character_cards=CharacterCardBuilder(database=CanonDatabase()),
+    ).build_context(
+        imported_source=imported_source,
+        scene_id=scene.scene_id,
+        character_ids=(),
+    )
+
+    prompt = CanonPromptBuilder().build_image_prompt(context)
+    anchor_section = prompt.split("Scene-grounded visual anchors", 1)[1].split(
+        "\n\n",
+        1,
+    )[0]
+
+    assert "Star Gates can only be built" not in anchor_section
+    assert "one-third of star systems" not in anchor_section
+    assert "classroom desks were pure white" in anchor_section
+    assert "holographic projection screen" in anchor_section
+
+
 def test_canon_prompt_builder_includes_bounded_current_scene_action_beats() -> None:
     """Prompts include compact canon-backed beats without storing source prose."""
     context = build_context()
@@ -260,6 +295,43 @@ def test_canon_prompt_builder_adds_variant_generation_handoffs() -> None:
     assert animation_prompt.index("Animation generation handoff:") < (
         animation_prompt.index("Scene production brief:")
     )
+
+
+def test_canon_prompt_builder_keeps_display_name_metadata_out_of_prompts() -> None:
+    """Production prompts should not expose machine-style display-name rows."""
+    context = build_context()
+    analysis = SceneAnalysis(
+        scene_id=context.scene.scene_id,
+        summary=(
+            "Scene focuses on Mark. Key canon state: "
+            "Mark Display Name = Mark."
+        ),
+        purpose="Establish the scene.",
+        conflict="Unknown",
+        mood="Informational",
+        visual_highlights=("Mark Display Name = Mark", "white classroom desks"),
+        character_goals=("Mark Display Name = Mark", "study the holographic screen"),
+        character_emotions=(),
+        important_objects=("Iron Sword Display Name = Iron Sword", "small bottle"),
+        environment_summary="classroom",
+        changes_introduced=("Mark Display Name = Mark", "Mark touches the screen"),
+        continuity_notes=("Mark Display Name = Mark", "Mark remains present"),
+        forbidden_elements=(),
+    )
+    builder = CanonPromptBuilder()
+    prompt_text = "\n".join(
+        (
+            builder.build_image_prompt(context, analysis),
+            builder.build_narration_prompt(context, analysis),
+            builder.build_camera_prompt(context, analysis),
+            builder.build_animation_prompt(context, analysis),
+        )
+    )
+
+    assert "Display Name =" not in prompt_text
+    assert "white classroom desks" in prompt_text
+    assert "small bottle" in prompt_text
+    assert "Mark remains present" in prompt_text
 
 
 def test_canon_prompt_builder_adds_action_beats_to_all_prompt_types() -> None:
